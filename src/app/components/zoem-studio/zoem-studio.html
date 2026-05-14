@@ -1,0 +1,115 @@
+<div class="p-6 space-y-6">
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center">
+        <lucide-icon [img]="SparklesIcon" class="w-5 h-5 text-violet-600" />
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-xl font-semibold text-slate-800">Zoem Studio</h1>
+          <span class="px-2 py-0.5 bg-violet-100 text-violet-700 text-xs font-semibold rounded-full">Pro</span>
+        </div>
+        <p class="text-sm text-slate-500">Automatizaciones e integraciones avanzadas</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Banner Pro -->
+  <div class="bg-linear-to-r from-violet-600 to-blue-600 rounded-xl p-5 text-white flex items-center justify-between">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <lucide-icon [img]="StarIcon" class="w-4 h-4 text-yellow-300" />
+        <span class="font-semibold">Plan Profesional activo</span>
+      </div>
+      <p class="text-sm text-violet-100">Tienes acceso completo a todas las funciones de Studio</p>
+    </div>
+    <div class="text-right">
+      <p class="text-2xl font-bold">{{ conectadas }}/{{ integraciones.length }}</p>
+      <p class="text-xs text-violet-200">integraciones conectadas</p>
+    </div>
+  </div>
+
+  <div class="grid lg:grid-cols-2 gap-6">
+    <!-- Workflows -->
+    <div class="bg-white rounded-xl border border-slate-200">
+      <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <lucide-icon [img]="ZapIcon" class="w-4 h-4 text-amber-500" />
+          <h2 class="font-semibold text-slate-800">Automatizaciones</h2>
+        </div>
+        <button class="text-sm text-violet-600 font-medium hover:underline">+ Nueva</button>
+      </div>
+      <div class="divide-y divide-slate-100">
+        @for (wf of workflows; track wf.id) {
+          <div class="p-4 flex items-start justify-between gap-3">
+            <div class="flex items-start gap-3 min-w-0">
+              <div [class]="'w-2 h-2 rounded-full mt-1.5 shrink-0 ' + (wf.activo ? 'bg-emerald-500' : 'bg-slate-300')"></div>
+              <div class="min-w-0">
+                <p class="font-medium text-slate-800 text-sm">{{ wf.nombre }}</p>
+                <p class="text-xs text-slate-500 mt-0.5">{{ wf.descripcion }}</p>
+              </div>
+            </div>
+            <span [class]="'text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ' + (wf.activo ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500')">
+              {{ wf.activo ? 'Activo' : 'Inactivo' }}
+            </span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Integraciones -->
+    <div class="bg-white rounded-xl border border-slate-200">
+      <div class="p-4 border-b border-slate-100 flex items-center gap-2">
+        <lucide-icon [img]="GlobeIcon" class="w-4 h-4 text-blue-500" />
+        <h2 class="font-semibold text-slate-800">Integraciones</h2>
+      </div>
+      <div class="divide-y divide-slate-100">
+        @for (int of integraciones; track int.nombre) {
+          <div class="p-4 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <span class="text-2xl">{{ int.icono }}</span>
+              <div>
+                <p class="font-medium text-slate-800 text-sm">{{ int.nombre }}</p>
+                <p class="text-xs text-slate-500">{{ int.descripcion }}</p>
+              </div>
+            </div>
+            @if (int.conectado) {
+              <div class="flex items-center gap-1 text-emerald-600 text-xs font-medium shrink-0">
+                <lucide-icon [img]="CheckCircle2Icon" class="w-3.5 h-3.5" />
+                Conectado
+              </div>
+            } @else {
+              <button class="text-xs text-violet-600 font-medium hover:underline shrink-0">Conectar</button>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- IA Personalizada -->
+  <div class="bg-white rounded-xl border border-slate-200">
+    <div class="p-4 border-b border-slate-100 flex items-center gap-2">
+      <lucide-icon [img]="BotIcon" class="w-4 h-4 text-violet-500" />
+      <h2 class="font-semibold text-slate-800">IA personalizada para tu despacho</h2>
+    </div>
+    <div class="p-5 grid md:grid-cols-3 gap-4">
+      <div class="p-4 border border-dashed border-violet-200 rounded-xl text-center hover:bg-violet-50 cursor-pointer transition-colors">
+        <lucide-icon [img]="FileCode2Icon" class="w-6 h-6 text-violet-400 mx-auto mb-2" />
+        <p class="text-sm font-medium text-slate-700">Entrenar con documentos</p>
+        <p class="text-xs text-slate-500 mt-1">Sube contratos, plantillas y procedimientos</p>
+      </div>
+      <div class="p-4 border border-dashed border-violet-200 rounded-xl text-center hover:bg-violet-50 cursor-pointer transition-colors">
+        <lucide-icon [img]="SparklesIcon" class="w-6 h-6 text-violet-400 mx-auto mb-2" />
+        <p class="text-sm font-medium text-slate-700">Personalizar respuestas</p>
+        <p class="text-xs text-slate-500 mt-1">Ajusta el tono y estilo del agente IA</p>
+      </div>
+      <div class="p-4 border border-dashed border-slate-200 rounded-xl text-center opacity-60">
+        <lucide-icon [img]="LockIcon" class="w-6 h-6 text-slate-300 mx-auto mb-2" />
+        <p class="text-sm font-medium text-slate-400">API pública</p>
+        <p class="text-xs text-slate-400 mt-1">Disponible en plan Empresa</p>
+      </div>
+    </div>
+  </div>
+</div>

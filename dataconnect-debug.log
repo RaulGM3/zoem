@@ -1,0 +1,432 @@
+I0602 14:49:53.481820   12191 load.go:31] Reloading schema and connectors...
+I0602 14:49:53.499365   12191 control.go:100] [projects/emulator/locations/emulator/services/zoem 1444] UpdateResources(): done
+Main schema: sources: schema/schema.gql [6411B] 
+Connector "zoem": sources: zoem/mutations.gql [9593B] zoem/queries.gql [6675B] 
+I0602 14:49:53.520183   12191 codegen.go:101] [connector "zoem" javascriptSdk] Generating sources into "/Users/raulgm/Developer/Zoem/Zoem/src/dataconnect-generated"
+E0602 14:49:53.527981   12191 load.go:95] Errors generating SDK: [connector "zoem" javascriptSdk]: failed to generate sources:
+failed to parse template: template: index.d.ts.go.tmpl:4:12: executing "index.d.ts.go.tmpl" at <ImportsTS>: wrong number of args for ImportsTS: want 2 got 1
+I0602 14:49:53.528689   12191 collector.go:107] schema extensions wrote into "/Users/raulgm/Developer/Zoem/Zoem/dataconnect/.dataconnect/schema"
+Generated sources: main/query.gql [12762B] main/mutation.gql [34538B] main/implicit.gql [4149B] prelude.gql [80888B] main/input.gql [137631B] main/relation.gql [71726B] 
+I0602 14:49:53.529821   12191 collector.go:107] connector "zoem" javascriptSdk wrote into "/Users/raulgm/Developer/Zoem/Zoem/src/dataconnect-generated"
+Generated sources: esm/index.esm.js [24387B] esm/package.json [17B] index.cjs.js [27088B] package.json [862B] README.md [207738B] index.d.ts [47117B] 
+I0602 14:49:53.529910   12191 collector.go:114] connector "zoem" javascriptSdk deleted obsolete file "/Users/raulgm/Developer/Zoem/Zoem/src/dataconnect-generated/angular/README.md"
+I0602 14:49:53.530015   12191 collector.go:114] connector "zoem" javascriptSdk deleted obsolete file "/Users/raulgm/Developer/Zoem/Zoem/src/dataconnect-generated/angular/esm/index.esm.js"
+I0602 14:49:53.530054   12191 collector.go:114] connector "zoem" javascriptSdk deleted obsolete file "/Users/raulgm/Developer/Zoem/Zoem/src/dataconnect-generated/angular/esm/package.json"
+I0602 14:49:53.530086   12191 collector.go:114] connector "zoem" javascriptSdk deleted obsolete file "/Users/raulgm/Developer/Zoem/Zoem/src/dataconnect-generated/angular/index.cjs.js"
+I0602 14:49:53.530114   12191 collector.go:114] connector "zoem" javascriptSdk deleted obsolete file "/Users/raulgm/Developer/Zoem/Zoem/src/dataconnect-generated/angular/index.d.ts"
+I0602 14:49:53.530149   12191 collector.go:114] connector "zoem" javascriptSdk deleted obsolete file "/Users/raulgm/Developer/Zoem/Zoem/src/dataconnect-generated/angular/package.json"
+I0602 14:49:53.530158   12191 load.go:109] Finished reloading
+I0602 14:49:53.530789   12191 dev.go:104] Listening on address (HTTP + gRPC): 127.0.0.1:9399
+I0602 14:49:53.530842   12191 dev.go:104] Listening on address (HTTP + gRPC): [::1]:9399
+I0602 14:49:56.195143   12191 migrate.go:24] Running migration SQL:
+Step 1: CREATE EXTENSION IF NOT EXISTS "uuid-ossp"
+Step 2: CREATE TABLE "public"."company" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" timestamptz NOT NULL, "is_active" boolean NOT NULL, "name" character varying(200) NOT NULL, "plan" character varying(20) NOT NULL, "slug" character varying(100) NOT NULL, PRIMARY KEY ("id"))
+Step 3: CREATE UNIQUE INDEX "company_slug_uidx" ON "public"."company" ("slug")
+Step 4: CREATE TABLE "public"."contact" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "company_id" uuid NOT NULL, "address" character varying(500) NULL, "contact_type" character varying(20) NOT NULL, "created_at" timestamptz NOT NULL, "email" character varying(255) NULL, "industry" character varying(100) NULL, "last_contact_date" date NULL, "name" character varying(200) NOT NULL, "nif" character varying(20) NULL, "phone" character varying(30) NULL, "status" character varying(20) NOT NULL, "total_billed" double precision NOT NULL, "updated_at" timestamptz NOT NULL, PRIMARY KEY ("id"), CONSTRAINT "contact_company_id_fkey" FOREIGN KEY ("company_id") REFERENCES "public"."company" ("id") ON DELETE CASCADE)
+Step 5: CREATE INDEX "contact_companyId_idx" ON "public"."contact" ("company_id")
+Step 6: CREATE TABLE "public"."calendar_event" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "company_id" uuid NOT NULL, "contact_id" uuid NULL, "created_at" timestamptz NOT NULL, "description" text NULL, "duration" character varying(20) NULL, "event_date" date NOT NULL, "event_time" character varying(10) NOT NULL, "event_type" character varying(20) NOT NULL, "status" character varying(20) NOT NULL, "title" character varying(300) NOT NULL, PRIMARY KEY ("id"), CONSTRAINT "calendar_event_company_id_fkey" FOREIGN KEY ("company_id") REFERENCES "public"."company" ("id") ON DELETE CASCADE, CONSTRAINT "calendar_event_contact_id_fkey" FOREIGN KEY ("contact_id") REFERENCES "public"."contact" ("id") ON DELETE SET NULL)
+Step 7: CREATE INDEX "calendar_event_companyId_idx" ON "public"."calendar_event" ("company_id")
+Step 8: CREATE INDEX "calendar_event_contactId_idx" ON "public"."calendar_event" ("contact_id")
+Step 9: CREATE TABLE "public"."user" ("id" text NOT NULL, "created_at" timestamptz NOT NULL, "display_name" character varying(100) NULL, "email" character varying(255) NOT NULL, "is_super_admin" boolean NOT NULL, PRIMARY KEY ("id"))
+Step 10: CREATE TABLE "public"."company_member" ("company_id" uuid NOT NULL, "user_id" text NOT NULL, "joined_at" timestamptz NOT NULL, "role" character varying(20) NOT NULL, PRIMARY KEY ("company_id", "user_id"), CONSTRAINT "company_member_company_id_fkey" FOREIGN KEY ("company_id") REFERENCES "public"."company" ("id") ON DELETE CASCADE, CONSTRAINT "company_member_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."user" ("id") ON DELETE CASCADE)
+Step 11: CREATE INDEX "company_member_companyId_idx" ON "public"."company_member" ("company_id")
+Step 12: CREATE INDEX "company_member_userId_idx" ON "public"."company_member" ("user_id")
+Step 13: CREATE TABLE "public"."contact_tag" ("contact_id" uuid NOT NULL, "tag" character varying(50) NOT NULL, PRIMARY KEY ("contact_id", "tag"), CONSTRAINT "contact_tag_contact_id_fkey" FOREIGN KEY ("contact_id") REFERENCES "public"."contact" ("id") ON DELETE CASCADE)
+Step 14: CREATE INDEX "contact_tag_contactId_idx" ON "public"."contact_tag" ("contact_id")
+Step 15: CREATE TABLE "public"."project" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "assigned_to_id" text NULL, "company_id" uuid NOT NULL, "budget" double precision NULL, "client_name" character varying(200) NOT NULL, "created_at" timestamptz NOT NULL, "description" text NULL, "hours_logged" double precision NULL, "next_deadline" date NULL, "open_date" date NOT NULL, "priority" character varying(10) NOT NULL, "progress" integer NOT NULL, "project_type" character varying(100) NOT NULL, "status" character varying(30) NOT NULL, "title" character varying(300) NOT NULL, "updated_at" timestamptz NOT NULL, PRIMARY KEY ("id"), CONSTRAINT "project_assigned_to_id_fkey" FOREIGN KEY ("assigned_to_id") REFERENCES "public"."user" ("id") ON DELETE SET NULL, CONSTRAINT "project_company_id_fkey" FOREIGN KEY ("company_id") REFERENCES "public"."company" ("id") ON DELETE CASCADE)
+Step 16: CREATE INDEX "project_assignedToId_idx" ON "public"."project" ("assigned_to_id")
+Step 17: CREATE INDEX "project_companyId_idx" ON "public"."project" ("company_id")
+Step 18: CREATE TABLE "public"."document" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "company_id" uuid NOT NULL, "contact_id" uuid NULL, "project_id" uuid NULL, "created_at" timestamptz NOT NULL, "doc_status" character varying(20) NOT NULL, "doc_type" character varying(50) NOT NULL, "file_size" character varying(20) NULL, "name" character varying(300) NOT NULL, "updated_at" timestamptz NOT NULL, PRIMARY KEY ("id"), CONSTRAINT "document_company_id_fkey" FOREIGN KEY ("company_id") REFERENCES "public"."company" ("id") ON DELETE CASCADE, CONSTRAINT "document_contact_id_fkey" FOREIGN KEY ("contact_id") REFERENCES "public"."contact" ("id") ON DELETE SET NULL, CONSTRAINT "document_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "public"."project" ("id") ON DELETE SET NULL)
+Step 19: CREATE INDEX "document_companyId_idx" ON "public"."document" ("company_id")
+Step 20: CREATE INDEX "document_contactId_idx" ON "public"."document" ("contact_id")
+Step 21: CREATE INDEX "document_projectId_idx" ON "public"."document" ("project_id")
+Step 22: CREATE TABLE "public"."ia_contact" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "assigned_to_id" text NULL, "company_id" uuid NOT NULL, "category" character varying(100) NOT NULL, "client_company" character varying(200) NULL, "client_email" character varying(255) NULL, "client_name" character varying(200) NOT NULL, "client_phone" character varying(30) NULL, "contact_date" date NOT NULL, "contact_time" character varying(10) NOT NULL, "contact_type" character varying(20) NOT NULL, "created_at" timestamptz NOT NULL, "description" text NOT NULL, "duration" character varying(10) NULL, "score" integer NOT NULL, "status" character varying(20) NOT NULL, "updated_at" timestamptz NOT NULL, "urgency" character varying(10) NOT NULL, PRIMARY KEY ("id"), CONSTRAINT "ia_contact_assigned_to_id_fkey" FOREIGN KEY ("assigned_to_id") REFERENCES "public"."user" ("id") ON DELETE SET NULL, CONSTRAINT "ia_contact_company_id_fkey" FOREIGN KEY ("company_id") REFERENCES "public"."company" ("id") ON DELETE CASCADE)
+Step 23: CREATE INDEX "ia_contact_assignedToId_idx" ON "public"."ia_contact" ("assigned_to_id")
+Step 24: CREATE INDEX "ia_contact_companyId_idx" ON "public"."ia_contact" ("company_id")
+Step 25: CREATE TABLE "public"."invoice" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "company_id" uuid NOT NULL, "contact_id" uuid NULL, "project_id" uuid NULL, "amount" double precision NOT NULL, "created_at" timestamptz NOT NULL, "due_date" date NOT NULL, "invoice_number" character varying(50) NOT NULL, "issue_date" date NOT NULL, "paid_date" date NULL, "status" character varying(20) NOT NULL, "total" double precision NOT NULL, "updated_at" timestamptz NOT NULL, "vat" double precision NOT NULL, PRIMARY KEY ("id"), CONSTRAINT "invoice_company_id_fkey" FOREIGN KEY ("company_id") REFERENCES "public"."company" ("id") ON DELETE CASCADE, CONSTRAINT "invoice_contact_id_fkey" FOREIGN KEY ("contact_id") REFERENCES "public"."contact" ("id") ON DELETE SET NULL, CONSTRAINT "invoice_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "public"."project" ("id") ON DELETE SET NULL)
+Step 26: CREATE INDEX "invoice_companyId_idx" ON "public"."invoice" ("company_id")
+Step 27: CREATE INDEX "invoice_contactId_idx" ON "public"."invoice" ("contact_id")
+Step 28: CREATE INDEX "invoice_projectId_idx" ON "public"."invoice" ("project_id")
+I0602 14:49:56.262559   12191 control.go:100] [projects/emulator/locations/emulator/services/zoem 0dd8] UpdateResources(): done
+Main schema: sources: schema/schema.gql [6411B] 
+Connector "zoem": sources: zoem/mutations.gql [9593B] zoem/queries.gql [6675B] 
+I0602 14:49:56.272061   12191 configure_emulator.go:21] ConfigureEmulator successed
+Request: service_id: "zoem"
+connection_string: "postgres://127.0.0.1:5432/fdcdb?sslmode=disable"
+database: "fdcdb"
+
+Response: 
+I0602 15:39:23.466206   12191 load.go:31] Reloading schema and connectors...
+W0602 15:39:23.575289   12191 control.go:74] [projects/emulator/locations/emulator/services/zoem 72ca] connector "zoem" has errors: zoem/mutations.gql:27:72: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:35:87: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:48:81: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:56:81: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:63:68: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:81:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:110:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:129:37: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:145:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:170:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:187:37: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:191:59: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:195:62: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:212:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:239:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:257:37: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:273:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:297:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:313:43: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:334:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:357:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:367:39: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:381:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:401:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:415:38: Unknown argument "reason" on directive "@auth".
+
+sources: zoem/mutations.gql [10359B] zoem/queries.gql [6675B] 
+I0602 15:39:23.575308   12191 control.go:100] [projects/emulator/locations/emulator/services/zoem 72ca] UpdateResources(): done
+Main schema: sources: schema/schema.gql [6411B] 
+Connector "zoem": sources: zoem/mutations.gql [10359B] zoem/queries.gql [6675B] 
+E0602 15:39:23.576497   12191 load.go:73] Could not load sources: 
+Errors: zoem/mutations.gql:27:72: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:35:87: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:48:81: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:56:81: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:63:68: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:81:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:110:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:129:37: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:145:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:170:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:187:37: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:191:59: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:195:62: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:212:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:239:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:257:37: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:273:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:297:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:313:43: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:334:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:357:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:367:39: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:381:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:401:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:415:38: Unknown argument "reason" on directive "@auth".
+I0602 15:39:23.577536   12191 collector.go:107] schema extensions wrote into "/Users/raulgm/Developer/Zoem/Zoem/dataconnect/.dataconnect/schema"
+Generated sources: prelude.gql [80888B] main/mutation.gql [34538B] main/implicit.gql [4149B] main/input.gql [137631B] main/relation.gql [71726B] main/query.gql [12762B] 
+I0602 15:39:23.577543   12191 load.go:74] Finished reloading
+I0602 15:39:43.465825   12191 load.go:31] Reloading schema and connectors...
+W0602 15:39:43.570042   12191 control.go:74] [projects/emulator/locations/emulator/services/zoem dcdb] connector "zoem" has errors: zoem/mutations.gql:27:72: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:35:87: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:48:81: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:56:81: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:63:68: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:81:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:110:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:129:37: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:145:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:170:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:187:37: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:191:59: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:195:62: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:212:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:239:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:257:37: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:273:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:297:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:313:43: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:334:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:357:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:367:39: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:381:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:401:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:415:38: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:37:25: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:48:31: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:69:21: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:89:40: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:116:31: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:146:40: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:169:31: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:202:40: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:228:31: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:260:46: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:280:66: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:302:42: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:329:33: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:361:41: Unknown argument "reason" on directive "@auth".
+
+sources: zoem/mutations.gql [10359B] zoem/queries.gql [7061B] 
+I0602 15:39:43.570109   12191 control.go:100] [projects/emulator/locations/emulator/services/zoem dcdb] UpdateResources(): done
+Main schema: sources: schema/schema.gql [6411B] 
+Connector "zoem": sources: zoem/mutations.gql [10359B] zoem/queries.gql [7061B] 
+E0602 15:39:43.571670   12191 load.go:73] Could not load sources: 
+Errors: zoem/mutations.gql:27:72: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:35:87: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:48:81: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:56:81: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:63:68: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:81:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:110:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:129:37: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:145:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:170:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:187:37: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:191:59: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:195:62: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:212:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:239:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:257:37: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:273:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:297:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:313:43: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:334:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:357:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:367:39: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:381:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:401:4: Unknown argument "reason" on directive "@auth".
+zoem/mutations.gql:415:38: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:37:25: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:48:31: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:69:21: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:89:40: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:116:31: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:146:40: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:169:31: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:202:40: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:228:31: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:260:46: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:280:66: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:302:42: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:329:33: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:361:41: Unknown argument "reason" on directive "@auth".
+I0602 15:39:43.572243   12191 collector.go:107] schema extensions wrote into "/Users/raulgm/Developer/Zoem/Zoem/dataconnect/.dataconnect/schema"
+Generated sources: main/implicit.gql [4149B] main/input.gql [137631B] main/relation.gql [71726B] main/query.gql [12762B] main/mutation.gql [34538B] prelude.gql [80888B] 
+I0602 15:39:43.572249   12191 load.go:74] Finished reloading
+I0602 15:43:43.462069   12191 load.go:31] Reloading schema and connectors...
+W0602 15:43:43.564714   12191 control.go:74] [projects/emulator/locations/emulator/services/zoem 508a] connector "zoem" has errors: zoem/queries.gql:37:25: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:48:31: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:69:21: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:89:40: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:116:31: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:146:40: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:169:31: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:202:40: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:228:31: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:260:46: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:280:66: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:302:42: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:329:33: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:361:41: Unknown argument "reason" on directive "@auth".
+
+sources: zoem/mutations.gql [9524B] zoem/queries.gql [7061B] 
+I0602 15:43:43.564729   12191 control.go:100] [projects/emulator/locations/emulator/services/zoem 508a] UpdateResources(): done
+Main schema: sources: schema/schema.gql [6411B] 
+Connector "zoem": sources: zoem/mutations.gql [9524B] zoem/queries.gql [7061B] 
+E0602 15:43:43.566970   12191 load.go:73] Could not load sources: 
+Errors: zoem/queries.gql:37:25: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:48:31: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:69:21: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:89:40: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:116:31: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:146:40: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:169:31: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:202:40: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:228:31: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:260:46: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:280:66: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:302:42: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:329:33: Unknown argument "reason" on directive "@auth".
+zoem/queries.gql:361:41: Unknown argument "reason" on directive "@auth".
+I0602 15:43:43.567569   12191 collector.go:107] schema extensions wrote into "/Users/raulgm/Developer/Zoem/Zoem/dataconnect/.dataconnect/schema"
+Generated sources: main/relation.gql [71726B] prelude.gql [80888B] main/query.gql [12762B] main/mutation.gql [34538B] main/implicit.gql [4149B] main/input.gql [137631B] 
+I0602 15:43:43.567578   12191 load.go:74] Finished reloading
+I0602 15:44:13.462190   12191 load.go:31] Reloading schema and connectors...
+I0602 15:44:13.556113   12191 control.go:100] [projects/emulator/locations/emulator/services/zoem d912] UpdateResources(): done
+Main schema: sources: schema/schema.gql [6411B] 
+Connector "zoem": sources: zoem/mutations.gql [9524B] zoem/queries.gql [6675B] 
+I0602 15:44:13.575848   12191 codegen.go:101] [connector "zoem" javascriptSdk] Generating sources into "/Users/raulgm/Developer/Zoem/Zoem/src/dataconnect-generated"
+E0602 15:44:13.583148   12191 load.go:95] Errors generating SDK: [connector "zoem" javascriptSdk]: failed to generate sources:
+failed to parse template: template: index.d.ts.go.tmpl:4:12: executing "index.d.ts.go.tmpl" at <ImportsTS>: wrong number of args for ImportsTS: want 2 got 1
+I0602 15:44:13.583748   12191 collector.go:107] schema extensions wrote into "/Users/raulgm/Developer/Zoem/Zoem/dataconnect/.dataconnect/schema"
+Generated sources: prelude.gql [80888B] main/implicit.gql [4149B] main/input.gql [137631B] main/relation.gql [71726B] main/query.gql [12762B] main/mutation.gql [34538B] 
+I0602 15:44:13.584693   12191 collector.go:107] connector "zoem" javascriptSdk wrote into "/Users/raulgm/Developer/Zoem/Zoem/src/dataconnect-generated"
+Generated sources: index.d.ts [47117B] esm/index.esm.js [24387B] esm/package.json [17B] index.cjs.js [27088B] package.json [862B] README.md [207738B] 
+I0602 15:44:13.584697   12191 load.go:109] Finished reloading
+E0602 15:57:33.521490   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 15:57:43.521450   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 15:57:53.521355   12191 watch.go:116] watchAllDir unable to walk dir `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`: lstat /Users/raulgm/Developer/Zoem/Zoem/dataconnect: no such file or directory
+E0602 15:57:53.521375   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 15:58:03.521404   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 15:58:13.521487   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 15:58:23.521561   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 15:58:33.521504   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 15:58:43.521421   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 15:58:53.521389   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 15:58:53.521364   12191 watch.go:116] watchAllDir unable to walk dir `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`: lstat /Users/raulgm/Developer/Zoem/Zoem/dataconnect: no such file or directory
+E0602 15:59:03.521643   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 15:59:13.521419   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 15:59:23.521386   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 15:59:33.521503   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 15:59:43.521004   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 15:59:53.521350   12191 watch.go:116] watchAllDir unable to walk dir `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`: lstat /Users/raulgm/Developer/Zoem/Zoem/dataconnect: no such file or directory
+E0602 15:59:53.521390   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:00:03.521453   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:00:13.521516   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:00:23.520851   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:00:33.520625   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:00:43.521443   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:00:53.521287   12191 watch.go:116] watchAllDir unable to walk dir `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`: lstat /Users/raulgm/Developer/Zoem/Zoem/dataconnect: no such file or directory
+E0602 16:00:53.521300   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:01:03.521418   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:01:13.521637   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:01:23.520669   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:01:33.521329   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:01:43.521400   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:01:53.521347   12191 watch.go:116] watchAllDir unable to walk dir `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`: lstat /Users/raulgm/Developer/Zoem/Zoem/dataconnect: no such file or directory
+E0602 16:01:53.521398   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:02:03.521342   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:02:13.521442   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:02:23.521403   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:02:33.520511   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:02:43.520867   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:02:53.521571   12191 watch.go:116] watchAllDir unable to walk dir `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`: lstat /Users/raulgm/Developer/Zoem/Zoem/dataconnect: no such file or directory
+E0602 16:02:53.521610   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:03:03.521396   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:03:13.521301   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:03:23.521342   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:03:33.521471   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:03:43.521446   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:03:53.521365   12191 watch.go:116] watchAllDir unable to walk dir `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`: lstat /Users/raulgm/Developer/Zoem/Zoem/dataconnect: no such file or directory
+E0602 16:03:53.521436   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:04:03.521383   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:04:13.521296   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:04:23.521233   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:04:33.521382   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:04:43.521395   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:04:53.521284   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:04:53.521238   12191 watch.go:116] watchAllDir unable to walk dir `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`: lstat /Users/raulgm/Developer/Zoem/Zoem/dataconnect: no such file or directory
+E0602 16:05:03.521410   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:05:13.521368   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:05:23.521356   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:05:33.521276   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:05:43.521275   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:05:53.521276   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:05:53.521217   12191 watch.go:116] watchAllDir unable to walk dir `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`: lstat /Users/raulgm/Developer/Zoem/Zoem/dataconnect: no such file or directory
+E0602 16:06:03.521160   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:06:13.521321   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:06:23.521263   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:06:33.521089   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:06:43.521206   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:06:53.521211   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:06:53.521167   12191 watch.go:116] watchAllDir unable to walk dir `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`: lstat /Users/raulgm/Developer/Zoem/Zoem/dataconnect: no such file or directory
+E0602 16:07:03.521260   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:07:13.521277   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:07:23.521225   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:07:33.521706   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:07:43.521227   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:07:53.521137   12191 watch.go:116] watchAllDir unable to walk dir `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`: lstat /Users/raulgm/Developer/Zoem/Zoem/dataconnect: no such file or directory
+E0602 16:07:53.521192   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:08:03.520164   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:08:13.521108   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:08:23.521170   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:08:33.521174   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:08:43.521252   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:08:53.521102   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:08:53.521077   12191 watch.go:116] watchAllDir unable to walk dir `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`: lstat /Users/raulgm/Developer/Zoem/Zoem/dataconnect: no such file or directory
+E0602 16:09:03.521227   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:09:13.521439   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:09:23.521164   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:09:33.521320   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:09:43.521673   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:09:53.523929   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:09:53.523892   12191 watch.go:116] watchAllDir unable to walk dir `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`: lstat /Users/raulgm/Developer/Zoem/Zoem/dataconnect: no such file or directory
+E0602 16:10:03.525373   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:10:13.526710   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:10:23.526950   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:10:33.527272   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:10:43.527472   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:10:53.527545   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:10:53.527517   12191 watch.go:116] watchAllDir unable to walk dir `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`: lstat /Users/raulgm/Developer/Zoem/Zoem/dataconnect: no such file or directory
+E0602 16:11:03.527535   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:11:13.527678   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:11:23.527737   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:11:33.527629   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:11:43.527801   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:11:53.527696   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:11:53.527665   12191 watch.go:116] watchAllDir unable to walk dir `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`: lstat /Users/raulgm/Developer/Zoem/Zoem/dataconnect: no such file or directory
+E0602 16:12:03.527567   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:12:13.527583   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:12:23.527777   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:12:33.526918   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:12:43.526873   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:12:53.527718   12191 watch.go:116] watchAllDir unable to walk dir `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`: lstat /Users/raulgm/Developer/Zoem/Zoem/dataconnect: no such file or directory
+E0602 16:12:53.527767   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:13:03.527881   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:13:13.527357   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:13:23.527148   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:13:33.527938   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:13:43.527717   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:13:53.527096   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:13:53.526979   12191 watch.go:116] watchAllDir unable to walk dir `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`: lstat /Users/raulgm/Developer/Zoem/Zoem/dataconnect: no such file or directory
+E0602 16:14:03.527870   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:14:13.527872   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:14:23.527245   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:14:33.527522   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:14:43.528003   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:14:53.527861   12191 watch.go:116] watchAllDir unable to walk dir `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`: lstat /Users/raulgm/Developer/Zoem/Zoem/dataconnect: no such file or directory
+E0602 16:14:53.527931   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:15:03.527939   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:15:13.527509   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:15:23.527838   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:15:33.527890   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:15:43.528013   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:15:53.527717   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:15:53.527668   12191 watch.go:116] watchAllDir unable to walk dir `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`: lstat /Users/raulgm/Developer/Zoem/Zoem/dataconnect: no such file or directory
+E0602 16:16:03.529088   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:16:13.527735   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:16:23.527874   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:16:33.527905   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:16:43.527888   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:16:53.527873   12191 watch.go:116] watchAllDir unable to walk dir `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`: lstat /Users/raulgm/Developer/Zoem/Zoem/dataconnect: no such file or directory
+E0602 16:16:53.527937   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:17:03.528054   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:17:13.528067   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:17:23.528129   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:17:33.528144   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:17:43.528052   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:17:53.528033   12191 watch.go:116] watchAllDir unable to walk dir `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`: lstat /Users/raulgm/Developer/Zoem/Zoem/dataconnect: no such file or directory
+E0602 16:17:53.528078   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:18:03.528152   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:18:13.528529   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:18:23.528204   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:18:33.528087   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:18:43.528196   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:18:53.527273   12191 watch.go:116] watchAllDir unable to walk dir `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`: lstat /Users/raulgm/Developer/Zoem/Zoem/dataconnect: no such file or directory
+E0602 16:18:53.527317   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:19:03.528141   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:19:13.528077   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:19:23.528298   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:19:33.528174   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:19:43.527655   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:19:53.527531   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:19:53.527503   12191 watch.go:116] watchAllDir unable to walk dir `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`: lstat /Users/raulgm/Developer/Zoem/Zoem/dataconnect: no such file or directory
+E0602 16:20:03.528320   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:20:13.528270   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:20:23.527809   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:20:33.528154   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:20:43.527931   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:20:53.527879   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:20:53.527885   12191 watch.go:116] watchAllDir unable to walk dir `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`: lstat /Users/raulgm/Developer/Zoem/Zoem/dataconnect: no such file or directory
+E0602 16:21:03.528311   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:21:13.528337   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:21:23.528324   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:21:33.528309   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:21:43.528127   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:21:53.528290   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:21:53.528247   12191 watch.go:116] watchAllDir unable to walk dir `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`: lstat /Users/raulgm/Developer/Zoem/Zoem/dataconnect: no such file or directory
+E0602 16:22:03.528135   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:22:13.528434   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:22:23.528648   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`
+E0602 16:22:33.528233   12191 watch.go:40] Failed to load config from "/Users/raulgm/Developer/Zoem/Zoem/dataconnect": could not find dataconnect.yaml in `/Users/raulgm/Developer/Zoem/Zoem/dataconnect`

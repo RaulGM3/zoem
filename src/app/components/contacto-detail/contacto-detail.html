@@ -1,0 +1,207 @@
+@if (contacto(); as c) {
+<div class="p-6 space-y-6">
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <button (click)="volver()" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500" aria-label="Volver">
+        <lucide-icon [img]="ArrowLeftIcon" class="w-5 h-5" />
+      </button>
+      <h1 class="text-xl font-semibold text-slate-800">{{ c.name }}</h1>
+      <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getStatusClass(c.status)">{{ c.status }}</span>
+    </div>
+    <button class="flex items-center gap-2 px-4 py-2 border border-slate-200 text-sm rounded-lg hover:bg-slate-50 text-slate-600">
+      <lucide-icon [img]="EditIcon" class="w-4 h-4" />Editar
+    </button>
+  </div>
+
+  <div class="grid lg:grid-cols-3 gap-6">
+    <!-- Sidebar -->
+    <div class="space-y-4">
+      <!-- Perfil -->
+      <div class="bg-white rounded-xl border border-slate-200 p-5">
+        <div class="flex items-center gap-4 mb-4">
+          <div class="w-14 h-14 bg-violet-100 rounded-xl flex items-center justify-center text-violet-700 font-bold text-xl">
+            {{ c.name.charAt(0) }}
+          </div>
+          <div>
+            <p class="font-semibold text-slate-800">{{ c.name }}</p>
+            <span class="text-xs text-slate-400">{{ c.type }}</span>
+          </div>
+        </div>
+        @if (c.tags && c.tags.length > 0) {
+          <div class="flex flex-wrap gap-1 mb-4">
+            @for (tag of c.tags; track tag) {
+              <span class="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-full">{{ tag }}</span>
+            }
+          </div>
+        }
+        <div class="space-y-2 text-sm">
+          <div class="flex items-center gap-2 text-slate-600">
+            <lucide-icon [img]="MailIcon" class="w-4 h-4 text-slate-400 shrink-0" />
+            {{ c.email }}
+          </div>
+          <div class="flex items-center gap-2 text-slate-600">
+            <lucide-icon [img]="PhoneIcon" class="w-4 h-4 text-slate-400 shrink-0" />
+            {{ c.phone }}
+          </div>
+          @if (c.address) {
+            <div class="flex items-center gap-2 text-slate-600">
+              <lucide-icon [img]="MapPinIcon" class="w-4 h-4 text-slate-400 shrink-0" />
+              {{ c.address }}
+            </div>
+          }
+          @if (c.nif) {
+            <div class="flex items-center gap-2 text-slate-600">
+              <lucide-icon [img]="Building2Icon" class="w-4 h-4 text-slate-400 shrink-0" />
+              NIF: {{ c.nif }}
+            </div>
+          }
+          @if (c.industry) {
+            <div class="flex items-center gap-2 text-slate-600">
+              <lucide-icon [img]="TagIcon" class="w-4 h-4 text-slate-400 shrink-0" />
+              {{ c.industry }}
+            </div>
+          }
+          <div class="flex items-center gap-2 text-slate-500">
+            <lucide-icon [img]="CalendarIcon" class="w-4 h-4 text-slate-400 shrink-0" />
+            Último contacto: {{ c.lastContact }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats rápidos -->
+      <div class="bg-white rounded-xl border border-slate-200 p-4 grid grid-cols-2 gap-4">
+        <div class="text-center p-3 bg-violet-50 rounded-lg">
+          <p class="text-xs text-slate-500 mb-1">Total facturado</p>
+          <p class="text-lg font-bold text-violet-700">{{ c.totalBilled | number:'1.0-0' }} €</p>
+        </div>
+        <div class="text-center p-3 bg-blue-50 rounded-lg">
+          <p class="text-xs text-slate-500 mb-1">Proyectos activos</p>
+          <p class="text-lg font-bold text-blue-700">{{ c.activeProjects }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contenido principal -->
+    <div class="lg:col-span-2 bg-white rounded-xl border border-slate-200">
+      <div class="flex border-b border-slate-200 overflow-x-auto">
+        <button (click)="activeTab.set('general')" [class]="activeTab() === 'general' ? 'px-4 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">General</button>
+        <button (click)="activeTab.set('proyectos')" [class]="activeTab() === 'proyectos' ? 'px-4 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Proyectos ({{ proyectos().length }})</button>
+        <button (click)="activeTab.set('facturas')" [class]="activeTab() === 'facturas' ? 'px-4 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Facturas ({{ facturas().length }})</button>
+        <button (click)="activeTab.set('comunicaciones')" [class]="activeTab() === 'comunicaciones' ? 'px-4 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Comunicaciones</button>
+        <button (click)="activeTab.set('documentos')" [class]="activeTab() === 'documentos' ? 'px-4 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Documentos ({{ documentos().length }})</button>
+      </div>
+
+      @if (activeTab() === 'general') {
+        <div class="p-5 space-y-5">
+          <div>
+            <h3 class="text-sm font-semibold text-slate-700 mb-3">Historial de facturación</h3>
+            <div class="flex items-end gap-3 h-24">
+              @for (m of historialFacturacion; track m.mes) {
+                <div class="flex-1 flex flex-col items-center gap-1">
+                  <span class="text-xs text-slate-400">{{ m.valor / 1000 | number:'1.0-0' }}k</span>
+                  <div class="w-full bg-violet-400 rounded-t-md" [style.height]="barHeight(m.valor)"></div>
+                  <span class="text-xs text-slate-400">{{ m.mes }}</span>
+                </div>
+              }
+            </div>
+          </div>
+          <div>
+            <h3 class="text-sm font-semibold text-slate-700 mb-2">Notas</h3>
+            <textarea
+              placeholder="Añade notas sobre este contacto..."
+              rows="4"
+              class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none"
+              aria-label="Notas del contacto">
+            </textarea>
+          </div>
+        </div>
+      }
+
+      @if (activeTab() === 'proyectos') {
+        <div class="p-5 space-y-3">
+          @if (proyectos().length === 0) {
+            <p class="text-sm text-slate-400 text-center py-8">Sin proyectos asociados</p>
+          }
+          @for (p of proyectos(); track p.id) {
+            <div class="border border-slate-200 rounded-lg p-4">
+              <div class="flex items-start justify-between mb-2">
+                <div>
+                  <p class="font-medium text-slate-800">{{ p.description }}</p>
+                  <p class="text-xs text-slate-400">{{ p.id }} · {{ p.type }}</p>
+                </div>
+                <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getProjectStatusClass(p.status)">{{ p.status }}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="flex-1 bg-slate-100 rounded-full h-1.5">
+                  <div class="bg-violet-500 h-1.5 rounded-full" [style.width]="p.progress + '%'"></div>
+                </div>
+                <span class="text-xs text-slate-500">{{ p.progress }}%</span>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      @if (activeTab() === 'facturas') {
+        <div class="p-5 space-y-2">
+          @if (facturas().length === 0) {
+            <p class="text-sm text-slate-400 text-center py-8">Sin facturas asociadas</p>
+          }
+          @for (f of facturas(); track f.id) {
+            <div class="flex items-center justify-between p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
+              <div>
+                <p class="font-medium text-slate-800 text-sm">#{{ f.number }}</p>
+                <p class="text-xs text-slate-400">{{ f.issueDate }}</p>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="font-semibold text-slate-800">{{ f.total | number:'1.0-0' }} €</span>
+                <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getInvoiceStatusClass(f.status)">{{ f.status }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      @if (activeTab() === 'comunicaciones') {
+        <div class="p-5 space-y-3">
+          @for (h of historialComunicacion; track h.id) {
+            <div class="flex items-start gap-3 p-3 border border-slate-200 rounded-lg">
+              <span class="text-xl">{{ getComunicacionIcon(h.tipo) }}</span>
+              <div>
+                <p class="font-medium text-slate-800 text-sm">{{ h.descripcion }}</p>
+                <p class="text-xs text-slate-400 mt-0.5">{{ h.fecha }}</p>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      @if (activeTab() === 'documentos') {
+        <div class="p-5 space-y-2">
+          @if (documentos().length === 0) {
+            <p class="text-sm text-slate-400 text-center py-8">Sin documentos asociados</p>
+          }
+          @for (d of documentos(); track d.id) {
+            <div class="flex items-center justify-between p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
+              <div class="flex items-center gap-2">
+                <lucide-icon [img]="FileTextIcon" class="w-4 h-4 text-slate-400" />
+                <div>
+                  <p class="font-medium text-slate-800 text-sm">{{ d.name }}</p>
+                  <p class="text-xs text-slate-400">{{ d.type }} · {{ d.size }}</p>
+                </div>
+              </div>
+              <span class="text-xs text-slate-400">{{ d.updatedAt }}</span>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>
+} @else {
+  <div class="p-6 text-center text-slate-500">
+    <p>Contacto no encontrado.</p>
+    <button (click)="volver()" class="mt-3 text-violet-600 text-sm hover:underline">Volver a contactos</button>
+  </div>
+}

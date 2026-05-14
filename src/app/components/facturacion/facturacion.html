@@ -1,0 +1,282 @@
+<!-- Header -->
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+  <div>
+    <h1 class="text-2xl font-bold text-slate-900">Facturación</h1>
+    <p class="mt-1 text-sm text-slate-500">Gestiona tus facturas y controla los cobros</p>
+  </div>
+  <button class="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-500">
+    <lucide-icon [img]="PlusIcon" size="16"></lucide-icon>
+    Nueva Factura
+  </button>
+</div>
+
+<!-- Semáforo fiscal + VeriFactu -->
+<div class="mb-4 grid gap-4 sm:grid-cols-2">
+  <div class="rounded-xl border border-slate-200 bg-white p-4 flex items-center gap-4">
+    <div class="relative flex items-center justify-center w-12 h-12 shrink-0">
+      <div class="w-4 h-4 bg-emerald-500 rounded-full"></div>
+      <div class="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-30"></div>
+    </div>
+    <div>
+      <p class="text-sm font-semibold text-slate-700">Semáforo Fiscal</p>
+      <p class="text-xs text-emerald-600 font-medium">Al día — Sin incidencias</p>
+      <p class="text-xs text-slate-400 mt-0.5">Próximo vencimiento: 20 Jul 2026</p>
+    </div>
+  </div>
+  <div class="rounded-xl border border-slate-200 bg-white p-4 flex items-center gap-4">
+    <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
+      <lucide-icon [img]="ShieldCheckIcon" class="w-6 h-6 text-blue-600" />
+    </div>
+    <div>
+      <p class="text-sm font-semibold text-slate-700">VeriFactu</p>
+      <div class="flex items-center gap-2 mt-0.5">
+        <div class="flex-1 bg-slate-100 rounded-full h-1.5 max-w-24">
+          <div class="bg-blue-500 h-1.5 rounded-full w-full"></div>
+        </div>
+        <span class="text-xs font-semibold text-blue-700">100%</span>
+      </div>
+      <p class="text-xs text-slate-400 mt-0.5">Todas las facturas certificadas</p>
+    </div>
+  </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="mb-6 grid gap-4 sm:grid-cols-3">
+  <div class="rounded-xl border border-slate-200 bg-white p-5">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-green-50">
+        <lucide-icon [img]="CheckCircle2Icon" size="20" class="text-green-600"></lucide-icon>
+      </div>
+      <p class="text-sm text-slate-500">Cobrado</p>
+    </div>
+    <p class="text-3xl font-bold text-slate-900">{{ totalInvoiced() | number:'1.0-0' }}€</p>
+    <p class="mt-1 text-xs text-green-600">Facturas pagadas</p>
+  </div>
+  <div class="rounded-xl border border-slate-200 bg-white p-5">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50">
+        <lucide-icon [img]="ClockIcon" size="20" class="text-amber-600"></lucide-icon>
+      </div>
+      <p class="text-sm text-slate-500">Pendiente</p>
+    </div>
+    <p class="text-3xl font-bold text-slate-900">{{ totalPending() | number:'1.0-0' }}€</p>
+    <p class="mt-1 text-xs text-amber-600">Esperando pago</p>
+  </div>
+  <div class="rounded-xl border border-slate-200 bg-white p-5">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-red-50">
+        <lucide-icon [img]="AlertCircleIcon" size="20" class="text-red-600"></lucide-icon>
+      </div>
+      <p class="text-sm text-slate-500">Vencido</p>
+    </div>
+    <p class="text-3xl font-bold text-slate-900">{{ totalOverdue() | number:'1.0-0' }}€</p>
+    <p class="mt-1 text-xs text-red-500">Requiere atención</p>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+  <div class="flex border-b border-slate-200 overflow-x-auto">
+    <button (click)="activeTab.set('facturas')" [class]="activeTab() === 'facturas' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Facturas</button>
+    <button (click)="activeTab.set('fiscal')" [class]="activeTab() === 'fiscal' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Panel Fiscal</button>
+    <button (click)="activeTab.set('horas')" [class]="activeTab() === 'horas' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Registro de Horas</button>
+  </div>
+
+  <!-- TAB: Facturas -->
+  @if (activeTab() === 'facturas') {
+    <div class="p-4">
+      <!-- Filters -->
+      <div class="mb-4 flex flex-col gap-3 sm:flex-row">
+        <div class="relative flex-1">
+          <lucide-icon [img]="SearchIcon" size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></lucide-icon>
+          <input
+            type="text"
+            placeholder="Buscar por cliente o número..."
+            [value]="search()"
+            (input)="search.set($any($event.target).value)"
+            class="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm placeholder-slate-400 focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-100"
+            aria-label="Buscar factura"
+          />
+        </div>
+        <select (change)="filterStatus.set($any($event.target).value)"
+          class="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-violet-300 focus:outline-none"
+          aria-label="Filtrar por estado">
+          <option value="">Todos los estados</option>
+          <option value="pagada">Pagada</option>
+          <option value="pendiente">Pendiente</option>
+          <option value="vencida">Vencida</option>
+          <option value="borrador">Borrador</option>
+        </select>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b bg-slate-50">
+              <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Nº / Cliente</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Proyecto</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Importe</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Estado</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Emisión</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Vencimiento</th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (inv of filtered(); track inv.id) {
+              <tr class="hover:bg-slate-50 transition-colors">
+                <td class="px-5 py-4">
+                  <p class="font-semibold text-slate-900">{{ inv.client }}</p>
+                  <p class="text-xs text-slate-400"># {{ inv.number }}</p>
+                </td>
+                <td class="px-4 py-4 text-xs text-slate-500">{{ inv.project || '—' }}</td>
+                <td class="px-4 py-4">
+                  <p class="font-semibold text-slate-900">{{ inv.total | number:'1.2-2' }}€</p>
+                  <p class="text-xs text-slate-400">Base: {{ inv.amount | number:'1.2-2' }}€</p>
+                </td>
+                <td class="px-4 py-4">
+                  <span class="rounded-full px-2.5 py-1 text-xs font-medium" [class]="getStatusClass(inv.status)">
+                    {{ getStatusLabel(inv.status) }}
+                  </span>
+                </td>
+                <td class="px-4 py-4 text-xs text-slate-500">{{ inv.issueDate }}</td>
+                <td class="px-4 py-4">
+                  <span class="text-xs"
+                    [class.text-red-600]="inv.status === 'vencida'"
+                    [class.font-semibold]="inv.status === 'vencida'"
+                    [class.text-slate-500]="inv.status !== 'vencida'">
+                    {{ inv.dueDate }}
+                  </span>
+                </td>
+                <td class="px-4 py-4">
+                  <div class="flex items-center gap-1">
+                    <button class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Ver factura">
+                      <lucide-icon [img]="EyeIcon" size="15"></lucide-icon>
+                    </button>
+                    <button class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Descargar factura">
+                      <lucide-icon [img]="DownloadIcon" size="15"></lucide-icon>
+                    </button>
+                    @if (inv.status === 'pendiente' || inv.status === 'vencida') {
+                      <button class="rounded-lg p-1.5 text-slate-400 hover:bg-violet-50 hover:text-violet-700" aria-label="Enviar factura">
+                        <lucide-icon [img]="SendIcon" size="15"></lucide-icon>
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+            @if (filtered().length === 0) {
+              <tr>
+                <td colspan="7" class="px-5 py-12 text-center text-sm text-slate-400">
+                  No se encontraron facturas
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- TAB: Panel Fiscal -->
+  @if (activeTab() === 'fiscal') {
+    <div class="p-5 space-y-5">
+      <div class="space-y-2">
+        <h3 class="text-sm font-semibold text-slate-700">Modelos fiscales</h3>
+        @for (modelo of modelosFiscales; track modelo.modelo + modelo.descripcion) {
+          <div class="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <lucide-icon [img]="FileTextIcon" class="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <p class="font-semibold text-slate-800 text-sm">{{ modelo.modelo }}</p>
+                <p class="text-xs text-slate-500">{{ modelo.descripcion }}</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-4">
+              <div class="text-right">
+                <p class="font-semibold text-slate-800">{{ modelo.importe | number:'1.0-0' }} €</p>
+                <p class="text-xs text-slate-400">{{ modelo.vencimiento }}</p>
+              </div>
+              <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getModeloEstadoClass(modelo.estado)">{{ modelo.estado }}</span>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="flex flex-wrap gap-3">
+        <button class="flex items-center gap-2 px-4 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700">
+          <lucide-icon [img]="FileTextIcon" class="w-4 h-4" />Generar modelos
+        </button>
+        <button class="flex items-center gap-2 px-4 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600">
+          <lucide-icon [img]="DownloadIcon" class="w-4 h-4" />Exportar XML
+        </button>
+        <button class="flex items-center gap-2 px-4 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600">
+          <lucide-icon [img]="ExternalLinkIcon" class="w-4 h-4" />Acceder a la AEAT
+        </button>
+      </div>
+
+      <div class="p-4 bg-blue-50 rounded-xl border border-blue-200 text-sm">
+        <div class="flex items-center gap-2 mb-2">
+          <lucide-icon [img]="ShieldCheckIcon" class="w-4 h-4 text-blue-600" />
+          <p class="font-semibold text-blue-800">VeriFactu — Trazabilidad garantizada</p>
+        </div>
+        <p class="text-xs text-blue-600">Todas las facturas están certificadas con hash SHA-256 conforme al RD 1007/2023. Período de retención: 5 años.</p>
+      </div>
+    </div>
+  }
+
+  <!-- TAB: Registro de Horas -->
+  @if (activeTab() === 'horas') {
+    <div class="p-5 space-y-4">
+      <div class="grid grid-cols-3 gap-3">
+        <div class="p-3 bg-slate-50 rounded-lg text-center">
+          <p class="text-xs text-slate-500">Horas totales</p>
+          <p class="text-xl font-bold text-slate-800">{{ totalHoras() }}h</p>
+        </div>
+        <div class="p-3 bg-amber-50 rounded-lg text-center">
+          <p class="text-xs text-slate-500">Sin facturar</p>
+          <p class="text-xl font-bold text-amber-700">{{ horasPendientes() }}h</p>
+        </div>
+        <div class="p-3 bg-violet-50 rounded-lg text-center">
+          <p class="text-xs text-slate-500">Valor pendiente</p>
+          <p class="text-xl font-bold text-violet-700">{{ horasPendientes() * 70 | number:'1.0-0' }} €</p>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-slate-500 border-b border-slate-100">
+              <th class="pb-3 font-medium">Fecha</th>
+              <th class="pb-3 font-medium">Cliente / Proyecto</th>
+              <th class="pb-3 font-medium">Descripción</th>
+              <th class="pb-3 font-medium text-right">Horas</th>
+              <th class="pb-3 font-medium text-right">Importe</th>
+              <th class="pb-3 font-medium text-center">Estado</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (hora of registroHoras; track hora.id) {
+              <tr class="hover:bg-slate-50">
+                <td class="py-3 text-slate-500 text-xs">{{ hora.fecha }}</td>
+                <td class="py-3">
+                  <p class="font-medium text-slate-800">{{ hora.cliente }}</p>
+                  <p class="text-xs text-slate-400">{{ hora.proyecto }}</p>
+                </td>
+                <td class="py-3 text-slate-500 text-xs max-w-48 truncate">{{ hora.descripcion }}</td>
+                <td class="py-3 text-right font-semibold text-slate-800">{{ hora.horas }}h</td>
+                <td class="py-3 text-right text-slate-600">{{ hora.importe | number:'1.0-0' }} €</td>
+                <td class="py-3 text-center">
+                  <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getHoraEstadoClass(hora.estadoFacturacion)">
+                    {{ hora.estadoFacturacion }}
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</div>

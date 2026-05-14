@@ -1,0 +1,65 @@
+<div class="min-h-screen bg-slate-950 text-white">
+  <header class="border-b border-slate-800 bg-slate-900 px-6 py-4">
+    <div class="flex flex-wrap items-center gap-4">
+      <a
+        routerLink="/"
+        class="flex items-center gap-2 text-sm text-slate-400 transition-colors hover:text-white"
+      >
+        <lucide-icon [img]="ArrowLeftIcon" [size]="16" />
+        Volver al CRM
+      </a>
+      <div class="h-4 w-px bg-slate-700"></div>
+      <div class="flex items-center gap-2">
+        <lucide-icon [img]="ShieldIcon" [size]="18" class="text-violet-400" />
+        <span class="font-semibold">Superuser</span>
+      </div>
+
+      @if (companies().length > 0) {
+        <div class="ml-auto flex items-center gap-2">
+          <span class="text-xs text-slate-500">Empresa activa:</span>
+          <select
+            [value]="activeCompany()?.id ?? ''"
+            (change)="selectCompany($event)"
+            class="rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-white focus:border-violet-500 focus:outline-none"
+            aria-label="Seleccionar empresa activa"
+          >
+            <option value="" disabled>Selecciona empresa</option>
+            @for (company of companies(); track company.id) {
+              <option [value]="company.id">{{ company.name }}</option>
+            }
+          </select>
+          @if (activeCompany()) {
+            <span class="rounded-full bg-violet-500/15 px-2.5 py-0.5 text-xs font-medium text-violet-300">
+              Activa
+            </span>
+          }
+        </div>
+      }
+    </div>
+  </header>
+
+  <nav class="border-b border-slate-800 bg-slate-900 px-6">
+    <div class="flex">
+      <a
+        routerLink="companies"
+        routerLinkActive="border-b-2 border-violet-400 text-white"
+        class="flex items-center gap-2 px-4 py-3 text-sm text-slate-400 transition-colors hover:text-white"
+      >
+        <lucide-icon [img]="Building2Icon" [size]="15" />
+        Empresas
+      </a>
+      <a
+        routerLink="users"
+        routerLinkActive="border-b-2 border-violet-400 text-white"
+        class="flex items-center gap-2 px-4 py-3 text-sm text-slate-400 transition-colors hover:text-white"
+      >
+        <lucide-icon [img]="UsersIcon" [size]="15" />
+        Usuarios
+      </a>
+    </div>
+  </nav>
+
+  <main class="p-6">
+    <router-outlet />
+  </main>
+</div>

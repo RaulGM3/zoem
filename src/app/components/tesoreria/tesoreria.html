@@ -1,0 +1,186 @@
+<div class="p-6 space-y-6">
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center">
+        <lucide-icon [img]="WalletIcon" class="w-5 h-5 text-violet-600" />
+      </div>
+      <div>
+        <h1 class="text-xl font-semibold text-slate-800">Tesorería</h1>
+        <p class="text-sm text-slate-500">Flujo de caja y cobros</p>
+      </div>
+    </div>
+    <div class="flex gap-2">
+      <button class="flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600">
+        <lucide-icon [img]="RefreshCwIcon" class="w-4 h-4" />
+        Sincronizar banco
+      </button>
+      <button class="flex items-center gap-2 px-3 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700">
+        <lucide-icon [img]="ArrowRightIcon" class="w-4 h-4" />
+        Acciones de cobro
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    @for (stat of stats; track stat.label) {
+      <div class="bg-white rounded-xl border border-slate-200 p-4">
+        <p class="text-sm text-slate-500">{{ stat.label }}</p>
+        <p class="text-2xl font-bold text-slate-800 mt-1">{{ stat.value }}</p>
+        <p [class]="stat.positive ? 'text-xs text-emerald-600 mt-1' : 'text-xs text-red-600 mt-1'">{{ stat.change }}</p>
+      </div>
+    }
+  </div>
+
+  <!-- Tabs -->
+  <div class="bg-white rounded-xl border border-slate-200">
+    <div class="flex border-b border-slate-200">
+      <button
+        (click)="activeTab.set('cobros')"
+        [class]="activeTab() === 'cobros' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700'">
+        Cobros automatizados
+      </button>
+      <button
+        (click)="activeTab.set('conciliacion')"
+        [class]="activeTab() === 'conciliacion' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700'">
+        Conciliación bancaria
+      </button>
+      <button
+        (click)="activeTab.set('rentabilidad')"
+        [class]="activeTab() === 'rentabilidad' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700'">
+        Rentabilidad por cliente
+      </button>
+    </div>
+
+    @if (activeTab() === 'cobros') {
+      <div class="p-5 space-y-4">
+        <!-- Pipeline de escalación -->
+        <div class="flex gap-2 items-center text-sm text-slate-500 mb-4 flex-wrap">
+          <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">Recordatorio</span>
+          <lucide-icon [img]="ArrowRightIcon" class="w-4 h-4 text-slate-300" />
+          <span class="px-3 py-1 bg-amber-100 text-amber-700 rounded-full font-medium">Formal</span>
+          <lucide-icon [img]="ArrowRightIcon" class="w-4 h-4 text-slate-300" />
+          <span class="px-3 py-1 bg-orange-100 text-orange-700 rounded-full font-medium">Remesa SEPA</span>
+          <lucide-icon [img]="ArrowRightIcon" class="w-4 h-4 text-slate-300" />
+          <span class="px-3 py-1 bg-red-100 text-red-700 rounded-full font-medium">Aviso Legal</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-slate-500 border-b border-slate-100">
+                <th class="pb-3 font-medium">Cliente</th>
+                <th class="pb-3 font-medium">Factura</th>
+                <th class="pb-3 font-medium text-right">Importe</th>
+                <th class="pb-3 font-medium text-center">Días vencido</th>
+                <th class="pb-3 font-medium">Nivel</th>
+                <th class="pb-3 font-medium">Próxima acción</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-50">
+              @for (cobro of cobros; track cobro.id) {
+                <tr class="hover:bg-slate-50">
+                  <td class="py-3 font-medium text-slate-800">{{ cobro.cliente }}</td>
+                  <td class="py-3 text-slate-500">{{ cobro.factura }}</td>
+                  <td class="py-3 text-right font-semibold text-slate-800">{{ cobro.importe | number:'1.0-0' }} €</td>
+                  <td class="py-3 text-center">
+                    <span class="text-red-600 font-semibold">{{ cobro.diasVencido }}d</span>
+                  </td>
+                  <td class="py-3">
+                    <span [class]="'px-2 py-1 rounded-full text-xs font-medium ' + getNivelClass(cobro.nivel)">
+                      {{ getNivelLabel(cobro.nivel) }}
+                    </span>
+                  </td>
+                  <td class="py-3 text-slate-500">{{ cobro.proximaAccion }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex justify-between items-center">
+          <span class="text-sm text-slate-500">Total vencido: <span class="font-semibold text-red-600">{{ totalVencido() | number:'1.0-0' }} €</span></span>
+        </div>
+      </div>
+    }
+
+    @if (activeTab() === 'conciliacion') {
+      <div class="p-5 space-y-4">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm text-slate-600">Tasa de conciliación</span>
+          <span [class]="'px-3 py-1 rounded-full text-sm font-semibold ' + (conciliacionRate() >= 80 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700')">
+            {{ conciliacionRate() }}%
+          </span>
+        </div>
+        <div class="w-full bg-slate-100 rounded-full h-2">
+          <div class="bg-green-500 h-2 rounded-full" [style.width]="conciliacionRate() + '%'"></div>
+        </div>
+
+        <div class="overflow-x-auto mt-4">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-slate-500 border-b border-slate-100">
+                <th class="pb-3 font-medium">Fecha</th>
+                <th class="pb-3 font-medium">Descripción</th>
+                <th class="pb-3 font-medium text-right">Importe</th>
+                <th class="pb-3 font-medium text-center">Estado</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-50">
+              @for (trx of transacciones; track trx.id) {
+                <tr class="hover:bg-slate-50">
+                  <td class="py-3 text-slate-500">{{ trx.fecha }}</td>
+                  <td class="py-3 text-slate-700">{{ trx.descripcion }}</td>
+                  <td [class]="'py-3 text-right font-semibold ' + (isPositive(trx.importe) ? 'text-emerald-600' : 'text-red-600')">
+                    {{ trx.importe > 0 ? '+' : '' }}{{ trx.importe | number:'1.0-0' }} €
+                  </td>
+                  <td class="py-3 text-center">
+                    <span [class]="'px-2 py-1 rounded-full text-xs font-medium ' + getEstadoClass(trx.estado)">
+                      {{ getEstadoLabel(trx.estado) }}
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    @if (activeTab() === 'rentabilidad') {
+      <div class="p-5">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-slate-500 border-b border-slate-100">
+                <th class="pb-3 font-medium">Cliente</th>
+                <th class="pb-3 font-medium text-right">Ingresos</th>
+                <th class="pb-3 font-medium text-right">Costes</th>
+                <th class="pb-3 font-medium text-right">Margen</th>
+                <th class="pb-3 font-medium text-right">Días de pago</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-50">
+              @for (r of rentabilidad; track r.cliente) {
+                <tr class="hover:bg-slate-50">
+                  <td class="py-3 font-medium text-slate-800">{{ r.cliente }}</td>
+                  <td class="py-3 text-right text-emerald-600 font-semibold">{{ r.ingresos | number:'1.0-0' }} €</td>
+                  <td class="py-3 text-right text-red-500">{{ r.costes | number:'1.0-0' }} €</td>
+                  <td class="py-3 text-right">
+                    <span [class]="'px-2 py-1 rounded-full text-xs font-semibold ' + (r.margen >= 50 ? 'bg-green-100 text-green-700' : r.margen >= 30 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700')">
+                      {{ r.margen }}%
+                    </span>
+                  </td>
+                  <td [class]="'py-3 text-right ' + (r.diasPago <= 30 ? 'text-emerald-600' : r.diasPago <= 60 ? 'text-amber-600' : 'text-red-600')">
+                    {{ r.diasPago }} días
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  </div>
+</div>

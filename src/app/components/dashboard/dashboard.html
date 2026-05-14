@@ -1,0 +1,193 @@
+<!-- Page Header -->
+<div class="mb-6">
+  <h1 class="text-2xl font-bold text-slate-900">Dashboard</h1>
+  <p class="mt-1 text-sm text-slate-500">Buenos días, Carlos. Aquí está el resumen de tu negocio.</p>
+</div>
+
+<!-- AI Summary Banner -->
+<div class="mb-6 rounded-xl border border-violet-200 bg-gradient-to-r from-violet-50 to-violet-100/50 p-4">
+  <div class="flex items-start gap-3">
+    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white">
+      <lucide-icon [img]="SparklesIcon" size="20"></lucide-icon>
+    </div>
+    <div class="flex-1">
+      <p class="text-sm font-semibold text-violet-900">Resumen IA del día</p>
+      <p class="mt-1 text-sm text-violet-700">
+        Hoy tienes 5 citas programadas y 2 tareas urgentes pendientes. Tu facturación del mes va un 15% por encima del objetivo.
+      </p>
+      <div class="mt-3 space-y-1.5">
+        @for (alert of aiAlerts; track alert.message) {
+          <div class="flex items-start gap-2 rounded-lg border px-3 py-2 text-xs" [class]="getAlertClass(alert.type)">
+            {{ alert.message }}
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Primary Stats -->
+<div class="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+  @for (stat of primaryStats; track stat.title) {
+    <a [routerLink]="stat.href"
+      class="group flex flex-col rounded-xl border border-slate-200 bg-white p-5 transition-shadow hover:shadow-md">
+      <div class="flex items-center justify-between">
+        <div class="flex h-10 w-10 items-center justify-center rounded-lg" [class]="stat.bg">
+          <lucide-icon [img]="stat.icon" size="20" [class]="stat.color"></lucide-icon>
+        </div>
+        <lucide-icon [img]="ChevronRightIcon" size="16" class="text-slate-300 group-hover:text-slate-500"></lucide-icon>
+      </div>
+      <p class="mt-3 text-sm font-medium text-slate-500">{{ stat.title }}</p>
+      <p class="mt-1 text-2xl font-bold text-slate-900">{{ stat.value }}</p>
+      <p class="mt-1 text-xs"
+        [class.text-green-600]="stat.positive === true"
+        [class.text-red-500]="stat.positive === false"
+        [class.text-slate-400]="stat.positive === null">
+        {{ stat.change }}
+      </p>
+    </a>
+  }
+</div>
+
+<!-- Secondary Stats -->
+<div class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+  @for (stat of secondaryStats; track stat.title) {
+    <a [routerLink]="stat.href"
+      class="group flex flex-col rounded-xl border border-slate-200 bg-white p-5 transition-shadow hover:shadow-md">
+      <div class="flex items-center justify-between">
+        <div class="flex h-10 w-10 items-center justify-center rounded-lg" [class]="stat.bg">
+          <lucide-icon [img]="stat.icon" size="20" [class]="stat.color"></lucide-icon>
+        </div>
+        <lucide-icon [img]="ChevronRightIcon" size="16" class="text-slate-300 group-hover:text-slate-500"></lucide-icon>
+      </div>
+      <p class="mt-3 text-sm font-medium text-slate-500">{{ stat.title }}</p>
+      <p class="mt-1 text-xl font-bold text-slate-900">{{ stat.value }}</p>
+      <p class="mt-1 text-xs"
+        [class.text-green-600]="stat.positive === true"
+        [class.text-red-500]="stat.positive === false"
+        [class.text-slate-400]="stat.positive === null">
+        {{ stat.change }}
+      </p>
+    </a>
+  }
+</div>
+
+<!-- Bottom Grid -->
+<div class="grid gap-6 lg:grid-cols-3">
+
+  <!-- Activity Feed -->
+  <div class="rounded-xl border border-slate-200 bg-white lg:col-span-1">
+    <div class="flex items-center justify-between border-b px-5 py-4">
+      <h2 class="text-sm font-semibold text-slate-900">Actividad Reciente</h2>
+      <a routerLink="/recepcion-ia"
+        class="text-xs font-medium text-violet-600 hover:text-violet-500">Ver todo</a>
+    </div>
+    <div class="divide-y divide-slate-100">
+      @for (item of activityFeed; track item.id) {
+        <a [routerLink]="item.href"
+          class="flex items-start gap-3 px-5 py-3 hover:bg-slate-50 transition-colors">
+          <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full" [class]="item.bg">
+            <lucide-icon [img]="getActivityIcon(item.icon)" size="14" [class]="item.color"></lucide-icon>
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-medium text-slate-800">{{ item.title }}</p>
+            <p class="truncate text-xs text-slate-500">{{ item.description }}</p>
+            <p class="mt-0.5 text-xs text-slate-400">{{ item.time }}</p>
+          </div>
+        </a>
+      }
+    </div>
+  </div>
+
+  <!-- Recent Projects -->
+  <div class="rounded-xl border border-slate-200 bg-white lg:col-span-1">
+    <div class="flex items-center justify-between border-b px-5 py-4">
+      <h2 class="text-sm font-semibold text-slate-900">Proyectos Activos</h2>
+      <a routerLink="/proyectos"
+        class="text-xs font-medium text-violet-600 hover:text-violet-500">Ver todos</a>
+    </div>
+    <div class="divide-y divide-slate-100">
+      @for (project of recentProjects; track project.id) {
+        <div class="px-5 py-3">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium text-slate-900">{{ project.client }}</p>
+              <p class="truncate text-xs text-slate-500">{{ project.description }}</p>
+            </div>
+            <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium" [class]="getProjectStatusClass(project.status)">
+              {{ project.status }}
+            </span>
+          </div>
+          <div class="mt-2">
+            <div class="flex items-center justify-between text-xs text-slate-500 mb-1">
+              <span>{{ project.assignedTo }}</span>
+              <span class="font-medium">{{ project.progress }}%</span>
+            </div>
+            <div class="h-1.5 rounded-full bg-slate-100">
+              <div class="h-1.5 rounded-full bg-violet-500 transition-all" [style.width.%]="project.progress"></div>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Today + IA Leads -->
+  <div class="flex flex-col gap-6">
+    <!-- Today's Events -->
+    <div class="rounded-xl border border-slate-200 bg-white">
+      <div class="flex items-center justify-between border-b px-5 py-4">
+        <h2 class="text-sm font-semibold text-slate-900">Hoy</h2>
+        <a routerLink="/calendario"
+          class="text-xs font-medium text-violet-600 hover:text-violet-500">Calendario</a>
+      </div>
+      <div class="divide-y divide-slate-100">
+        @for (event of todayEvents; track event.id) {
+          <div class="flex items-start gap-3 px-5 py-3">
+            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-50">
+              <lucide-icon [img]="CalendarIcon" size="14" class="text-violet-600"></lucide-icon>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-slate-900">{{ event.title }}</p>
+              <p class="text-xs text-slate-500">{{ event.client }} · {{ event.time }}</p>
+            </div>
+          </div>
+        }
+        @if (todayEvents.length === 0) {
+          <div class="px-5 py-4 text-center text-sm text-slate-400">Sin citas hoy</div>
+        }
+      </div>
+    </div>
+
+    <!-- IA Leads -->
+    <div class="rounded-xl border border-slate-200 bg-white">
+      <div class="flex items-center justify-between border-b px-5 py-4">
+        <h2 class="text-sm font-semibold text-slate-900">Leads IA Pendientes</h2>
+        <a routerLink="/recepcion-ia"
+          class="text-xs font-medium text-violet-600 hover:text-violet-500">Ver todos</a>
+      </div>
+      <div class="divide-y divide-slate-100">
+        @for (lead of recentIA; track lead.id) {
+          <div class="flex items-start gap-3 px-5 py-3">
+            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-50">
+              <lucide-icon [img]="BotIcon" size="14" class="text-violet-600"></lucide-icon>
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium text-slate-900">{{ lead.cliente.nombre }}</p>
+              <p class="text-xs text-slate-500">{{ lead.categoria }} · Score: {{ lead.puntuacion }}</p>
+            </div>
+            <span class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+              [class.bg-red-100]="lead.urgencia === 'alta'"
+              [class.text-red-700]="lead.urgencia === 'alta'"
+              [class.bg-amber-100]="lead.urgencia === 'normal'"
+              [class.text-amber-700]="lead.urgencia === 'normal'"
+              [class.bg-slate-100]="lead.urgencia === 'baja'"
+              [class.text-slate-600]="lead.urgencia === 'baja'">
+              {{ lead.urgencia }}
+            </span>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,347 @@
+<div class="space-y-6">
+  <!-- Top bar -->
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <lucide-icon [img]="Building2Icon" [size]="20" class="text-violet-400" />
+      <h1 class="text-xl font-semibold">Empresas</h1>
+      <span class="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-400">
+        {{ companies().length }}
+      </span>
+    </div>
+
+    <div class="flex gap-3">
+      <div class="relative">
+        <lucide-icon
+          [img]="SearchIcon"
+          [size]="15"
+          class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+        />
+        <input
+          type="text"
+          placeholder="Buscar empresa..."
+          [value]="search()"
+          (input)="search.set($any($event.target).value)"
+          class="rounded-lg border border-slate-700 bg-slate-800 py-2 pl-9 pr-4 text-sm text-white placeholder-slate-500 focus:border-violet-500 focus:outline-none"
+        />
+      </div>
+      <button
+        (click)="openCreate()"
+        class="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-500"
+      >
+        <lucide-icon [img]="PlusIcon" [size]="15" />
+        Nueva empresa
+      </button>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="overflow-hidden rounded-xl border border-slate-800">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-900 text-left text-xs uppercase tracking-wider text-slate-500">
+        <tr>
+          <th class="px-4 py-3">Empresa</th>
+          <th class="px-4 py-3">Rubro</th>
+          <th class="px-4 py-3">Ciudad</th>
+          <th class="px-4 py-3">Teléfono</th>
+          <th class="px-4 py-3">Plan</th>
+          <th class="px-4 py-3">Estado</th>
+          <th class="px-4 py-3">Alta</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-800 bg-slate-900/50">
+        @for (company of filteredCompanies(); track company.id) {
+          <tr class="transition-colors hover:bg-slate-800/50">
+            <td class="px-4 py-3">
+              <div class="font-medium text-white">{{ company.name }}</div>
+              <div class="text-xs text-slate-500">{{ company.email }}</div>
+            </td>
+            <td class="px-4 py-3 text-slate-400">{{ rubroLabels[company.rubro] }}</td>
+            <td class="px-4 py-3 text-slate-400">
+              <div>{{ company.ciudad }}</div>
+              <div class="text-xs text-slate-600">{{ caLabels[company.ca] }}</div>
+            </td>
+            <td class="px-4 py-3 text-slate-400">{{ company.telefono }}</td>
+            <td class="px-4 py-3">
+              <span class="rounded-full px-2 py-0.5 text-xs font-medium {{ getPlanClass(company.plan) }}">
+                {{ company.plan }}
+              </span>
+            </td>
+            <td class="px-4 py-3">
+              @if (company.status === 'active') {
+                <span class="flex items-center gap-1.5 text-emerald-400">
+                  <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+                  Activa
+                </span>
+              } @else if (company.status === 'trial') {
+                <span class="flex items-center gap-1.5 text-amber-400">
+                  <span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
+                  Trial
+                </span>
+              } @else {
+                <span class="flex items-center gap-1.5 text-slate-500">
+                  <span class="h-1.5 w-1.5 rounded-full bg-slate-500"></span>
+                  Inactiva
+                </span>
+              }
+            </td>
+            <td class="px-4 py-3 text-slate-500">{{ formatDate(company.createdAt) }}</td>
+            <td class="px-4 py-3">
+              <div class="flex items-center justify-end gap-2">
+                <button
+                  (click)="openEdit(company)"
+                  class="rounded p-1.5 text-slate-500 transition-colors hover:bg-slate-700 hover:text-white"
+                  aria-label="Editar empresa"
+                >
+                  <lucide-icon [img]="EditIcon" [size]="14" />
+                </button>
+                <button
+                  (click)="delete(company.id)"
+                  class="rounded p-1.5 text-slate-500 transition-colors hover:bg-red-500/20 hover:text-red-400"
+                  aria-label="Eliminar empresa"
+                >
+                  <lucide-icon [img]="Trash2Icon" [size]="14" />
+                </button>
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="8" class="px-4 py-10 text-center text-slate-500">
+              No hay empresas que coincidan con la búsqueda.
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Form modal -->
+@if (showForm()) {
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="company-form-title"
+  >
+    <div class="w-full max-w-2xl rounded-xl border border-slate-700 bg-slate-900 shadow-2xl">
+      <!-- Header -->
+      <div class="flex items-center justify-between border-b border-slate-800 px-6 py-4">
+        <h2 id="company-form-title" class="text-lg font-semibold text-white">
+          {{ editingId() ? 'Editar empresa' : 'Nueva empresa' }}
+        </h2>
+        <button
+          (click)="showForm.set(false)"
+          class="rounded p-1 text-slate-500 hover:text-white"
+          aria-label="Cerrar formulario"
+        >
+          <lucide-icon [img]="XIcon" [size]="18" />
+        </button>
+      </div>
+
+      <!-- Body -->
+      <form [formGroup]="form" (ngSubmit)="save()" class="space-y-5 p-6">
+
+        <!-- Nombre -->
+        <div>
+          <label for="co-name" class="mb-1 block text-xs font-medium text-slate-400">
+            Nombre de la empresa <span class="text-red-400">*</span>
+          </label>
+          <input
+            id="co-name"
+            type="text"
+            formControlName="name"
+            class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-violet-500 focus:outline-none"
+            placeholder="García & Asociados"
+          />
+        </div>
+
+        <!-- Rubro + CA -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="co-rubro" class="mb-1 block text-xs font-medium text-slate-400">
+              Rubro <span class="text-red-400">*</span>
+            </label>
+            <select
+              id="co-rubro"
+              formControlName="rubro"
+              class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
+            >
+              <option value="abogados">Despacho de Abogados</option>
+            </select>
+          </div>
+          <div>
+            <label for="co-ca" class="mb-1 block text-xs font-medium text-slate-400">
+              Comunidad Autónoma <span class="text-red-400">*</span>
+            </label>
+            <select
+              id="co-ca"
+              formControlName="ca"
+              class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
+            >
+              @for (entry of caEntries; track entry[0]) {
+                <option [value]="entry[0]">{{ entry[1] }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <!-- Email + Teléfono -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="co-email" class="mb-1 block text-xs font-medium text-slate-400">
+              Email <span class="text-red-400">*</span>
+            </label>
+            <input
+              id="co-email"
+              type="email"
+              formControlName="email"
+              class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-violet-500 focus:outline-none"
+              placeholder="contacto@despacho.com"
+            />
+          </div>
+          <div>
+            <label for="co-telefono" class="mb-1 block text-xs font-medium text-slate-400">
+              Teléfono <span class="text-red-400">*</span>
+            </label>
+            <input
+              id="co-telefono"
+              type="tel"
+              formControlName="telefono"
+              class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-violet-500 focus:outline-none"
+              placeholder="+34 91 000 00 00"
+            />
+          </div>
+        </div>
+
+        <!-- Dirección -->
+        <div>
+          <label for="co-direccion" class="mb-1 block text-xs font-medium text-slate-400">
+            Dirección <span class="text-red-400">*</span>
+          </label>
+          <input
+            id="co-direccion"
+            type="text"
+            formControlName="direccion"
+            class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-violet-500 focus:outline-none"
+            placeholder="Calle Gran Vía 42, 3º"
+          />
+        </div>
+
+        <!-- Código postal + Ciudad -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="co-cp" class="mb-1 block text-xs font-medium text-slate-400">
+              Código postal <span class="text-red-400">*</span>
+            </label>
+            <input
+              id="co-cp"
+              type="text"
+              formControlName="codigoPostal"
+              class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-violet-500 focus:outline-none"
+              placeholder="28013"
+            />
+          </div>
+          <div>
+            <label for="co-ciudad" class="mb-1 block text-xs font-medium text-slate-400">
+              Ciudad <span class="text-red-400">*</span>
+            </label>
+            <input
+              id="co-ciudad"
+              type="text"
+              formControlName="ciudad"
+              class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-violet-500 focus:outline-none"
+              placeholder="Madrid"
+            />
+          </div>
+        </div>
+
+        <!-- CIF + Web -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="co-cif" class="mb-1 block text-xs font-medium text-slate-400">CIF/NIF</label>
+            <input
+              id="co-cif"
+              type="text"
+              formControlName="cif"
+              class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-violet-500 focus:outline-none"
+              placeholder="B12345678"
+            />
+          </div>
+          <div>
+            <label for="co-web" class="mb-1 block text-xs font-medium text-slate-400">Web</label>
+            <input
+              id="co-web"
+              type="url"
+              formControlName="website"
+              class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-violet-500 focus:outline-none"
+              placeholder="https://despacho.com"
+            />
+          </div>
+        </div>
+
+        <!-- Plan + Estado -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="co-plan" class="mb-1 block text-xs font-medium text-slate-400">Plan</label>
+            <select
+              id="co-plan"
+              formControlName="plan"
+              class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
+            >
+              <option value="free">Free</option>
+              <option value="pro">Pro</option>
+              <option value="enterprise">Enterprise</option>
+            </select>
+          </div>
+          <div>
+            <label for="co-status" class="mb-1 block text-xs font-medium text-slate-400">Estado</label>
+            <select
+              id="co-status"
+              formControlName="status"
+              class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
+            >
+              <option value="active">Activa</option>
+              <option value="trial">Trial</option>
+              <option value="inactive">Inactiva</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Descripción -->
+        <div>
+          <label for="co-desc" class="mb-1 block text-xs font-medium text-slate-400">
+            Descripción
+          </label>
+          <textarea
+            id="co-desc"
+            formControlName="descripcion"
+            rows="2"
+            class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-violet-500 focus:outline-none"
+            placeholder="Breve descripción del despacho..."
+          ></textarea>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex justify-end gap-3 border-t border-slate-800 pt-4">
+          <button
+            type="button"
+            (click)="showForm.set(false)"
+            class="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-400 transition-colors hover:border-slate-500 hover:text-white"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            [disabled]="form.invalid || saving()"
+            class="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <lucide-icon [img]="CheckIcon" [size]="14" />
+            {{ saving() ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

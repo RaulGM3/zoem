@@ -1,0 +1,204 @@
+@if (proyecto(); as p) {
+<div class="p-6 space-y-6">
+  <!-- Header -->
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <div class="flex items-center gap-3">
+      <button (click)="volver()" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500" aria-label="Volver">
+        <lucide-icon [img]="ArrowLeftIcon" class="w-5 h-5" />
+      </button>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-xl font-semibold text-slate-800">{{ p.description }}</h1>
+          <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getStatusClass(p.status)">{{ p.status }}</span>
+          <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getPriorityClass(p.priority)">{{ p.priority }}</span>
+        </div>
+        <p class="text-sm text-slate-500">{{ p.id }} · {{ p.type }}</p>
+      </div>
+    </div>
+    <div class="flex gap-2">
+      <button class="flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600">
+        <lucide-icon [img]="EditIcon" class="w-4 h-4" />Editar
+      </button>
+      <button class="flex items-center gap-2 px-3 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700">
+        <lucide-icon [img]="ReceiptIcon" class="w-4 h-4" />Facturar
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="bg-white rounded-xl border border-slate-200 p-4">
+      <p class="text-sm text-slate-500">Progreso</p>
+      <p class="text-2xl font-bold text-slate-800 mt-1">{{ p.progress }}%</p>
+      <div class="w-full bg-slate-100 rounded-full h-1.5 mt-2">
+        <div class="bg-violet-500 h-1.5 rounded-full" [style.width]="p.progress + '%'"></div>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-4">
+      <p class="text-sm text-slate-500">Horas registradas</p>
+      <p class="text-2xl font-bold text-slate-800 mt-1">{{ p.hoursLogged ?? 0 }}h</p>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-4">
+      <p class="text-sm text-slate-500">Presupuesto</p>
+      <p class="text-2xl font-bold text-slate-800 mt-1">{{ (p.budget ?? 0) | number:'1.0-0' }} €</p>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-4">
+      <p class="text-sm text-slate-500">Días hasta entrega</p>
+      @if (p.daysToDeadline !== undefined) {
+        <p [class]="'text-2xl font-bold mt-1 ' + (p.daysToDeadline <= 7 ? 'text-red-600' : p.daysToDeadline <= 21 ? 'text-amber-600' : 'text-slate-800')">
+          {{ p.daysToDeadline }}d
+        </p>
+      } @else {
+        <p class="text-2xl font-bold text-slate-400 mt-1">—</p>
+      }
+    </div>
+  </div>
+
+  <div class="grid lg:grid-cols-3 gap-6">
+    <!-- Tabs izquierda -->
+    <div class="lg:col-span-2 bg-white rounded-xl border border-slate-200">
+      <div class="flex border-b border-slate-200">
+        <button (click)="activeTab.set('tareas')" [class]="activeTab() === 'tareas' ? 'px-4 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600' : 'px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700'">
+          Tareas ({{ completadas() }}/{{ tareas().length }})
+        </button>
+        <button (click)="activeTab.set('documentos')" [class]="activeTab() === 'documentos' ? 'px-4 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600' : 'px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700'">
+          Documentos
+        </button>
+        <button (click)="activeTab.set('historial')" [class]="activeTab() === 'historial' ? 'px-4 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600' : 'px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700'">
+          Historial
+        </button>
+      </div>
+
+      @if (activeTab() === 'tareas') {
+        <div class="p-4 space-y-2">
+          <div class="flex justify-between items-center mb-3">
+            <span class="text-sm text-slate-500">{{ completadas() }} de {{ tareas().length }} completadas</span>
+            <button class="flex items-center gap-1.5 text-sm text-violet-600 font-medium hover:underline">
+              <lucide-icon [img]="PlusIcon" class="w-3.5 h-3.5" />Nueva tarea
+            </button>
+          </div>
+          @if (tareas().length === 0) {
+            <p class="text-sm text-slate-400 text-center py-8">Sin tareas asignadas</p>
+          }
+          @for (tarea of tareas(); track tarea.id) {
+            <div class="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-200">
+              @if (tarea.estado === 'completada') {
+                <lucide-icon [img]="CheckCircle2Icon" class="w-5 h-5 text-emerald-500 shrink-0" />
+              } @else if (tarea.estado === 'en_proceso') {
+                <lucide-icon [img]="PlayCircleIcon" class="w-5 h-5 text-blue-500 shrink-0" />
+              } @else {
+                <lucide-icon [img]="CircleIcon" class="w-5 h-5 text-slate-300 shrink-0" />
+              }
+              <span [class]="'text-sm ' + (tarea.estado === 'completada' ? 'text-slate-400 line-through' : 'text-slate-700')">
+                {{ tarea.titulo }}
+              </span>
+            </div>
+          }
+        </div>
+      }
+
+      @if (activeTab() === 'documentos') {
+        <div class="p-4 space-y-2">
+          @if (documentos().length === 0) {
+            <p class="text-sm text-slate-400 text-center py-8">Sin documentos asociados</p>
+          }
+          @for (d of documentos(); track d.id) {
+            <div class="flex items-center justify-between p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
+              <div class="flex items-center gap-2">
+                <lucide-icon [img]="FileTextIcon" class="w-4 h-4 text-slate-400" />
+                <div>
+                  <p class="font-medium text-slate-800 text-sm">{{ d.name }}</p>
+                  <p class="text-xs text-slate-400">{{ d.type }} · {{ d.size }}</p>
+                </div>
+              </div>
+              <span class="text-xs text-slate-400">{{ d.updatedAt }}</span>
+            </div>
+          }
+        </div>
+      }
+
+      @if (activeTab() === 'historial') {
+        <div class="p-4">
+          @if (historial().length === 0) {
+            <p class="text-sm text-slate-400 text-center py-8">Sin eventos registrados</p>
+          }
+          <div class="space-y-4">
+            @for (h of historial(); track h.id) {
+              <div class="flex gap-3">
+                <div class="flex flex-col items-center">
+                  <div class="w-2 h-2 bg-violet-400 rounded-full mt-1.5"></div>
+                  <div class="w-0.5 flex-1 bg-slate-200 mt-1"></div>
+                </div>
+                <div class="pb-4">
+                  <p class="text-sm text-slate-700">{{ h.evento }}</p>
+                  <div class="flex gap-2 text-xs text-slate-400 mt-0.5">
+                    <span>{{ h.fecha }}</span>
+                    <span>·</span>
+                    <span>{{ h.usuario }}</span>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Sidebar derecha -->
+    <div class="space-y-4">
+      <!-- Cliente -->
+      <div class="bg-white rounded-xl border border-slate-200 p-4">
+        <h3 class="text-sm font-semibold text-slate-700 mb-3">Cliente</h3>
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-semibold">
+            {{ p.client.charAt(0) }}
+          </div>
+          <p class="font-medium text-slate-800 text-sm">{{ p.client }}</p>
+        </div>
+      </div>
+
+      <!-- Detalles -->
+      <div class="bg-white rounded-xl border border-slate-200 p-4 space-y-3 text-sm">
+        <h3 class="font-semibold text-slate-700">Detalles</h3>
+        <div class="flex justify-between">
+          <span class="text-slate-500">Responsable</span>
+          <span class="font-medium text-slate-700">{{ p.assignedTo }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-500">Inicio</span>
+          <span class="text-slate-600">{{ p.openDate }}</span>
+        </div>
+        @if (p.nextDeadline) {
+          <div class="flex justify-between">
+            <span class="text-slate-500">Entrega</span>
+            <span class="text-slate-600">{{ p.nextDeadline }}</span>
+          </div>
+        }
+        <div class="flex justify-between">
+          <span class="text-slate-500">Última actualización</span>
+          <span class="text-slate-400">{{ p.lastUpdate }}</span>
+        </div>
+      </div>
+
+      <!-- Acciones rápidas -->
+      <div class="bg-white rounded-xl border border-slate-200 p-4 space-y-2">
+        <h3 class="text-sm font-semibold text-slate-700 mb-2">Acciones rápidas</h3>
+        <button class="w-full flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600">
+          <lucide-icon [img]="ReceiptIcon" class="w-4 h-4 text-violet-500" />Crear factura
+        </button>
+        <button class="w-full flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600">
+          <lucide-icon [img]="FileTextIcon" class="w-4 h-4 text-blue-500" />Añadir documento
+        </button>
+        <button class="w-full flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600">
+          <lucide-icon [img]="CalendarIcon" class="w-4 h-4 text-emerald-500" />Programar reunión
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+} @else {
+  <div class="p-6 text-center text-slate-500">
+    <p>Proyecto no encontrado.</p>
+    <button (click)="volver()" class="mt-3 text-violet-600 text-sm hover:underline">Volver a proyectos</button>
+  </div>
+}
