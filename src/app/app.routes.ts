@@ -1,12 +1,13 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './auth/auth.guard';
 import { superUserGuard } from './auth/superuser.guard';
+import { permissionGuard } from './auth/permission.guard';
 
 export const routes: Routes = [
   {
     path: 'login',
     loadComponent: () =>
-      import('./auth/login/login.component').then((m) => m.LoginComponent),
+      import('./auth/login/login').then((m) => m.LoginComponent),
   },
   {
     path: '',
@@ -96,6 +97,7 @@ export const routes: Routes = [
       },
       {
         path: 'usuarios',
+        canActivate: [permissionGuard('Configuración')],
         loadComponent: () =>
           import('./components/usuarios/usuarios').then((m) => m.UsuariosComponent),
       },

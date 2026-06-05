@@ -1,22 +1,14 @@
-import { Component, signal, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, computed, ChangeDetectionStrategy, inject, OnInit } from '@angular/core';
 import {
   LucideAngularModule, UserCog, Users, Shield, Plus, Search,
   Mail, MoreHorizontal, CheckCircle2, Clock, XCircle,
 } from 'lucide-angular';
-import { USUARIOS_EMPRESA, ROLES_EMPRESA } from '../../data/dummy-data';
+import { Timestamp } from '@angular/fire/firestore';
+import { UsersService } from '../../core/services/users';
+import { PermissionService } from '../../core/services/permission.service';
+import { FIRM_ROLE_COLORS } from '../../interfaces/member';
 
 type UsuariosTab = 'usuarios' | 'roles' | 'permisos';
-
-const MODULOS = ['Proyectos', 'Contactos', 'Facturación', 'Tesorería', 'Documentos', 'Informes', 'Configuración'];
-const PERMISOS_MATRIZ: Record<string, Record<string, boolean>> = {
-  'Proyectos':     { Admin: true,  Gestor: true,  Usuario: true,  Viewer: true  },
-  'Contactos':     { Admin: true,  Gestor: true,  Usuario: true,  Viewer: true  },
-  'Facturación':   { Admin: true,  Gestor: true,  Usuario: false, Viewer: true  },
-  'Tesorería':     { Admin: true,  Gestor: true,  Usuario: false, Viewer: false },
-  'Documentos':    { Admin: true,  Gestor: true,  Usuario: true,  Viewer: true  },
-  'Informes':      { Admin: true,  Gestor: true,  Usuario: false, Viewer: true  },
-  'Configuración': { Admin: true,  Gestor: false, Usuario: false, Viewer: false },
-};
 
 const ACTIVIDAD = [
   { usuario: 'Carlos Mendoza', accion: 'Inicio de sesión', fecha: 'Hoy, 09:15' },
@@ -31,7 +23,7 @@ const ACTIVIDAD = [
   templateUrl: './usuarios.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class UsuariosComponent {
+export class UsuariosComponent implements OnInit {
   readonly UserCogIcon = UserCog;
   readonly UsersIcon = Users;
   readonly ShieldIcon = Shield;
@@ -43,43 +35,58 @@ export class UsuariosComponent {
   readonly ClockIcon = Clock;
   readonly XCircleIcon = XCircle;
 
+  private readonly usersService = inject(UsersService);
+  private readonly permissionService = inject(PermissionService);
+
   activeTab = signal<UsuariosTab>('usuarios');
   search = signal('');
-
-  usuarios = USUARIOS_EMPRESA;
-  roles = ROLES_EMPRESA;
-  modulos = MODULOS;
-  permisosMatriz = PERMISOS_MATRIZ;
   actividad = ACTIVIDAD;
 
-  filteredUsuarios = computed(() => {
+  readonly isLoading = this.usersService.isLoading;
+  readonly activos = this.usersService.activos;
+  readonly pendientes = this.usersService.pendientes;
+  readonly isAdmin = this.permissionService.isAdmin;
+  readonly modulos = this.permissionService.MODULOS;
+  readonly permisosMatriz = this.permissionService.PERMISOS_MATRIZ;
+
+  readonly roles = computed(() => this.usersService.getRoles());
+  readonly totalMiembros = computed(() => this.usersService.members().length);
+
+  readonly filteredUsuarios = computed(() => {
     const q = this.search().toLowerCase();
-    if (!q) return this.usuarios;
-    return this.usuarios.filter(u =>
+    if (!q) return this.usersService.members();
+    return this.usersService.members().filter(u =>
       u.nombre.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
     );
   });
 
-  activos = computed(() => this.usuarios.filter(u => u.estado === 'activo').length);
-  pendientes = computed(() => this.usuarios.filter(u => u.estado === 'pendiente').length);
+  ngOnInit(): void {
+    this.usersService.loadMembers();
+  }
+
+  formatLogin(ts: Timestamp | null): string {
+    if (!ts) return '—';
+    const date = ts.toDate();
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / 86_400_000);
+    const hhmm = date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    if (diffDays === 0) return `Hoy, ${hhmm}`;
+    if (diffDays === 1) return `Ayer, ${hhmm}`;
+    return `Hace ${diffDays} días`;
+  }
 
   getEstadoClass(estado: string): string {
     const map: Record<string, string> = {
-      activo: 'bg-green-100 text-green-700',
+      activo:   'bg-green-100 text-green-700',
       inactivo: 'bg-slate-100 text-slate-500',
       pendiente: 'bg-amber-100 text-amber-700',
     };
-    return map[estado] || 'bg-slate-100 text-slate-600';
+    return map[estado] ?? 'bg-slate-100 text-slate-600';
   }
 
   getRolClass(rol: string): string {
-    const map: Record<string, string> = {
-      Admin: 'bg-red-100 text-red-700',
-      Gestor: 'bg-violet-100 text-violet-700',
-      Usuario: 'bg-blue-100 text-blue-700',
-      Viewer: 'bg-slate-100 text-slate-600',
-    };
-    return map[rol] || 'bg-slate-100 text-slate-600';
+    return FIRM_ROLE_COLORS[rol as keyof typeof FIRM_ROLE_COLORS] ?? 'bg-slate-100 text-slate-600';
   }
 
   tienePermiso(modulo: string, rol: string): boolean {

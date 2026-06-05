@@ -80,15 +80,22 @@ export class InvitationService {
       throw new Error('Esta invitación no está dirigida a tu dirección de correo');
     }
 
+    const normalizedEmail = userEmail.toLowerCase().trim();
     const membersCol = collection(this.firestore, 'companyMembers');
     await addDoc(membersCol, {
       companyId: invitation.companyId,
-      userId: userEmail.toLowerCase().trim(),
+      userId: normalizedEmail,
+      email: normalizedEmail,
+      nombre: '',
       role: invitation.role,
+      departamento: '',
+      estado: 'activo',
+      ultimoLogin: null,
       createdAt: serverTimestamp(),
     });
 
-    await this.userSync.updateUserCompany(userEmail, invitation.companyId, invitation.role);
+    const systemRole: 'admin' | 'user' = invitation.role === 'Admin' ? 'admin' : 'user';
+    await this.userSync.updateUserCompany(userEmail, invitation.companyId, systemRole);
 
     await updateDoc(doc(this.firestore, 'companyInvitations', invitation.id), {
       status: 'accepted',

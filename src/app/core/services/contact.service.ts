@@ -15,23 +15,7 @@ import {
   arrayRemove,
 } from '@angular/fire/firestore';
 import { CompanyService } from './company.service';
-
-export interface Contact {
-  id: string;
-  companyId: string;
-  name: string;
-  contactType: string;
-  status: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  nif?: string;
-  industry?: string;
-  lastContactDate?: string;
-  tags?: string[];
-  createdAt?: unknown;
-  updatedAt?: unknown;
-}
+import { Contact } from '../../interfaces';
 
 @Injectable({ providedIn: 'root' })
 export class ContactService {
@@ -56,6 +40,8 @@ export class ContactService {
       );
       const snapshot = await getDocs(q);
       this.contacts.set(snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Contact));
+    } catch {
+      // No active company or Firestore error — leave contacts empty
     } finally {
       this.isLoading.set(false);
     }
@@ -66,9 +52,11 @@ export class ContactService {
     return snapshot.exists() ? ({ id: snapshot.id, ...snapshot.data() } as Contact) : null;
   }
 
-  async createContact(data: Omit<Contact, 'id' | 'companyId' | 'createdAt' | 'updatedAt'>): Promise<void> {
+  async createContact(
+    data: Omit<Contact, 'id' | 'companyId' | 'createdAt' | 'updatedAt'>
+  ): Promise<void> {
     await addDoc(collection(this.firestore, 'contacts'), {
-      ...data,
+      ...(data as Record<string, unknown>),
       companyId: this.companyId,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -76,8 +64,11 @@ export class ContactService {
     await this.loadContacts();
   }
 
-  async updateContact(id: string, data: Partial<Omit<Contact, 'id' | 'companyId'>>): Promise<void> {
-    await updateDoc(doc(this.firestore, 'contacts', id), { ...data, updatedAt: serverTimestamp() });
+  async updateContact(id: string, data: Record<string, unknown>): Promise<void> {
+    await updateDoc(doc(this.firestore, 'contacts', id), {
+      ...data,
+      updatedAt: serverTimestamp(),
+    });
     await this.loadContacts();
   }
 

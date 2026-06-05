@@ -1,6 +1,7 @@
 import { Timestamp } from '@angular/fire/firestore';
+import { FirmRole } from './member';
 
-export type InvitationRole = 'user' | 'admin';
+export type InvitationRole = FirmRole;
 export type InvitationStatus = 'pending' | 'accepted' | 'expired';
 
 export interface CompanyInvitation {

@@ -6,8 +6,10 @@
       <button (click)="volver()" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500" aria-label="Volver">
         <lucide-icon [img]="ArrowLeftIcon" class="w-5 h-5" />
       </button>
-      <h1 class="text-xl font-semibold text-slate-800">{{ c.name }}</h1>
-      <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getStatusClass(c.status)">{{ c.status }}</span>
+      <h1 class="text-xl font-semibold text-slate-800">{{ getDisplayName(c) }}</h1>
+      <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getStatusClass(c.status)">
+        {{ getStatusLabel(c.status) }}
+      </span>
     </div>
     <button class="flex items-center gap-2 px-4 py-2 border border-slate-200 text-sm rounded-lg hover:bg-slate-50 text-slate-600">
       <lucide-icon [img]="EditIcon" class="w-4 h-4" />Editar
@@ -21,11 +23,11 @@
       <div class="bg-white rounded-xl border border-slate-200 p-5">
         <div class="flex items-center gap-4 mb-4">
           <div class="w-14 h-14 bg-violet-100 rounded-xl flex items-center justify-center text-violet-700 font-bold text-xl">
-            {{ c.name.charAt(0) }}
+            {{ getInitials(c) }}
           </div>
           <div>
-            <p class="font-semibold text-slate-800">{{ c.name }}</p>
-            <span class="text-xs text-slate-400">{{ c.type }}</span>
+            <p class="font-semibold text-slate-800 leading-tight">{{ getDisplayName(c) }}</p>
+            <span class="text-xs text-slate-400">{{ getTypeLabel(c) }}</span>
           </div>
         </div>
         @if (c.tags && c.tags.length > 0) {
@@ -40,31 +42,39 @@
             <lucide-icon [img]="MailIcon" class="w-4 h-4 text-slate-400 shrink-0" />
             {{ c.email }}
           </div>
-          <div class="flex items-center gap-2 text-slate-600">
-            <lucide-icon [img]="PhoneIcon" class="w-4 h-4 text-slate-400 shrink-0" />
-            {{ c.phone }}
-          </div>
-          @if (c.address) {
+          @if (c.phone) {
+            <div class="flex items-center gap-2 text-slate-600">
+              <lucide-icon [img]="PhoneIcon" class="w-4 h-4 text-slate-400 shrink-0" />
+              {{ c.phone }}
+            </div>
+          }
+          @if (c.mobile) {
+            <div class="flex items-center gap-2 text-slate-600">
+              <lucide-icon [img]="PhoneIcon" class="w-4 h-4 text-slate-400 shrink-0" />
+              {{ c.mobile }}
+            </div>
+          }
+          @if (getAddress(c)) {
             <div class="flex items-center gap-2 text-slate-600">
               <lucide-icon [img]="MapPinIcon" class="w-4 h-4 text-slate-400 shrink-0" />
-              {{ c.address }}
+              {{ getAddress(c) }}
             </div>
           }
-          @if (c.nif) {
+          @if (getIdentifier(c)) {
             <div class="flex items-center gap-2 text-slate-600">
               <lucide-icon [img]="Building2Icon" class="w-4 h-4 text-slate-400 shrink-0" />
-              NIF: {{ c.nif }}
+              {{ getIdentifierLabel(c) }}: {{ getIdentifier(c) }}
             </div>
           }
-          @if (c.industry) {
+          @if (getSector(c)) {
             <div class="flex items-center gap-2 text-slate-600">
               <lucide-icon [img]="TagIcon" class="w-4 h-4 text-slate-400 shrink-0" />
-              {{ c.industry }}
+              {{ getSector(c) }}
             </div>
           }
           <div class="flex items-center gap-2 text-slate-500">
             <lucide-icon [img]="CalendarIcon" class="w-4 h-4 text-slate-400 shrink-0" />
-            Último contacto: {{ c.lastContact }}
+            Último contacto: {{ getLastContact(c) }}
           </div>
         </div>
       </div>
@@ -73,11 +83,11 @@
       <div class="bg-white rounded-xl border border-slate-200 p-4 grid grid-cols-2 gap-4">
         <div class="text-center p-3 bg-violet-50 rounded-lg">
           <p class="text-xs text-slate-500 mb-1">Total facturado</p>
-          <p class="text-lg font-bold text-violet-700">{{ c.totalBilled | number:'1.0-0' }} €</p>
+          <p class="text-lg font-bold text-violet-700">{{ (c.totalBilled ?? 0) | number:'1.0-0' }} €</p>
         </div>
         <div class="text-center p-3 bg-blue-50 rounded-lg">
           <p class="text-xs text-slate-500 mb-1">Proyectos activos</p>
-          <p class="text-lg font-bold text-blue-700">{{ c.activeProjects }}</p>
+          <p class="text-lg font-bold text-blue-700">{{ c.activeProjects ?? 0 }}</p>
         </div>
       </div>
     </div>
@@ -89,7 +99,7 @@
         <button (click)="activeTab.set('proyectos')" [class]="activeTab() === 'proyectos' ? 'px-4 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Proyectos ({{ proyectos().length }})</button>
         <button (click)="activeTab.set('facturas')" [class]="activeTab() === 'facturas' ? 'px-4 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Facturas ({{ facturas().length }})</button>
         <button (click)="activeTab.set('comunicaciones')" [class]="activeTab() === 'comunicaciones' ? 'px-4 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Comunicaciones</button>
-        <button (click)="activeTab.set('documentos')" [class]="activeTab() === 'documentos' ? 'px-4 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Documentos ({{ documentos().length }})</button>
+        <button (click)="activeTab.set('documentos')" [class]="activeTab() === 'documentos' ? 'px-4 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Documentos ({{ totalDocumentos() }})</button>
       </div>
 
       @if (activeTab() === 'general') {
@@ -109,6 +119,7 @@
           <div>
             <h3 class="text-sm font-semibold text-slate-700 mb-2">Notas</h3>
             <textarea
+              [value]="c.notes ?? ''"
               placeholder="Añade notas sobre este contacto..."
               rows="4"
               class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none"
@@ -177,25 +188,208 @@
         </div>
       }
 
+      <!-- TAB: Documentos — Navegador de archivos -->
       @if (activeTab() === 'documentos') {
-        <div class="p-5 space-y-2">
-          @if (documentos().length === 0) {
-            <p class="text-sm text-slate-400 text-center py-8">Sin documentos asociados</p>
+        <div class="p-5 space-y-4">
+
+          <!-- Toolbar: breadcrumb + acciones -->
+          <div class="flex items-center justify-between gap-3 flex-wrap">
+            <!-- Breadcrumb -->
+            <nav class="flex items-center gap-1 text-sm min-w-0" aria-label="Ruta de carpetas">
+              <button (click)="navigateToRoot()"
+                class="font-medium text-violet-600 hover:underline shrink-0">
+                Raíz
+              </button>
+              @for (folder of folderPath(); track folder.id; let i = $index) {
+                <span class="text-slate-400 shrink-0">/</span>
+                <button (click)="navigateToBreadcrumb(i)"
+                  class="font-medium text-violet-600 hover:underline truncate max-w-[100px]">
+                  {{ folder.name }}
+                </button>
+              }
+            </nav>
+
+            <!-- Actions -->
+            <div class="flex items-center gap-2 shrink-0">
+              <button (click)="isCreatingFolder.set(true)"
+                class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                <lucide-icon [img]="FolderPlusIcon" size="13"></lucide-icon>
+                Nueva carpeta
+              </button>
+              <label class="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-500 cursor-pointer">
+                <lucide-icon [img]="UploadIcon" size="13"></lucide-icon>
+                @if (isUploading()) { Subiendo... } @else { Subir archivo }
+                <input type="file" multiple class="hidden" (change)="onFileSelected($event)" [disabled]="isUploading()" />
+              </label>
+            </div>
+          </div>
+
+          <!-- Crear carpeta inline -->
+          @if (isCreatingFolder()) {
+            <div class="flex items-center gap-2 p-3 bg-violet-50 rounded-lg border border-violet-200">
+              <lucide-icon [img]="FolderIcon" size="16" class="text-violet-400 shrink-0"></lucide-icon>
+              <input
+                type="text"
+                placeholder="Nombre de la carpeta..."
+                [value]="newFolderName()"
+                (input)="newFolderName.set($any($event.target).value)"
+                (keydown.enter)="createFolder()"
+                (keydown.escape)="isCreatingFolder.set(false); newFolderName.set('')"
+                class="flex-1 min-w-0 bg-transparent border-none outline-none text-sm text-slate-700 placeholder-slate-400"
+                autofocus
+                aria-label="Nombre de la nueva carpeta"
+              />
+              <button (click)="createFolder()" [disabled]="!newFolderName().trim()"
+                class="p-1 rounded text-green-600 hover:bg-green-100 disabled:opacity-40" aria-label="Crear carpeta">
+                <lucide-icon [img]="CheckIcon" size="16"></lucide-icon>
+              </button>
+              <button (click)="isCreatingFolder.set(false); newFolderName.set('')"
+                class="p-1 rounded text-slate-400 hover:bg-slate-200" aria-label="Cancelar">
+                <lucide-icon [img]="XIcon" size="16"></lucide-icon>
+              </button>
+            </div>
           }
-          @for (d of documentos(); track d.id) {
-            <div class="flex items-center justify-between p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
-              <div class="flex items-center gap-2">
-                <lucide-icon [img]="FileTextIcon" class="w-4 h-4 text-slate-400" />
-                <div>
-                  <p class="font-medium text-slate-800 text-sm">{{ d.name }}</p>
-                  <p class="text-xs text-slate-400">{{ d.type }} · {{ d.size }}</p>
+
+          <!-- Loading -->
+          @if (folderService.isLoading() || fileService.isLoading()) {
+            <div class="text-center py-10 text-sm text-slate-400">Cargando documentos...</div>
+          } @else {
+
+            <!-- Carpetas -->
+            @if (currentFolders().length > 0) {
+              <div>
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Carpetas</p>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  @for (folder of currentFolders(); track folder.id) {
+                    <div class="group relative rounded-lg border border-slate-200 bg-slate-50 hover:bg-violet-50 hover:border-violet-200 transition-colors">
+
+                      @if (renamingFolderId() === folder.id) {
+                        <!-- Modo renombrar -->
+                        <div class="p-3 flex items-center gap-2">
+                          <lucide-icon [img]="FolderIcon" size="18" class="text-violet-400 shrink-0"></lucide-icon>
+                          <input
+                            type="text"
+                            [value]="renameValue()"
+                            (input)="renameValue.set($any($event.target).value)"
+                            (keydown.enter)="confirmRename(folder.id)"
+                            (keydown.escape)="renamingFolderId.set(null)"
+                            class="flex-1 min-w-0 border-b border-violet-400 bg-transparent text-sm font-medium text-slate-700 outline-none"
+                            autofocus
+                            aria-label="Nuevo nombre de carpeta"
+                          />
+                          <button (click)="confirmRename(folder.id)" class="p-0.5 text-green-600 hover:text-green-700" aria-label="Confirmar">
+                            <lucide-icon [img]="CheckIcon" size="14"></lucide-icon>
+                          </button>
+                          <button (click)="renamingFolderId.set(null)" class="p-0.5 text-slate-400" aria-label="Cancelar">
+                            <lucide-icon [img]="XIcon" size="14"></lucide-icon>
+                          </button>
+                        </div>
+
+                      } @else if (deletingFolderId() === folder.id) {
+                        <!-- Confirmación eliminar carpeta -->
+                        <div class="p-3 flex flex-col items-center gap-2 text-center">
+                          <p class="text-xs text-red-600 font-medium">¿Eliminar "{{ folder.name }}"?</p>
+                          <p class="text-[10px] text-slate-400">Se eliminará todo su contenido.</p>
+                          <div class="flex gap-2">
+                            <button (click)="deleteFolder(folder.id)"
+                              class="px-3 py-1 bg-red-500 text-white text-xs rounded-lg hover:bg-red-600">
+                              Eliminar
+                            </button>
+                            <button (click)="deletingFolderId.set(null)"
+                              class="px-3 py-1 border border-slate-200 text-xs rounded-lg hover:bg-slate-100">
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+
+                      } @else {
+                        <!-- Vista normal -->
+                        <button (click)="navigateToFolder(folder)" class="w-full p-3 text-left" [attr.aria-label]="'Abrir carpeta ' + folder.name">
+                          <div class="flex items-center gap-2">
+                            <lucide-icon [img]="FolderIcon" size="18" class="text-violet-400 shrink-0"></lucide-icon>
+                            <span class="text-sm font-medium text-slate-700 truncate">{{ folder.name }}</span>
+                          </div>
+                        </button>
+                        <!-- Acciones (al hacer hover) -->
+                        <div class="absolute top-1.5 right-1.5 hidden group-hover:flex gap-0.5 bg-white rounded shadow-sm border border-slate-100 p-0.5">
+                          <button (click)="startRename(folder)" class="p-1 rounded text-slate-400 hover:text-slate-700" aria-label="Renombrar carpeta">
+                            <lucide-icon [img]="PencilIcon" size="12"></lucide-icon>
+                          </button>
+                          <button (click)="deletingFolderId.set(folder.id)" class="p-1 rounded text-slate-400 hover:text-red-500" aria-label="Eliminar carpeta">
+                            <lucide-icon [img]="Trash2Icon" size="12"></lucide-icon>
+                          </button>
+                        </div>
+                      }
+
+                    </div>
+                  }
                 </div>
               </div>
-              <span class="text-xs text-slate-400">{{ d.updatedAt }}</span>
-            </div>
+            }
+
+            <!-- Archivos -->
+            @if (currentFiles().length > 0) {
+              <div>
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Archivos</p>
+                <div class="space-y-1.5">
+                  @for (file of currentFiles(); track file.id) {
+                    @if (deletingFileId() === file.id) {
+                      <!-- Confirmación eliminar archivo -->
+                      <div class="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <p class="text-sm text-red-600 font-medium truncate mr-3">¿Eliminar "{{ file.name }}"?</p>
+                        <div class="flex gap-2 shrink-0">
+                          <button (click)="deleteFile(file)"
+                            class="px-3 py-1 bg-red-500 text-white text-xs rounded-lg hover:bg-red-600">
+                            Eliminar
+                          </button>
+                          <button (click)="deletingFileId.set(null)"
+                            class="px-3 py-1 border border-slate-200 text-xs rounded-lg hover:bg-white">
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    } @else {
+                      <!-- Fila de archivo -->
+                      <div class="flex items-center justify-between p-3 border border-slate-200 rounded-lg hover:bg-slate-50 group">
+                        <div class="flex items-center gap-3 min-w-0">
+                          <span class="text-xl shrink-0" aria-hidden="true">{{ getFileIcon(file.mimeType) }}</span>
+                          <div class="min-w-0">
+                            <p class="text-sm font-medium text-slate-700 truncate">{{ file.name }}</p>
+                            <p class="text-xs text-slate-400">{{ formatFileSize(file.sizeBytes) }}</p>
+                          </div>
+                        </div>
+                        <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                          <a [href]="file.downloadUrl" target="_blank" rel="noopener"
+                            class="p-1.5 rounded text-slate-400 hover:bg-slate-100 hover:text-violet-600"
+                            [attr.aria-label]="'Descargar ' + file.name">
+                            <lucide-icon [img]="DownloadIcon" size="14"></lucide-icon>
+                          </a>
+                          <button (click)="deletingFileId.set(file.id)"
+                            class="p-1.5 rounded text-slate-400 hover:bg-red-50 hover:text-red-500"
+                            [attr.aria-label]="'Eliminar ' + file.name">
+                            <lucide-icon [img]="Trash2Icon" size="14"></lucide-icon>
+                          </button>
+                        </div>
+                      </div>
+                    }
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- Estado vacío -->
+            @if (currentFolders().length === 0 && currentFiles().length === 0) {
+              <div class="text-center py-12">
+                <lucide-icon [img]="FolderOpenIcon" size="40" class="mx-auto mb-3 text-slate-200"></lucide-icon>
+                <p class="text-sm font-medium text-slate-500">Esta carpeta está vacía</p>
+                <p class="text-xs text-slate-400 mt-1">Crea una carpeta o sube archivos para empezar.</p>
+              </div>
+            }
+
           }
         </div>
       }
+
     </div>
   </div>
 </div>

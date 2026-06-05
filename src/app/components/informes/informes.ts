@@ -5,6 +5,7 @@ import {
   Clock, RefreshCw, Download, Target,
 } from 'lucide-angular';
 import { PROJECTS, INVOICES, CONTACTS } from '../../data/dummy-data';
+import { getContactDisplayName, getContactInitials } from '../../interfaces';
 
 type InformesTab = 'general' | 'financiero' | 'clientes' | 'equipo';
 type Periodo = 'semana' | 'mes' | 'trimestre' | 'año';
@@ -61,8 +62,16 @@ export class InformesComponent {
 
   topClientes = computed(() =>
     CONTACTS.slice()
-      .sort((a, b) => b.totalBilled - a.totalBilled)
+      .sort((a, b) => (b.totalBilled ?? 0) - (a.totalBilled ?? 0))
       .slice(0, 5)
+      .map((c) => ({
+        id: c.id,
+        name: getContactDisplayName(c),
+        initials: getContactInitials(c),
+        industry: c.type === 'persona_juridica' ? c.sectorActividad : c.profesion,
+        totalBilled: c.totalBilled,
+        status: c.status,
+      }))
   );
 
   servicios = [

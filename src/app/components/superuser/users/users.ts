@@ -29,6 +29,7 @@ import { SuperuserService } from '../../../services/superuser';
 import { UserSyncService } from '../../../core/services/user-sync.service';
 import { CompanyInvitation } from '../../../interfaces/invitation';
 import { Company } from '../../../interfaces/company';
+import { FIRM_ROLES, FirmRole } from '../../../interfaces/member';
 
 interface FirestoreUser {
   id: string;
@@ -113,9 +114,11 @@ export class UsersComponent implements OnInit {
     });
   });
 
+  readonly firmRoles = FIRM_ROLES;
+
   inviteForm = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
-    role: ['user' as 'user' | 'admin', Validators.required],
+    role: ['Usuario' as FirmRole, Validators.required],
     companyId: ['', Validators.required],
   });
 
@@ -127,7 +130,7 @@ export class UsersComponent implements OnInit {
   }
 
   openInvite(): void {
-    this.inviteForm.reset({ role: 'user', companyId: '' });
+    this.inviteForm.reset({ role: 'Usuario' as FirmRole, companyId: '' });
     this.inviteError.set(null);
     this.inviteSuccess.set(null);
     this.showInviteForm.set(true);
@@ -140,7 +143,7 @@ export class UsersComponent implements OnInit {
     try {
       const { email, role, companyId } = this.inviteForm.getRawValue() as {
         email: string;
-        role: 'user' | 'admin';
+        role: FirmRole;
         companyId: string;
       };
       const company = this.companies().find((c) => c.id === companyId);

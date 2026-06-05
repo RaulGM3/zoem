@@ -77,7 +77,7 @@ export class DemoLayoutComponent {
     {
       category: 'Gestión',
       items: [
-        { name: 'Proyectos', href: '/proyectos', icon: FolderKanban },
+        { name: 'Expedientes', href: '/proyectos', icon: FolderKanban },
         { name: 'Contactos', href: '/contactos', icon: Users },
         { name: 'Casos', href: '/casos', icon: Briefcase },
         { name: 'Calendario', href: '/calendario', icon: Calendar },
