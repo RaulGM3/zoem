@@ -471,16 +471,16 @@ export const DASHBOARD_STATS = {
 };
 
 // --- CASOS ---
-export const CASOS: Caso[] = [
-  { id: 'CASO-001', cliente: 'Innovatech Industries', tipo: 'Mercantil', estado: 'en_proceso', prioridad: 'alta', asignado: 'Carlos Mendoza', vencimiento: '30 May 2026', diasVencimiento: 25, descripcion: 'Revisión de contrato de distribución exclusiva' },
-  { id: 'CASO-002', cliente: 'María García López', tipo: 'Laboral', estado: 'urgente', prioridad: 'alta', asignado: 'Ana Martínez', vencimiento: '20 May 2026', diasVencimiento: 15, descripcion: 'Despido improcedente — plazo de reclamación inminente' },
-  { id: 'CASO-003', cliente: 'Consultora Global S.L.', tipo: 'Fiscal', estado: 'pendiente', prioridad: 'media', asignado: 'Laura Sánchez', vencimiento: '15 Jun 2026', diasVencimiento: 41, descripcion: 'Declaración modelo 303 segundo trimestre' },
-  { id: 'CASO-004', cliente: 'StartUp Ventures S.L.', tipo: 'Mercantil', estado: 'pendiente', prioridad: 'media', asignado: 'Carlos Mendoza', vencimiento: '10 Jun 2026', diasVencimiento: 36, descripcion: 'Constitución de sociedad y estatutos sociales' },
-  { id: 'CASO-005', cliente: 'Carlos Rodríguez', tipo: 'Civil', estado: 'en_proceso', prioridad: 'baja', asignado: 'Ana Martínez', vencimiento: '1 Jul 2026', diasVencimiento: 57, descripcion: 'Reclamación por daños en propiedad arrendada' },
-  { id: 'CASO-006', cliente: 'Innovatech Industries', tipo: 'Legal', estado: 'cerrado', prioridad: 'baja', asignado: 'Laura Sánchez', vencimiento: '1 Abr 2026', diasVencimiento: -30, descripcion: 'Registro de marca nacional — resuelto satisfactoriamente' },
-  { id: 'CASO-007', cliente: 'Distribuciones Norte S.L.', tipo: 'Fiscal', estado: 'urgente', prioridad: 'alta', asignado: 'Carlos Mendoza', vencimiento: '18 May 2026', diasVencimiento: 13, descripcion: 'Inspección de Hacienda — requerimiento de documentación' },
-  { id: 'CASO-008', cliente: 'Estudio Creativo Luna', tipo: 'Laboral', estado: 'pendiente', prioridad: 'baja', asignado: 'Ana Martínez', vencimiento: '20 Jun 2026', diasVencimiento: 46, descripcion: 'Contrato de prestación de servicios con freelancer' },
-];
+// export const CASOS: Caso[] = [
+//   { id: 'CASO-001', cliente: 'Innovatech Industries', tipo: 'Mercantil', estado: 'en_proceso', prioridad: 'alta', asignado: 'Carlos Mendoza', vencimiento: '30 May 2026', diasVencimiento: 25, descripcion: 'Revisión de contrato de distribución exclusiva' },
+//   { id: 'CASO-002', cliente: 'María García López', tipo: 'Laboral', estado: 'urgente', prioridad: 'alta', asignado: 'Ana Martínez', vencimiento: '20 May 2026', diasVencimiento: 15, descripcion: 'Despido improcedente — plazo de reclamación inminente' },
+//   { id: 'CASO-003', cliente: 'Consultora Global S.L.', tipo: 'Fiscal', estado: 'pendiente', prioridad: 'media', asignado: 'Laura Sánchez', vencimiento: '15 Jun 2026', diasVencimiento: 41, descripcion: 'Declaración modelo 303 segundo trimestre' },
+//   { id: 'CASO-004', cliente: 'StartUp Ventures S.L.', tipo: 'Mercantil', estado: 'pendiente', prioridad: 'media', asignado: 'Carlos Mendoza', vencimiento: '10 Jun 2026', diasVencimiento: 36, descripcion: 'Constitución de sociedad y estatutos sociales' },
+//   { id: 'CASO-005', cliente: 'Carlos Rodríguez', tipo: 'Civil', estado: 'en_proceso', prioridad: 'baja', asignado: 'Ana Martínez', vencimiento: '1 Jul 2026', diasVencimiento: 57, descripcion: 'Reclamación por daños en propiedad arrendada' },
+//   { id: 'CASO-006', cliente: 'Innovatech Industries', tipo: 'Legal', estado: 'cerrado', prioridad: 'baja', asignado: 'Laura Sánchez', vencimiento: '1 Abr 2026', diasVencimiento: -30, descripcion: 'Registro de marca nacional — resuelto satisfactoriamente' },
+//   { id: 'CASO-007', cliente: 'Distribuciones Norte S.L.', tipo: 'Fiscal', estado: 'urgente', prioridad: 'alta', asignado: 'Carlos Mendoza', vencimiento: '18 May 2026', diasVencimiento: 13, descripcion: 'Inspección de Hacienda — requerimiento de documentación' },
+//   { id: 'CASO-008', cliente: 'Estudio Creativo Luna', tipo: 'Laboral', estado: 'pendiente', prioridad: 'baja', asignado: 'Ana Martínez', vencimiento: '20 Jun 2026', diasVencimiento: 46, descripcion: 'Contrato de prestación de servicios con freelancer' },
+// ];
 
 // --- PIPELINE DEALS ---
 export const PIPELINE_DEALS: PipelineDeal[] = [

@@ -1,0 +1,284 @@
+<div class="p-6 space-y-6">
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <a routerLink="/casos" class="p-1.5 rounded-lg hover:bg-slate-100" aria-label="Volver a casos">
+        <lucide-icon [img]="ArrowLeftIcon" class="w-4 h-4 text-slate-500" />
+      </a>
+      <div class="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center">
+        <lucide-icon [img]="LayersIcon" class="w-5 h-5 text-violet-600" />
+      </div>
+      <div>
+        <h1 class="text-xl font-semibold text-slate-800">Plantillas de caso</h1>
+        <p class="text-sm text-slate-500">Modelos reutilizables con hitos y costos predefinidos</p>
+      </div>
+    </div>
+    <button (click)="openNew()"
+      class="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white text-sm rounded-lg hover:bg-violet-700">
+      <lucide-icon [img]="PlusIcon" class="w-4 h-4" />
+      Nueva plantilla
+    </button>
+  </div>
+
+  <!-- List -->
+  @if (plantillasService.loading()) {
+    <div class="text-center text-slate-400 py-12 text-sm">Cargando plantillas...</div>
+  } @else if (plantillasService.plantillas().length === 0) {
+    <div class="bg-white rounded-xl border border-slate-200 p-12 text-center">
+      <lucide-icon [img]="LayersIcon" class="w-10 h-10 text-slate-200 mx-auto mb-3" />
+      <p class="text-slate-500 font-medium">Sin plantillas todavía</p>
+      <p class="text-sm text-slate-400 mt-1">Crea plantillas para estandarizar tus casos y ahorrar tiempo</p>
+      <button (click)="openNew()"
+        class="mt-4 px-4 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700">
+        Crear primera plantilla
+      </button>
+    </div>
+  } @else {
+    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      @for (p of plantillasService.plantillas(); track p.id) {
+        <div class="bg-white rounded-xl border border-slate-200 p-5 flex flex-col gap-4">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <h2 class="font-semibold text-slate-800 truncate">{{ p.nombre }}</h2>
+              @if (p.tipo) {
+                <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded-full font-medium bg-violet-100 text-violet-700">
+                  {{ p.tipo }}
+                </span>
+              }
+              @if (p.descripcion) {
+                <p class="text-xs text-slate-500 mt-1.5 line-clamp-2">{{ p.descripcion }}</p>
+              }
+            </div>
+            <div class="flex gap-1 shrink-0">
+              <button (click)="openEdit(p)" class="p-1.5 rounded hover:bg-slate-100" aria-label="Editar plantilla">
+                <lucide-icon [img]="Edit2Icon" class="w-4 h-4 text-slate-400" />
+              </button>
+              <button (click)="deletePlantilla(p.id)" class="p-1.5 rounded hover:bg-red-50" aria-label="Eliminar plantilla">
+                <lucide-icon [img]="Trash2Icon" class="w-4 h-4 text-red-400" />
+              </button>
+            </div>
+          </div>
+
+          @if (p.hitos.length > 0) {
+            <div>
+              <p class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
+                Hitos ({{ p.hitos.length }})
+              </p>
+              <ul class="space-y-1">
+                @for (h of p.hitos.slice(0, 3); track h.id) {
+                  <li class="flex items-center gap-2 text-xs text-slate-600">
+                    <div class="w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0"></div>
+                    <span class="truncate">{{ h.titulo }}</span>
+                    <span class="text-slate-400 shrink-0">+{{ h.diasDesdeInicio }}d</span>
+                  </li>
+                }
+                @if (p.hitos.length > 3) {
+                  <li class="text-xs text-slate-400 pl-3.5">+{{ p.hitos.length - 3 }} más...</li>
+                }
+              </ul>
+            </div>
+          }
+
+          @if (p.modeloCostos.honorariosBase || p.modeloCostos.suplidos.length > 0) {
+            <div class="pt-3 border-t border-slate-100 text-xs text-slate-500 space-y-1">
+              @if (p.modeloCostos.honorariosBase) {
+                <div class="flex justify-between">
+                  <span>Honorarios base</span>
+                  <span class="font-medium text-slate-700">{{ p.modeloCostos.honorariosBase }} €</span>
+                </div>
+              }
+              @if (p.modeloCostos.suplidos.length > 0) {
+                <div class="flex justify-between">
+                  <span>Estructura de costos</span>
+                  <span class="font-medium text-slate-700">{{ p.modeloCostos.suplidos.length }} partidas</span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<!-- ── Drawer: Crear / Editar plantilla ───────────── -->
+@if (showForm()) {
+  <div class="fixed inset-0 z-40 bg-black/30" (click)="showForm.set(false)" aria-hidden="true"></div>
+  <aside class="fixed right-0 top-0 h-full w-full max-w-lg bg-white shadow-2xl z-50 flex flex-col"
+    role="dialog" aria-modal="true" aria-labelledby="plantilla-drawer-title">
+
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+      <h2 id="plantilla-drawer-title" class="text-base font-semibold text-slate-800">
+        {{ editingId() ? 'Editar plantilla' : 'Nueva plantilla' }}
+      </h2>
+      <button (click)="showForm.set(false)" class="p-1.5 rounded-lg hover:bg-slate-100" aria-label="Cerrar">
+        <lucide-icon [img]="XIcon" class="w-4 h-4 text-slate-500" />
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+
+      <!-- Datos básicos -->
+      <section class="space-y-4">
+        <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">Datos básicos</h3>
+        <div class="space-y-1">
+          <label class="text-sm font-medium text-slate-700">Nombre <span class="text-red-500">*</span></label>
+          <input type="text" [value]="formNombre()" (input)="formNombre.set($any($event.target).value)"
+            placeholder="Ej. Divorcio contencioso"
+            class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="space-y-1">
+            <label class="text-sm font-medium text-slate-700">Tipo (opcional)</label>
+            <select [value]="formTipo()" (change)="formTipo.set($any($event.target).value)"
+              class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
+              <option value="">Sin tipo</option>
+              @for (t of tipos; track t) { <option [value]="t">{{ t }}</option> }
+            </select>
+          </div>
+          <div class="space-y-1">
+            <label class="text-sm font-medium text-slate-700">Honorarios base (€)</label>
+            <input type="number" min="0" step="0.01" [value]="formHonorarios()" (input)="formHonorarios.set($any($event.target).value)"
+              class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+          </div>
+        </div>
+        <div class="space-y-1">
+          <label class="text-sm font-medium text-slate-700">Descripción</label>
+          <textarea rows="2" [value]="formDescripcion()" (input)="formDescripcion.set($any($event.target).value)"
+            class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none"></textarea>
+        </div>
+      </section>
+
+      <!-- Hitos -->
+      <section class="space-y-3">
+        <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">Hitos</h3>
+
+        @if (formHitos().length > 0) {
+          <ul class="space-y-2">
+            @for (h of formHitos(); track h.id; let i = $index) {
+              <li class="flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-2">
+                <div class="flex flex-col gap-0.5">
+                  <button (click)="moveHito(i, -1)" [disabled]="i === 0" class="p-0.5 hover:bg-slate-200 rounded disabled:opacity-30">
+                    <lucide-icon [img]="ChevronUpIcon" class="w-3 h-3 text-slate-400" />
+                  </button>
+                  <button (click)="moveHito(i, 1)" [disabled]="i === formHitos().length - 1" class="p-0.5 hover:bg-slate-200 rounded disabled:opacity-30">
+                    <lucide-icon [img]="ChevronDownIcon" class="w-3 h-3 text-slate-400" />
+                  </button>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-slate-700 truncate">{{ h.titulo }}</p>
+                  <p class="text-xs text-slate-400">
+                    +{{ h.diasDesdeInicio }}d
+                    @if (h.asignadoA) { · {{ getMemberName(h.asignadoA) }} }
+                  </p>
+                </div>
+                <button (click)="removeHito(h.id)" class="p-1 rounded hover:bg-red-50">
+                  <lucide-icon [img]="XIcon" class="w-3.5 h-3.5 text-red-400" />
+                </button>
+              </li>
+            }
+          </ul>
+        }
+
+        <div class="border border-dashed border-slate-200 rounded-lg p-3 space-y-3">
+          <p class="text-xs font-medium text-slate-500">Añadir hito</p>
+          <div class="space-y-1">
+            <label class="text-xs text-slate-500">Título <span class="text-red-400">*</span></label>
+            <input type="text" [value]="hitoTitulo()" (input)="hitoTitulo.set($any($event.target).value)"
+              placeholder="Ej. Presentar demanda"
+              class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="space-y-1">
+              <label class="text-xs text-slate-500">Días desde inicio</label>
+              <input type="number" min="0" [value]="hitoDias()" (input)="hitoDias.set($any($event.target).value)"
+                placeholder="0"
+                class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+            </div>
+            <div class="space-y-1">
+              <label class="text-xs text-slate-500">Asignado a</label>
+              <select [value]="hitoAsignado()" (change)="hitoAsignado.set($any($event.target).value)"
+                class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
+                <option value="">Sin asignar</option>
+                @for (m of usersService.members(); track m.id) {
+                  <option [value]="m.userId">{{ m.nombre }}</option>
+                }
+              </select>
+            </div>
+          </div>
+          <button (click)="addHito()" [disabled]="!hitoTitulo().trim()"
+            class="w-full py-1.5 text-xs text-violet-600 border border-violet-200 rounded-lg hover:bg-violet-50 disabled:opacity-40">
+            + Añadir hito
+          </button>
+        </div>
+      </section>
+
+      <!-- Estructura de costos -->
+      <section class="space-y-3">
+        <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">Estructura de Costos</h3>
+
+        @if (formSuplidos().length > 0) {
+          <ul class="space-y-1">
+            @for (s of formSuplidos(); track $index; let i = $index) {
+              <li class="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 text-sm">
+                <div class="min-w-0">
+                  <span class="text-slate-700 font-medium">{{ s.nombre }}</span>
+                  <span class="ml-1.5 text-xs text-slate-400">{{ getTipoCostoLabel(s.tipo) }}</span>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  @if (s.importeEstimado != null) {
+                    <span class="text-slate-500 text-xs">{{ s.importeEstimado }} €</span>
+                  }
+                  <button (click)="removeSuplido(i)" class="p-0.5 hover:bg-red-50 rounded">
+                    <lucide-icon [img]="XIcon" class="w-3 h-3 text-red-400" />
+                  </button>
+                </div>
+              </li>
+            }
+          </ul>
+        }
+
+        <div class="border border-dashed border-slate-200 rounded-lg p-3 space-y-3">
+          <p class="text-xs font-medium text-slate-500">Añadir partida</p>
+          <div class="space-y-1">
+            <label class="text-xs text-slate-500">Nombre <span class="text-red-400">*</span></label>
+            <input type="text" [value]="suplidoNombre()" (input)="suplidoNombre.set($any($event.target).value)"
+              placeholder="Ej. Tasa judicial"
+              class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+          </div>
+          <div class="space-y-1">
+            <label class="text-xs text-slate-500">Tipo <span class="text-red-400">*</span></label>
+            <select [value]="suplidoTipo()" (change)="suplidoTipo.set($any($event.target).value)"
+              class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
+              <option value="">Selecciona un tipo</option>
+              @for (t of tiposCosto; track t.value) {
+                <option [value]="t.value">{{ t.label }}</option>
+              }
+            </select>
+          </div>
+          <div class="space-y-1">
+            <label class="text-xs text-slate-500">Precio aproximado (€, opcional)</label>
+            <input type="number" min="0" step="0.01" [value]="suplidoImporte()" (input)="suplidoImporte.set($any($event.target).value)"
+              placeholder="Importe estimado"
+              class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+          </div>
+          <button (click)="addSuplido()" [disabled]="!suplidoNombre().trim() || !suplidoTipo()"
+            class="w-full py-1.5 text-xs text-violet-600 border border-violet-200 rounded-lg hover:bg-violet-50 disabled:opacity-40">
+            + Añadir partida
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <div class="px-6 py-4 border-t border-slate-200 flex gap-3 justify-end">
+      <button (click)="showForm.set(false)"
+        class="px-4 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">
+        Cancelar
+      </button>
+      <button (click)="save()" [disabled]="saving() || !formNombre().trim()"
+        class="px-4 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50">
+        {{ saving() ? 'Guardando...' : (editingId() ? 'Guardar cambios' : 'Crear plantilla') }}
+      </button>
+    </div>
+  </aside>
+}

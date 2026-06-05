@@ -1,11 +1,48 @@
+import { Timestamp } from '@angular/fire/firestore';
+
+export type CasoTipo = 'Legal' | 'Fiscal' | 'Laboral' | 'Mercantil' | 'Civil';
+export type CasoEstado = 'pendiente' | 'en_proceso' | 'cerrado' | 'urgente' | 'archivado';
+export type CasoPrioridad = 'alta' | 'media' | 'baja';
+export type HitoEstado = 'pendiente' | 'en_progreso' | 'completado' | 'cancelado';
+
+export interface Hito {
+  id: string;
+  titulo: string;
+  descripcion?: string;
+  fechaEstimada?: string;
+  fechaReal?: string;
+  asignadoA?: string;
+  estado: HitoEstado;
+  orden: number;
+}
+
+export interface ResumenFinanciero {
+  totalIngresos: number;
+  totalSuplidos: number;
+  totalHonorarios: number;
+  saldo: number;
+}
+
 export interface Caso {
   id: string;
-  cliente: string;
-  tipo: 'Legal' | 'Fiscal' | 'Laboral' | 'Mercantil' | 'Civil';
-  estado: 'pendiente' | 'en_proceso' | 'cerrado' | 'urgente';
-  prioridad: 'alta' | 'media' | 'baja';
-  asignado: string;
-  vencimiento: string;
-  diasVencimiento: number;
-  descripcion: string;
+  companyId: string;
+  titulo: string;
+  descripcion?: string;
+  tipo: CasoTipo;
+  estado: CasoEstado;
+  prioridad: CasoPrioridad;
+  contactoIds: string[];
+  plantillaId?: string;
+  hitos: Hito[];
+  resumenFinanciero: ResumenFinanciero;
+  vencimiento?: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }
+
+export const RESUMEN_FINANCIERO_VACIO: ResumenFinanciero = {
+  totalIngresos: 0,
+  totalSuplidos: 0,
+  totalHonorarios: 0,
+  saldo: 0,
+};

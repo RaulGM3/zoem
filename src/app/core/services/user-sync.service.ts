@@ -1,17 +1,7 @@
 import { computed, Injectable, signal } from '@angular/core';
 import { inject } from '@angular/core';
 import { Firestore, doc, getDoc, setDoc, updateDoc, serverTimestamp } from '@angular/fire/firestore';
-
-export interface ZoemUser {
-  id: string;
-  email: string;
-  displayName: string | null;
-  isSuperUser: boolean;
-  companyId?: string;
-  role?: 'user' | 'admin';
-  createdAt?: unknown;
-  updatedAt?: unknown;
-}
+import { SystemRole, ZoemUser } from '../../interfaces/user';
 
 @Injectable({ providedIn: 'root' })
 export class UserSyncService {
@@ -20,8 +10,8 @@ export class UserSyncService {
   readonly currentUser = signal<ZoemUser | null>(null);
   readonly isSuperUser = computed(() => this.currentUser()?.isSuperUser ?? false);
 
-  async syncUser(email: string, displayName: string | null): Promise<void> {
-    const userRef = doc(this.firestore, 'users', email);
+  async syncUser(uid: string, email: string, displayName: string | null): Promise<void> {
+    const userRef = doc(this.firestore, 'users', uid);
     const snapshot = await getDoc(userRef);
     if (!snapshot.exists()) {
       await setDoc(userRef, {
@@ -34,11 +24,11 @@ export class UserSyncService {
     } else {
       await setDoc(userRef, { displayName, updatedAt: serverTimestamp() }, { merge: true });
     }
-    await this.loadCurrentUser(email);
+    await this.loadCurrentUser(uid);
   }
 
-  async loadCurrentUser(email: string): Promise<void> {
-    const userRef = doc(this.firestore, 'users', email);
+  async loadCurrentUser(uid: string): Promise<void> {
+    const userRef = doc(this.firestore, 'users', uid);
     const snapshot = await getDoc(userRef);
     if (snapshot.exists()) {
       this.currentUser.set({ id: snapshot.id, ...snapshot.data() } as ZoemUser);
@@ -47,8 +37,8 @@ export class UserSyncService {
     }
   }
 
-  async updateUserCompany(email: string, companyId: string, role: 'user' | 'admin'): Promise<void> {
-    const userRef = doc(this.firestore, 'users', email);
+  async updateUserCompany(uid: string, companyId: string, role: SystemRole): Promise<void> {
+    const userRef = doc(this.firestore, 'users', uid);
     await updateDoc(userRef, { companyId, role, updatedAt: serverTimestamp() });
     this.currentUser.update((u) => u ? { ...u, companyId, role } : u);
   }

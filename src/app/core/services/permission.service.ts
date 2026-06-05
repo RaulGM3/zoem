@@ -27,9 +27,9 @@ export class PermissionService {
   readonly PERMISOS_MATRIZ = PERMISOS_MATRIZ;
 
   readonly currentMember = computed(() => {
-    const email = this.userSync.currentUser()?.email;
-    if (!email) return null;
-    return this.usersService.members().find(m => m.userId === email) ?? null;
+    const uid = this.userSync.currentUser()?.id;
+    if (!uid) return null;
+    return this.usersService.members().find(m => m.userId === uid) ?? null;
   });
 
   readonly userRole = computed<FirmRole | null>(() => this.currentMember()?.role ?? null);

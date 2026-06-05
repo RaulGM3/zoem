@@ -38,7 +38,6 @@ export interface PersonaFisica extends ContactBase {
   apellidos: string;
   nifType: 'dni' | 'nie' | 'pasaporte' | 'otro';
   nif?: string;
-  fechaNacimiento?: string; // ISO date string
   lugarNacimiento?: string;
   nacionalidad?: string; // ISO 3166-1 alpha-2
   estadoCivil?: 'soltero' | 'casado' | 'divorciado' | 'viudo' | 'pareja_hecho';

@@ -12,7 +12,7 @@
     <!-- Invalid / already accepted -->
     @if (state() === 'invalid') {
       <div class="rounded-xl border border-red-500/20 bg-red-500/5 p-8 text-center">
-        <lucide-icon [img]="AlertCircleIcon" [size]="40" class="mx-auto mb-4 text-red-400" />
+        <lucide-icon [img]="CircleAlertIcon" [size]="40" class="mx-auto mb-4 text-red-400" />
         <h1 class="mb-2 text-xl font-semibold text-white">Invitación no válida</h1>
         <p class="text-sm text-slate-400">
           {{ errorMessage() || 'Este enlace de invitación no existe o no es válido.' }}
@@ -26,7 +26,7 @@
     <!-- Expired -->
     @if (state() === 'expired') {
       <div class="rounded-xl border border-amber-500/20 bg-amber-500/5 p-8 text-center">
-        <lucide-icon [img]="AlertCircleIcon" [size]="40" class="mx-auto mb-4 text-amber-400" />
+        <lucide-icon [img]="CircleAlertIcon" [size]="40" class="mx-auto mb-4 text-amber-400" />
         <h1 class="mb-2 text-xl font-semibold text-white">Invitación expirada</h1>
         <p class="mb-1 text-sm text-slate-400">
           Esta invitación para <span class="text-white">{{ invitation()?.email }}</span> ha expirado.
@@ -62,26 +62,161 @@
             <div>
               <p class="text-xs text-slate-500">Rol asignado</p>
               <p class="text-sm font-medium text-white capitalize">
-                {{ invitation()?.role === 'admin' ? 'Administrador' : 'Usuario' }}
+                {{ invitation()?.role === 'Admin' ? 'Administrador' : 'Usuario' }}
               </p>
             </div>
           </div>
         </div>
 
-        @if (!isLoggedIn) {
-          <p class="mb-4 text-center text-sm text-slate-400">
-            Debes iniciar sesión con
+        <!-- Auth loading -->
+        @if (isAuthLoading) {
+          <div class="flex justify-center py-4">
+            <div class="h-5 w-5 animate-spin rounded-full border-2 border-slate-700 border-t-violet-500"></div>
+          </div>
+        } @else if (!isLoggedIn) {
+          <!-- Registration form for new users -->
+          <p class="mb-5 text-center text-sm text-slate-400">
+            Configura tu contraseña para unirte como
             <span class="font-medium text-white">{{ invitation()?.email }}</span>
-            para aceptar esta invitación.
           </p>
-          <button
-            (click)="goToLogin()"
-            class="w-full rounded-lg bg-violet-600 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-500"
-          >
-            Iniciar sesión para continuar
-          </button>
+
+          <form [formGroup]="registerForm" (ngSubmit)="registerAndAccept()" class="space-y-4" novalidate>
+            <!-- Nombre + Apellido -->
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label for="invite-nombre" class="mb-1.5 block text-xs font-medium text-slate-400">Nombre</label>
+                <input
+                  id="invite-nombre"
+                  type="text"
+                  formControlName="nombre"
+                  autocomplete="given-name"
+                  placeholder="Tu nombre"
+                  class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+                  [class.border-red-500]="registerForm.get('nombre')?.invalid && registerForm.get('nombre')?.dirty"
+                />
+              </div>
+              <div>
+                <label for="invite-apellido" class="mb-1.5 block text-xs font-medium text-slate-400">Apellido</label>
+                <input
+                  id="invite-apellido"
+                  type="text"
+                  formControlName="apellido"
+                  autocomplete="family-name"
+                  placeholder="Tu apellido"
+                  class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+                  [class.border-red-500]="registerForm.get('apellido')?.invalid && registerForm.get('apellido')?.dirty"
+                />
+              </div>
+            </div>
+
+            <!-- Teléfono -->
+            <div>
+              <label for="invite-telefono" class="mb-1.5 block text-xs font-medium text-slate-400">Teléfono</label>
+              <input
+                id="invite-telefono"
+                type="tel"
+                formControlName="telefono"
+                autocomplete="tel"
+                placeholder="+34 600 000 000"
+                class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+                [class.border-red-500]="registerForm.get('telefono')?.invalid && registerForm.get('telefono')?.dirty"
+              />
+              @if (registerForm.get('telefono')?.invalid && registerForm.get('telefono')?.dirty) {
+                <p class="mt-1 text-xs text-red-400" role="alert">Introduce un número de teléfono válido</p>
+              }
+            </div>
+
+            <!-- Email (readonly) -->
+            <div>
+              <label class="mb-1.5 block text-xs font-medium text-slate-400">Correo electrónico</label>
+              <input
+                type="email"
+                [value]="invitation()?.email ?? ''"
+                readonly
+                aria-readonly="true"
+                class="w-full rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2.5 text-sm text-slate-400 cursor-not-allowed"
+              />
+            </div>
+
+            <!-- Password -->
+            <div>
+              <label for="invite-password" class="mb-1.5 block text-xs font-medium text-slate-400">Contraseña</label>
+              <div class="relative">
+                <input
+                  id="invite-password"
+                  [type]="showPassword() ? 'text' : 'password'"
+                  formControlName="password"
+                  autocomplete="new-password"
+                  placeholder="Crea una contraseña segura"
+                  class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 pr-10 text-sm text-white placeholder-slate-500 outline-none transition focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+                />
+                <button
+                  type="button"
+                  (click)="showPassword.set(!showPassword())"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                  [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                >
+                  <lucide-icon [img]="showPassword() ? EyeOffIcon : EyeIcon" [size]="16" />
+                </button>
+              </div>
+
+              <!-- Password requirements -->
+              @if (registerForm.get('password')?.dirty) {
+                <ul class="mt-2 space-y-1" aria-label="Requisitos de contraseña">
+                  @for (req of passwordRequirements(); track req.label) {
+                    <li class="flex items-center gap-1.5 text-xs" [class]="req.met ? 'text-emerald-400' : 'text-slate-500'">
+                      <lucide-icon [img]="req.met ? CircleCheckIcon : CircleXIcon" [size]="12" aria-hidden="true" />
+                      {{ req.label }}
+                    </li>
+                  }
+                </ul>
+              }
+            </div>
+
+            <!-- Confirm password -->
+            <div>
+              <label for="invite-confirm-password" class="mb-1.5 block text-xs font-medium text-slate-400">Confirmar contraseña</label>
+              <div class="relative">
+                <input
+                  id="invite-confirm-password"
+                  [type]="showConfirmPassword() ? 'text' : 'password'"
+                  formControlName="confirmPassword"
+                  autocomplete="new-password"
+                  placeholder="Repite la contraseña"
+                  class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 pr-10 text-sm text-white placeholder-slate-500 outline-none transition focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+                  [class.border-red-500]="registerForm.hasError('passwordMismatch') && registerForm.get('confirmPassword')?.dirty"
+                />
+                <button
+                  type="button"
+                  (click)="showConfirmPassword.set(!showConfirmPassword())"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                  [attr.aria-label]="showConfirmPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                >
+                  <lucide-icon [img]="showConfirmPassword() ? EyeOffIcon : EyeIcon" [size]="16" />
+                </button>
+              </div>
+              @if (registerForm.hasError('passwordMismatch') && registerForm.get('confirmPassword')?.dirty) {
+                <p class="mt-1 text-xs text-red-400" role="alert">Las contraseñas no coinciden</p>
+              }
+            </div>
+
+            <button
+              type="submit"
+              [disabled]="registerForm.invalid || state() === 'accepting'"
+              class="w-full rounded-lg bg-violet-600 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {{ state() === 'accepting' ? 'Creando cuenta...' : 'Crear cuenta y unirse' }}
+            </button>
+          </form>
+
+          <p class="mt-4 text-center text-xs text-slate-500">
+            ¿Ya tienes una cuenta?
+            <button type="button" (click)="goToLogin()" class="text-violet-400 hover:text-violet-300 underline-offset-2 hover:underline ml-1">
+              Inicia sesión
+            </button>
+          </p>
         } @else if (!emailMatches) {
-          <div class="rounded-lg bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+          <div class="rounded-lg bg-amber-500/10 px-4 py-3 text-sm text-amber-300" role="alert">
             Esta invitación está dirigida a
             <span class="font-medium">{{ invitation()?.email }}</span>.
             Has iniciado sesión como <span class="font-medium">{{ currentUserEmail }}</span>.
@@ -111,7 +246,7 @@
     <!-- Accepted -->
     @if (state() === 'accepted') {
       <div class="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-8 text-center">
-        <lucide-icon [img]="CheckCircleIcon" [size]="40" class="mx-auto mb-4 text-emerald-400" />
+        <lucide-icon [img]="CircleCheckBigIcon" [size]="40" class="mx-auto mb-4 text-emerald-400" />
         <h1 class="mb-2 text-xl font-semibold text-white">¡Bienvenido!</h1>
         <p class="text-sm text-slate-400">
           Te has unido a <span class="text-white font-medium">{{ invitation()?.companyName }}</span>.
@@ -123,7 +258,7 @@
     <!-- Error -->
     @if (state() === 'error') {
       <div class="rounded-xl border border-red-500/20 bg-red-500/5 p-8 text-center">
-        <lucide-icon [img]="AlertCircleIcon" [size]="40" class="mx-auto mb-4 text-red-400" />
+        <lucide-icon [img]="CircleAlertIcon" [size]="40" class="mx-auto mb-4 text-red-400" />
         <h1 class="mb-2 text-xl font-semibold text-white">Error al aceptar</h1>
         <p class="text-sm text-slate-400">{{ errorMessage() }}</p>
         <a routerLink="/" class="mt-6 inline-block rounded-lg bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-700">

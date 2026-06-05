@@ -30,15 +30,7 @@ import { UserSyncService } from '../../../core/services/user-sync.service';
 import { CompanyInvitation } from '../../../interfaces/invitation';
 import { Company } from '../../../interfaces/company';
 import { FIRM_ROLES, FirmRole } from '../../../interfaces/member';
-
-interface FirestoreUser {
-  id: string;
-  email: string;
-  displayName: string | null;
-  isSuperUser: boolean;
-  companyId?: string;
-  role?: 'user' | 'admin';
-}
+import { ZoemUser } from '../../../interfaces/user';
 
 @Component({
   selector: 'app-users',
@@ -80,9 +72,9 @@ export class UsersComponent implements OnInit {
 
   readonly allUsers = toSignal(
     collectionData(collection(this.firestore, 'users'), { idField: 'id' }).pipe(
-      map((docs) => docs as FirestoreUser[]),
+      map((docs) => docs as ZoemUser[]),
     ),
-    { initialValue: [] as FirestoreUser[] },
+    { initialValue: [] as ZoemUser[] },
   );
 
   readonly allInvitations = toSignal(this.invitationService.getAllPendingInvitations(), {
@@ -184,8 +176,12 @@ export class UsersComponent implements OnInit {
   getRoleClass(role: string | undefined, isSuperUser?: boolean): string {
     if (isSuperUser) return 'bg-violet-500/20 text-violet-300';
     const map: Record<string, string> = {
-      user: 'bg-slate-700 text-slate-300',
-      admin: 'bg-blue-500/20 text-blue-300',
+      user:    'bg-slate-700 text-slate-300',
+      admin:   'bg-blue-500/20 text-blue-300',
+      Admin:   'bg-blue-500/20 text-blue-300',
+      Gestor:  'bg-violet-500/20 text-violet-300',
+      Usuario: 'bg-slate-700 text-slate-300',
+      Viewer:  'bg-slate-600 text-slate-400',
     };
     return map[role ?? 'user'] ?? 'bg-slate-700 text-slate-300';
   }

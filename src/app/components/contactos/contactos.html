@@ -360,68 +360,96 @@
     </button>
   </div>
 
+  <!-- Step indicator (solo contacto nuevo) -->
+  @if (!editingId()) {
+    <div class="flex items-center gap-2 px-6 pt-5 pb-1">
+      <div class="flex items-center gap-1.5 shrink-0">
+        <span [class]="formStep() === 2 ? 'flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white' : 'flex h-5 w-5 items-center justify-center rounded-full bg-violet-600 text-[10px] font-bold text-white'">
+          @if (formStep() === 2) { <lucide-icon [img]="CheckIcon" size="10" /> } @else { 1 }
+        </span>
+        <span class="text-xs" [class]="formStep() === 1 ? 'font-semibold text-violet-700' : 'text-slate-400'">Datos principales</span>
+      </div>
+      <div class="mx-1 h-px flex-1 bg-slate-200"></div>
+      <div class="flex items-center gap-1.5 shrink-0">
+        <span [class]="formStep() === 2 ? 'flex h-5 w-5 items-center justify-center rounded-full bg-violet-600 text-[10px] font-bold text-white' : 'flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 text-[10px] font-medium text-slate-400'">2</span>
+        <span class="text-xs" [class]="formStep() === 2 ? 'font-semibold text-violet-700' : 'text-slate-400'">
+          Info adicional <span class="font-normal text-slate-400">(opcional)</span>
+        </span>
+      </div>
+    </div>
+  }
+
   <!-- Body (scrollable) -->
   <form [formGroup]="form" (ngSubmit)="saveContact()" class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
 
-    <!-- Tipo de contacto -->
-    <div>
-      <p class="text-xs font-medium text-slate-500 mb-2">Tipo de contacto</p>
-      <div class="flex gap-3">
-        <button type="button" (click)="formType.set('persona_fisica')"
-          [class]="formType() === 'persona_fisica' ? 'flex-1 py-2.5 text-sm font-semibold rounded-lg border-2 border-violet-500 bg-violet-50 text-violet-700' : 'flex-1 py-2.5 text-sm font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50'">
-          Persona Física
-        </button>
-        <button type="button" (click)="formType.set('persona_juridica')"
-          [class]="formType() === 'persona_juridica' ? 'flex-1 py-2.5 text-sm font-semibold rounded-lg border-2 border-violet-500 bg-violet-50 text-violet-700' : 'flex-1 py-2.5 text-sm font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50'">
-          Persona Jurídica
-        </button>
+    <!-- Tipo de contacto (paso 1 o edición) -->
+    @if (showStep1Fields()) {
+      <div>
+        <p class="text-xs font-medium text-slate-500 mb-2">Tipo de contacto</p>
+        <div class="flex gap-3">
+          <button type="button" (click)="formType.set('persona_fisica')"
+            [class]="formType() === 'persona_fisica' ? 'flex-1 py-2.5 text-sm font-semibold rounded-lg border-2 border-violet-500 bg-violet-50 text-violet-700' : 'flex-1 py-2.5 text-sm font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50'">
+            Persona Física
+          </button>
+          <button type="button" (click)="formType.set('persona_juridica')"
+            [class]="formType() === 'persona_juridica' ? 'flex-1 py-2.5 text-sm font-semibold rounded-lg border-2 border-violet-500 bg-violet-50 text-violet-700' : 'flex-1 py-2.5 text-sm font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50'">
+            Persona Jurídica
+          </button>
+        </div>
       </div>
-    </div>
+    }
 
-    <!-- Campos Persona Física -->
+    <!-- PERSONA FÍSICA -->
     @if (formType() === 'persona_fisica') {
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label for="nombre" class="block text-xs font-medium text-slate-500 mb-1">Nombre *</label>
-          <input id="nombre" formControlName="nombre" type="text"
-            class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+      @if (showStep1Fields()) {
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="nombre" class="block text-xs font-medium text-slate-500 mb-1">Nombre *</label>
+            <input id="nombre" formControlName="nombre" type="text"
+              class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+              [class]="showErrors() && !form.get('nombre')?.value?.trim() ? 'border-red-300' : 'border-slate-200'" />
+            @if (showErrors() && !form.get('nombre')?.value?.trim()) {
+              <p class="mt-0.5 text-[11px] text-red-500">Campo obligatorio</p>
+            }
+          </div>
+          <div>
+            <label for="apellidos" class="block text-xs font-medium text-slate-500 mb-1">Apellidos *</label>
+            <input id="apellidos" formControlName="apellidos" type="text"
+              class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+              [class]="showErrors() && !form.get('apellidos')?.value?.trim() ? 'border-red-300' : 'border-slate-200'" />
+            @if (showErrors() && !form.get('apellidos')?.value?.trim()) {
+              <p class="mt-0.5 text-[11px] text-red-500">Campo obligatorio</p>
+            }
+          </div>
         </div>
-        <div>
-          <label for="apellidos" class="block text-xs font-medium text-slate-500 mb-1">Apellidos *</label>
-          <input id="apellidos" formControlName="apellidos" type="text"
-            class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="nifType" class="block text-xs font-medium text-slate-500 mb-1">Documento *</label>
+            <select id="nifType" formControlName="nifType"
+              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
+              <option value="dni">DNI</option>
+              <option value="nie">NIE</option>
+              <option value="pasaporte">Pasaporte</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div>
+            <label for="nif" class="block text-xs font-medium text-slate-500 mb-1">Número *</label>
+            <input id="nif" formControlName="nif" type="text"
+              class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+              [class]="showErrors() && !form.get('nif')?.value?.trim() ? 'border-red-300' : 'border-slate-200'" />
+            @if (showErrors() && !form.get('nif')?.value?.trim()) {
+              <p class="mt-0.5 text-[11px] text-red-500">Campo obligatorio</p>
+            }
+          </div>
         </div>
-      </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label for="nifType" class="block text-xs font-medium text-slate-500 mb-1">Documento</label>
-          <select id="nifType" formControlName="nifType"
-            class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
-            <option value="dni">DNI</option>
-            <option value="nie">NIE</option>
-            <option value="pasaporte">Pasaporte</option>
-            <option value="otro">Otro</option>
-          </select>
-        </div>
-        <div>
-          <label for="nif" class="block text-xs font-medium text-slate-500 mb-1">Número</label>
-          <input id="nif" formControlName="nif" type="text"
-            class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-        </div>
-      </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label for="fechaNacimiento" class="block text-xs font-medium text-slate-500 mb-1">Fecha nacimiento</label>
-          <input id="fechaNacimiento" formControlName="fechaNacimiento" type="date"
-            class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-        </div>
+      }
+      @if (showStep2Fields()) {
         <div>
           <label for="nacionalidad" class="block text-xs font-medium text-slate-500 mb-1">Nacionalidad (ISO)</label>
           <input id="nacionalidad" formControlName="nacionalidad" type="text" placeholder="ES"
             class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
         </div>
-      </div>
-      <div class="grid grid-cols-2 gap-4">
         <div>
           <label for="estadoCivil" class="block text-xs font-medium text-slate-500 mb-1">Estado civil</label>
           <select id="estadoCivil" formControlName="estadoCivil"
@@ -434,165 +462,180 @@
             <option value="pareja_hecho">Pareja de hecho</option>
           </select>
         </div>
-        <div>
-          <label for="profesion" class="block text-xs font-medium text-slate-500 mb-1">Profesión</label>
-          <input id="profesion" formControlName="profesion" type="text"
-            class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-        </div>
-      </div>
+      }
     }
 
-    <!-- Campos Persona Jurídica -->
+    <!-- PERSONA JURÍDICA -->
     @if (formType() === 'persona_juridica') {
-      <div>
-        <label for="razonSocial" class="block text-xs font-medium text-slate-500 mb-1">Razón social *</label>
-        <input id="razonSocial" formControlName="razonSocial" type="text"
-          class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-      </div>
-      <div class="grid grid-cols-2 gap-4">
+      @if (showStep1Fields()) {
         <div>
-          <label for="nombreComercial" class="block text-xs font-medium text-slate-500 mb-1">Nombre comercial</label>
-          <input id="nombreComercial" formControlName="nombreComercial" type="text"
+          <label for="razonSocial" class="block text-xs font-medium text-slate-500 mb-1">Razón social *</label>
+          <input id="razonSocial" formControlName="razonSocial" type="text"
+            class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+            [class]="showErrors() && !form.get('razonSocial')?.value?.trim() ? 'border-red-300' : 'border-slate-200'" />
+          @if (showErrors() && !form.get('razonSocial')?.value?.trim()) {
+            <p class="mt-0.5 text-[11px] text-red-500">Campo obligatorio</p>
+          }
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="cifType" class="block text-xs font-medium text-slate-500 mb-1">Documento *</label>
+            <select id="cifType" formControlName="cifType"
+              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
+              <option value="cif">CIF (España)</option>
+              <option value="vat">VAT (UE)</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div>
+            <label for="cif" class="block text-xs font-medium text-slate-500 mb-1">Número *</label>
+            <input id="cif" formControlName="cif" type="text"
+              class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+              [class]="showErrors() && !form.get('cif')?.value?.trim() ? 'border-red-300' : 'border-slate-200'" />
+            @if (showErrors() && !form.get('cif')?.value?.trim()) {
+              <p class="mt-0.5 text-[11px] text-red-500">Campo obligatorio</p>
+            }
+          </div>
+        </div>
+      }
+      @if (showStep2Fields()) {
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="nombreComercial" class="block text-xs font-medium text-slate-500 mb-1">Nombre comercial</label>
+            <input id="nombreComercial" formControlName="nombreComercial" type="text"
+              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+          </div>
+          <div>
+            <label for="formaJuridica" class="block text-xs font-medium text-slate-500 mb-1">Forma jurídica</label>
+            <select id="formaJuridica" formControlName="formaJuridica"
+              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
+              <option value="">— Seleccionar —</option>
+              <option value="S.L.">S.L.</option>
+              <option value="S.A.">S.A.</option>
+              <option value="S.L.U.">S.L.U.</option>
+              <option value="S.L.P.">S.L.P.</option>
+              <option value="Autónomo">Autónomo</option>
+              <option value="Cooperativa">Cooperativa</option>
+              <option value="Asociación">Asociación</option>
+              <option value="Fundación">Fundación</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="sectorActividad" class="block text-xs font-medium text-slate-500 mb-1">Sector de actividad</label>
+            <input id="sectorActividad" formControlName="sectorActividad" type="text"
+              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+          </div>
+          <div>
+            <label for="website" class="block text-xs font-medium text-slate-500 mb-1">Sitio web</label>
+            <input id="website" formControlName="website" type="url" placeholder="https://"
+              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+          </div>
+        </div>
+        <div>
+          <label for="representanteLegalNombre" class="block text-xs font-medium text-slate-500 mb-1">Representante legal</label>
+          <input id="representanteLegalNombre" formControlName="representanteLegalNombre" type="text"
             class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
         </div>
-        <div>
-          <label for="formaJuridica" class="block text-xs font-medium text-slate-500 mb-1">Forma jurídica</label>
-          <select id="formaJuridica" formControlName="formaJuridica"
-            class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
-            <option value="">— Seleccionar —</option>
-            <option value="S.L.">S.L.</option>
-            <option value="S.A.">S.A.</option>
-            <option value="S.L.U.">S.L.U.</option>
-            <option value="S.L.P.">S.L.P.</option>
-            <option value="Autónomo">Autónomo</option>
-            <option value="Cooperativa">Cooperativa</option>
-            <option value="Asociación">Asociación</option>
-            <option value="Fundación">Fundación</option>
-            <option value="Otro">Otro</option>
-          </select>
+      }
+    }
+
+    <!-- Datos de contacto (paso 1 o edición) -->
+    @if (showStep1Fields()) {
+      <div class="border-t border-slate-100 pt-4">
+        <p class="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">Datos de contacto</p>
+        <div class="space-y-3">
+          <div>
+            <label for="email" class="block text-xs font-medium text-slate-500 mb-1">Email *</label>
+            <input id="email" formControlName="email" type="email"
+              class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+              [class]="(showErrors() || form.get('email')?.touched) && form.get('email')?.invalid ? 'border-red-300' : 'border-slate-200'" />
+            @if ((showErrors() || form.get('email')?.touched) && form.get('email')?.invalid) {
+              <p class="mt-0.5 text-[11px] text-red-500">
+                {{ !form.get('email')?.value ? 'Campo obligatorio' : 'Email no válido' }}
+              </p>
+            }
+          </div>
+          <div>
+            <label for="mobile" class="block text-xs font-medium text-slate-500 mb-1">Móvil *</label>
+            <input id="mobile" formControlName="mobile" type="tel"
+              class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+              [class]="showErrors() && !form.get('mobile')?.value?.trim() ? 'border-red-300' : 'border-slate-200'" />
+            @if (showErrors() && !form.get('mobile')?.value?.trim()) {
+              <p class="mt-0.5 text-[11px] text-red-500">Campo obligatorio</p>
+            }
+          </div>
         </div>
-      </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label for="cifType" class="block text-xs font-medium text-slate-500 mb-1">Tipo identificador</label>
-          <select id="cifType" formControlName="cifType"
-            class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
-            <option value="cif">CIF (España)</option>
-            <option value="vat">VAT (UE)</option>
-            <option value="otro">Otro</option>
-          </select>
-        </div>
-        <div>
-          <label for="cif" class="block text-xs font-medium text-slate-500 mb-1">Número</label>
-          <input id="cif" formControlName="cif" type="text"
-            class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-        </div>
-      </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label for="sectorActividad" class="block text-xs font-medium text-slate-500 mb-1">Sector de actividad</label>
-          <input id="sectorActividad" formControlName="sectorActividad" type="text"
-            class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-        </div>
-        <div>
-          <label for="website" class="block text-xs font-medium text-slate-500 mb-1">Sitio web</label>
-          <input id="website" formControlName="website" type="url" placeholder="https://"
-            class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-        </div>
-      </div>
-      <div>
-        <label for="representanteLegalNombre" class="block text-xs font-medium text-slate-500 mb-1">Representante legal</label>
-        <input id="representanteLegalNombre" formControlName="representanteLegalNombre" type="text"
-          class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
       </div>
     }
 
-    <!-- Datos de contacto -->
-    <div class="border-t border-slate-100 pt-4">
-      <p class="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">Datos de contacto</p>
-      <div class="space-y-3">
+    <!-- Dirección (paso 2 o edición) -->
+    @if (showStep2Fields()) {
+      <div class="border-t border-slate-100 pt-4">
+        <p class="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">Dirección</p>
+        <div class="space-y-3">
+          <div class="grid grid-cols-3 gap-3">
+            <div class="col-span-2">
+              <label for="calle" class="block text-xs font-medium text-slate-500 mb-1">Calle</label>
+              <input id="calle" formControlName="calle" type="text"
+                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+            </div>
+            <div>
+              <label for="numero" class="block text-xs font-medium text-slate-500 mb-1">Nº / Piso</label>
+              <input id="numero" formControlName="numero" type="text"
+                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="codigoPostal" class="block text-xs font-medium text-slate-500 mb-1">C.P.</label>
+              <input id="codigoPostal" formControlName="codigoPostal" type="text"
+                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+            </div>
+            <div>
+              <label for="municipio" class="block text-xs font-medium text-slate-500 mb-1">Municipio</label>
+              <input id="municipio" formControlName="municipio" type="text"
+                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="provincia" class="block text-xs font-medium text-slate-500 mb-1">Provincia</label>
+              <input id="provincia" formControlName="provincia" type="text"
+                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+            </div>
+            <div>
+              <label for="pais" class="block text-xs font-medium text-slate-500 mb-1">País (ISO)</label>
+              <input id="pais" formControlName="pais" type="text" placeholder="ES"
+                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Estado y notas (paso 1 o edición) -->
+    @if (showStep1Fields()) {
+      <div class="border-t border-slate-100 pt-4 space-y-3">
         <div>
-          <label for="email" class="block text-xs font-medium text-slate-500 mb-1">Email *</label>
-          <input id="email" formControlName="email" type="email"
-            class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
-            [class]="form.get('email')?.invalid && form.get('email')?.touched ? 'border-red-300' : 'border-slate-200'" />
+          <label for="status" class="block text-xs font-medium text-slate-500 mb-1">Estado *</label>
+          <select id="status" formControlName="status"
+            class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
+            <option value="activo">Activo</option>
+            <option value="potencial">Potencial</option>
+            <option value="inactivo">Inactivo</option>
+            <option value="archivado">Archivado</option>
+          </select>
         </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label for="phone" class="block text-xs font-medium text-slate-500 mb-1">Teléfono fijo</label>
-            <input id="phone" formControlName="phone" type="tel"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-          </div>
-          <div>
-            <label for="mobile" class="block text-xs font-medium text-slate-500 mb-1">Móvil</label>
-            <input id="mobile" formControlName="mobile" type="tel"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-          </div>
+        <div>
+          <label for="notes" class="block text-xs font-medium text-slate-500 mb-1">Notas internas</label>
+          <textarea id="notes" formControlName="notes" rows="3"
+            class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none"></textarea>
         </div>
       </div>
-    </div>
-
-    <!-- Dirección -->
-    <div class="border-t border-slate-100 pt-4">
-      <p class="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">Dirección</p>
-      <div class="space-y-3">
-        <div class="grid grid-cols-3 gap-3">
-          <div class="col-span-2">
-            <label for="calle" class="block text-xs font-medium text-slate-500 mb-1">Calle</label>
-            <input id="calle" formControlName="calle" type="text"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-          </div>
-          <div>
-            <label for="numero" class="block text-xs font-medium text-slate-500 mb-1">Nº / Piso</label>
-            <input id="numero" formControlName="numero" type="text"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label for="codigoPostal" class="block text-xs font-medium text-slate-500 mb-1">C.P.</label>
-            <input id="codigoPostal" formControlName="codigoPostal" type="text"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-          </div>
-          <div>
-            <label for="municipio" class="block text-xs font-medium text-slate-500 mb-1">Municipio</label>
-            <input id="municipio" formControlName="municipio" type="text"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label for="provincia" class="block text-xs font-medium text-slate-500 mb-1">Provincia</label>
-            <input id="provincia" formControlName="provincia" type="text"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-          </div>
-          <div>
-            <label for="pais" class="block text-xs font-medium text-slate-500 mb-1">País (ISO)</label>
-            <input id="pais" formControlName="pais" type="text" placeholder="ES"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Estado y notas -->
-    <div class="border-t border-slate-100 pt-4 space-y-3">
-      <div>
-        <label for="status" class="block text-xs font-medium text-slate-500 mb-1">Estado</label>
-        <select id="status" formControlName="status"
-          class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
-          <option value="activo">Activo</option>
-          <option value="potencial">Potencial</option>
-          <option value="inactivo">Inactivo</option>
-          <option value="archivado">Archivado</option>
-        </select>
-      </div>
-      <div>
-        <label for="notes" class="block text-xs font-medium text-slate-500 mb-1">Notas internas</label>
-        <textarea id="notes" formControlName="notes" rows="3"
-          class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none"></textarea>
-      </div>
-    </div>
+    }
 
     <!-- Spacer para que el sticky footer no tape contenido -->
     <div class="h-4"></div>
@@ -600,17 +643,37 @@
 
   <!-- Footer (sticky) -->
   <div class="flex gap-3 border-t border-slate-200 px-6 py-4 shrink-0 bg-white">
-    <button type="button" (click)="closeDrawer()"
-      class="flex-1 rounded-lg border border-slate-200 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
-      Cancelar
-    </button>
-    <button type="submit" form="contactForm" [disabled]="form.invalid || isSaving()"
-      (click)="saveContact()"
-      class="flex-1 rounded-lg bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-      @if (isSaving()) {
-        <lucide-icon [img]="Loader2Icon" size="16" class="animate-spin"></lucide-icon>
-      }
-      {{ editingId() ? 'Guardar cambios' : 'Crear contacto' }}
-    </button>
+    @if (!editingId() && formStep() === 1) {
+      <button type="button" (click)="closeDrawer()"
+        class="flex-1 rounded-lg border border-slate-200 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+        Cancelar
+      </button>
+      <button type="button" (click)="nextStep()"
+        class="flex-1 rounded-lg bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 flex items-center justify-center gap-1.5">
+        Continuar
+        <lucide-icon [img]="ChevronRightIcon" size="16"></lucide-icon>
+      </button>
+    } @else if (!editingId() && formStep() === 2) {
+      <button type="button" (click)="prevStep()"
+        class="rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 flex items-center gap-1">
+        <lucide-icon [img]="ChevronLeftIcon" size="16"></lucide-icon>
+        Atrás
+      </button>
+      <button type="button" (click)="saveContact()" [disabled]="isSaving()"
+        class="flex-1 rounded-lg bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+        @if (isSaving()) { <lucide-icon [img]="Loader2Icon" size="16" class="animate-spin"></lucide-icon> }
+        Guardar contacto
+      </button>
+    } @else {
+      <button type="button" (click)="closeDrawer()"
+        class="flex-1 rounded-lg border border-slate-200 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+        Cancelar
+      </button>
+      <button type="button" (click)="saveContact()" [disabled]="isSaving()"
+        class="flex-1 rounded-lg bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+        @if (isSaving()) { <lucide-icon [img]="Loader2Icon" size="16" class="animate-spin"></lucide-icon> }
+        Guardar cambios
+      </button>
+    }
   </div>
 </aside>

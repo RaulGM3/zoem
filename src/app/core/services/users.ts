@@ -86,11 +86,11 @@ export class UsersService {
     this.members.update(list => list.filter(m => m.id !== id));
   }
 
-  async recordLogin(email: string, companyId: string): Promise<void> {
+  async recordLogin(uid: string, companyId: string): Promise<void> {
     const q = query(
       collection(this.firestore, 'companyMembers'),
       where('companyId', '==', companyId),
-      where('userId', '==', email)
+      where('userId', '==', uid)
     );
     const snapshot = await getDocs(q);
     if (snapshot.empty) return;

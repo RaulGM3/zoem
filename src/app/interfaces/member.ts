@@ -33,6 +33,8 @@ export interface CompanyMember {
   userId: string;
   email: string;
   nombre: string;
+  apellido?: string;
+  telefono?: string;
   role: FirmRole;
   departamento: string;
   estado: MemberEstado;

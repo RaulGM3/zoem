@@ -7,6 +7,8 @@ export * from './calendar-event.interface';
 export * from './ia-contact.interface';
 export * from './document.interface';
 export * from './caso.interface';
+export * from './gestoria.interface';
+export * from './plantilla.interface';
 export * from './pipeline.interface';
 export * from './registro-hora.interface';
 export * from './tarea.interface';

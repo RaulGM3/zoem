@@ -68,7 +68,12 @@ export class InvitationService {
     return { id: d.id, ...d.data() } as CompanyInvitation;
   }
 
-  async acceptInvitation(token: string, userEmail: string): Promise<void> {
+  async acceptInvitation(
+    token: string,
+    userEmail: string,
+    uid: string,
+    profile?: { nombre: string; apellido: string; telefono: string },
+  ): Promise<void> {
     const invitation = await this.getInvitationByToken(token);
     if (!invitation || !invitation.id) throw new Error('Invitación no encontrada');
     if (invitation.status !== 'pending') throw new Error('Esta invitación ya no está activa');
@@ -84,9 +89,11 @@ export class InvitationService {
     const membersCol = collection(this.firestore, 'companyMembers');
     await addDoc(membersCol, {
       companyId: invitation.companyId,
-      userId: normalizedEmail,
+      userId: uid,
       email: normalizedEmail,
-      nombre: '',
+      nombre: profile?.nombre ?? '',
+      apellido: profile?.apellido ?? '',
+      telefono: profile?.telefono ?? '',
       role: invitation.role,
       departamento: '',
       estado: 'activo',
@@ -95,7 +102,7 @@ export class InvitationService {
     });
 
     const systemRole: 'admin' | 'user' = invitation.role === 'Admin' ? 'admin' : 'user';
-    await this.userSync.updateUserCompany(userEmail, invitation.companyId, systemRole);
+    await this.userSync.updateUserCompany(uid, invitation.companyId, systemRole);
 
     await updateDoc(doc(this.firestore, 'companyInvitations', invitation.id), {
       status: 'accepted',

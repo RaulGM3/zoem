@@ -5,7 +5,7 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import {
   LucideAngularModule,
   Users, Search, Plus, Phone, Mail, Building2,
-  Eye, Edit, Trash2, ChevronRight, UserPlus, TrendingUp,
+  Eye, Edit, Trash2, ChevronRight, ChevronLeft, UserPlus, TrendingUp,
   GitMerge, Shield, Brain, ArrowRight, X, Check, LoaderCircle,
 } from 'lucide-angular';
 import { PIPELINE_DEALS } from '../../data/dummy-data';
@@ -46,6 +46,7 @@ export class ContactosComponent {
   readonly EditIcon = Edit;
   readonly Trash2Icon = Trash2;
   readonly ChevronRightIcon = ChevronRight;
+  readonly ChevronLeftIcon = ChevronLeft;
   readonly UserPlusIcon = UserPlus;
   readonly TrendingUpIcon = TrendingUp;
   readonly GitMergeIcon = GitMerge;
@@ -68,13 +69,14 @@ export class ContactosComponent {
   formType = signal<'persona_fisica' | 'persona_juridica'>('persona_fisica');
   isSaving = signal(false);
   deleteConfirmId = signal<string | null>(null);
+  formStep = signal<1 | 2>(1);
+  showErrors = signal(false);
 
   pipelineDeals = PIPELINE_DEALS;
   rgpdData = RGPD_CONSENTIMIENTOS;
 
   form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
-    phone: [''],
     mobile: [''],
     status: ['activo', Validators.required],
     notes: [''],
@@ -83,10 +85,9 @@ export class ContactosComponent {
     apellidos: [''],
     nifType: ['dni'],
     nif: [''],
-    fechaNacimiento: [''],
+
     nacionalidad: ['ES'],
-    estadoCivil: [''],
-    profesion: [''],
+    estadoCivil: ['casado'],
     // Persona Jurídica
     razonSocial: [''],
     nombreComercial: [''],
@@ -185,7 +186,7 @@ export class ContactosComponent {
   }
 
   getPhone(c: Contact): string | undefined {
-    return c.phone ?? c.mobile;
+    return  c.mobile;
   }
 
   totalBilled(): number {
@@ -196,11 +197,39 @@ export class ContactosComponent {
     return this.contactService.contacts().filter((c) => c.status === 'activo').length;
   }
 
+  showStep1Fields = computed(() => !!this.editingId() || this.formStep() === 1);
+  showStep2Fields = computed(() => !!this.editingId() || this.formStep() === 2);
+
+  step1Valid = computed(() => {
+    const v = this.form.getRawValue();
+    const emailOk = !this.form.get('email')?.invalid;
+    const mobileOk = !!v.mobile?.trim();
+    if (this.formType() === 'persona_fisica') {
+      return emailOk && mobileOk && !!v.nombre?.trim() && !!v.apellidos?.trim() && !!v.nif?.trim();
+    }
+    return emailOk && mobileOk && !!v.razonSocial?.trim() && !!v.cif?.trim();
+  });
+
+  nextStep() {
+    if (!this.step1Valid()) {
+      this.showErrors.set(true);
+      return;
+    }
+    this.showErrors.set(false);
+    this.formStep.set(2);
+  }
+
+  prevStep() {
+    this.formStep.set(1);
+  }
+
   openNew() {
     this.editingId.set(null);
     this.formType.set('persona_fisica');
+    this.formStep.set(1);
+    this.showErrors.set(false);
     this.form.reset({
-      status: 'activo', nifType: 'dni', cifType: 'cif', pais: 'ES', nacionalidad: 'ES',
+      status: 'activo', nifType: 'dni', cifType: 'cif', pais: 'ES', nacionalidad: 'ES', estadoCivil: 'casado',
     });
     this.showDrawer.set(true);
   }
@@ -212,7 +241,6 @@ export class ContactosComponent {
       contact.type === 'persona_fisica' ? contact.direccion : contact.direccionSocial;
     const base = {
       email: contact.email,
-      phone: contact.phone ?? '',
       mobile: contact.mobile ?? '',
       status: contact.status,
       notes: contact.notes ?? '',
@@ -230,10 +258,8 @@ export class ContactosComponent {
         apellidos: contact.apellidos,
         nifType: contact.nifType,
         nif: contact.nif ?? '',
-        fechaNacimiento: contact.fechaNacimiento ?? '',
         nacionalidad: contact.nacionalidad ?? 'ES',
         estadoCivil: contact.estadoCivil ?? '',
-        profesion: contact.profesion ?? '',
       });
     } else {
       this.form.patchValue({
@@ -253,27 +279,28 @@ export class ContactosComponent {
 
   async saveContact() {
     if (this.form.invalid) return;
+    if (!this.editingId() && !this.step1Valid()) {
+      this.showErrors.set(true);
+      this.formStep.set(1);
+      return;
+    }
     this.isSaving.set(true);
     try {
       const v = this.form.getRawValue();
       const base = {
         email: v.email!,
-        phone: v.phone || undefined,
-        mobile: v.mobile || undefined,
+        mobile: v.mobile || '',
         status: v.status as ContactStatus,
-        notes: v.notes || undefined,
+        notes: v.notes || '',
       };
-      const direccion =
-        v.calle || v.municipio
-          ? {
-              calle: v.calle || undefined,
-              numero: v.numero || undefined,
-              codigoPostal: v.codigoPostal || undefined,
-              municipio: v.municipio || undefined,
-              provincia: v.provincia || undefined,
-              pais: v.pais || 'ES',
-            }
-          : undefined;
+      const direccion = {
+        calle: v.calle || '',
+        numero: v.numero || '',
+        codigoPostal: v.codigoPostal || '',
+        municipio: v.municipio || '',
+        provincia: v.provincia || '',
+        pais: v.pais || 'ES',
+      };
 
       let data: ContactPayload;
       if (this.formType() === 'persona_fisica') {
@@ -283,11 +310,9 @@ export class ContactosComponent {
           nombre: v.nombre!,
           apellidos: v.apellidos!,
           nifType: v.nifType as PersonaFisica['nifType'],
-          nif: v.nif || undefined,
-          fechaNacimiento: v.fechaNacimiento || undefined,
-          nacionalidad: v.nacionalidad || undefined,
-          estadoCivil: (v.estadoCivil as PersonaFisica['estadoCivil']) || undefined,
-          profesion: v.profesion || undefined,
+          nif: v.nif || '',
+          nacionalidad: v.nacionalidad || 'ES',
+          estadoCivil: (v.estadoCivil as PersonaFisica['estadoCivil']) || 'casado',
           direccion,
         };
       } else {
@@ -295,13 +320,13 @@ export class ContactosComponent {
           type: 'persona_juridica',
           ...base,
           razonSocial: v.razonSocial!,
-          nombreComercial: v.nombreComercial || undefined,
-          formaJuridica: v.formaJuridica || undefined,
+          nombreComercial: v.nombreComercial || '',
+          formaJuridica: v.formaJuridica || '',
           cifType: v.cifType as 'cif' | 'vat' | 'otro',
-          cif: v.cif || undefined,
-          sectorActividad: v.sectorActividad || undefined,
-          website: v.website || undefined,
-          representanteLegalNombre: v.representanteLegalNombre || undefined,
+          cif: v.cif || '',
+          sectorActividad: v.sectorActividad || '',
+          website: v.website || '',
+          representanteLegalNombre: v.representanteLegalNombre || '',
           direccionSocial: direccion,
         };
       }
@@ -321,7 +346,9 @@ export class ContactosComponent {
   closeDrawer() {
     this.showDrawer.set(false);
     this.editingId.set(null);
-    this.form.reset({ status: 'activo', nifType: 'dni', cifType: 'cif', pais: 'ES', nacionalidad: 'ES' });
+    this.formStep.set(1);
+    this.showErrors.set(false);
+    this.form.reset({ status: 'activo', nifType: 'dni', cifType: 'cif', pais: 'ES', nacionalidad: 'ES', estadoCivil: 'casado' });
   }
 
   async confirmDelete(id: string) {

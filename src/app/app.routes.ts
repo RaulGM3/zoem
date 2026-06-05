@@ -111,6 +111,17 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/casos/casos').then((m) => m.CasosComponent),
       },
+      {
+        path: 'casos/:id',
+        loadComponent: () =>
+          import('./components/caso-detail/caso-detail').then((m) => m.CasoDetailComponent),
+      },
+      {
+        path: 'plantillas',
+        canActivate: [permissionGuard('Configuración')],
+        loadComponent: () =>
+          import('./components/plantillas/plantillas').then((m) => m.PlantillasComponent),
+      },
     ],
   },
   {

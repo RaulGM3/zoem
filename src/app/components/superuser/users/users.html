@@ -22,7 +22,7 @@
           placeholder="Buscar..."
           [value]="search()"
           (input)="search.set($any($event.target).value)"
-          class="rounded-lg border border-slate-700 bg-slate-800 py-2 pl-44 pr-4 text-sm text-white placeholder-slate-500 focus:border-violet-500 focus:outline-none"
+          class="rounded-lg border border-slate-700 bg-slate-800 py-2 pl-10 pr-4 text-sm text-white placeholder-slate-500 focus:border-violet-500 focus:outline-none"
         />
       </div>
 
@@ -34,7 +34,7 @@
           aria-label="Filtrar por rol"
         >
           <option value="">Todos los roles</option>
-          <option value="user">User</option>
+          <option value="user">Usuario</option>
           <option value="admin">Admin</option>
           <option value="superuser">Superuser</option>
         </select>
@@ -261,8 +261,9 @@
               formControlName="role"
               class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
             >
-              <option value="user">Usuario</option>
-              <option value="admin">Administrador</option>
+              @for (role of firmRoles; track role) {
+                <option [value]="role">{{ role }}</option>
+              }
             </select>
           </div>
 
