@@ -1,0 +1,127 @@
+<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+  @if (loading()) {
+    <div class="p-10 text-center text-slate-400 text-sm">Cargando casos...</div>
+  } @else {
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50">
+          <tr class="text-left text-slate-500 border-b border-slate-200">
+            <th class="px-4 py-3 font-medium">Título</th>
+            <th class="px-4 py-3 font-medium">Tipo</th>
+            <th class="px-4 py-3 font-medium text-center">Estado</th>
+            <th class="px-4 py-3 font-medium">Vencimiento</th>
+            <th class="px-4 py-3 font-medium text-center">Hitos</th>
+            <th class="px-4 py-3 font-medium text-right">Saldo</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @if (casos().length === 0) {
+            <tr>
+              <td colspan="7" class="px-4 py-10 text-center text-slate-400">No se encontraron casos</td>
+            </tr>
+          }
+          @for (caso of casos(); track caso.id) {
+            <tr
+              class="hover:bg-slate-50 cursor-pointer"
+              (click)="casoClick.emit(caso)"
+              (keydown.enter)="casoClick.emit(caso)"
+              tabindex="0"
+              [attr.aria-label]="'Ver caso: ' + caso.titulo"
+            >
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-2">
+                  <div [class]="'w-2 h-2 rounded-full shrink-0 ' + getPriorityDot(caso.prioridad)"></div>
+                  <div>
+                    <p class="font-medium text-slate-800">{{ caso.titulo }}</p>
+                    <p class="text-xs text-slate-400">{{ caso.id }}</p>
+                  </div>
+                </div>
+              </td>
+              <td class="px-4 py-3">
+                <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getTipoClass(caso.tipo)">{{ caso.tipo }}</span>
+              </td>
+              <td class="px-4 py-3 text-center">
+                <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getEstadoClass(caso.estado)">{{ caso.estado }}</span>
+              </td>
+              <td [class]="'px-4 py-3 ' + getVencimientoClass(getDiasVencimiento(caso.vencimiento))">
+                {{ caso.vencimiento ?? '—' }}
+              </td>
+              <td class="px-4 py-3 text-center text-slate-500">{{ getHitosProgress(caso) }}</td>
+              <td
+                class="px-4 py-3 text-right font-medium"
+                [class]="caso.resumenFinanciero.saldo >= 0 ? 'text-emerald-600' : 'text-red-600'"
+              >
+                {{ caso.resumenFinanciero.saldo | number:'1.2-2' }} €
+              </td>
+              <td class="px-4 py-3">
+                <button
+                  class="p-1 hover:bg-slate-100 rounded"
+                  aria-label="Más acciones"
+                  (click)="toggleDropdown(caso, $event)"
+                >
+                  <lucide-icon [img]="MoreHorizontalIcon" class="w-4 h-4 text-slate-400" />
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
+
+@if (activeDropdown() && dropdownPos()) {
+  <div class="fixed inset-0 z-5" (click)="activeDropdown.set(null); activeCaso.set(null); dropdownPos.set(null)"></div>
+  <div
+    class="fixed z-10 bg-white border border-slate-200 rounded-lg shadow-lg w-36 py-1"
+    [style.top.px]="dropdownPos()!.top"
+    [style.right.px]="dropdownPos()!.right"
+  >
+    <button
+      class="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+      (click)="openDeleteDialog($event)"
+      aria-label="Eliminar caso"
+    >
+      <lucide-icon [img]="TrashIcon" class="w-4 h-4" />
+      Eliminar
+    </button>
+  </div>
+}
+
+@if (casoToDelete()) {
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+    (click)="cancelDelete()"
+    role="presentation"
+  >
+    <div
+      class="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4"
+      (click)="$event.stopPropagation()"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="dialog-title"
+    >
+      <h3 id="dialog-title" class="text-base font-semibold text-slate-800">Eliminar caso</h3>
+      <p class="mt-2 text-sm text-slate-500">
+        ¿Seguro que quieres eliminar
+        <span class="font-medium text-slate-700">{{ casoToDelete()!.titulo }}</span>?
+        Esta acción no se puede deshacer.
+      </p>
+      <div class="mt-5 flex gap-3 justify-end">
+        <button
+          class="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg"
+          (click)="cancelDelete()"
+        >
+          Cancelar
+        </button>
+        <button
+          class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg"
+          (click)="confirmDelete()"
+        >
+          Eliminar
+        </button>
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,27 @@
+<div class="flex items-center justify-between">
+  <div class="flex items-center gap-3">
+    <div class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+      <lucide-icon [img]="BriefcaseIcon" class="w-5 h-5 text-amber-600" />
+    </div>
+    <div>
+      <h1 class="text-xl font-semibold text-slate-800">Gestión de Casos</h1>
+      <p class="text-sm text-slate-500">Seguimiento de expedientes y plazos</p>
+    </div>
+  </div>
+  <div class="flex items-center gap-2">
+    <a
+      routerLink="/plantillas"
+      class="flex items-center gap-2 px-3 py-2 border border-slate-200 text-slate-600 text-sm rounded-lg hover:bg-slate-50"
+    >
+      <lucide-icon [img]="LayersIcon" class="w-4 h-4" />
+      Plantillas
+    </a>
+    <button
+      (click)="newCasoClick.emit()"
+      class="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white text-sm rounded-lg hover:bg-violet-700"
+    >
+      <lucide-icon [img]="PlusIcon" class="w-4 h-4" />
+      Nuevo caso
+    </button>
+  </div>
+</div>

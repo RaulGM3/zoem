@@ -55,13 +55,13 @@ export class PlantillasComponent implements OnInit {
   tipos: CasoTipo[] = ['Legal', 'Fiscal', 'Laboral', 'Mercantil', 'Civil'];
 
   readonly tiposCosto: { value: TipoCosto; label: string }[] = [
-    { value: 'suplido', label: 'Suplido' },
-    { value: 'cuota_litis', label: 'Cuota litis' },
-    { value: 'intereses_demora', label: 'Intereses de demora' },
-    { value: 'costas_judiciales', label: 'Costas judiciales' },
     { value: 'gastos_repercutibles', label: 'Gastos repercutibles' },
-    { value: 'provisiones_fondos', label: 'Provisiones de fondos' },
+    { value: 'suplido', label: 'Suplido' },
+    { value: 'intereses_demora', label: 'Intereses de demora' },
     { value: 'saldos_clientes', label: 'Saldos de clientes' },
+    { value: 'provisiones_fondos', label: 'Provisiones de fondos' },
+    { value: 'cuota_litis', label: 'Cuota litis' },
+    { value: 'costas_judiciales', label: 'Costas judiciales' },
   ];
 
   async ngOnInit(): Promise<void> {
@@ -84,14 +84,16 @@ export class PlantillasComponent implements OnInit {
     this.showForm.set(true);
   }
 
-  openEdit(p: CasoPlantilla): void {
-    this.editingId.set(p.id);
-    this.formNombre.set(p.nombre);
-    this.formDescripcion.set(p.descripcion ?? '');
-    this.formTipo.set(p.tipo ?? '');
-    this.formHonorarios.set(p.modeloCostos.honorariosBase?.toString() ?? '');
-    this.formHitos.set([...p.hitos]);
-    this.formSuplidos.set([...p.modeloCostos.suplidos]);
+  async openEdit(p: CasoPlantilla): Promise<void> {
+    const full = await this.plantillasService.getPlantilla(p.id);
+    if (!full) return;
+    this.editingId.set(full.id);
+    this.formNombre.set(full.nombre);
+    this.formDescripcion.set(full.descripcion ?? '');
+    this.formTipo.set(full.tipo ?? '');
+    this.formHonorarios.set(full.modeloCostos.honorariosBase?.toString() ?? '');
+    this.formHitos.set([...full.hitos]);
+    this.formSuplidos.set([...full.modeloCostos.suplidos]);
     this.clearHitoForm();
     this.clearSuplidoForm();
     this.showForm.set(true);
@@ -162,7 +164,8 @@ export class PlantillasComponent implements OnInit {
     this.hitoTitulo.set('');
     this.hitoDescripcion.set('');
     this.hitoDias.set('0');
-    this.hitoAsignado.set('');
+    const members = this.usersService.members();
+    this.hitoAsignado.set(members.length === 1 ? members[0].userId : '');
   }
 
   // Estructura de costos

@@ -1,0 +1,35 @@
+<div class="flex flex-wrap gap-3">
+  <div class="relative flex-1 min-w-48">
+    <lucide-icon [img]="SearchIcon" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+    <input
+      type="text"
+      placeholder="Buscar por título o descripción..."
+      [value]="search()"
+      (input)="searchChange.emit($any($event.target).value)"
+      class="pl-10 pr-4 py-2 w-full border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+      aria-label="Buscar casos"
+    />
+  </div>
+  <select
+    [value]="filterEstado()"
+    (change)="filterEstadoChange.emit($any($event.target).value)"
+    class="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 text-slate-600"
+    aria-label="Filtrar por estado"
+  >
+    <option value="">Todos los estados</option>
+    @for (e of estados(); track e) {
+      <option [value]="e">{{ e }}</option>
+    }
+  </select>
+  <select
+    [value]="filterTipo()"
+    (change)="filterTipoChange.emit($any($event.target).value)"
+    class="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 text-slate-600"
+    aria-label="Filtrar por tipo"
+  >
+    <option value="">Todos los tipos</option>
+    @for (t of tipos(); track t) {
+      <option [value]="t">{{ t }}</option>
+    }
+  </select>
+</div>

@@ -8,6 +8,7 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  writeBatch,
   query,
   orderBy,
   serverTimestamp,
@@ -16,9 +17,6 @@ import { CompanyService } from './company.service';
 import { PlantillasService } from './plantillas.service';
 import {
   Caso,
-  CasoEstado,
-  CasoPrioridad,
-  CasoTipo,
   Hito,
   MovimientoGestoria,
   RESUMEN_FINANCIERO_VACIO,
@@ -28,6 +26,12 @@ import {
 type CasoCreate = Omit<Caso, 'id' | 'companyId' | 'hitos' | 'resumenFinanciero' | 'createdAt' | 'updatedAt'> & {
   plantillaId?: string;
 };
+
+function stripUndefined<T extends object>(obj: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, v]) => v !== undefined)
+  ) as Partial<T>;
+}
 
 @Injectable({ providedIn: 'root' })
 export class CasosService {
@@ -48,39 +52,51 @@ export class CasosService {
     return collection(this.firestore, 'companies', this.companyId, 'casos');
   }
 
+  private hitosRef(casoId: string) {
+    return collection(this.firestore, 'companies', this.companyId, 'casos', casoId, 'hitos');
+  }
+
   async loadCasos(): Promise<void> {
     this.loading.set(true);
     try {
       const q = query(this.casosRef, orderBy('updatedAt', 'desc'));
       const snapshot = await getDocs(q);
-      this.casos.set(snapshot.docs.map(d => ({ id: d.id, ...d.data() }) as Caso));
+      this.casos.set(snapshot.docs.map(d => ({ id: d.id, ...d.data(), hitos: [] as Hito[] }) as Caso));
     } finally {
       this.loading.set(false);
     }
   }
 
   async getCaso(id: string): Promise<Caso | null> {
-    const snapshot = await getDoc(doc(this.firestore, 'companies', this.companyId, 'casos', id));
-    return snapshot.exists() ? ({ id: snapshot.id, ...snapshot.data() }) as Caso : null;
+    const companyId = this.companyId;
+    const [casoSnap, hitosSnap] = await Promise.all([
+      getDoc(doc(this.firestore, 'companies', companyId, 'casos', id)),
+      getDocs(query(
+        collection(this.firestore, 'companies', companyId, 'casos', id, 'hitos'),
+        orderBy('orden')
+      )),
+    ]);
+    if (!casoSnap.exists()) return null;
+    const hitos = hitosSnap.docs.map(d => ({ id: d.id, ...d.data() }) as Hito);
+    return { id: casoSnap.id, ...casoSnap.data(), hitos } as Caso;
   }
 
   async createCaso(data: CasoCreate): Promise<string> {
     const companyId = this.companyId;
-    let hitos: Hito[] = [];
+    let hitosToCreate: Omit<Hito, 'id'>[] = [];
 
     if (data.plantillaId) {
       const plantilla = await this.plantillasService.getPlantilla(data.plantillaId);
       if (plantilla) {
         const inicio = new Date();
-        hitos = plantilla.hitos.map(h => {
+        hitosToCreate = plantilla.hitos.map(h => {
           const fecha = new Date(inicio);
           fecha.setDate(fecha.getDate() + h.diasDesdeInicio);
           return {
-            id: crypto.randomUUID(),
             titulo: h.titulo,
-            descripcion: h.descripcion,
+            ...(h.descripcion ? { descripcion: h.descripcion } : {}),
             fechaEstimada: fecha.toISOString().slice(0, 10),
-            asignadoA: h.asignadoA,
+            ...(h.asignadoA ? { asignadoA: h.asignadoA } : {}),
             estado: 'pendiente' as const,
             orden: h.orden,
           };
@@ -89,13 +105,21 @@ export class CasosService {
     }
 
     const ref = await addDoc(collection(this.firestore, 'companies', companyId, 'casos'), {
-      ...data,
+      ...stripUndefined(data),
       companyId,
-      hitos,
       resumenFinanciero: { ...RESUMEN_FINANCIERO_VACIO },
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
+
+    if (hitosToCreate.length > 0) {
+      const batch = writeBatch(this.firestore);
+      const hitosColRef = collection(this.firestore, 'companies', companyId, 'casos', ref.id, 'hitos');
+      for (const h of hitosToCreate) {
+        batch.set(doc(hitosColRef), h as object);
+      }
+      await batch.commit();
+    }
 
     await this.loadCasos();
     return ref.id;
@@ -103,7 +127,7 @@ export class CasosService {
 
   async updateCaso(id: string, data: Partial<Pick<Caso, 'titulo' | 'descripcion' | 'tipo' | 'estado' | 'prioridad' | 'contactoIds' | 'vencimiento'>>): Promise<void> {
     await updateDoc(doc(this.firestore, 'companies', this.companyId, 'casos', id), {
-      ...data,
+      ...stripUndefined(data),
       updatedAt: serverTimestamp(),
     });
     this.casos.update(list =>
@@ -112,17 +136,32 @@ export class CasosService {
   }
 
   async deleteCaso(id: string): Promise<void> {
-    await deleteDoc(doc(this.firestore, 'companies', this.companyId, 'casos', id));
+    const companyId = this.companyId;
+    const hitosSnap = await getDocs(
+      collection(this.firestore, 'companies', companyId, 'casos', id, 'hitos')
+    );
+    const batch = writeBatch(this.firestore);
+    hitosSnap.docs.forEach(d => batch.delete(d.ref));
+    batch.delete(doc(this.firestore, 'companies', companyId, 'casos', id));
+    await batch.commit();
     this.casos.update(list => list.filter(c => c.id !== id));
   }
 
-  async updateHitos(casoId: string, hitos: Hito[]): Promise<void> {
-    await updateDoc(doc(this.firestore, 'companies', this.companyId, 'casos', casoId), {
-      hitos,
-      updatedAt: serverTimestamp(),
-    });
-    this.casos.update(list =>
-      list.map(c => (c.id === casoId ? { ...c, hitos } : c))
+  async addHito(casoId: string, data: Omit<Hito, 'id'>): Promise<Hito> {
+    const ref = await addDoc(this.hitosRef(casoId), stripUndefined(data) as object);
+    return { id: ref.id, ...data };
+  }
+
+  async updateHito(casoId: string, hitoId: string, data: Partial<Omit<Hito, 'id'>>): Promise<void> {
+    await updateDoc(
+      doc(this.firestore, 'companies', this.companyId, 'casos', casoId, 'hitos', hitoId),
+      stripUndefined(data) as object
+    );
+  }
+
+  async deleteHito(casoId: string, hitoId: string): Promise<void> {
+    await deleteDoc(
+      doc(this.firestore, 'companies', this.companyId, 'casos', casoId, 'hitos', hitoId)
     );
   }
 

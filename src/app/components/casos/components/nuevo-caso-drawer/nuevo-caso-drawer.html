@@ -1,0 +1,132 @@
+@if (visible()) {
+  <div
+    class="fixed inset-0 z-40 bg-black/30"
+    (click)="closed.emit()"
+    aria-hidden="true"
+  ></div>
+  <aside
+    class="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="drawer-title"
+  >
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+      <h2 id="drawer-title" class="text-lg font-semibold text-slate-800">Nuevo caso</h2>
+      <button
+        (click)="closed.emit()"
+        class="p-1.5 rounded-lg hover:bg-slate-100"
+        aria-label="Cerrar"
+      >
+        <lucide-icon [img]="XIcon" class="w-5 h-5 text-slate-500" />
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+
+      <div class="space-y-1">
+        <label for="form-titulo" class="text-sm font-medium text-slate-700">Título <span class="text-red-500">*</span></label>
+        <input
+          id="form-titulo"
+          type="text"
+          [value]="formTitulo()"
+          (input)="formTitulo.set($any($event.target).value)"
+          placeholder="Ej. Divorcio García Rodríguez"
+          class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+        />
+      </div>
+
+      <div class="space-y-1">
+        <label for="form-plantilla" class="text-sm font-medium text-slate-700">Plantilla</label>
+        <select
+          id="form-plantilla"
+          [value]="formPlantillaId()"
+          (change)="onPlantillaChange($any($event.target).value)"
+          class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+        >
+          <option value="">Sin plantilla</option>
+          @for (p of plantillas(); track p.id) {
+            <option [value]="p.id">{{ p.nombre }}</option>
+          }
+        </select>
+        <p class="text-xs text-slate-400">Los hitos de la plantilla se copiarán automáticamente</p>
+      </div>
+
+      <div class="space-y-1">
+        <label for="form-descripcion" class="text-sm font-medium text-slate-700">Descripción</label>
+        <textarea
+          id="form-descripcion"
+          rows="3"
+          [value]="formDescripcion()"
+          (input)="formDescripcion.set($any($event.target).value)"
+          class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none"
+        ></textarea>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="space-y-1">
+          <label for="form-prioridad" class="text-sm font-medium text-slate-700">Prioridad</label>
+          <select
+            id="form-prioridad"
+            [value]="formPrioridad()"
+            (change)="formPrioridad.set($any($event.target).value)"
+            class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+          >
+            @for (p of prioridades; track p) {
+              <option [value]="p">{{ p }}</option>
+            }
+          </select>
+        </div>
+        <div class="space-y-1">
+          <label for="form-estado" class="text-sm font-medium text-slate-700">Estado</label>
+          <select
+            id="form-estado"
+            [value]="formEstado()"
+            (change)="formEstado.set($any($event.target).value)"
+            class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+          >
+            @for (e of estados; track e) {
+              <option [value]="e">{{ e }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <div class="space-y-1">
+        <label for="form-vencimiento" class="text-sm font-medium text-slate-700">Vencimiento</label>
+        <input
+          id="form-vencimiento"
+          type="date"
+          [value]="formVencimiento()"
+          (input)="formVencimiento.set($any($event.target).value)"
+          [disabled]="formSinVencimiento()"
+          class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+        />
+        <label class="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer select-none mt-1">
+          <input
+            type="checkbox"
+            [checked]="formSinVencimiento()"
+            (change)="formSinVencimiento.set($any($event.target).checked)"
+            class="rounded border-slate-300 text-violet-600 focus:ring-violet-300"
+          />
+          Sin vencimiento
+        </label>
+      </div>
+    </div>
+
+    <div class="px-6 py-4 border-t border-slate-200 flex gap-3 justify-end">
+      <button
+        (click)="closed.emit()"
+        class="px-4 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50"
+      >
+        Cancelar
+      </button>
+      <button
+        (click)="submit()"
+        [disabled]="saving() || !formTitulo().trim()"
+        class="px-4 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {{ saving() ? 'Guardando...' : 'Crear caso' }}
+      </button>
+    </div>
+  </aside>
+}

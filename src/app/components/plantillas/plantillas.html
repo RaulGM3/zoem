@@ -197,13 +197,19 @@
             </div>
             <div class="space-y-1">
               <label class="text-xs text-slate-500">Asignado a</label>
-              <select [value]="hitoAsignado()" (change)="hitoAsignado.set($any($event.target).value)"
-                class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
-                <option value="">Sin asignar</option>
-                @for (m of usersService.members(); track m.id) {
-                  <option [value]="m.userId">{{ m.nombre }}</option>
-                }
-              </select>
+              @if (usersService.members().length === 1) {
+                <div class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-700">
+                  {{ usersService.members()[0].nombre }}
+                </div>
+              } @else {
+                <select [value]="hitoAsignado()" (change)="hitoAsignado.set($any($event.target).value)"
+                  class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
+                  <option value="">Sin asignar</option>
+                  @for (m of usersService.members(); track m.id) {
+                    <option [value]="m.userId">{{ m.nombre }}</option>
+                  }
+                </select>
+              }
             </div>
           </div>
           <button (click)="addHito()" [disabled]="!hitoTitulo().trim()"

@@ -213,34 +213,24 @@ export class CasoDetailComponent implements OnInit {
     this.savingHito.set(true);
     try {
       const editId = this.editingHitoId();
-      let hitos: Hito[];
+      const hitoData = {
+        titulo: this.hitoTitulo().trim(),
+        ...(this.hitoDescripcion().trim() ? { descripcion: this.hitoDescripcion().trim() } : {}),
+        ...(this.hitoFechaEstimada() ? { fechaEstimada: this.hitoFechaEstimada() } : {}),
+        ...(this.hitoAsignadoA() ? { asignadoA: this.hitoAsignadoA() } : {}),
+        estado: this.hitoEstado(),
+      };
+
       if (editId) {
-        hitos = c.hitos.map(h =>
-          h.id === editId
-            ? {
-                ...h,
-                titulo: this.hitoTitulo().trim(),
-                descripcion: this.hitoDescripcion().trim() || undefined,
-                fechaEstimada: this.hitoFechaEstimada() || undefined,
-                asignadoA: this.hitoAsignadoA() || undefined,
-                estado: this.hitoEstado(),
-              }
-            : h
+        await this.casosService.updateHito(c.id, editId, hitoData);
+        this.caso.update(cur => cur
+          ? { ...cur, hitos: cur.hitos.map(h => h.id === editId ? { ...h, ...hitoData } : h) }
+          : null
         );
       } else {
-        const newHito: Hito = {
-          id: crypto.randomUUID(),
-          titulo: this.hitoTitulo().trim(),
-          descripcion: this.hitoDescripcion().trim() || undefined,
-          fechaEstimada: this.hitoFechaEstimada() || undefined,
-          asignadoA: this.hitoAsignadoA() || undefined,
-          estado: this.hitoEstado(),
-          orden: c.hitos.length,
-        };
-        hitos = [...c.hitos, newHito];
+        const newHito = await this.casosService.addHito(c.id, { ...hitoData, orden: c.hitos.length });
+        this.caso.update(cur => cur ? { ...cur, hitos: [...cur.hitos, newHito] } : null);
       }
-      await this.casosService.updateHitos(c.id, hitos);
-      this.caso.set({ ...c, hitos });
       this.showHitoForm.set(false);
     } finally {
       this.savingHito.set(false);
@@ -250,18 +240,19 @@ export class CasoDetailComponent implements OnInit {
   async deleteHito(hitoId: string): Promise<void> {
     const c = this.caso();
     if (!c) return;
-    const hitos = c.hitos.filter(h => h.id !== hitoId);
-    await this.casosService.updateHitos(c.id, hitos);
-    this.caso.set({ ...c, hitos });
+    await this.casosService.deleteHito(c.id, hitoId);
+    this.caso.update(cur => cur ? { ...cur, hitos: cur.hitos.filter(h => h.id !== hitoId) } : null);
   }
 
   async toggleHitoEstado(hito: Hito): Promise<void> {
     const c = this.caso();
     if (!c) return;
     const next: HitoEstado = hito.estado === 'completado' ? 'pendiente' : 'completado';
-    const hitos = c.hitos.map(h => (h.id === hito.id ? { ...h, estado: next } : h));
-    await this.casosService.updateHitos(c.id, hitos);
-    this.caso.set({ ...c, hitos });
+    await this.casosService.updateHito(c.id, hito.id, { estado: next });
+    this.caso.update(cur => cur
+      ? { ...cur, hitos: cur.hitos.map(h => h.id === hito.id ? { ...h, estado: next } : h) }
+      : null
+    );
   }
 
   getMemberName(userId?: string): string {

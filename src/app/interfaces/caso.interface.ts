@@ -46,3 +46,14 @@ export const RESUMEN_FINANCIERO_VACIO: ResumenFinanciero = {
   totalHonorarios: 0,
   saldo: 0,
 };
+
+export interface CreateCasoData {
+  titulo: string;
+  descripcion?: string;
+  tipo: CasoTipo;
+  estado: CasoEstado;
+  prioridad: CasoPrioridad;
+  vencimiento?: string;
+  contactoIds: string[];
+  plantillaId?: string;
+}
