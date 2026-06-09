@@ -1,121 +1,223 @@
-import { Component, signal, computed } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, OnInit, signal, computed, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Router } from '@angular/router';
 import {
   LucideAngularModule,
-  LucideIconData,
   Phone,
-  MessageCircle,
-  Mail,
   Clock,
   CheckCircle2,
   XCircle,
-  Eye,
-  TrendingUp,
-  BarChart3,
   Search,
-  Filter,
   Bot,
   Sparkles,
-  ChevronRight,
-  User,
   Zap,
+  FileText,
+  X,
+  Timer,
+  CircleAlert,
+  UserPlus,
+  UserCheck,
+  FolderOpen,
+  PhoneOutgoing,
+  Archive,
 } from 'lucide-angular';
-import { IA_CONTACTS } from '../../data/dummy-data';
-import type { IaContact } from '../../interfaces';
+import { LlamadasService } from '../../core/services/llamadas.service';
+import { ContactService } from '../../core/services/contact.service';
+import type { LlamadaResumen } from '../../interfaces/llamada.interface';
+import type { Contact } from '../../interfaces/contact.interface';
+import type { Timestamp } from '@angular/fire/firestore';
 
 @Component({
   selector: 'app-recepcion-ia',
-  standalone: true,
-  imports: [RouterLink, LucideAngularModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [LucideAngularModule],
   templateUrl: './recepcion-ia.html',
 })
-export class RecepcionIAComponent {
+export class RecepcionIAComponent implements OnInit {
+  private readonly llamadasSvc = inject(LlamadasService);
+  private readonly contactSvc = inject(ContactService);
+  private readonly router = inject(Router);
+
   readonly PhoneIcon = Phone;
-  readonly MessageCircleIcon = MessageCircle;
-  readonly MailIcon = Mail;
   readonly ClockIcon = Clock;
   readonly CheckCircle2Icon = CheckCircle2;
   readonly XCircleIcon = XCircle;
-  readonly EyeIcon = Eye;
-  readonly TrendingUpIcon = TrendingUp;
-  readonly BarChart3Icon = BarChart3;
   readonly SearchIcon = Search;
-  readonly FilterIcon = Filter;
   readonly BotIcon = Bot;
   readonly SparklesIcon = Sparkles;
-  readonly ChevronRightIcon = ChevronRight;
-  readonly UserIcon = User;
   readonly ZapIcon = Zap;
+  readonly FileTextIcon = FileText;
+  readonly XIcon = X;
+  readonly TimerIcon = Timer;
+  readonly CircleAlertIcon = CircleAlert;
+  readonly UserPlusIcon = UserPlus;
+  readonly UserCheckIcon = UserCheck;
+  readonly FolderOpenIcon = FolderOpen;
+  readonly PhoneOutgoingIcon = PhoneOutgoing;
+  readonly ArchiveIcon = Archive;
 
-  contacts = IA_CONTACTS;
-  filterType = signal('');
-  search = signal('');
+  readonly loading = this.llamadasSvc.loading;
 
-  filtered = computed(() => {
-    const t = this.filterType();
+  readonly filterEstado = signal('');
+  readonly search = signal('');
+  readonly selectedLlamada = signal<LlamadaResumen | null>(null);
+
+  private readonly contactPhoneSet = computed(() => {
+    const normalize = (p: string) => p.replace(/\D/g, '');
+    const phones = new Set<string>();
+    for (const c of this.contactSvc.contacts()) {
+      if (c.phone) phones.add(normalize(c.phone));
+      if (c.mobile) phones.add(normalize(c.mobile));
+    }
+    return phones;
+  });
+
+  readonly filtered = computed(() => {
     const q = this.search().toLowerCase();
-    return this.contacts.filter((c) => {
-      const matchT = !t || c.tipo === t;
-      const matchQ = !q || c.cliente.nombre.toLowerCase().includes(q) || c.descripcion.toLowerCase().includes(q);
-      return matchT && matchQ;
+    const estado = this.filterEstado();
+    return this.llamadasSvc.llamadas().filter((ll) => {
+      const matchQ =
+        !q ||
+        (ll.datosCapturados?.nombreCliente ?? '').toLowerCase().includes(q) ||
+        (ll.datosCapturados?.descripcionCaso ?? '').toLowerCase().includes(q) ||
+        ll.resumen.toLowerCase().includes(q);
+      const matchE = !estado || ll.estado === estado;
+      return matchQ && matchE;
     });
   });
 
-  stats = {
-    total: this.contacts.length,
-    llamadas: this.contacts.filter((c) => c.tipo === 'llamada').length,
-    whatsapp: this.contacts.filter((c) => c.tipo === 'whatsapp').length,
-    email: this.contacts.filter((c) => c.tipo === 'email').length,
-    pendientes: this.contacts.filter((c) => c.estado === 'pendiente').length,
-    resueltos: this.contacts.filter((c) => c.estado === 'resuelto').length,
-    avgScore: Math.round(this.contacts.reduce((s, c) => s + c.puntuacion, 0) / this.contacts.length),
-  };
+  readonly stats = computed(() => {
+    const l = this.llamadasSvc.llamadas();
+    const total = l.length;
+    const exitosas = l.filter((ll) => ll.exitosa).length;
+    const urgentes = l.filter((ll) => ll.datosCapturados?.nivelUrgencia === 'urgente').length;
+    const avgDuracion =
+      total > 0 ? Math.round(l.reduce((s, ll) => s + ll.duracionSegundos, 0) / total) : 0;
+    return { total, exitosas, urgentes, avgDuracion };
+  });
 
-  getTypeIcon(tipo: string): LucideIconData {
-    if (tipo === 'llamada') return Phone;
-    if (tipo === 'whatsapp') return MessageCircle;
-    return Mail;
+  readonly ultimaInteraccion = computed(() => {
+    const l = this.llamadasSvc.llamadas();
+    return l.length ? l[0].creadoEn : null;
+  });
+
+  ngOnInit(): void {
+    this.llamadasSvc.loadLlamadas();
+    this.contactSvc.loadContacts();
   }
 
-  getTypeClass(tipo: string): string {
-    if (tipo === 'llamada') return 'bg-green-100 text-green-700';
-    if (tipo === 'whatsapp') return 'bg-emerald-100 text-emerald-700';
-    return 'bg-blue-100 text-blue-700';
+  isKnownContact(ll: LlamadaResumen): boolean {
+    const phone = ll.datosCapturados?.telefono;
+    if (!phone) return false;
+    return this.contactPhoneSet().has(phone.replace(/\D/g, ''));
   }
 
-  getUrgencyClass(urgencia: string): string {
+  getMatchedContact(ll: LlamadaResumen): Contact | undefined {
+    const phone = ll.datosCapturados?.telefono;
+    if (!phone) return undefined;
+    const normalized = phone.replace(/\D/g, '');
+    return this.contactSvc.contacts().find((c) => {
+      if (c.phone && c.phone.replace(/\D/g, '') === normalized) return true;
+      if (c.mobile && c.mobile.replace(/\D/g, '') === normalized) return true;
+      return false;
+    });
+  }
+
+  openTranscript(llamada: LlamadaResumen): void {
+    this.selectedLlamada.set(llamada);
+  }
+
+  closeTranscript(): void {
+    this.selectedLlamada.set(null);
+  }
+
+  abrirCaso(_ll: LlamadaResumen): void {
+    this.router.navigate(['/casos']);
+  }
+
+  agregarContacto(ll: LlamadaResumen): void {
+    const query: Record<string, string> = { newContact: '1' };
+    const d = ll.datosCapturados;
+    if (d?.nombreCliente) {
+      const parts = d.nombreCliente.trim().split(/\s+/);
+      query['nombre'] = parts[0];
+      if (parts.length > 1) query['apellidos'] = parts.slice(1).join(' ');
+    }
+    if (d?.telefono) query['mobile'] = d.telefono;
+    if (d?.descripcionCaso) query['notes'] = d.descripcionCaso;
+    this.router.navigate(['/contactos'], { queryParams: query });
+  }
+
+  async descartarLlamada(ll: LlamadaResumen): Promise<void> {
+    await this.llamadasSvc.descartarLlamada(ll.conversationId);
+  }
+
+  formatDate(ts: Timestamp): string {
+    return ts.toDate().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  formatTime(ts: Timestamp): string {
+    return ts.toDate().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  formatDuracion(seconds: number): string {
+    if (seconds < 60) return `${seconds}s`;
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return s > 0 ? `${m}m ${s}s` : `${m}m`;
+  }
+
+  formatRelative(ts: Timestamp): string {
+    const diffMin = Math.floor((Date.now() - ts.toDate().getTime()) / 60000);
+    if (diffMin < 1) return 'hace menos de un minuto';
+    if (diffMin < 60) return `hace ${diffMin} min`;
+    const diffHrs = Math.floor(diffMin / 60);
+    if (diffHrs < 24) return `hace ${diffHrs}h`;
+    return `hace ${Math.floor(diffHrs / 24)}d`;
+  }
+
+  getUrgencyClass(u?: string): string {
     const map: Record<string, string> = {
       urgente: 'bg-red-100 text-red-700',
       alta: 'bg-orange-100 text-orange-700',
       normal: 'bg-amber-100 text-amber-700',
       baja: 'bg-slate-100 text-slate-500',
     };
-    return map[urgencia] || 'bg-slate-100 text-slate-500';
+    return map[u ?? ''] ?? 'bg-slate-100 text-slate-500';
   }
 
-  getStatusClass(estado: string): string {
+  getUrgencyLabel(u?: string): string {
+    const map: Record<string, string> = { urgente: 'Urgente', alta: 'Alta', normal: 'Normal', baja: 'Baja' };
+    return map[u ?? ''] ?? (u ?? '—');
+  }
+
+  getEstadoClass(estado: string): string {
     const map: Record<string, string> = {
-      pendiente: 'bg-amber-100 text-amber-700',
-      en_proceso: 'bg-blue-100 text-blue-700',
-      resuelto: 'bg-green-100 text-green-700',
-      descartado: 'bg-slate-100 text-slate-500',
+      completada: 'bg-green-100 text-green-700',
+      fallida: 'bg-red-100 text-red-700',
+      interrumpida: 'bg-amber-100 text-amber-700',
     };
-    return map[estado] || 'bg-slate-100 text-slate-500';
+    return map[estado] ?? 'bg-slate-100 text-slate-500';
   }
 
-  getScoreColor(score: number): string {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 60) return 'text-amber-600';
-    return 'text-red-500';
-  }
-
-  getStatusLabel(estado: string): string {
+  getEstadoLabel(estado: string): string {
     const map: Record<string, string> = {
-      pendiente: 'Pendiente',
-      en_proceso: 'En proceso',
-      resuelto: 'Resuelto',
-      descartado: 'Descartado',
+      completada: 'Completada',
+      fallida: 'Fallida',
+      interrumpida: 'Interrumpida',
     };
-    return map[estado] || estado;
+    return map[estado] ?? estado;
+  }
+
+  getEspecialidadLabel(e?: string): string {
+    const map: Record<string, string> = {
+      FraudeOnline: 'Fraude Online',
+      Divorcios: 'Divorcios',
+      Herencias: 'Herencias',
+      LaboralDespido: 'Laboral / Despido',
+      AccidenteTrafico: 'Tráfico',
+      DerechoPenal: 'Penal',
+      DerechoMercantil: 'Mercantil',
+    };
+    return map[e ?? ''] ?? (e ?? '');
   }
 }

@@ -5,6 +5,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  updateDoc,
   query,
   orderBy,
 } from '@angular/fire/firestore';
@@ -27,11 +28,18 @@ export class LlamadasService {
       const q = query(this.llamadasRef, orderBy('creadoEn', 'desc'));
       const snap = await getDocs(q);
       this.llamadas.set(
-        snap.docs.map((d) => ({ ...d.data(), conversationId: d.id }) as LlamadaResumen)
+        snap.docs
+          .map((d) => ({ ...d.data(), conversationId: d.id }) as LlamadaResumen)
+          .filter((l) => !l.descartada)
       );
     } finally {
       this.loading.set(false);
     }
+  }
+
+  async descartarLlamada(conversationId: string): Promise<void> {
+    await updateDoc(doc(this.llamadasRef, conversationId), { descartada: true });
+    this.llamadas.update((list) => list.filter((l) => l.conversationId !== conversationId));
   }
 
   async getLlamada(id: string): Promise<LlamadaResumen | null> {

@@ -26,4 +26,5 @@ export interface LlamadaResumen {
   exitosa: boolean;
   datosCapturados: DatosCapturados;
   creadoEn: Timestamp;
+  descartada?: boolean;
 }

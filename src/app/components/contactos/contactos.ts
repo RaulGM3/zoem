@@ -1,12 +1,12 @@
 import { Component, signal, computed, inject, ChangeDetectionStrategy } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { RouterLink, ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import {
   LucideAngularModule,
   Users, Search, Plus, Phone, Mail, Building2,
   Eye, Edit, Trash2, ChevronRight, ChevronLeft, UserPlus, TrendingUp,
-  GitMerge, Shield, Brain, ArrowRight, X, Check, LoaderCircle,
+  GitMerge, Shield, Brain, ArrowRight, X, Check, LoaderCircle, StickyNote,
 } from 'lucide-angular';
 import { PIPELINE_DEALS } from '../../data/dummy-data';
 import { ContactService } from '../../core/services/contact.service';
@@ -56,9 +56,11 @@ export class ContactosComponent {
   readonly XIcon = X;
   readonly CheckIcon = Check;
   readonly Loader2Icon = LoaderCircle;
+  readonly StickyNoteIcon = StickyNote;
 
   readonly contactService = inject(ContactService);
   private readonly fb = inject(FormBuilder);
+  private readonly route = inject(ActivatedRoute);
 
   activeTab = signal<ContactosTab>('contactos');
   search = signal('');
@@ -76,7 +78,7 @@ export class ContactosComponent {
   rgpdData = RGPD_CONSENTIMIENTOS;
 
   form = this.fb.group({
-    email: ['', [Validators.required, Validators.email]],
+    email: ['', [Validators.email]],
     mobile: [''],
     status: ['activo', Validators.required],
     notes: [''],
@@ -108,6 +110,20 @@ export class ContactosComponent {
 
   constructor() {
     this.contactService.loadContacts();
+    const p = this.route.snapshot.queryParamMap;
+    if (p.get('newContact') === '1') {
+      this.formType.set('persona_fisica');
+      this.formStep.set(1);
+      this.showErrors.set(false);
+      this.form.reset({ status: 'activo', nifType: 'dni', cifType: 'cif', pais: 'ES', nacionalidad: 'ES', estadoCivil: 'casado' });
+      this.form.patchValue({
+        nombre: p.get('nombre') ?? '',
+        apellidos: p.get('apellidos') ?? '',
+        mobile: p.get('mobile') ?? '',
+        notes: p.get('notes') ?? '',
+      });
+      this.showDrawer.set(true);
+    }
   }
 
   etapasPipeline: Array<{ key: string; label: string }> = [
@@ -137,13 +153,19 @@ export class ContactosComponent {
     const q = this.search().toLowerCase();
     const s = this.filterStatus();
     const t = this.filterType();
-    return this.contactService.contacts().filter((c) => {
-      const name = getContactDisplayName(c).toLowerCase();
-      const matchQ = !q || name.includes(q) || c.email.toLowerCase().includes(q);
-      const matchS = !s || c.status === s;
-      const matchT = !t || c.type === t;
-      return matchQ && matchS && matchT;
-    });
+    return this.contactService.contacts()
+      .filter((c) => {
+        const name = getContactDisplayName(c).toLowerCase();
+        const matchQ = !q || name.includes(q) || c.email.toLowerCase().includes(q);
+        const matchS = !s || c.status === s;
+        const matchT = !t || c.type === t;
+        return matchQ && matchS && matchT;
+      })
+      .sort((a, b) => {
+        const aMs = a.createdAt?.toMillis() ?? 0;
+        const bMs = b.createdAt?.toMillis() ?? 0;
+        return bMs - aMs;
+      });
   });
 
   displayName(c: Contact): string {
@@ -205,9 +227,9 @@ export class ContactosComponent {
     const emailOk = !this.form.get('email')?.invalid;
     const mobileOk = !!v.mobile?.trim();
     if (this.formType() === 'persona_fisica') {
-      return emailOk && mobileOk && !!v.nombre?.trim() && !!v.apellidos?.trim() && !!v.nif?.trim();
+      return emailOk && mobileOk && !!v.nombre?.trim() && !!v.apellidos?.trim();
     }
-    return emailOk && mobileOk && !!v.razonSocial?.trim() && !!v.cif?.trim();
+    return emailOk && mobileOk && !!v.razonSocial?.trim();
   });
 
   nextStep() {
@@ -288,7 +310,7 @@ export class ContactosComponent {
     try {
       const v = this.form.getRawValue();
       const base = {
-        email: v.email!,
+        email: v.email || '',
         mobile: v.mobile || '',
         status: v.status as ContactStatus,
         notes: v.notes || '',
