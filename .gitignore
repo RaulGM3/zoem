@@ -45,3 +45,5 @@ Thumbs.db
 
 /dataconnect
 /src/environments/*
+/functions/node_modules
+/functions/lib

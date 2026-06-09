@@ -122,6 +122,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/plantillas/plantillas').then((m) => m.PlantillasComponent),
       },
+      {
+        path: 'llamadas',
+        loadComponent: () =>
+          import('./components/llamadas/llamadas.component').then((m) => m.LlamadasComponent),
+      },
     ],
   },
   {
