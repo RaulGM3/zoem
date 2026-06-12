@@ -1,9 +1,9 @@
 import {
   Component, ChangeDetectionStrategy, input, output,
-  signal, computed, viewChild, ElementRef, afterNextRender,
+  signal, computed, viewChild, ElementRef, effect,
 } from '@angular/core';
-import { LucideAngularModule, X, Clock } from 'lucide-angular';
-import type { CalendarItem, EventGroup } from '../../calendario.types';
+import { LucideAngularModule, X, Clock, Trash2, Plus } from 'lucide-angular';
+import type { Anotacion, CalendarItem, EventGroup, ItemColor } from '../../calendario.types';
 
 type HitoEstado = NonNullable<CalendarItem['hitoEstado']>;
 
@@ -36,6 +36,59 @@ interface ItemLayout {
   colIndex: number;
   totalCols: number;
 }
+
+const TYPE_COLOR: Record<string, ItemColor> = {
+  reunion:      'violet',
+  llamada:      'green',
+  entrega:      'blue',
+  recordatorio: 'amber',
+};
+
+const COLOR_ITEM: Record<ItemColor, string> = {
+  violet: 'bg-violet-50 border-l-violet-500 text-violet-900',
+  indigo: 'bg-indigo-50 border-l-indigo-500 text-indigo-900',
+  blue:   'bg-blue-50 border-l-blue-500 text-blue-900',
+  green:  'bg-green-50 border-l-green-500 text-green-900',
+  amber:  'bg-amber-50 border-l-amber-500 text-amber-900',
+  red:    'bg-red-50 border-l-red-500 text-red-900',
+  pink:   'bg-pink-50 border-l-pink-500 text-pink-900',
+  slate:  'bg-slate-50 border-l-slate-400 text-slate-900',
+};
+
+const COLOR_DRAG: Record<ItemColor, string> = {
+  violet: 'border-violet-400 bg-violet-100/60 text-violet-800',
+  indigo: 'border-indigo-400 bg-indigo-100/60 text-indigo-800',
+  blue:   'border-blue-400 bg-blue-100/60 text-blue-800',
+  green:  'border-green-400 bg-green-100/60 text-green-800',
+  amber:  'border-amber-400 bg-amber-100/60 text-amber-800',
+  red:    'border-red-400 bg-red-100/60 text-red-800',
+  pink:   'border-pink-400 bg-pink-100/60 text-pink-800',
+  slate:  'border-slate-400 bg-slate-100/60 text-slate-700',
+};
+
+const COLOR_DOT: Record<ItemColor, string> = {
+  violet: 'bg-violet-500',
+  indigo: 'bg-indigo-500',
+  blue:   'bg-blue-500',
+  green:  'bg-green-500',
+  amber:  'bg-amber-500',
+  red:    'bg-red-500',
+  pink:   'bg-pink-500',
+  slate:  'bg-slate-400',
+};
+
+const COLOR_SWATCH: Record<ItemColor, string> = {
+  violet: 'bg-violet-500 ring-violet-500',
+  indigo: 'bg-indigo-500 ring-indigo-500',
+  blue:   'bg-blue-500 ring-blue-500',
+  green:  'bg-green-500 ring-green-500',
+  amber:  'bg-amber-500 ring-amber-500',
+  red:    'bg-red-500 ring-red-500',
+  pink:   'bg-pink-500 ring-pink-500',
+  slate:  'bg-slate-400 ring-slate-400',
+};
+
+const ALL_COLORS: readonly ItemColor[] = ['violet', 'indigo', 'blue', 'green', 'amber', 'red', 'pink', 'slate'];
 
 const HOUR_HEIGHT = 64;
 const SNAP_MINUTES = 15;
@@ -139,9 +192,19 @@ export class DayScheduleComponent {
 
   readonly itemTimeChanged = output<ItemTimeChange>();
   readonly hitoStatusChanged = output<{ id: string; casoId: string; estado: HitoEstado }>();
+  readonly eventoStatusChanged = output<{ id: string; status: CalendarItem['status'] }>();
+  readonly annotationAdded = output<{ itemId: string; casoId?: string; texto: string }>();
+  readonly annotationDeleted = output<{ itemId: string; casoId?: string; anotacionId: string }>();
+  readonly itemColorChanged = output<{ id: string; color: ItemColor | null }>();
 
   readonly XIcon = X;
   readonly ClockIcon = Clock;
+  readonly Trash2Icon = Trash2;
+  readonly PlusIcon = Plus;
+
+  readonly HITO_ESTADOS: readonly HitoEstado[] = ['pendiente', 'en_progreso', 'completado', 'cancelado'];
+  readonly EVENTO_STATUSES: ReadonlyArray<CalendarItem['status']> = ['pendiente', 'confirmada', 'cancelada'];
+  readonly ALL_COLORS = ALL_COLORS;
 
   readonly hours = HOURS;
   readonly hourHeight = HOUR_HEIGHT;
@@ -152,6 +215,8 @@ export class DayScheduleComponent {
 
   readonly dragging = signal<DragState | null>(null);
   readonly resizing = signal<ResizeState | null>(null);
+  readonly selectedItem = signal<CalendarItem | null>(null);
+  readonly newAnnotationText = signal('');
 
   readonly unscheduledItems = computed<CalendarItem[]>(() =>
     this.groupedEvents().flatMap(g => g.items.filter(i => !i.horaInicio))
@@ -168,9 +233,15 @@ export class DayScheduleComponent {
   });
 
   constructor() {
-    afterNextRender(() => {
+    let scrolled = false;
+    effect(() => {
       const area = this.scheduleAreaRef()?.nativeElement;
-      if (area) area.scrollTop = minutesToPx(8 * 60); // scroll inicial a 08:00
+      if (area && !scrolled) {
+        scrolled = true;
+        const now = new Date();
+        const targetHour = Math.max(0, now.getHours() - 2);
+        area.scrollTop = minutesToPx(targetHour * 60);
+      }
     });
   }
 
@@ -223,26 +294,19 @@ export class DayScheduleComponent {
 
   // ── clases CSS ───────────────────────────────────────────────────────
 
+  private effectiveColor(item: CalendarItem): ItemColor {
+    return item.color ?? TYPE_COLOR[item.type] ?? 'slate';
+  }
+
   getItemClass(item: CalendarItem): string {
-    const colors: Record<string, string> = {
-      reunion:      'bg-violet-50 border-l-violet-500 text-violet-900',
-      llamada:      'bg-green-50 border-l-green-500 text-green-900',
-      entrega:      'bg-blue-50 border-l-blue-500 text-blue-900',
-      recordatorio: 'bg-amber-50 border-l-amber-500 text-amber-900',
-    };
-    const color = colors[item.type] ?? 'bg-slate-50 border-l-slate-400 text-slate-900';
+    const color = COLOR_ITEM[this.effectiveColor(item)];
     const dragging = this.isDraggingItem(item) ? 'shadow-xl opacity-90 z-10' : 'z-[1]';
     return `absolute rounded-lg border-l-4 overflow-hidden select-none touch-none ${color} ${dragging}`;
   }
 
   getDragPreviewClass(item: CalendarItem): string {
-    const borders: Record<string, string> = {
-      reunion:      'border-violet-400 bg-violet-100/60 text-violet-800',
-      llamada:      'border-green-400 bg-green-100/60 text-green-800',
-      entrega:      'border-blue-400 bg-blue-100/60 text-blue-800',
-      recordatorio: 'border-amber-400 bg-amber-100/60 text-amber-800',
-    };
-    return `pointer-events-none absolute rounded-lg border-2 border-dashed z-10 ${borders[item.type] ?? 'border-slate-400 bg-slate-100/60 text-slate-700'}`;
+    const drag = COLOR_DRAG[this.effectiveColor(item)];
+    return `pointer-events-none absolute rounded-lg border-2 border-dashed z-10 ${drag}`;
   }
 
   getHitoEstadoBadgeClass(estado: HitoEstado): string {
@@ -444,7 +508,10 @@ export class DayScheduleComponent {
     this.dragging.set(null);
     const timeChanged = drag.currentStartMinutes !== drag.originalStartMinutes;
     const dateChanged = drag.currentDate !== drag.originalDate;
-    if (!timeChanged && !dateChanged) return;
+    if (!timeChanged && !dateChanged) {
+      this.selectedItem.set(drag.item);
+      return;
+    }
 
     this.itemTimeChanged.emit({
       id: drag.item.id,
@@ -467,6 +534,122 @@ export class DayScheduleComponent {
       horaInicio: resize.item.horaInicio!,
       duracionMinutos: resize.currentDuration,
     });
+  }
+
+  // ── modal ────────────────────────────────────────────────────────────
+
+  closeModal(): void {
+    this.selectedItem.set(null);
+    this.newAnnotationText.set('');
+  }
+
+  getItemTypeLabel(item: CalendarItem): string {
+    if (item.hitoEstado !== undefined) return 'Hito';
+    const labels: Record<string, string> = {
+      reunion: 'Reunión', llamada: 'Llamada', entrega: 'Entrega', recordatorio: 'Recordatorio',
+    };
+    return labels[item.type] ?? item.type;
+  }
+
+  getHitoEstadoFullLabel(estado: HitoEstado): string {
+    const map: Record<HitoEstado, string> = {
+      pendiente: 'Pendiente', en_progreso: 'En proceso', completado: 'Completado', cancelado: 'Cancelado',
+    };
+    return map[estado];
+  }
+
+  getEventoStatusLabel(status: CalendarItem['status']): string {
+    const map: Record<CalendarItem['status'], string> = {
+      pendiente: 'Pendiente', confirmada: 'Confirmada', cancelada: 'Cancelada',
+    };
+    return map[status];
+  }
+
+  getHitoEstadoBtnClass(estado: HitoEstado, isActive: boolean): string {
+    if (!isActive) return 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50';
+    const map: Record<HitoEstado, string> = {
+      pendiente:   'bg-amber-100 text-amber-700 ring-2 ring-amber-300 ring-offset-1',
+      en_progreso: 'bg-blue-100 text-blue-700 ring-2 ring-blue-300 ring-offset-1',
+      completado:  'bg-green-100 text-green-700 ring-2 ring-green-300 ring-offset-1',
+      cancelado:   'bg-slate-100 text-slate-600 ring-2 ring-slate-300 ring-offset-1',
+    };
+    return map[estado];
+  }
+
+  getEventoStatusBtnClass(status: CalendarItem['status'], isActive: boolean): string {
+    if (!isActive) return 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50';
+    const map: Record<CalendarItem['status'], string> = {
+      pendiente:  'bg-amber-100 text-amber-700 ring-2 ring-amber-300 ring-offset-1',
+      confirmada: 'bg-green-100 text-green-700 ring-2 ring-green-300 ring-offset-1',
+      cancelada:  'bg-slate-100 text-slate-600 ring-2 ring-slate-300 ring-offset-1',
+    };
+    return map[status];
+  }
+
+  getModalHeaderColor(item: CalendarItem): string {
+    return COLOR_DOT[this.effectiveColor(item)];
+  }
+
+  getColorSwatchClass(color: ItemColor, isActive: boolean): string {
+    return `${COLOR_SWATCH[color]}${isActive ? ' ring-2 ring-offset-2 scale-110' : ''}`;
+  }
+
+  setItemColor(color: ItemColor | null): void {
+    const item = this.selectedItem();
+    if (!item) return;
+    this.itemColorChanged.emit({ id: item.id, color });
+    this.selectedItem.update(i => i ? { ...i, color: color ?? undefined } : null);
+  }
+
+  setHitoEstado(estado: HitoEstado): void {
+    const item = this.selectedItem();
+    if (!item?.casoId) return;
+    this.hitoStatusChanged.emit({ id: item.id, casoId: item.casoId, estado });
+    this.selectedItem.update(i => i ? { ...i, hitoEstado: estado } : null);
+  }
+
+  setEventoStatus(status: CalendarItem['status']): void {
+    const item = this.selectedItem();
+    if (!item) return;
+    this.eventoStatusChanged.emit({ id: item.id, status });
+    this.selectedItem.update(i => i ? { ...i, status } : null);
+  }
+
+  addAnnotation(): void {
+    const texto = this.newAnnotationText().trim();
+    const item = this.selectedItem();
+    if (!texto || !item) return;
+    this.annotationAdded.emit({ itemId: item.id, casoId: item.casoId, texto });
+    const anotacion: Anotacion = { id: String(Date.now()), texto, creadaEn: new Date().toISOString() };
+    this.selectedItem.update(i => i ? { ...i, anotaciones: [...(i.anotaciones ?? []), anotacion] } : null);
+    this.newAnnotationText.set('');
+  }
+
+  deleteAnnotation(anotacionId: string): void {
+    const item = this.selectedItem();
+    if (!item) return;
+    this.annotationDeleted.emit({ itemId: item.id, casoId: item.casoId, anotacionId });
+    this.selectedItem.update(i =>
+      i ? { ...i, anotaciones: (i.anotaciones ?? []).filter(a => a.id !== anotacionId) } : null
+    );
+  }
+
+  onAnnotationInput(event: Event): void {
+    this.newAnnotationText.set((event.target as HTMLInputElement).value);
+  }
+
+  onAnnotationKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      this.addAnnotation();
+    }
+  }
+
+  formatAnnotationDate(isoString: string): string {
+    const date = new Date(isoString);
+    const today = new Date();
+    if (date.toDateString() === today.toDateString()) return 'Hoy';
+    return date.toLocaleDateString('es', { day: 'numeric', month: 'short' });
   }
 
   /** Devuelve el data-date de la columna bajo el cursor */

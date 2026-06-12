@@ -18,6 +18,7 @@ export interface Hito {
   orden: number;
   horaAgenda?: string;   // HH:mm — slot asignado en la agenda
   duracionAgenda?: number; // minutos
+  calendarColor?: string | null;
 }
 
 export interface ResumenFinanciero {

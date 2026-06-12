@@ -1,3 +1,11 @@
+export type ItemColor = 'violet' | 'indigo' | 'blue' | 'green' | 'amber' | 'red' | 'pink' | 'slate';
+
+export interface Anotacion {
+  id: string;
+  texto: string;
+  creadaEn: string; // ISO date string
+}
+
 export interface CalendarItem {
   id: string;
   title: string;
@@ -10,6 +18,8 @@ export interface CalendarItem {
   casoId?: string;
   horaInicio?: string;    // HH:mm — hora en la agenda
   duracionMinutos?: number; // duración en minutos (default 60)
+  anotaciones?: Anotacion[];
+  color?: ItemColor;
 }
 
 export interface WeekDay {

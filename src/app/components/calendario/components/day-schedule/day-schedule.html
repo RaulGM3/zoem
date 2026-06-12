@@ -1,3 +1,4 @@
+<div class="flex h-full flex-col">
 @if (!hasSelectedDates()) {
   <div class="rounded-xl border border-dashed border-slate-200 bg-slate-50 py-12 text-center text-sm text-slate-400">
     Selecciona un día para ver sus hitos
@@ -6,7 +7,7 @@
 
   <!-- Hitos sin programar -->
   @if (unscheduledItems().length > 0) {
-    <div class="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+    <div class="mb-3 shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
       <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
         Sin programar — click para añadir al horario
       </p>
@@ -27,12 +28,10 @@
   }
 
   <!-- Grid de agenda -->
-  @if (groupedEvents().length > 0) {
-    <div class="overflow-hidden rounded-xl border border-slate-200">
+  <div class="min-h-0 flex-1 overflow-hidden rounded-xl border border-slate-200">
       <div
         #scheduleArea
-        class="overflow-y-auto overflow-x-auto"
-        style="max-height: 600px"
+        class="h-full overflow-y-auto overflow-x-auto"
         (pointermove)="onSchedulePointerMove($event)"
         (pointerup)="onSchedulePointerUp($event)"
         (pointercancel)="onSchedulePointerCancel()"
@@ -132,12 +131,14 @@
                             <button
                               class="rounded px-1 py-0.5 text-[9px] font-semibold leading-none transition-opacity hover:opacity-80"
                               [class]="getHitoEstadoBadgeClass(item.hitoEstado)"
+                              (pointerdown)="$event.stopPropagation()"
                               (click)="advanceHito($event, item)"
                               [attr.aria-label]="'Avanzar estado de ' + item.title"
                             >{{ getHitoEstadoLabel(item.hitoEstado) }}</button>
                           }
                           <button
                             class="flex h-4 w-4 items-center justify-center rounded opacity-40 transition-opacity hover:opacity-100"
+                            (pointerdown)="$event.stopPropagation()"
                             (click)="unscheduleItem($event, item)"
                             [attr.aria-label]="'Quitar ' + item.title + ' del horario'"
                           >
@@ -185,9 +186,156 @@
         </div>
       </div>
     </div>
-  } @else {
-    <div class="rounded-xl border border-dashed border-slate-200 bg-slate-50 py-12 text-center text-sm text-slate-400">
-      No hay hitos para los días seleccionados
+}
+</div>
+
+<!-- Modal de detalle del evento -->
+@if (selectedItem(); as item) {
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm"
+    (click)="closeModal()"
+    (keydown.escape)="closeModal()"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="'Detalle de ' + item.title"
+  >
+    <div
+      class="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl"
+      (click)="$event.stopPropagation()"
+    >
+      <!-- Header -->
+      <div class="flex items-start gap-3 border-b border-slate-100 p-5 pb-4">
+        <div class="mt-1 h-3 w-3 shrink-0 rounded-full" [class]="getModalHeaderColor(item)"></div>
+        <div class="min-w-0 flex-1">
+          <h2 id="modal-event-title" class="text-sm font-semibold leading-tight text-slate-900">
+            {{ item.title }}
+          </h2>
+          <p class="mt-0.5 text-xs text-slate-400">
+            {{ getTimeLabel(item) }}
+            @if (getTimeLabel(item)) { · }
+            {{ getItemTypeLabel(item) }}
+            @if (item.client) { · {{ item.client }} }
+          </p>
+        </div>
+        <button
+          class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+          (click)="closeModal()"
+          aria-label="Cerrar"
+        >
+          <lucide-icon [img]="XIcon" size="14"></lucide-icon>
+        </button>
+      </div>
+
+      <div class="space-y-5 p-5">
+        <!-- Estado del hito -->
+        @if (item.hitoEstado !== undefined) {
+          <div>
+            <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Estado</p>
+            <div class="flex flex-wrap gap-2">
+              @for (estado of HITO_ESTADOS; track estado) {
+                <button
+                  class="rounded-lg px-3 py-1.5 text-xs font-medium transition-all"
+                  [class]="getHitoEstadoBtnClass(estado, item.hitoEstado === estado)"
+                  (click)="setHitoEstado(estado)"
+                >{{ getHitoEstadoFullLabel(estado) }}</button>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Estado del evento -->
+        @if (item.hitoEstado === undefined) {
+          <div>
+            <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Estado</p>
+            <div class="flex flex-wrap gap-2">
+              @for (status of EVENTO_STATUSES; track status) {
+                <button
+                  class="rounded-lg px-3 py-1.5 text-xs font-medium transition-all"
+                  [class]="getEventoStatusBtnClass(status, item.status === status)"
+                  (click)="setEventoStatus(status)"
+                >{{ getEventoStatusLabel(status) }}</button>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Anotaciones -->
+        <div>
+          <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Anotaciones
+            @if ((item.anotaciones?.length ?? 0) > 0) {
+              <span class="ml-1 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">
+                {{ item.anotaciones!.length }}
+              </span>
+            }
+          </p>
+
+          <!-- Input nueva anotación -->
+          <div class="mb-3 flex gap-2">
+            <input
+              type="text"
+              placeholder="Añadir anotación..."
+              [value]="newAnnotationText()"
+              (input)="onAnnotationInput($event)"
+              (keydown)="onAnnotationKeydown($event)"
+              class="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 placeholder:text-slate-400 focus:border-violet-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-100"
+            />
+            <button
+              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500 text-white transition-colors hover:bg-violet-600 disabled:opacity-40"
+              (click)="addAnnotation()"
+              [disabled]="!newAnnotationText().trim()"
+              aria-label="Añadir anotación"
+            >
+              <lucide-icon [img]="PlusIcon" size="14"></lucide-icon>
+            </button>
+          </div>
+
+          <!-- Lista de anotaciones -->
+          @if ((item.anotaciones?.length ?? 0) > 0) {
+            <ul class="max-h-44 space-y-2 overflow-y-auto">
+              @for (nota of item.anotaciones!; track nota.id) {
+                <li class="flex items-start gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                  <p class="min-w-0 flex-1 text-xs leading-relaxed text-slate-700">{{ nota.texto }}</p>
+                  <div class="flex shrink-0 flex-col items-end gap-1">
+                    <span class="text-[10px] text-slate-400">{{ formatAnnotationDate(nota.creadaEn) }}</span>
+                    <button
+                      class="text-slate-300 transition-colors hover:text-red-400"
+                      (click)="deleteAnnotation(nota.id)"
+                      [attr.aria-label]="'Eliminar anotación: ' + nota.texto"
+                    >
+                      <lucide-icon [img]="Trash2Icon" size="12"></lucide-icon>
+                    </button>
+                  </div>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="text-xs italic text-slate-400">Sin anotaciones todavía</p>
+          }
+        </div>
+        <!-- Color -->
+        <div>
+          <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Color</p>
+          <div class="flex items-center gap-2">
+            <!-- Reset a color por tipo -->
+            <button
+              class="h-7 w-7 shrink-0 rounded-full border-2 border-dashed border-slate-300 bg-white transition-all hover:scale-110"
+              [class]="!item.color ? 'ring-2 ring-offset-2 ring-slate-300 scale-110' : ''"
+              (click)="setItemColor(null)"
+              aria-label="Color automático según tipo"
+            ></button>
+            @for (color of ALL_COLORS; track color) {
+              <button
+                class="h-7 w-7 shrink-0 rounded-full transition-all hover:scale-110"
+                [class]="getColorSwatchClass(color, item.color === color)"
+                (click)="setItemColor(color)"
+                [attr.aria-label]="'Color ' + color"
+              ></button>
+            }
+          </div>
+        </div>
+      </div>
+
     </div>
-  }
+  </div>
 }

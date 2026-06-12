@@ -43,6 +43,7 @@ export interface Evento {
   recurrencia: EventoRecurrencia;
   prioridad: EventoPrioridad;
   color: EventoColor;
+  calendarColor?: string | null;
   invitados: string[] | 'todos'; // userId[] or 'todos' for whole company
   creadoPor: string;
   createdAt: Timestamp;

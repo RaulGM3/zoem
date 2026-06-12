@@ -2,12 +2,15 @@ import {
   Component, OnInit, signal, computed,
   ChangeDetectionStrategy, inject, viewChild,
 } from '@angular/core';
+import { LucideAngularModule, Plus } from 'lucide-angular';
 import { CasosService } from '../../core/services/casos.service';
 import { EventosService } from '../../core/services/eventos.service';
-import type { Evento, Hito, HitoEstado } from '../../interfaces';
+import type { CreateEventoData, Evento, Hito, HitoEstado } from '../../interfaces';
 import type { CalendarItem, EventGroup, ViewMode, WeekDay } from './calendario.types';
 import { CalendarNavComponent } from './components/calendar-nav/calendar-nav';
 import { DayScheduleComponent, type ItemTimeChange } from './components/day-schedule/day-schedule';
+import { NuevoEventoDrawerComponent } from '../eventos/components/nuevo-evento-drawer/nuevo-evento-drawer';
+import type { ItemColor } from './calendario.types';
 
 function timeToMinutes(time: string): number {
   const parts = time.split(':').map(Number);
@@ -45,17 +48,22 @@ function mondayOf(d: Date): string {
 
 @Component({
   selector: 'app-calendario',
-  imports: [CalendarNavComponent, DayScheduleComponent],
+  imports: [CalendarNavComponent, DayScheduleComponent, NuevoEventoDrawerComponent, LucideAngularModule],
   templateUrl: './calendario.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block h-full' },
 })
 export class CalendarioComponent implements OnInit {
   private readonly casosService = inject(CasosService);
   private readonly eventosService = inject(EventosService);
   private readonly nav = viewChild(CalendarNavComponent);
 
+  readonly PlusIcon = Plus;
   readonly dayNames = DAY_NAMES;
   readonly today = localDateStr(new Date());
+
+  readonly showDrawer = signal(false);
+  readonly saving = signal(false);
 
   allItems = signal<CalendarItem[]>([]);
   currentWeekStart = signal<string>(mondayOf(new Date()));
@@ -120,12 +128,10 @@ export class CalendarioComponent implements OnInit {
   groupedEvents = computed<EventGroup[]>(() => {
     const selected = this.selectedDates();
     if (selected.size === 0) return [];
-    const filtered = this.allItems().filter(e => selected.has(e.date));
     const grouped = new Map<string, CalendarItem[]>();
-    for (const e of filtered) {
-      const list = grouped.get(e.date) ?? [];
-      list.push(e);
-      grouped.set(e.date, list);
+    for (const date of selected) grouped.set(date, []);
+    for (const e of this.allItems()) {
+      if (selected.has(e.date)) grouped.get(e.date)!.push(e);
     }
     return Array.from(grouped.entries())
       .sort(([a], [b]) => a.localeCompare(b))
@@ -254,6 +260,30 @@ export class CalendarioComponent implements OnInit {
     }
   }
 
+  async onSaveEvento(data: CreateEventoData): Promise<void> {
+    this.saving.set(true);
+    try {
+      const nuevo = await this.eventosService.createEvento(data);
+      this.allItems.update(items => [...items, this.eventoToItem(nuevo)]);
+      this.showDrawer.set(false);
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  async updateItemColor({ id, color }: { id: string; color: ItemColor | null }): Promise<void> {
+    const item = this.allItems().find(i => i.id === id);
+    if (!item) return;
+    this.allItems.update(items =>
+      items.map(i => i.id === id ? { ...i, color: color ?? undefined } : i)
+    );
+    if (item.hitoEstado !== undefined && item.casoId) {
+      await this.casosService.updateHito(item.casoId, id, { calendarColor: color });
+    } else {
+      await this.eventosService.updateEvento(id, { calendarColor: color });
+    }
+  }
+
   private eventoToItem(e: Evento): CalendarItem {
     return {
       id: e.id,
@@ -267,6 +297,7 @@ export class CalendarioComponent implements OnInit {
       ...(!e.todoDia && e.horaInicio && e.horaFin
         ? { duracionMinutos: timeToMinutes(e.horaFin) - timeToMinutes(e.horaInicio) }
         : {}),
+      ...(e.calendarColor ? { color: e.calendarColor as ItemColor } : {}),
     };
   }
 
@@ -283,6 +314,7 @@ export class CalendarioComponent implements OnInit {
       ...(h.descripcion ? { description: h.descripcion } : {}),
       ...(h.horaAgenda ? { horaInicio: h.horaAgenda } : {}),
       ...(h.duracionAgenda ? { duracionMinutos: h.duracionAgenda } : {}),
+      ...(h.calendarColor ? { color: h.calendarColor as ItemColor } : {}),
     };
   }
 

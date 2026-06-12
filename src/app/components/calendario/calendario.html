@@ -1,24 +1,43 @@
-<div class="mb-6">
-  <h1 class="text-2xl font-bold text-slate-900">Calendario</h1>
+<div class="flex h-full flex-col gap-3">
+  <div class="flex shrink-0 items-center justify-between">
+    <h1 class="text-2xl font-bold text-slate-900">Calendario</h1>
+    <button
+      (click)="showDrawer.set(true)"
+      class="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-violet-700"
+    >
+      <lucide-icon [img]="PlusIcon" size="16"></lucide-icon>
+      Nuevo evento
+    </button>
+  </div>
+
+  <app-calendar-nav
+    class="block shrink-0"
+    [weekDays]="weekDays()"
+    [monthDays]="monthDays()"
+    [viewMode]="viewMode()"
+    [weekMonthLabel]="weekMonthLabel()"
+    [dayNames]="dayNames"
+    (prevClicked)="prevWeek()"
+    (nextClicked)="nextWeek()"
+    (viewModeChanged)="setViewMode($event)"
+    (dateToggled)="toggleDate($event)"
+    (visibleDateChanged)="visibleMonthDate.set($event)"
+    (moreDaysRequested)="stripDayCount.update(n => n + 7)"
+  />
+
+  <app-day-schedule
+    class="block min-h-0 flex-1"
+    [groupedEvents]="groupedEvents()"
+    [hasSelectedDates]="selectedDates().size > 0"
+    (hitoStatusChanged)="updateHitoEstado($event)"
+    (itemTimeChanged)="updateItemTime($event)"
+    (itemColorChanged)="updateItemColor($event)"
+  />
 </div>
 
-<app-calendar-nav
-  [weekDays]="weekDays()"
-  [monthDays]="monthDays()"
-  [viewMode]="viewMode()"
-  [weekMonthLabel]="weekMonthLabel()"
-  [dayNames]="dayNames"
-  (prevClicked)="prevWeek()"
-  (nextClicked)="nextWeek()"
-  (viewModeChanged)="setViewMode($event)"
-  (dateToggled)="toggleDate($event)"
-  (visibleDateChanged)="visibleMonthDate.set($event)"
-  (moreDaysRequested)="stripDayCount.update(n => n + 7)"
-/>
-
-<app-day-schedule
-  [groupedEvents]="groupedEvents()"
-  [hasSelectedDates]="selectedDates().size > 0"
-  (hitoStatusChanged)="updateHitoEstado($event)"
-  (itemTimeChanged)="updateItemTime($event)"
+<app-nuevo-evento-drawer
+  [visible]="showDrawer()"
+  [saving]="saving()"
+  (saved)="onSaveEvento($event)"
+  (closed)="showDrawer.set(false)"
 />
