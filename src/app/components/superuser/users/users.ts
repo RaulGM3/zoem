@@ -30,7 +30,7 @@ import { UserSyncService } from '../../../core/services/user-sync.service';
 import { CompanyInvitation } from '../../../interfaces/invitation';
 import { Company } from '../../../interfaces/company';
 import { FIRM_ROLES, FirmRole } from '../../../interfaces/member';
-import { ZoemUser } from '../../../interfaces/user';
+import { VerteyUser } from '../../../interfaces/user';
 
 @Component({
   selector: 'app-users',
@@ -72,9 +72,9 @@ export class UsersComponent implements OnInit {
 
   readonly allUsers = toSignal(
     collectionData(collection(this.firestore, 'users'), { idField: 'id' }).pipe(
-      map((docs) => docs as ZoemUser[]),
+      map((docs) => docs as VerteyUser[]),
     ),
-    { initialValue: [] as ZoemUser[] },
+    { initialValue: [] as VerteyUser[] },
   );
 
   readonly allInvitations = toSignal(this.invitationService.getAllPendingInvitations(), {

@@ -21,12 +21,12 @@ const INTEGRACIONES = [
 ];
 
 @Component({
-  selector: 'app-zoem-studio',
+  selector: 'app-vertey-studio',
   imports: [LucideAngularModule],
-  templateUrl: './zoem-studio.html',
+  templateUrl: './vertey-studio.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ZoemStudioComponent {
+export class VerteyStudioComponent {
   readonly SparklesIcon = Sparkles;
   readonly ZapIcon = Zap;
   readonly GlobeIcon = Globe;

@@ -5,6 +5,7 @@ import type { Caso } from '../../../../interfaces';
 
 @Component({
   selector: 'app-casos-table',
+  host: { style: 'display: block' },
   imports: [LucideAngularModule, DecimalPipe],
   templateUrl: './casos-table.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

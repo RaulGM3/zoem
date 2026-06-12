@@ -12,6 +12,7 @@ import {
   FolderKanban,
   Users,
   Calendar,
+  CalendarPlus,
   FileText,
   Send,
   Receipt,
@@ -70,18 +71,19 @@ export class DemoLayoutComponent {
       category: 'Inteligencia Artificial',
       items: [
         { name: 'Recepción IA', href: '/recepcion-ia', icon: MessagesSquare },
-        { name: 'Agente IA', href: '/agente-ia', icon: Bot, badge: 'Online' },
-        { name: 'Zoem Studio', href: '/zoem-studio', icon: Sparkles, badge: 'Pro' },
+        // { name: 'Agente IA', href: '/agente-ia', icon: Bot, badge: 'Online' },
+        // { name: 'Vertey Studio', href: '/vertey-studio', icon: Sparkles, badge: 'Pro' },
       ],
     },
     {
       category: 'Gestión',
       items: [
-        { name: 'Expedientes', href: '/proyectos', icon: FolderKanban },
+        // { name: 'Expedientes', href: '/proyectos', icon: FolderKanban },
         { name: 'Contactos', href: '/contactos', icon: Users },
         { name: 'Casos', href: '/casos', icon: Briefcase },
         { name: 'Calendario', href: '/calendario', icon: Calendar },
-        { name: 'Documentos', href: '/documentos', icon: FileText },
+        { name: 'Eventos', href: '/eventos', icon: CalendarPlus },
+        // { name: 'Documentos', href: '/documentos', icon: FileText },
       ],
     },
     {

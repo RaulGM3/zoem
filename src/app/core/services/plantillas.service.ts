@@ -93,7 +93,9 @@ export class PlantillasService {
     if (!plantillaSnap.exists()) return null;
     const data = plantillaSnap.data() as Record<string, unknown>;
     const hitos = hitosSnap.docs.map(d => ({ id: d.id, ...d.data() }) as HitoPlantilla);
-    const suplidos = costosSnap.docs.map(d => d.data() as PartidaCosto);
+    const suplidos = costosSnap.docs
+      .map(d => d.data() as PartidaCosto)
+      .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
     return {
       id: plantillaSnap.id,
       ...data,
@@ -128,8 +130,8 @@ export class PlantillasService {
       const { id: _id, ...hitoData } = h;
       batch.set(doc(hitosColRef), stripUndefined(hitoData) as object);
     }
-    for (const s of modeloCostos.suplidos) {
-      batch.set(doc(costosColRef), stripUndefined(s) as object);
+    for (const [i, s] of modeloCostos.suplidos.entries()) {
+      batch.set(doc(costosColRef), stripUndefined({ ...s, orden: i }) as object);
     }
     await batch.commit();
 
@@ -164,7 +166,7 @@ export class PlantillasService {
     if (modeloCostos?.suplidos !== undefined) {
       await this.syncSubcollection(
         this.costosRef(id),
-        modeloCostos.suplidos.map(s => stripUndefined(s) as Record<string, unknown>)
+        modeloCostos.suplidos.map((s, i) => stripUndefined({ ...s, orden: i }) as Record<string, unknown>)
       );
     }
 

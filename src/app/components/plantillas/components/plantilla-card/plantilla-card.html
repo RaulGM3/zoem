@@ -1,0 +1,60 @@
+<div class="bg-white rounded-xl border border-slate-200 p-5 flex flex-col gap-4">
+  <div class="flex items-start justify-between gap-2">
+    <a [routerLink]="['/plantillas', plantilla().id]" class="min-w-0 flex-1 block hover:opacity-80 transition-opacity">
+      <h2 class="font-semibold text-slate-800 truncate">{{ plantilla().nombre }}</h2>
+      @if (plantilla().tipo) {
+        <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded-full font-medium bg-violet-100 text-violet-700">
+          {{ plantilla().tipo }}
+        </span>
+      }
+      @if (plantilla().descripcion) {
+        <p class="text-xs text-slate-500 mt-1.5 line-clamp-2">{{ plantilla().descripcion }}</p>
+      }
+    </a>
+    <div class="flex gap-1 shrink-0">
+      <a [routerLink]="['/plantillas', plantilla().id]" class="p-1.5 rounded hover:bg-slate-100" aria-label="Abrir plantilla">
+        <lucide-icon [img]="ExternalLinkIcon" class="w-4 h-4 text-slate-400" />
+      </a>
+      <button (click)="delete.emit(plantilla().id)" class="p-1.5 rounded hover:bg-red-50" aria-label="Eliminar plantilla">
+        <lucide-icon [img]="Trash2Icon" class="w-4 h-4 text-red-400" />
+      </button>
+    </div>
+  </div>
+
+  @if (plantilla().hitos.length > 0) {
+    <div>
+      <p class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
+        Hitos ({{ plantilla().hitos.length }})
+      </p>
+      <ul class="space-y-1">
+        @for (h of plantilla().hitos.slice(0, 3); track h.id) {
+          <li class="flex items-center gap-2 text-xs text-slate-600">
+            <div class="w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0"></div>
+            <span class="truncate">{{ h.titulo }}</span>
+            <span class="text-slate-400 shrink-0">+{{ h.diasDesdeInicio }}d</span>
+          </li>
+        }
+        @if (plantilla().hitos.length > 3) {
+          <li class="text-xs text-slate-400 pl-3.5">+{{ plantilla().hitos.length - 3 }} más...</li>
+        }
+      </ul>
+    </div>
+  }
+
+  @if (plantilla().modeloCostos.honorariosBase || plantilla().modeloCostos.suplidos.length > 0) {
+    <div class="pt-3 border-t border-slate-100 text-xs text-slate-500 space-y-1">
+      @if (plantilla().modeloCostos.honorariosBase) {
+        <div class="flex justify-between">
+          <span>Honorarios base</span>
+          <span class="font-medium text-slate-700">{{ plantilla().modeloCostos.honorariosBase }} €</span>
+        </div>
+      }
+      @if (plantilla().modeloCostos.suplidos.length > 0) {
+        <div class="flex justify-between">
+          <span>Estructura de costos</span>
+          <span class="font-medium text-slate-700">{{ plantilla().modeloCostos.suplidos.length }} partidas</span>
+        </div>
+      }
+    </div>
+  }
+</div>

@@ -1,0 +1,345 @@
+<div class="fixed inset-0 z-40 bg-black/30" (click)="closed.emit()" aria-hidden="true"></div>
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+  <aside class="pointer-events-auto bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
+    role="dialog" aria-modal="true" aria-labelledby="plantilla-drawer-title">
+
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+      <h2 id="plantilla-drawer-title" class="text-base font-semibold text-slate-800">
+        {{ plantilla() ? 'Editar plantilla' : 'Nueva plantilla' }}
+      </h2>
+      <button (click)="closed.emit()" class="p-1.5 rounded-lg hover:bg-slate-100" aria-label="Cerrar">
+        <lucide-icon [img]="XIcon" class="w-4 h-4 text-slate-500" />
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+
+      <!-- Datos básicos -->
+      <section class="space-y-4">
+        <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">Datos básicos</h3>
+        <div class="space-y-1">
+          <label class="text-sm font-medium text-slate-700">Nombre <span class="text-red-500">*</span></label>
+          <input type="text" [value]="formNombre()" (input)="formNombre.set($any($event.target).value)"
+            placeholder="Ej. Divorcio contencioso"
+            class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="space-y-1">
+            <label class="text-sm font-medium text-slate-700">Tipo (opcional)</label>
+            <select [value]="formTipo()" (change)="formTipo.set($any($event.target).value)"
+              class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
+              <option value="">Sin tipo</option>
+              @for (t of tipos(); track t) { <option [value]="t">{{ t }}</option> }
+            </select>
+          </div>
+          <div class="space-y-1">
+            <label class="text-sm font-medium text-slate-700">Honorarios base (€)</label>
+            <input type="number" min="0" step="0.01" [value]="formHonorarios()" (input)="formHonorarios.set($any($event.target).value)"
+              class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+          </div>
+        </div>
+        <div class="space-y-1">
+          <label class="text-sm font-medium text-slate-700">Descripción</label>
+          <textarea rows="2" [value]="formDescripcion()" (input)="formDescripcion.set($any($event.target).value)"
+            class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none"></textarea>
+        </div>
+      </section>
+
+      <!-- Hitos -->
+      <section class="space-y-3">
+        <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">Hitos</h3>
+
+        @if (formHitos().length > 0) {
+          <ul class="space-y-2">
+            @for (h of formHitos(); track h.id; let i = $index) {
+              <li class="flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-2">
+                <div class="flex flex-col gap-0.5">
+                  <button (click)="moveHito(i, -1)" [disabled]="i === 0" class="p-0.5 hover:bg-slate-200 rounded disabled:opacity-30">
+                    <lucide-icon [img]="ChevronUpIcon" class="w-3 h-3 text-slate-400" />
+                  </button>
+                  <button (click)="moveHito(i, 1)" [disabled]="i === formHitos().length - 1" class="p-0.5 hover:bg-slate-200 rounded disabled:opacity-30">
+                    <lucide-icon [img]="ChevronDownIcon" class="w-3 h-3 text-slate-400" />
+                  </button>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-slate-700 truncate">{{ h.titulo }}</p>
+                  <p class="text-xs text-slate-400">
+                    +{{ h.diasDesdeInicio }}d
+                    @if (h.asignadoA) { · {{ getMemberName(h.asignadoA) }} }
+                  </p>
+                </div>
+                <button (click)="removeHito(h.id)" class="p-1 rounded hover:bg-red-50">
+                  <lucide-icon [img]="XIcon" class="w-3.5 h-3.5 text-red-400" />
+                </button>
+              </li>
+            }
+          </ul>
+        }
+
+        <div class="border border-dashed border-slate-200 rounded-lg p-3 space-y-3">
+          <p class="text-xs font-medium text-slate-500">Añadir hito</p>
+          <div class="space-y-1">
+            <label class="text-xs text-slate-500">Título <span class="text-red-400">*</span></label>
+            <input type="text" [value]="hitoTitulo()" (input)="hitoTitulo.set($any($event.target).value)"
+              placeholder="Ej. Presentar demanda"
+              class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="space-y-1">
+              <label class="text-xs text-slate-500">Días desde inicio</label>
+              <input type="number" min="0" [value]="hitoDias()" (input)="hitoDias.set($any($event.target).value)"
+                placeholder="0"
+                class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+            </div>
+            <div class="space-y-1">
+              <label class="text-xs text-slate-500">Asignado a</label>
+              @if (members().length === 1) {
+                <div class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-700">
+                  {{ members()[0].nombre }}
+                </div>
+              } @else {
+                <select [value]="hitoAsignado()" (change)="hitoAsignado.set($any($event.target).value)"
+                  class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
+                  <option value="">Sin asignar</option>
+                  @for (m of members(); track m.id) {
+                    <option [value]="m.userId">{{ m.nombre }}</option>
+                  }
+                </select>
+              }
+            </div>
+          </div>
+          <button (click)="addHito()" [disabled]="!hitoTitulo().trim()"
+            class="w-full py-1.5 text-xs text-violet-600 border border-violet-200 rounded-lg hover:bg-violet-50 disabled:opacity-40">
+            + Añadir hito
+          </button>
+        </div>
+      </section>
+
+      <!-- Estructura de costos -->
+      <section class="space-y-3">
+        <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">Estructura de Costos</h3>
+
+        @if (formSuplidos().length > 0) {
+          <ul class="space-y-1">
+            @for (s of formSuplidos(); track $index; let i = $index) {
+              <li class="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 text-sm">
+                <div class="min-w-0">
+                  <span class="text-slate-700 font-medium">{{ s.nombre }}</span>
+                  <span class="ml-1.5 text-xs text-slate-400">{{ getTipoCostoLabel(s.tipo) }}</span>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  @if (s.importeEstimado != null) {
+                    <span class="text-slate-500 text-xs">{{ s.importeEstimado }} €</span>
+                  }
+                  <button (click)="removeSuplido(i)" class="p-0.5 hover:bg-red-50 rounded">
+                    <lucide-icon [img]="XIcon" class="w-3 h-3 text-red-400" />
+                  </button>
+                </div>
+              </li>
+            }
+          </ul>
+        }
+
+        <div class="border border-dashed border-slate-200 rounded-lg p-3 space-y-3">
+          <p class="text-xs font-medium text-slate-500">Añadir partida</p>
+          <div class="space-y-1">
+            <label class="text-xs text-slate-500">Nombre <span class="text-red-400">*</span></label>
+            <input type="text" [value]="suplidoNombre()" (input)="suplidoNombre.set($any($event.target).value)"
+              placeholder="Ej. Tasa judicial"
+              class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+          </div>
+          <div class="space-y-1">
+            <label class="text-xs text-slate-500">Tipo <span class="text-red-400">*</span></label>
+            <select [value]="suplidoTipo()" (change)="suplidoTipo.set($any($event.target).value)"
+              class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
+              <option value="">Selecciona un tipo</option>
+              @for (t of tiposCosto(); track t.value) {
+                <option [value]="t.value">{{ t.label }}</option>
+              }
+            </select>
+          </div>
+          <div class="space-y-1">
+            <label class="text-xs text-slate-500">Precio aproximado (€, opcional)</label>
+            <input type="number" min="0" step="0.01" [value]="suplidoImporte()" (input)="suplidoImporte.set($any($event.target).value)"
+              placeholder="Importe estimado"
+              class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+          </div>
+          <button (click)="addSuplido()" [disabled]="!suplidoNombre().trim() || !suplidoTipo()"
+            class="w-full py-1.5 text-xs text-violet-600 border border-violet-200 rounded-lg hover:bg-violet-50 disabled:opacity-40">
+            + Añadir partida
+          </button>
+        </div>
+      </section>
+
+      <!-- Documentos de referencia -->
+      <section class="space-y-3">
+        <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">Documentos de referencia</h3>
+
+        @if (!effectivePlantillaId() && !formNombre().trim()) {
+          <div class="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center">
+            <lucide-icon [img]="FileIcon" class="mx-auto mb-2 w-6 h-6 text-slate-300" />
+            <p class="text-xs text-slate-400">Añade un nombre a la plantilla para habilitar los documentos</p>
+          </div>
+        } @else {
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <nav class="flex items-center gap-1 text-xs text-slate-500 min-w-0" aria-label="Ruta de carpetas">
+              @if (docFolderPath().length > 0) {
+                <button (click)="navigateBack()"
+                  class="p-1 rounded hover:bg-slate-100 shrink-0 mr-0.5"
+                  aria-label="Carpeta anterior">
+                  <lucide-icon [img]="ArrowLeftIcon" class="w-3.5 h-3.5 text-slate-500" />
+                </button>
+              }
+              <button (click)="navigateToRoot()"
+                class="hover:text-violet-600 font-medium shrink-0"
+                [class.text-violet-600]="docFolderPath().length === 0">
+                Raíz
+              </button>
+              @for (crumb of docFolderPath(); track crumb.id; let i = $index) {
+                <span class="text-slate-300">/</span>
+                <button (click)="navigateToBreadcrumb(i)"
+                  class="hover:text-violet-600 truncate max-w-30"
+                  [class.font-medium]="i === docFolderPath().length - 1"
+                  [class.text-violet-600]="i === docFolderPath().length - 1">
+                  {{ crumb.name }}
+                </button>
+              }
+            </nav>
+            <div class="flex items-center gap-1 shrink-0">
+              <button (click)="isCreatingFolder.set(true); isAddingFile.set(false)"
+                class="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-500 hover:bg-slate-100"
+                title="Nueva carpeta">
+                <lucide-icon [img]="FolderPlusIcon" class="w-3.5 h-3.5" />
+                Carpeta
+              </button>
+              <button (click)="isAddingFile.set(true); isCreatingFolder.set(false)"
+                class="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-500 hover:bg-slate-100"
+                title="Añadir documento requerido">
+                <lucide-icon [img]="FilePlusIcon" class="w-3.5 h-3.5" />
+                Documento
+              </button>
+            </div>
+          </div>
+
+          @if (isCreatingFolder()) {
+            <div class="flex items-center gap-2">
+              <input type="text" [value]="newFolderName()" (input)="newFolderName.set($any($event.target).value)"
+                (keyup.enter)="createFolder()" (keyup.escape)="isCreatingFolder.set(false)"
+                placeholder="Nombre de la carpeta"
+                class="flex-1 rounded-lg border border-violet-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-200"
+                autofocus />
+              <button (click)="createFolder()" [disabled]="!newFolderName().trim()"
+                class="p-1.5 rounded-lg bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-40">
+                <lucide-icon [img]="CheckIcon" class="w-3.5 h-3.5" />
+              </button>
+              <button (click)="isCreatingFolder.set(false)" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500">
+                <lucide-icon [img]="XIcon" class="w-3.5 h-3.5" />
+              </button>
+            </div>
+          }
+
+          @if (isAddingFile()) {
+            <div class="flex items-center gap-2">
+              <input type="text" [value]="newFileName()" (input)="newFileName.set($any($event.target).value)"
+                (keyup.enter)="addFile()" (keyup.escape)="isAddingFile.set(false)"
+                placeholder="Nombre del documento (ej. DNI cliente.pdf)"
+                class="flex-1 rounded-lg border border-violet-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-200"
+                autofocus />
+              <button (click)="addFile()" [disabled]="!newFileName().trim()"
+                class="p-1.5 rounded-lg bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-40">
+                <lucide-icon [img]="CheckIcon" class="w-3.5 h-3.5" />
+              </button>
+              <button (click)="isAddingFile.set(false)" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500">
+                <lucide-icon [img]="XIcon" class="w-3.5 h-3.5" />
+              </button>
+            </div>
+          }
+
+          @if (folderService.isLoading() || fileService.isLoading()) {
+            <p class="text-center text-xs text-slate-400 py-4">Cargando...</p>
+          } @else if (docCurrentFolders().length === 0 && docCurrentFiles().length === 0) {
+            <div class="rounded-lg border border-dashed border-slate-200 py-6 text-center text-xs text-slate-400">
+              Crea carpetas o añade nombres de documentos requeridos
+            </div>
+          } @else {
+            <ul class="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white overflow-hidden">
+              @for (folder of docCurrentFolders(); track folder.id) {
+                <li class="group flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50">
+                  @if (renamingFolderId() === folder.id) {
+                    <lucide-icon [img]="FolderOpenIcon" class="w-4 h-4 text-amber-400 shrink-0" />
+                    <input type="text" [value]="renameValue()" (input)="renameValue.set($any($event.target).value)"
+                      (keyup.enter)="confirmRename(folder.id)" (keyup.escape)="renamingFolderId.set(null)"
+                      class="flex-1 rounded border border-violet-300 px-2 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-violet-300"
+                      autofocus />
+                    <button (click)="confirmRename(folder.id)" [disabled]="!renameValue().trim()"
+                      class="p-1 rounded hover:bg-violet-50 disabled:opacity-40">
+                      <lucide-icon [img]="CheckIcon" class="w-3.5 h-3.5 text-violet-600" />
+                    </button>
+                    <button (click)="renamingFolderId.set(null)" class="p-1 rounded hover:bg-slate-100">
+                      <lucide-icon [img]="XIcon" class="w-3.5 h-3.5 text-slate-400" />
+                    </button>
+                  } @else if (deletingFolderId() === folder.id) {
+                    <lucide-icon [img]="FolderIcon" class="w-4 h-4 text-red-400 shrink-0" />
+                    <span class="flex-1 text-sm text-red-600">¿Eliminar "{{ folder.name }}" y su contenido?</span>
+                    <button (click)="deleteFolder(folder.id)"
+                      class="rounded px-2 py-0.5 text-xs bg-red-500 text-white hover:bg-red-600">
+                      Eliminar
+                    </button>
+                    <button (click)="deletingFolderId.set(null)" class="rounded px-2 py-0.5 text-xs border border-slate-200 hover:bg-slate-100">
+                      Cancelar
+                    </button>
+                  } @else {
+                    <button (click)="navigateToFolder(folder)" class="flex flex-1 items-center gap-2 min-w-0 text-left">
+                      <lucide-icon [img]="FolderIcon" class="w-4 h-4 text-amber-400 shrink-0" />
+                      <span class="text-sm text-slate-700 truncate">{{ folder.name }}</span>
+                    </button>
+                    <div class="hidden group-hover:flex items-center gap-0.5">
+                      <button (click)="startRename(folder)" class="p-1 rounded hover:bg-slate-200" title="Renombrar">
+                        <lucide-icon [img]="PencilIcon" class="w-3 h-3 text-slate-400" />
+                      </button>
+                      <button (click)="deletingFolderId.set(folder.id)" class="p-1 rounded hover:bg-red-50" title="Eliminar">
+                        <lucide-icon [img]="Trash2Icon" class="w-3 h-3 text-red-400" />
+                      </button>
+                    </div>
+                  }
+                </li>
+              }
+              @for (file of docCurrentFiles(); track file.id) {
+                <li class="group flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50">
+                  <lucide-icon [img]="FileIcon" class="w-4 h-4 text-slate-400 shrink-0" />
+                  <p class="flex-1 text-sm text-slate-700 truncate min-w-0">{{ file.name }}</p>
+                  @if (deletingFileId() === file.id) {
+                    <button (click)="deleteFile(file)"
+                      class="rounded px-2 py-0.5 text-xs bg-red-500 text-white hover:bg-red-600">
+                      Eliminar
+                    </button>
+                    <button (click)="deletingFileId.set(null)" class="rounded px-2 py-0.5 text-xs border border-slate-200 hover:bg-slate-100">
+                      Cancelar
+                    </button>
+                  } @else {
+                    <div class="hidden group-hover:flex items-center gap-0.5">
+                      <button (click)="deletingFileId.set(file.id)" class="p-1 rounded hover:bg-red-50" title="Eliminar">
+                        <lucide-icon [img]="Trash2Icon" class="w-3 h-3 text-red-400" />
+                      </button>
+                    </div>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        }
+      </section>
+    </div>
+
+    <div class="px-6 py-4 border-t border-slate-200 flex gap-3 justify-end">
+      <button (click)="closed.emit()"
+        class="px-4 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">
+        Cancelar
+      </button>
+      <button (click)="save()" [disabled]="saving() || !formNombre().trim()"
+        class="px-4 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50">
+        {{ saving() ? 'Guardando...' : (plantilla() ? 'Guardar cambios' : 'Crear plantilla') }}
+      </button>
+    </div>
+  </aside>
+</div>

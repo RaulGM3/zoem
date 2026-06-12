@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "hitos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "casoId", "order": "ASCENDING" },
+        { "fieldPath": "orden", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

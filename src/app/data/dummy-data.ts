@@ -634,11 +634,11 @@ export interface RolEmpresa {
 }
 
 export const USUARIOS_EMPRESA: UsuarioEmpresa[] = [
-  { id: 'USR-001', nombre: 'Carlos Mendoza', email: 'c.mendoza@zoem.es', rol: 'Admin', departamento: 'Dirección', estado: 'activo', ultimoLogin: 'Hoy, 09:15' },
-  { id: 'USR-002', nombre: 'Ana Martínez', email: 'a.martinez@zoem.es', rol: 'Gestor', departamento: 'Proyectos', estado: 'activo', ultimoLogin: 'Hoy, 08:30' },
-  { id: 'USR-003', nombre: 'Laura Sánchez', email: 'l.sanchez@zoem.es', rol: 'Gestor', departamento: 'Legal', estado: 'activo', ultimoLogin: 'Ayer, 17:00' },
-  { id: 'USR-004', nombre: 'Pedro García', email: 'p.garcia@zoem.es', rol: 'Usuario', departamento: 'Administración', estado: 'activo', ultimoLogin: 'Hace 3 días' },
-  { id: 'USR-005', nombre: 'Isabel Torres', email: 'i.torres@zoem.es', rol: 'Viewer', departamento: 'Contabilidad', estado: 'pendiente', ultimoLogin: '—' },
+  { id: 'USR-001', nombre: 'Carlos Mendoza', email: 'c.mendoza@vertey.es', rol: 'Admin', departamento: 'Dirección', estado: 'activo', ultimoLogin: 'Hoy, 09:15' },
+  { id: 'USR-002', nombre: 'Ana Martínez', email: 'a.martinez@vertey.es', rol: 'Gestor', departamento: 'Proyectos', estado: 'activo', ultimoLogin: 'Hoy, 08:30' },
+  { id: 'USR-003', nombre: 'Laura Sánchez', email: 'l.sanchez@vertey.es', rol: 'Gestor', departamento: 'Legal', estado: 'activo', ultimoLogin: 'Ayer, 17:00' },
+  { id: 'USR-004', nombre: 'Pedro García', email: 'p.garcia@vertey.es', rol: 'Usuario', departamento: 'Administración', estado: 'activo', ultimoLogin: 'Hace 3 días' },
+  { id: 'USR-005', nombre: 'Isabel Torres', email: 'i.torres@vertey.es', rol: 'Viewer', departamento: 'Contabilidad', estado: 'pendiente', ultimoLogin: '—' },
 ];
 
 export const ROLES_EMPRESA: RolEmpresa[] = [

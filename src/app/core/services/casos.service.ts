@@ -10,13 +10,16 @@ import {
   deleteDoc,
   writeBatch,
   query,
+  where,
   orderBy,
   serverTimestamp,
+  deleteField,
 } from '@angular/fire/firestore';
 import { CompanyService } from './company.service';
 import { PlantillasService } from './plantillas.service';
 import {
   Caso,
+  CasoPlantilla,
   Hito,
   MovimientoGestoria,
   RESUMEN_FINANCIERO_VACIO,
@@ -52,8 +55,8 @@ export class CasosService {
     return collection(this.firestore, 'companies', this.companyId, 'casos');
   }
 
-  private hitosRef(casoId: string) {
-    return collection(this.firestore, 'companies', this.companyId, 'casos', casoId, 'hitos');
+  private get hitosRef() {
+    return collection(this.firestore, 'companies', this.companyId, 'hitos');
   }
 
   async loadCasos(): Promise<void> {
@@ -71,10 +74,7 @@ export class CasosService {
     const companyId = this.companyId;
     const [casoSnap, hitosSnap] = await Promise.all([
       getDoc(doc(this.firestore, 'companies', companyId, 'casos', id)),
-      getDocs(query(
-        collection(this.firestore, 'companies', companyId, 'casos', id, 'hitos'),
-        orderBy('orden')
-      )),
+      getDocs(query(this.hitosRef, where('casoId', '==', id), orderBy('orden'))),
     ]);
     if (!casoSnap.exists()) return null;
     const hitos = hitosSnap.docs.map(d => ({ id: d.id, ...d.data() }) as Hito);
@@ -83,10 +83,11 @@ export class CasosService {
 
   async createCaso(data: CasoCreate): Promise<string> {
     const companyId = this.companyId;
-    let hitosToCreate: Omit<Hito, 'id'>[] = [];
+    let hitosToCreate: Omit<Hito, 'id' | 'casoId' | 'casoTitulo'>[] = [];
+    let plantilla: Awaited<ReturnType<typeof this.plantillasService.getPlantilla>> = null;
 
     if (data.plantillaId) {
-      const plantilla = await this.plantillasService.getPlantilla(data.plantillaId);
+      plantilla = await this.plantillasService.getPlantilla(data.plantillaId);
       if (plantilla) {
         const inicio = new Date();
         hitosToCreate = plantilla.hitos.map(h => {
@@ -114,11 +115,17 @@ export class CasosService {
 
     if (hitosToCreate.length > 0) {
       const batch = writeBatch(this.firestore);
-      const hitosColRef = collection(this.firestore, 'companies', companyId, 'casos', ref.id, 'hitos');
       for (const h of hitosToCreate) {
-        batch.set(doc(hitosColRef), h as object);
+        batch.set(doc(this.hitosRef), { ...h, casoId: ref.id, casoTitulo: data.titulo } as object);
       }
       await batch.commit();
+    }
+
+    if (data.plantillaId) {
+      await Promise.all([
+        this.copyPlantillaDocStructure(companyId, ref.id, data.plantillaId),
+        plantilla ? this.copyModeloCostos(companyId, ref.id, plantilla) : Promise.resolve(),
+      ]);
     }
 
     await this.loadCasos();
@@ -137,9 +144,7 @@ export class CasosService {
 
   async deleteCaso(id: string): Promise<void> {
     const companyId = this.companyId;
-    const hitosSnap = await getDocs(
-      collection(this.firestore, 'companies', companyId, 'casos', id, 'hitos')
-    );
+    const hitosSnap = await getDocs(query(this.hitosRef, where('casoId', '==', id)));
     const batch = writeBatch(this.firestore);
     hitosSnap.docs.forEach(d => batch.delete(d.ref));
     batch.delete(doc(this.firestore, 'companies', companyId, 'casos', id));
@@ -147,22 +152,128 @@ export class CasosService {
     this.casos.update(list => list.filter(c => c.id !== id));
   }
 
-  async addHito(casoId: string, data: Omit<Hito, 'id'>): Promise<Hito> {
-    const ref = await addDoc(this.hitosRef(casoId), stripUndefined(data) as object);
-    return { id: ref.id, ...data };
+  async addHito(casoId: string, casoTitulo: string, data: Omit<Hito, 'id' | 'casoId' | 'casoTitulo'>): Promise<Hito> {
+    const hito: Omit<Hito, 'id'> = { casoId, casoTitulo, ...data };
+    const ref = await addDoc(this.hitosRef, stripUndefined(hito) as object);
+    return { id: ref.id, ...hito };
   }
 
-  async updateHito(casoId: string, hitoId: string, data: Partial<Omit<Hito, 'id'>>): Promise<void> {
-    await updateDoc(
-      doc(this.firestore, 'companies', this.companyId, 'casos', casoId, 'hitos', hitoId),
-      stripUndefined(data) as object
-    );
+  async updateHito(_casoId: string, hitoId: string, data: Partial<Omit<Hito, 'id'>>): Promise<void> {
+    await updateDoc(doc(this.hitosRef, hitoId), stripUndefined(data) as object);
   }
 
-  async deleteHito(casoId: string, hitoId: string): Promise<void> {
-    await deleteDoc(
-      doc(this.firestore, 'companies', this.companyId, 'casos', casoId, 'hitos', hitoId)
-    );
+  async deleteHito(_casoId: string, hitoId: string): Promise<void> {
+    await deleteDoc(doc(this.hitosRef, hitoId));
+  }
+
+  async clearHitoSchedule(hitoId: string): Promise<void> {
+    await updateDoc(doc(this.hitosRef, hitoId), {
+      horaAgenda: deleteField(),
+      duracionAgenda: deleteField(),
+    });
+  }
+
+  async getHitosParaCalendario(): Promise<Hito[]> {
+    const snap = await getDocs(query(this.hitosRef, orderBy('fechaEstimada')));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }) as Hito);
+  }
+
+  private async copyPlantillaDocStructure(companyId: string, casoId: string, plantillaId: string): Promise<void> {
+    const [foldersSnap, filesSnap] = await Promise.all([
+      getDocs(query(
+        collection(this.firestore, 'plantilla_folders'),
+        where('companyId', '==', companyId),
+        where('plantillaId', '==', plantillaId)
+      )),
+      getDocs(query(
+        collection(this.firestore, 'plantilla_files'),
+        where('companyId', '==', companyId),
+        where('plantillaId', '==', plantillaId)
+      )),
+    ]);
+
+    if (foldersSnap.empty && filesSnap.empty) return;
+
+    const docFoldersRef = collection(this.firestore, 'companies', companyId, 'casos', casoId, 'doc_folders');
+    const docSlotsRef = collection(this.firestore, 'companies', companyId, 'casos', casoId, 'doc_slots');
+
+    // Map plantillaFolderId → new casoFolderId to remap parentId references
+    const folderIdMap = new Map<string, string>();
+    const batch = writeBatch(this.firestore);
+
+    for (const f of foldersSnap.docs) {
+      const newRef = doc(docFoldersRef);
+      folderIdMap.set(f.id, newRef.id);
+      const data = f.data();
+      batch.set(newRef, {
+        name: data['name'],
+        parentId: null, // fixed after second pass
+        plantillaFolderId: f.id,
+        createdAt: serverTimestamp(),
+      });
+    }
+
+    // Second pass: fix parentIds now that all folder IDs are mapped
+    for (const f of foldersSnap.docs) {
+      const data = f.data();
+      const parentId = data['parentId'];
+      if (parentId && folderIdMap.has(parentId)) {
+        const newFolderRef = doc(docFoldersRef, folderIdMap.get(f.id)!);
+        batch.update(newFolderRef, { parentId: folderIdMap.get(parentId)! });
+      }
+    }
+
+    for (const f of filesSnap.docs) {
+      const data = f.data();
+      const newFolderId = data['folderId'] ? (folderIdMap.get(data['folderId']) ?? null) : null;
+      batch.set(doc(docSlotsRef), {
+        folderId: newFolderId,
+        name: data['name'],
+        ...(data['description'] ? { description: data['description'] } : {}),
+        status: 'pendiente',
+        plantillaFileId: f.id,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    }
+
+    await batch.commit();
+  }
+
+  private async copyModeloCostos(companyId: string, casoId: string, plantilla: CasoPlantilla): Promise<void> {
+    const { honorariosBase, suplidos } = plantilla.modeloCostos;
+    if (!honorariosBase && suplidos.length === 0) return;
+
+    const slotsRef = collection(this.firestore, 'companies', companyId, 'casos', casoId, 'gestoria_slots');
+    const batch = writeBatch(this.firestore);
+
+    let slotOrden = 0;
+
+    if (honorariosBase) {
+      batch.set(doc(slotsRef), {
+        nombre: 'Honorarios base',
+        tipoCosto: 'honorarios_base',
+        importeEstimado: honorariosBase,
+        status: 'pendiente',
+        orden: slotOrden++,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    }
+
+    for (const s of suplidos) {
+      batch.set(doc(slotsRef), {
+        nombre: s.nombre,
+        tipoCosto: s.tipo,
+        ...(s.importeEstimado !== undefined ? { importeEstimado: s.importeEstimado } : {}),
+        status: 'pendiente',
+        orden: slotOrden++,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    }
+
+    await batch.commit();
   }
 
   async recalcularResumen(casoId: string): Promise<void> {

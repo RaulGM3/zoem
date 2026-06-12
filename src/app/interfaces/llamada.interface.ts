@@ -3,6 +3,7 @@ import type { Timestamp } from '@angular/fire/firestore';
 export interface Turno {
   rol: 'agente' | 'usuario';
   mensaje: string;
+  segundosEnLlamada?: number;
 }
 
 export type EstadoLlamada = 'completada' | 'fallida' | 'interrumpida';

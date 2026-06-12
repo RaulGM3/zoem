@@ -1,12 +1,17 @@
-import { Component, signal, computed, ChangeDetectionStrategy, inject, OnInit } from '@angular/core';
+import { Component, signal, computed, ChangeDetectionStrategy, inject, OnInit, OnDestroy } from '@angular/core';
 import {
   LucideAngularModule, UserCog, Users, Shield, Plus, Search,
-  Mail, MoreHorizontal, CheckCircle2, Clock, XCircle,
+  Mail, MoreHorizontal, CheckCircle2, Clock, XCircle, Trash2,
 } from 'lucide-angular';
 import { Timestamp } from '@angular/fire/firestore';
+import { Subscription } from 'rxjs';
 import { UsersService } from '../../core/services/users';
 import { PermissionService } from '../../core/services/permission.service';
+import { InvitationService } from '../../core/services/invitation.service';
+import { CompanyService } from '../../core/services/company.service';
 import { FIRM_ROLE_COLORS } from '../../interfaces/member';
+import type { CompanyInvitation } from '../../interfaces/invitation';
+import { InviteDrawerComponent, type InviteFormData } from './components/invite-drawer/invite-drawer';
 
 type UsuariosTab = 'usuarios' | 'roles' | 'permisos';
 
@@ -19,11 +24,11 @@ const ACTIVIDAD = [
 
 @Component({
   selector: 'app-usuarios',
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, InviteDrawerComponent],
   templateUrl: './usuarios.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class UsuariosComponent implements OnInit {
+export class UsuariosComponent implements OnInit, OnDestroy {
   readonly UserCogIcon = UserCog;
   readonly UsersIcon = Users;
   readonly ShieldIcon = Shield;
@@ -34,9 +39,14 @@ export class UsuariosComponent implements OnInit {
   readonly CheckCircle2Icon = CheckCircle2;
   readonly ClockIcon = Clock;
   readonly XCircleIcon = XCircle;
+  readonly Trash2Icon = Trash2;
 
   private readonly usersService = inject(UsersService);
   private readonly permissionService = inject(PermissionService);
+  private readonly invitationService = inject(InvitationService);
+  private readonly companyService = inject(CompanyService);
+
+  private invitationsSub?: Subscription;
 
   activeTab = signal<UsuariosTab>('usuarios');
   search = signal('');
@@ -60,8 +70,73 @@ export class UsuariosComponent implements OnInit {
     );
   });
 
+  // Invite drawer
+  readonly showInviteDrawer = signal(false);
+  readonly inviteSaving = signal(false);
+  readonly inviteLink = signal<string | null>(null);
+  readonly pendingInvitations = signal<CompanyInvitation[]>([]);
+  readonly cancellingId = signal<string | null>(null);
+
+  readonly hasPendingInvitations = computed(() => this.pendingInvitations().length > 0);
+
   ngOnInit(): void {
     this.usersService.loadMembers();
+    this.loadInvitations();
+  }
+
+  ngOnDestroy(): void {
+    this.invitationsSub?.unsubscribe();
+  }
+
+  private loadInvitations(): void {
+    const companyId = this.companyService.activeCompany()?.id;
+    if (!companyId) return;
+    this.invitationsSub = this.invitationService
+      .getInvitationsByCompany(companyId)
+      .subscribe(invitations => {
+        this.pendingInvitations.set(
+          invitations.filter(i => i.status === 'pending')
+        );
+      });
+  }
+
+  openInviteDrawer(): void {
+    this.inviteLink.set(null);
+    this.showInviteDrawer.set(true);
+  }
+
+  closeInviteDrawer(): void {
+    this.showInviteDrawer.set(false);
+    this.inviteLink.set(null);
+  }
+
+  async onInviteSubmit(data: InviteFormData): Promise<void> {
+    const company = this.companyService.activeCompany();
+    const createdBy = this.permissionService.currentMember()?.email ?? '';
+    if (!company) return;
+    this.inviteSaving.set(true);
+    try {
+      const token = await this.invitationService.createInvitation(
+        company.id,
+        company.name,
+        data.email,
+        data.role,
+        createdBy,
+      );
+      const link = `${window.location.origin}/invite?token=${token}`;
+      this.inviteLink.set(link);
+    } finally {
+      this.inviteSaving.set(false);
+    }
+  }
+
+  async cancelInvitation(id: string): Promise<void> {
+    this.cancellingId.set(id);
+    try {
+      await this.invitationService.cancelInvitation(id);
+    } finally {
+      this.cancellingId.set(null);
+    }
   }
 
   formatLogin(ts: Timestamp | null): string {
@@ -74,6 +149,11 @@ export class UsuariosComponent implements OnInit {
     if (diffDays === 0) return `Hoy, ${hhmm}`;
     if (diffDays === 1) return `Ayer, ${hhmm}`;
     return `Hace ${diffDays} días`;
+  }
+
+  formatExpiry(ts: Timestamp): string {
+    const date = ts.toDate();
+    return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
   }
 
   getEstadoClass(estado: string): string {

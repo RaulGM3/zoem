@@ -64,6 +64,11 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'eventos',
+        loadComponent: () =>
+          import('./components/eventos/eventos').then((m) => m.EventosComponent),
+      },
+      {
         path: 'documentos',
         loadComponent: () =>
           import('./components/documentos/documentos').then(
@@ -91,9 +96,9 @@ export const routes: Routes = [
           import('./components/agente-ia/agente-ia').then((m) => m.AgenteIAComponent),
       },
       {
-        path: 'zoem-studio',
+        path: 'vertey-studio',
         loadComponent: () =>
-          import('./components/zoem-studio/zoem-studio').then((m) => m.ZoemStudioComponent),
+          import('./components/vertey-studio/vertey-studio').then((m) => m.VerteyStudioComponent),
       },
       {
         path: 'usuarios',
@@ -121,6 +126,12 @@ export const routes: Routes = [
         canActivate: [permissionGuard('Configuración')],
         loadComponent: () =>
           import('./components/plantillas/plantillas').then((m) => m.PlantillasComponent),
+      },
+      {
+        path: 'plantillas/:id',
+        canActivate: [permissionGuard('Configuración')],
+        loadComponent: () =>
+          import('./components/plantilla-detail/plantilla-detail').then((m) => m.PlantillaDetailComponent),
       },
       {
         path: 'llamadas',

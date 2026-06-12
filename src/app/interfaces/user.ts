@@ -1,6 +1,6 @@
 export type SystemRole = 'user' | 'admin';
 
-export interface ZoemUser {
+export interface VerteyUser {
   id: string;
   email: string;
   displayName: string | null;

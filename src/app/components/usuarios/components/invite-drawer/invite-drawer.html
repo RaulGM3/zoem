@@ -1,0 +1,131 @@
+<!-- Backdrop -->
+@if (visible()) {
+  <div
+    class="fixed inset-0 bg-black/30 z-40"
+    (click)="close()"
+    aria-hidden="true"
+  ></div>
+}
+
+<!-- Drawer -->
+<div
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="invite-drawer-title"
+  [class]="'fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white shadow-xl flex flex-col transition-transform duration-300 ' + (visible() ? 'translate-x-0' : 'translate-x-full')"
+>
+  <!-- Header -->
+  <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center">
+        <lucide-icon [img]="MailIcon" class="w-4 h-4 text-violet-600" />
+      </div>
+      <h2 id="invite-drawer-title" class="text-base font-semibold text-slate-800">Invitar usuario</h2>
+    </div>
+    <button
+      (click)="close()"
+      class="p-1.5 hover:bg-slate-100 rounded-lg"
+      aria-label="Cerrar"
+    >
+      <lucide-icon [img]="XIcon" class="w-4 h-4 text-slate-500" />
+    </button>
+  </div>
+
+  <!-- Body -->
+  <div class="flex-1 overflow-y-auto px-6 py-6">
+    @if (inviteLink()) {
+      <!-- Success state -->
+      <div class="space-y-5">
+        <div class="flex flex-col items-center gap-3 py-6 text-center">
+          <div class="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center">
+            <lucide-icon [img]="SendIcon" class="w-7 h-7 text-emerald-600" />
+          </div>
+          <h3 class="text-lg font-semibold text-slate-800">Invitación generada</h3>
+          <p class="text-sm text-slate-500 max-w-xs">
+            Comparte este enlace con el usuario. Expira en 7 días.
+          </p>
+        </div>
+
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+          <p class="text-xs text-slate-500 font-medium uppercase tracking-wide">Enlace de invitación</p>
+          <p class="text-xs text-slate-700 break-all font-mono">{{ inviteLink() }}</p>
+          <button
+            (click)="copyLink()"
+            class="flex items-center gap-2 px-3 py-1.5 bg-violet-600 text-white text-xs rounded-lg hover:bg-violet-700 transition-colors"
+          >
+            @if (copied()) {
+              <lucide-icon [img]="CheckIcon" class="w-3.5 h-3.5" />
+              Copiado
+            } @else {
+              <lucide-icon [img]="CopyIcon" class="w-3.5 h-3.5" />
+              Copiar enlace
+            }
+          </button>
+        </div>
+
+        <button
+          (click)="close()"
+          class="w-full py-2.5 border border-slate-200 text-slate-700 text-sm rounded-xl hover:bg-slate-50"
+        >
+          Cerrar
+        </button>
+      </div>
+    } @else {
+      <!-- Form state -->
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-5" novalidate>
+        <div class="space-y-1.5">
+          <label for="invite-email" class="text-sm font-medium text-slate-700">
+            Correo electrónico <span class="text-red-500" aria-hidden="true">*</span>
+          </label>
+          <div class="relative">
+            <lucide-icon [img]="MailIcon" class="absolute left-3 top-2.5 w-4 h-4 text-slate-400 pointer-events-none" />
+            <input
+              id="invite-email"
+              type="email"
+              formControlName="email"
+              placeholder="usuario@empresa.com"
+              autocomplete="email"
+              class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+            />
+          </div>
+          @if (form.controls.email.invalid && form.controls.email.touched) {
+            <p class="text-xs text-red-500">Introduce un correo válido</p>
+          }
+        </div>
+
+        <div class="space-y-1.5">
+          <label for="invite-role" class="text-sm font-medium text-slate-700">
+            Rol <span class="text-red-500" aria-hidden="true">*</span>
+          </label>
+          <div class="relative">
+            <lucide-icon [img]="ShieldIcon" class="absolute left-3 top-2.5 w-4 h-4 text-slate-400 pointer-events-none" />
+            <select
+              id="invite-role"
+              formControlName="role"
+              class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 bg-white appearance-none"
+            >
+              @for (rol of roles; track rol) {
+                <option [value]="rol">{{ rol }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <p class="text-xs text-amber-700">
+            Se generará un enlace de invitación que deberás compartir manualmente con el usuario. Tendrá 7 días para aceptarlo.
+          </p>
+        </div>
+
+        <button
+          type="submit"
+          [disabled]="form.invalid || saving()"
+          class="w-full flex items-center justify-center gap-2 py-2.5 bg-violet-600 text-white text-sm font-medium rounded-xl hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          <lucide-icon [img]="SendIcon" class="w-4 h-4" />
+          {{ saving() ? 'Generando...' : 'Generar invitación' }}
+        </button>
+      </form>
+    }
+  </div>
+</div>

@@ -1,0 +1,21 @@
+@if (loading()) {
+  <div class="text-center text-slate-400 py-12 text-sm">Cargando plantillas...</div>
+} @else if (plantillas().length === 0) {
+  <div class="bg-white rounded-xl border border-slate-200 p-12 text-center">
+    <lucide-icon [img]="LayersIcon" class="w-10 h-10 text-slate-200 mx-auto mb-3" />
+    <p class="text-slate-500 font-medium">Sin plantillas todavía</p>
+    <p class="text-sm text-slate-400 mt-1">Crea plantillas para estandarizar tus casos y ahorrar tiempo</p>
+    <button (click)="newPlantilla.emit()"
+      class="mt-4 px-4 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700">
+      Crear primera plantilla
+    </button>
+  </div>
+} @else {
+  <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    @for (p of plantillas(); track p.id) {
+      <app-plantilla-card
+        [plantilla]="p"
+        (delete)="delete.emit($event)" />
+    }
+  </div>
+}

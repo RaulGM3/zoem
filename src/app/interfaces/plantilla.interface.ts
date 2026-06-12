@@ -23,6 +23,7 @@ export interface PartidaCosto {
   nombre: string;
   tipo: TipoCosto;
   importeEstimado?: number;
+  orden?: number;
 }
 
 export interface CasoPlantilla {

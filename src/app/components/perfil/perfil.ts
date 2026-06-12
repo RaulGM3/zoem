@@ -29,7 +29,7 @@ export class PerfilComponent {
 
   personalForm = this.fb.group({
     nombre: ['Carlos Mendoza', Validators.required],
-    email: [{ value: 'carlos@zoem.es', disabled: true }],
+    email: [{ value: 'carlos@vertey.es', disabled: true }],
     telefono: ['+34 612 345 678'],
     linkedin: ['linkedin.com/in/carlosmendoza'],
     biografia: ['Abogado mercantil con 12 años de experiencia. Especialista en fusiones y adquisiciones y derecho societario.'],

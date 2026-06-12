@@ -1,7 +1,10 @@
-import { Component, ChangeDetectionStrategy, input, output, signal, effect } from '@angular/core';
-import { LucideAngularModule, X } from 'lucide-angular';
+import { Component, ChangeDetectionStrategy, input, output, signal, computed, effect, inject } from '@angular/core';
+import { LucideAngularModule, X, Plus, Search } from 'lucide-angular';
 import type { CasoEstado, CasoPrioridad, CasoTipo, CreateCasoData } from '../../../../interfaces';
 import type { CasoPlantilla } from '../../../../interfaces';
+import type { Contact } from '../../../../interfaces';
+import { getContactDisplayName } from '../../../../interfaces';
+import { ContactService } from '../../../../core/services/contact.service';
 
 @Component({
   selector: 'app-nuevo-caso-drawer',
@@ -10,14 +13,19 @@ import type { CasoPlantilla } from '../../../../interfaces';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NuevoCasoDrawerComponent {
+  private readonly contactService = inject(ContactService);
+
   readonly visible = input.required<boolean>();
   readonly plantillas = input.required<CasoPlantilla[]>();
   readonly saving = input.required<boolean>();
 
   readonly saved = output<CreateCasoData>();
   readonly closed = output<void>();
+  readonly crearContacto = output<void>();
 
   readonly XIcon = X;
+  readonly PlusIcon = Plus;
+  readonly SearchIcon = Search;
 
   readonly estados: readonly CasoEstado[] = ['pendiente', 'en_proceso', 'cerrado', 'urgente', 'archivado'];
   readonly tipos: readonly CasoTipo[] = ['Legal', 'Fiscal', 'Laboral', 'Mercantil', 'Civil'];
@@ -32,9 +40,32 @@ export class NuevoCasoDrawerComponent {
   readonly formSinVencimiento = signal(false);
   readonly formPlantillaId = signal('');
 
+  readonly clienteSeleccionado = signal<Contact | null>(null);
+  readonly buscadorQuery = signal('');
+  readonly showDropdown = signal(false);
+
+  readonly contactosFiltrados = computed(() => {
+    const q = this.buscadorQuery().trim().toLowerCase();
+    if (!q) return [];
+    return this.contactService.contacts().filter(c => {
+      const nombre = getContactDisplayName(c).toLowerCase();
+      const nif = c.type === 'persona_fisica' ? (c.nif ?? '').toLowerCase() : (c.cif ?? '').toLowerCase();
+      const email = c.email.toLowerCase();
+      const phone = `${c.phone ?? ''} ${c.mobile ?? ''}`.toLowerCase();
+      return nombre.includes(q) || nif.includes(q) || email.includes(q) || phone.includes(q);
+    }).slice(0, 8);
+  });
+
+  readonly canSubmit = computed(() => !!this.formTitulo().trim() && !!this.clienteSeleccionado());
+
   constructor() {
     effect(() => {
-      if (this.visible()) this.resetForm();
+      if (this.visible()) {
+        this.resetForm();
+        if (this.contactService.contacts().length === 0) {
+          this.contactService.loadContacts();
+        }
+      }
     });
   }
 
@@ -47,6 +78,9 @@ export class NuevoCasoDrawerComponent {
     this.formVencimiento.set('');
     this.formSinVencimiento.set(false);
     this.formPlantillaId.set('');
+    this.clienteSeleccionado.set(null);
+    this.buscadorQuery.set('');
+    this.showDropdown.set(false);
   }
 
   onPlantillaChange(id: string): void {
@@ -55,9 +89,34 @@ export class NuevoCasoDrawerComponent {
     if (plantilla?.tipo) this.formTipo.set(plantilla.tipo);
   }
 
+  onBuscadorInput(value: string): void {
+    this.buscadorQuery.set(value);
+    this.showDropdown.set(true);
+  }
+
+  onBuscadorBlur(): void {
+    setTimeout(() => this.showDropdown.set(false), 200);
+  }
+
+  selectCliente(c: Contact): void {
+    this.clienteSeleccionado.set(c);
+    this.buscadorQuery.set('');
+    this.showDropdown.set(false);
+  }
+
+  clearCliente(): void {
+    this.clienteSeleccionado.set(null);
+    this.buscadorQuery.set('');
+  }
+
+  displayName(c: Contact): string {
+    return getContactDisplayName(c);
+  }
+
   submit(): void {
     const titulo = this.formTitulo().trim();
-    if (!titulo) return;
+    const cliente = this.clienteSeleccionado();
+    if (!titulo || !cliente) return;
     this.saved.emit({
       titulo,
       descripcion: this.formDescripcion().trim() || undefined,
@@ -65,7 +124,7 @@ export class NuevoCasoDrawerComponent {
       estado: this.formEstado(),
       prioridad: this.formPrioridad(),
       vencimiento: this.formSinVencimiento() ? undefined : (this.formVencimiento() || undefined),
-      contactoIds: [],
+      contactoIds: [cliente.id],
       plantillaId: this.formPlantillaId() || undefined,
     });
   }

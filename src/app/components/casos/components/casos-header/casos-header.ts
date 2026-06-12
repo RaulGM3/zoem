@@ -4,6 +4,7 @@ import { LucideAngularModule, Briefcase, Plus, Layers } from 'lucide-angular';
 
 @Component({
   selector: 'app-casos-header',
+  host: { style: 'display: block' },
   imports: [LucideAngularModule, RouterLink],
   templateUrl: './casos-header.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

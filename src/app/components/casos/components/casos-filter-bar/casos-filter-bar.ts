@@ -4,6 +4,7 @@ import type { CasoEstado, CasoTipo } from '../../../../interfaces';
 
 @Component({
   selector: 'app-casos-filter-bar',
+  host: { style: 'display: block' },
   imports: [LucideAngularModule],
   templateUrl: './casos-filter-bar.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

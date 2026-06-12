@@ -1,23 +1,13 @@
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-  <div class="bg-white rounded-xl border border-slate-200 p-4">
-    <p class="text-sm text-slate-500">Total casos</p>
-    <p class="text-2xl font-bold text-slate-800 mt-1">{{ total() }}</p>
-  </div>
-  <div class="bg-white rounded-xl border border-slate-200 p-4">
-    <p class="text-sm text-slate-500">En proceso</p>
-    <p class="text-2xl font-bold text-blue-600 mt-1">{{ enProceso() }}</p>
-  </div>
-  <div class="bg-white rounded-xl border border-slate-200 p-4">
-    <p class="text-sm text-slate-500">Pendientes</p>
-    <p class="text-2xl font-bold text-amber-600 mt-1">{{ pendientes() }}</p>
-  </div>
-  <div class="bg-white rounded-xl border border-slate-200 p-4">
-    <div class="flex items-center gap-1.5">
-      <p class="text-sm text-slate-500">Urgentes</p>
-      @if (urgentes() > 0) {
-        <lucide-icon [img]="AlertCircleIcon" class="w-4 h-4 text-red-500" />
-      }
-    </div>
-    <p class="text-2xl font-bold text-red-600 mt-1">{{ urgentes() }}</p>
-  </div>
+<div class="flex items-center gap-6 px-1 py-1 text-sm text-slate-500">
+  <span>
+    <span class="font-semibold text-slate-800">{{ total() }}</span> total
+  </span>
+  <span class="w-px h-3.5 bg-slate-200"></span>
+  <span>
+    <span class="font-semibold text-blue-600">{{ enProceso() }}</span> en proceso
+  </span>
+  <span class="w-px h-3.5 bg-slate-200"></span>
+  <span>
+    <span class="font-semibold text-amber-600">{{ pendientes() }}</span> pendientes
+  </span>
 </div>

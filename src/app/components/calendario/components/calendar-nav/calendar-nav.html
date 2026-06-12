@@ -1,0 +1,83 @@
+<div class="mb-6 rounded-xl border border-slate-200 bg-white p-4">
+  <!-- Controls row -->
+  <div class="mb-4 flex items-center gap-2">
+    <button
+      (click)="prevClicked.emit()"
+      class="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+    >
+      <lucide-icon [img]="ChevronLeftIcon" size="18"></lucide-icon>
+    </button>
+    <span class="flex-1 text-center text-sm font-semibold text-slate-700">{{ weekMonthLabel() }}</span>
+    <button
+      (click)="nextClicked.emit()"
+      class="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+    >
+      <lucide-icon [img]="ChevronRightIcon" size="18"></lucide-icon>
+    </button>
+    <div class="flex overflow-hidden rounded-lg border border-slate-200">
+      <button
+        (click)="viewModeChanged.emit('week')"
+        class="px-2.5 py-1 text-xs font-medium transition-colors"
+        [class]="viewMode() === 'week' ? 'bg-violet-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'"
+      >Sem</button>
+      <button
+        (click)="viewModeChanged.emit('month')"
+        class="px-2.5 py-1 text-xs font-medium transition-colors"
+        [class]="viewMode() === 'month' ? 'bg-violet-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'"
+      >Mes</button>
+    </div>
+  </div>
+
+  <!-- Week strip (scrollable, infinite) -->
+  @if (viewMode() === 'week') {
+    <div #scrollRef class="scroll-hide flex overflow-x-auto gap-1 pb-0.5" (scroll)="onStripScroll($event)">
+      @for (day of weekDays(); track day.date; let i = $index) {
+        @if (i > 0 && i % 7 === 0) {
+          <div class="mx-0.5 w-px shrink-0 self-stretch bg-slate-100"></div>
+        }
+        <button
+          (click)="dateToggled.emit(day.date)"
+          class="flex min-w-[14.285714%] shrink-0 flex-col items-center gap-1 rounded-xl p-2 text-xs transition-colors"
+          [class]="day.isSelected ? 'bg-violet-600 text-white' : day.isToday ? 'bg-violet-50 text-violet-700' : 'text-slate-600 hover:bg-slate-50'"
+        >
+          <span class="font-medium">{{ day.dayName }}</span>
+          <span class="text-base font-bold leading-none">{{ day.dayNum }}</span>
+          @if (day.hasEvents) {
+            <span class="h-1.5 w-1.5 rounded-full" [class]="day.isSelected ? 'bg-white/70' : 'bg-violet-400'"></span>
+          } @else {
+            <span class="h-1.5 w-1.5"></span>
+          }
+        </button>
+      }
+    </div>
+  }
+
+  <!-- Month grid (6 weeks × 7 days) -->
+  @if (viewMode() === 'month') {
+    <div class="grid grid-cols-7 gap-1">
+      @for (name of dayNames(); track name) {
+        <div class="py-1 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-400">{{ name }}</div>
+      }
+      @for (day of monthDays(); track day.date) {
+        <button
+          (click)="dateToggled.emit(day.date)"
+          class="flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-xs transition-colors"
+          [class]="day.isSelected
+            ? 'bg-violet-600 text-white'
+            : day.isToday
+              ? 'bg-violet-50 text-violet-700'
+              : day.isCurrentMonth
+                ? 'text-slate-700 hover:bg-slate-50'
+                : 'text-slate-300 hover:bg-slate-50'"
+        >
+          <span class="text-sm font-bold leading-none">{{ day.dayNum }}</span>
+          @if (day.hasEvents) {
+            <span class="h-1 w-1 rounded-full" [class]="day.isSelected ? 'bg-white/70' : 'bg-violet-400'"></span>
+          } @else {
+            <span class="h-1 w-1"></span>
+          }
+        </button>
+      }
+    </div>
+  }
+</div>

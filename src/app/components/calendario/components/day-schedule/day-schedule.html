@@ -1,0 +1,193 @@
+@if (!hasSelectedDates()) {
+  <div class="rounded-xl border border-dashed border-slate-200 bg-slate-50 py-12 text-center text-sm text-slate-400">
+    Selecciona un día para ver sus hitos
+  </div>
+} @else {
+
+  <!-- Hitos sin programar -->
+  @if (unscheduledItems().length > 0) {
+    <div class="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+        Sin programar — click para añadir al horario
+      </p>
+      <div class="flex flex-wrap gap-2">
+        @for (item of unscheduledItems(); track item.id) {
+          <button
+            class="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:border-violet-300 hover:bg-violet-50 hover:text-violet-800"
+            (click)="scheduleItem(item)"
+            [attr.aria-label]="'Programar ' + item.title"
+          >
+            <lucide-icon [img]="ClockIcon" size="12" class="shrink-0 opacity-60"></lucide-icon>
+            <span class="max-w-[9rem] truncate">{{ item.title }}</span>
+            <span class="max-w-[6rem] truncate text-slate-400">{{ item.client }}</span>
+          </button>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Grid de agenda -->
+  @if (groupedEvents().length > 0) {
+    <div class="overflow-hidden rounded-xl border border-slate-200">
+      <div
+        #scheduleArea
+        class="overflow-y-auto overflow-x-auto"
+        style="max-height: 600px"
+        (pointermove)="onSchedulePointerMove($event)"
+        (pointerup)="onSchedulePointerUp($event)"
+        (pointercancel)="onSchedulePointerCancel()"
+      >
+        <!-- Cabecera sticky -->
+        <div #scheduleHeader class="sticky top-0 z-20 flex border-b border-slate-200 bg-white">
+          <div class="w-14 shrink-0"></div>
+          @for (group of groupedEvents(); track group.date) {
+            <div class="min-w-40 flex-1 border-l border-slate-100 py-2 text-center text-xs font-semibold text-slate-600">
+              {{ group.label }}
+            </div>
+          }
+        </div>
+
+        <!-- Cuerpo -->
+        <div class="flex" [style.height.px]="totalGridHeight">
+
+          <!-- Regla de horas -->
+          <div class="relative w-14 shrink-0 border-r border-slate-100 bg-white">
+            @for (hour of hours; track hour) {
+              <div
+                class="absolute flex w-full items-start justify-end pr-2 text-[10px] leading-none text-slate-400"
+                [style.top.px]="hourHeight * hour - 6"
+              >
+                @if (hour > 0) { {{ formatHour(hour) }} }
+              </div>
+            }
+          </div>
+
+          <!-- Columnas de días -->
+          @for (group of groupedEvents(); track group.date) {
+            @let drag = dragging();
+
+            <div
+              class="relative min-w-40 flex-1 border-l border-slate-100"
+              [attr.data-date]="group.date"
+            >
+              <!-- Líneas de hora -->
+              @for (hour of hours; track hour) {
+                <div
+                  class="pointer-events-none absolute inset-x-0 border-t"
+                  [class]="hour % 6 === 0 ? 'border-slate-200' : 'border-slate-100'"
+                  [style.top.px]="hourHeight * hour"
+                ></div>
+              }
+              <!-- Líneas de media hora (guión) -->
+              @for (hour of hours; track hour) {
+                <div
+                  class="pointer-events-none absolute inset-x-0 border-t border-dashed border-slate-100"
+                  [style.top.px]="hourHeight * hour + hourHeight / 2"
+                ></div>
+              }
+
+              <!-- Halo indicador cuando el drag apunta a esta columna (distinta del origen) -->
+              @if (drag && drag.currentDate === group.date && drag.originalDate !== group.date) {
+                <div class="pointer-events-none absolute inset-0 bg-violet-50/40 ring-1 ring-inset ring-violet-200"></div>
+              }
+
+              <!-- Bloques programados -->
+              @for (item of scheduledItemsForDate(group.date); track item.id) {
+                @let isDragging = isDraggingItem(item);
+                @let crossDay = isDragging && !!drag && drag.currentDate !== group.date;
+
+                <!-- Sombra fantasma en posición original (solo durante drag) -->
+                @if (isDragging) {
+                  <div
+                    class="pointer-events-none absolute rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 opacity-40"
+                    [style.left]="getItemLeft(item)"
+                    [style.width]="getItemWidth(item)"
+                    [style.top.px]="getItemTop(item)"
+                    [style.height.px]="getItemHeight(item)"
+                    aria-hidden="true"
+                  ></div>
+                }
+
+                <!-- Bloque real (se oculta si el drag cruza a otra columna) -->
+                @if (!crossDay) {
+                  <div
+                    [class]="getItemClass(item)"
+                    [style.left]="getItemLeft(item)"
+                    [style.width]="getItemWidth(item)"
+                    [style.top.px]="isDragging ? getDragTop() : getItemTop(item)"
+                    [style.height.px]="isResizingItem(item) ? getResizeHeight() : getItemHeight(item)"
+                    [style.cursor]="isDragging ? 'grabbing' : 'grab'"
+                    (pointerdown)="onItemPointerDown($event, item)"
+                    role="button"
+                    tabindex="0"
+                    [attr.aria-label]="item.title + (item.horaInicio ? ' — ' + item.horaInicio : '')"
+                  >
+                    <div class="flex h-full flex-col p-1.5 pb-4">
+                      <div class="flex min-h-0 items-start gap-1">
+                        <p class="min-w-0 flex-1 truncate text-[11px] font-semibold leading-tight">
+                          {{ item.title }}
+                        </p>
+                        <div class="flex shrink-0 items-center gap-0.5">
+                          @if (item.hitoEstado && item.hitoEstado !== 'cancelado') {
+                            <button
+                              class="rounded px-1 py-0.5 text-[9px] font-semibold leading-none transition-opacity hover:opacity-80"
+                              [class]="getHitoEstadoBadgeClass(item.hitoEstado)"
+                              (click)="advanceHito($event, item)"
+                              [attr.aria-label]="'Avanzar estado de ' + item.title"
+                            >{{ getHitoEstadoLabel(item.hitoEstado) }}</button>
+                          }
+                          <button
+                            class="flex h-4 w-4 items-center justify-center rounded opacity-40 transition-opacity hover:opacity-100"
+                            (click)="unscheduleItem($event, item)"
+                            [attr.aria-label]="'Quitar ' + item.title + ' del horario'"
+                          >
+                            <lucide-icon [img]="XIcon" size="10"></lucide-icon>
+                          </button>
+                        </div>
+                      </div>
+                      <p class="mt-0.5 truncate text-[10px] leading-none opacity-60">
+                        @if (isDragging) { {{ getDragTimeLabel() }} }
+                        @else if (isResizingItem(item)) { {{ getResizeTimeLabel() }} }
+                        @else { {{ getTimeLabel(item) }} }
+                      </p>
+                    </div>
+                    <!-- Handle de resize -->
+                    <div
+                      class="resize-handle absolute inset-x-0 bottom-0 flex h-3 cursor-ns-resize items-center justify-center"
+                      (pointerdown)="onResizePointerDown($event, item)"
+                      role="slider"
+                      aria-orientation="vertical"
+                      aria-label="Cambiar duración"
+                    >
+                      <div class="h-0.5 w-6 rounded-full bg-current opacity-30"></div>
+                    </div>
+                  </div>
+                }
+              }
+
+              <!-- Preview de drag entre columnas (aparece en la columna destino) -->
+              @if (drag && drag.currentDate === group.date && drag.originalDate !== group.date) {
+                <div
+                  [class]="getDragPreviewClass(drag.item)"
+                  style="left: 2px; width: calc(100% - 4px)"
+                  [style.top.px]="getDragTop()"
+                  [style.height.px]="getItemHeight(drag.item)"
+                >
+                  <div class="p-1.5">
+                    <p class="truncate text-[11px] font-semibold leading-tight">{{ drag.item.title }}</p>
+                    <p class="mt-0.5 text-[10px] opacity-70">{{ getDragTimeLabel() }}</p>
+                  </div>
+                </div>
+              }
+
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  } @else {
+    <div class="rounded-xl border border-dashed border-slate-200 bg-slate-50 py-12 text-center text-sm text-slate-400">
+      No hay hitos para los días seleccionados
+    </div>
+  }
+}

@@ -45,7 +45,7 @@
 
       <!-- Tabs -->
       <nav class="flex gap-1 mt-4" role="tablist">
-        @for (tab of [['info','Información'],['hitos','Hitos'],['gestoria','Gestoría']]; track tab[0]) {
+        @for (tab of [['info','Información'],['hitos','Hitos'],['gestoria','Gestoría'],['documentos','Documentos']]; track tab[0]) {
           <button
             role="tab"
             [attr.aria-selected]="activeTab() === tab[0]"
@@ -60,6 +60,18 @@
             }
             @if (tab[0] === 'gestoria' && gestoriaService.movimientos().length > 0) {
               <span class="ml-1.5 text-xs opacity-70">{{ gestoriaService.movimientos().length }}</span>
+            }
+            @if (tab[0] === 'gestoria') {
+              @let pendingCosts = gestoriaService.slots().filter(s => s.status === 'pendiente').length;
+              @if (pendingCosts > 0) {
+                <span class="ml-1.5 inline-flex items-center justify-center w-4 h-4 text-xs rounded-full bg-amber-400 text-white font-semibold">{{ pendingCosts }}</span>
+              }
+            }
+            @if (tab[0] === 'documentos') {
+              @let pending = casoDocService.slots().filter(s => s.status === 'pendiente').length;
+              @if (pending > 0) {
+                <span class="ml-1.5 inline-flex items-center justify-center w-4 h-4 text-xs rounded-full bg-amber-400 text-white font-semibold">{{ pending }}</span>
+              }
             }
           </button>
         }
@@ -303,6 +315,84 @@
       @if (activeTab() === 'gestoria') {
         <div class="space-y-4">
 
+          <!-- Costos previstos por plantilla -->
+          @if (gestoriaService.slots().length > 0) {
+            <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+              <div class="px-4 py-3 border-b border-slate-200">
+                <div class="flex items-center justify-between mb-1.5">
+                  <h3 class="text-sm font-medium text-slate-700">Costos previstos por plantilla</h3>
+                  @let sp = slotsGestoriaProgress();
+                  @if (sp) {
+                    <span class="text-xs text-slate-500">
+                      <span class="font-semibold text-slate-800">{{ sp.registrados }}</span> de {{ sp.total }} registrados
+                    </span>
+                  }
+                </div>
+                @let sp2 = slotsGestoriaProgress();
+                @if (sp2) {
+                  <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      class="h-full bg-violet-500 rounded-full transition-all duration-300"
+                      [style.width.%]="(sp2.registrados / sp2.total) * 100"
+                    ></div>
+                  </div>
+                }
+              </div>
+
+              <div class="divide-y divide-slate-100">
+                @for (slot of gestoriaService.slots(); track slot.id) {
+                  <div class="flex items-center gap-3 px-4 py-3">
+
+                    <lucide-icon
+                      [img]="slot.status === 'registrado' ? CheckCircle2Icon : CircleAlertIcon"
+                      [class]="'w-4 h-4 shrink-0 ' + (slot.status === 'registrado' ? 'text-emerald-500' : 'text-amber-400')"
+                    />
+
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm text-slate-700 font-medium truncate">{{ slot.nombre }}</p>
+                      <p class="text-xs text-slate-400">{{ slot.tipoCosto | titlecase }}</p>
+                    </div>
+
+                    <div class="flex items-center gap-3 shrink-0">
+                      @if (slot.importeEstimado != null) {
+                        <span class="text-sm text-slate-500">
+                          <span class="text-xs text-slate-400">est.</span>
+                          {{ slot.importeEstimado | number:'1.2-2' }} €
+                        </span>
+                      }
+                      @if (slot.status === 'registrado') {
+                        @if (slot.importeReal != null) {
+                          <span class="text-sm font-semibold text-emerald-700">
+                            {{ slot.importeReal | number:'1.2-2' }} €
+                          </span>
+                        }
+                        <span class="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 font-medium">Registrado</span>
+                        <button
+                          (click)="unregisterSlot(slot)"
+                          class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-300 hover:text-slate-500"
+                          title="Desasociar movimiento"
+                          aria-label="Desasociar movimiento"
+                        >
+                          <lucide-icon [img]="XIcon" class="w-3.5 h-3.5" />
+                        </button>
+                      } @else {
+                        <span class="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-700 font-medium">Pendiente</span>
+                        <button
+                          (click)="openRegistrarSlot(slot)"
+                          class="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-violet-600 text-white rounded-lg hover:bg-violet-700"
+                        >
+                          <lucide-icon [img]="PlusIcon" class="w-3 h-3" />
+                          Registrar
+                        </button>
+                      }
+                    </div>
+
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
           <!-- Summary cards -->
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <div class="bg-white rounded-xl border border-slate-200 p-4">
@@ -397,6 +487,126 @@
           </div>
         </div>
       }
+
+      <!-- ── TAB DOCUMENTOS ──────────────────────────── -->
+      @if (activeTab() === 'documentos') {
+        <div class="space-y-4 max-w-2xl">
+
+          @if (casoDocService.isLoading()) {
+            <div class="flex items-center justify-center h-32 text-slate-400 text-sm">
+              <lucide-icon [img]="LoaderIcon" class="w-4 h-4 mr-2 animate-spin" />
+              Cargando documentos...
+            </div>
+          } @else if (casoDocService.slots().length === 0) {
+            <div class="bg-white rounded-xl border border-slate-200 p-10 flex flex-col items-center gap-3 text-center">
+              <lucide-icon [img]="FolderOpenIcon" class="w-10 h-10 text-slate-300" />
+              <p class="text-slate-500 text-sm font-medium">Sin documentos requeridos</p>
+              <p class="text-slate-400 text-xs">Este caso no tiene una plantilla con estructura documental asociada.</p>
+            </div>
+          } @else {
+            <!-- Progress header -->
+            @let progress = docsProgress();
+            @if (progress) {
+              <div class="bg-white rounded-xl border border-slate-200 p-4">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-sm font-medium text-slate-700">Documentos requeridos</span>
+                  <span class="text-sm text-slate-500">
+                    <span class="font-semibold text-slate-800">{{ progress.subidos }}</span> de {{ progress.total }} completados
+                  </span>
+                </div>
+                <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    class="h-full bg-violet-500 rounded-full transition-all duration-300"
+                    [style.width.%]="(progress.subidos / progress.total) * 100"
+                  ></div>
+                </div>
+              </div>
+            }
+
+            <!-- Slots list -->
+            <div class="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
+              @for (slot of slotsConRuta(); track slot.id) {
+                <div class="flex items-center gap-3 px-4 py-3">
+
+                  <!-- File icon + info -->
+                  <lucide-icon
+                    [img]="slot.status === 'subido' ? CheckCircle2Icon : FileTextIcon"
+                    [class]="'w-5 h-5 shrink-0 ' + (slot.status === 'subido' ? 'text-emerald-500' : 'text-slate-300')"
+                  />
+
+                  <div class="flex-1 min-w-0">
+                    @if (slot.rutaCarpeta) {
+                      <p class="text-xs text-slate-400 truncate">
+                        <lucide-icon [img]="FolderOpenIcon" class="w-3 h-3 inline-block mr-0.5 -mt-0.5" />
+                        {{ slot.rutaCarpeta }}
+                      </p>
+                    }
+                    <p class="text-sm text-slate-700 font-medium truncate">{{ slot.name }}</p>
+                    @if (slot.description) {
+                      <p class="text-xs text-slate-400 truncate">{{ slot.description }}</p>
+                    }
+                  </div>
+
+                  <!-- Status + actions -->
+                  <div class="flex items-center gap-2 shrink-0">
+                    @if (slot.status === 'subido') {
+                      <span class="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 font-medium">Subido</span>
+                      @if (slot.downloadUrl) {
+                        <a
+                          [href]="slot.downloadUrl"
+                          target="_blank"
+                          rel="noopener"
+                          class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+                          aria-label="Descargar"
+                        >
+                          <lucide-icon [img]="DownloadIcon" class="w-4 h-4" />
+                        </a>
+                      }
+                      <button
+                        (click)="removeUpload(slot)"
+                        [disabled]="uploadingSlotId() === slot.id"
+                        class="p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400 disabled:opacity-50"
+                        aria-label="Eliminar documento"
+                      >
+                        @if (uploadingSlotId() === slot.id) {
+                          <lucide-icon [img]="LoaderIcon" class="w-4 h-4 animate-spin" />
+                        } @else {
+                          <lucide-icon [img]="Trash2Icon" class="w-4 h-4" />
+                        }
+                      </button>
+                    } @else {
+                      <span class="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-700 font-medium">Pendiente</span>
+                      <button
+                        (click)="triggerUpload(slot.id)"
+                        [disabled]="uploadingSlotId() === slot.id"
+                        class="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50"
+                      >
+                        @if (uploadingSlotId() === slot.id) {
+                          <lucide-icon [img]="LoaderIcon" class="w-3.5 h-3.5 animate-spin" />
+                          Subiendo...
+                        } @else {
+                          <lucide-icon [img]="UploadIcon" class="w-3.5 h-3.5" />
+                          Subir
+                        }
+                      </button>
+                      <input
+                        type="file"
+                        [id]="'upload-' + slot.id"
+                        class="hidden"
+                        (change)="onFileSelected($event, slot)"
+                        aria-hidden="true"
+                      />
+                    }
+                  </div>
+
+                </div>
+              }
+            </div>
+          }
+
+        </div>
+      }
+
     </div>
   </div>
 }
@@ -465,12 +675,12 @@
 
 <!-- ── Movimiento form drawer ──────────────────────── -->
 @if (showMovForm()) {
-  <div class="fixed inset-0 z-40 bg-black/30" (click)="showMovForm.set(false)" aria-hidden="true"></div>
+  <div class="fixed inset-0 z-40 bg-black/30" (click)="closeMovForm()" aria-hidden="true"></div>
   <aside class="fixed right-0 top-0 h-full w-full max-w-sm bg-white shadow-2xl z-50 flex flex-col"
     role="dialog" aria-modal="true" aria-labelledby="mov-drawer-title">
     <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
       <h2 id="mov-drawer-title" class="text-base font-semibold text-slate-800">Nuevo movimiento</h2>
-      <button (click)="showMovForm.set(false)" class="p-1.5 rounded-lg hover:bg-slate-100" aria-label="Cerrar">
+      <button (click)="closeMovForm()" class="p-1.5 rounded-lg hover:bg-slate-100" aria-label="Cerrar">
         <lucide-icon [img]="XIcon" class="w-4 h-4 text-slate-500" />
       </button>
     </div>
@@ -517,7 +727,7 @@
       </div>
     </div>
     <div class="px-6 py-4 border-t border-slate-200 flex gap-3 justify-end">
-      <button (click)="showMovForm.set(false)"
+      <button (click)="closeMovForm()"
         class="px-4 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">
         Cancelar
       </button>

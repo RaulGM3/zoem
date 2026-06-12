@@ -1,0 +1,149 @@
+<div class="mb-6 flex items-center justify-between">
+  <h1 class="text-2xl font-bold text-slate-900">Eventos</h1>
+  <button
+    (click)="showDrawer.set(true)"
+    class="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 transition-colors"
+  >
+    <lucide-icon [img]="PlusIcon" class="w-4 h-4" />
+    Nuevo evento
+  </button>
+</div>
+
+<app-calendar-nav
+  [weekDays]="weekDays()"
+  [monthDays]="monthDays()"
+  [viewMode]="viewMode()"
+  [weekMonthLabel]="weekMonthLabel()"
+  [dayNames]="dayNames"
+  (prevClicked)="prevWeek()"
+  (nextClicked)="nextWeek()"
+  (viewModeChanged)="setViewMode($event)"
+  (dateToggled)="toggleDate($event)"
+  (visibleDateChanged)="visibleMonthDate.set($event)"
+  (moreDaysRequested)="stripDayCount.update(n => n + 7)"
+/>
+
+<!-- Event list -->
+@if (loading()) {
+  <div class="mt-6 flex items-center justify-center py-12">
+    <div class="h-8 w-8 animate-spin rounded-full border-4 border-violet-200 border-t-violet-600"></div>
+  </div>
+} @else if (selectedDates().size === 0) {
+  <div class="mt-6 rounded-xl border border-dashed border-slate-200 bg-slate-50 py-12 text-center text-sm text-slate-400">
+    Selecciona un día para ver sus eventos
+  </div>
+} @else if (groupedEventos().length === 0) {
+  <div class="mt-6 rounded-xl border border-dashed border-slate-200 bg-slate-50 py-12 text-center">
+    <p class="text-sm text-slate-400">No hay eventos para los días seleccionados</p>
+    <button
+      (click)="showDrawer.set(true)"
+      class="mt-3 text-sm font-medium text-violet-600 hover:text-violet-700"
+    >
+      + Crear evento
+    </button>
+  </div>
+} @else {
+  <div class="mt-6 space-y-6">
+    @for (group of groupedEventos(); track group.date) {
+      <div>
+        <h2 class="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
+          {{ group.label }}
+          <span class="rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-bold text-violet-700">
+            {{ group.items.length }}
+          </span>
+        </h2>
+        <div class="space-y-3">
+          @for (evento of group.items; track evento.id) {
+            <div
+              [class]="'flex items-start gap-4 rounded-xl border border-slate-200 bg-white p-5 border-l-4 ' + getColorConfig(evento.color).border"
+            >
+              <!-- Color dot -->
+              <div
+                class="mt-0.5 h-3 w-3 shrink-0 rounded-full"
+                [class]="getColorConfig(evento.color).dot"
+              ></div>
+
+              <div class="min-w-0 flex-1">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="font-semibold text-slate-900">{{ evento.titulo }}</p>
+                    <p class="mt-0.5 text-sm text-slate-500">{{ formatTime(evento) }}</p>
+                  </div>
+                  <div class="flex shrink-0 items-center gap-2">
+                    @if (evento.prioridad !== 'ninguna') {
+                      <span
+                        class="rounded-full px-2.5 py-1 text-xs font-semibold"
+                        [class]="getPrioridadConfig(evento.prioridad).bg + ' ' + getPrioridadConfig(evento.prioridad).text"
+                      >
+                        {{ getPrioridadConfig(evento.prioridad).label }}
+                      </span>
+                    }
+                    <button
+                      (click)="deleteEvento(evento.id)"
+                      class="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                      aria-label="Eliminar evento"
+                    >
+                      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                  @if (evento.lugar) {
+                    <span class="flex items-center gap-1">
+                      <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      {{ evento.lugar }}
+                    </span>
+                  }
+                  @if (evento.link) {
+                    <a
+                      [href]="evento.link"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="flex items-center gap-1 text-violet-600 hover:text-violet-700"
+                    >
+                      <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                      </svg>
+                      Enlace
+                    </a>
+                  }
+                  <span class="flex items-center gap-1">
+                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    {{ formatInvitados(evento) }}
+                  </span>
+                  @if (evento.recurrencia !== 'ninguna') {
+                    <span class="flex items-center gap-1">
+                      <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      {{ getRecurrenciaLabel(evento.recurrencia) }}
+                    </span>
+                  }
+                </div>
+
+                @if (evento.descripcion) {
+                  <p class="mt-2 text-xs text-slate-500">{{ evento.descripcion }}</p>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+}
+
+<app-nuevo-evento-drawer
+  [visible]="showDrawer()"
+  [saving]="saving()"
+  (saved)="onSaveEvento($event)"
+  (closed)="showDrawer.set(false)"
+/>

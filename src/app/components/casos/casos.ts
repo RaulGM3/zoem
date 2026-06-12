@@ -53,7 +53,6 @@ export class CasosComponent implements OnInit {
   readonly total = computed(() => this.casosService.casos().length);
   readonly enProceso = computed(() => this.casosService.casos().filter(c => c.estado === 'en_proceso').length);
   readonly pendientes = computed(() => this.casosService.casos().filter(c => c.estado === 'pendiente').length);
-  readonly urgentes = computed(() => this.casosService.casos().filter(c => c.estado === 'urgente').length);
 
   async ngOnInit(): Promise<void> {
     await Promise.all([
@@ -75,6 +74,11 @@ export class CasosComponent implements OnInit {
 
   navigateTo(caso: Caso): void {
     this.router.navigate(['/casos', caso.id]);
+  }
+
+  goToContactos(): void {
+    this.showDrawer.set(false);
+    this.router.navigate(['/contactos']);
   }
 
   async onDeleteCaso(caso: Caso): Promise<void> {

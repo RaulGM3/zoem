@@ -1,11 +1,10 @@
-<div class="p-6 space-y-6">
+<div class="p-6 space-y-4">
   <app-casos-header (newCasoClick)="showDrawer.set(true)" />
 
   <app-casos-stats
     [total]="total()"
     [enProceso]="enProceso()"
     [pendientes]="pendientes()"
-    [urgentes]="urgentes()"
   />
 
   <app-casos-filter-bar
@@ -33,4 +32,5 @@
   [saving]="saving()"
   (saved)="saveNuevoCaso($event)"
   (closed)="showDrawer.set(false)"
+  (crearContacto)="goToContactos()"
 />

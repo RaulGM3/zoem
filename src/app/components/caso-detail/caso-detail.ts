@@ -3,28 +3,32 @@ import {
   ChangeDetectionStrategy, inject,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { DecimalPipe } from '@angular/common';
+import { DecimalPipe, TitleCasePipe } from '@angular/common';
 import {
   LucideAngularModule,
   ArrowLeft, Edit2, Check, X, Plus, Trash2, User,
   TrendingUp, TrendingDown, Minus, ChevronRight,
   CheckCircle2, Circle, Clock, XCircle, Loader,
+  FileText, Upload, FolderOpen, Download, CircleAlert,
 } from 'lucide-angular';
 import { CasosService } from '../../core/services/casos.service';
 import { GestoriaService } from '../../core/services/gestoria.service';
 import { ContactService } from '../../core/services/contact.service';
 import { UsersService } from '../../core/services/users';
+import { CasoDocService } from '../../core/services/caso-doc.service';
 import {
   Caso, CasoEstado, CasoPrioridad, CasoTipo,
   Hito, HitoEstado, MovimientoTipo,
+  CasoDocFolder, CasoDocSlot,
+  GestoriaSlot,
   getContactDisplayName,
 } from '../../interfaces';
 
-type Tab = 'info' | 'hitos' | 'gestoria';
+type Tab = 'info' | 'hitos' | 'gestoria' | 'documentos';
 
 @Component({
   selector: 'app-caso-detail',
-  imports: [LucideAngularModule, RouterLink, DecimalPipe],
+  imports: [LucideAngularModule, RouterLink, DecimalPipe, TitleCasePipe],
   templateUrl: './caso-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -35,6 +39,7 @@ export class CasoDetailComponent implements OnInit {
   readonly gestoriaService = inject(GestoriaService);
   readonly contactService = inject(ContactService);
   readonly usersService = inject(UsersService);
+  readonly casoDocService = inject(CasoDocService);
 
   readonly ArrowLeftIcon = ArrowLeft;
   readonly Edit2Icon = Edit2;
@@ -52,6 +57,11 @@ export class CasoDetailComponent implements OnInit {
   readonly ClockIcon = Clock;
   readonly XCircleIcon = XCircle;
   readonly LoaderIcon = Loader;
+  readonly FileTextIcon = FileText;
+  readonly UploadIcon = Upload;
+  readonly FolderOpenIcon = FolderOpen;
+  readonly DownloadIcon = Download;
+  readonly CircleAlertIcon = CircleAlert;
 
   caso = signal<Caso | null>(null);
   loading = signal(true);
@@ -99,6 +109,40 @@ export class CasoDetailComponent implements OnInit {
     return Math.round((completados / hitos.length) * 100);
   });
 
+  // Documentos
+  uploadingSlotId = signal<string | null>(null);
+
+  slotsConRuta = computed(() => {
+    const folders = this.casoDocService.folders();
+    const folderMap = new Map<string, CasoDocFolder>(folders.map(f => [f.id, f]));
+
+    const buildPath = (folderId: string | null): string => {
+      if (!folderId) return '';
+      const parts: string[] = [];
+      let current: CasoDocFolder | undefined = folderMap.get(folderId);
+      while (current) {
+        parts.unshift(current.name);
+        current = current.parentId ? folderMap.get(current.parentId) : undefined;
+      }
+      return parts.join(' / ');
+    };
+
+    return this.casoDocService.slots().map(slot => ({
+      ...slot,
+      rutaCarpeta: buildPath(slot.folderId),
+    })).sort((a, b) => {
+      const folderCmp = a.rutaCarpeta.localeCompare(b.rutaCarpeta);
+      return folderCmp !== 0 ? folderCmp : a.name.localeCompare(b.name);
+    });
+  });
+
+  docsProgress = computed(() => {
+    const slots = this.casoDocService.slots();
+    if (slots.length === 0) return null;
+    const subidos = slots.filter(s => s.status === 'subido').length;
+    return { subidos, total: slots.length };
+  });
+
   // Gestoría
   showMovForm = signal(false);
   movConcepto = signal('');
@@ -108,6 +152,14 @@ export class CasoDetailComponent implements OnInit {
   movFecha = signal('');
   movNotas = signal('');
   savingMov = signal(false);
+  registeringSlot = signal<GestoriaSlot | null>(null);
+
+  slotsGestoriaProgress = computed(() => {
+    const slots = this.gestoriaService.slots();
+    if (slots.length === 0) return null;
+    const registrados = slots.filter(s => s.status === 'registrado').length;
+    return { registrados, total: slots.length };
+  });
 
   tipos: CasoTipo[] = ['Legal', 'Fiscal', 'Laboral', 'Mercantil', 'Civil'];
   estados: CasoEstado[] = ['pendiente', 'en_proceso', 'cerrado', 'urgente', 'archivado'];
@@ -121,6 +173,8 @@ export class CasoDetailComponent implements OnInit {
       this.contactService.loadContacts(),
       this.usersService.loadMembers(),
       this.gestoriaService.loadMovimientos(id),
+      this.gestoriaService.loadSlots(id),
+      this.casoDocService.load(id),
     ]);
     const caso = await this.casosService.getCaso(id);
     this.caso.set(caso);
@@ -228,7 +282,7 @@ export class CasoDetailComponent implements OnInit {
           : null
         );
       } else {
-        const newHito = await this.casosService.addHito(c.id, { ...hitoData, orden: c.hitos.length });
+        const newHito = await this.casosService.addHito(c.id, c.titulo, { ...hitoData, orden: c.hitos.length });
         this.caso.update(cur => cur ? { ...cur, hitos: [...cur.hitos, newHito] } : null);
       }
       this.showHitoForm.set(false);
@@ -264,6 +318,7 @@ export class CasoDetailComponent implements OnInit {
   // ── Gestoría ───────────────────────────────────────────
 
   openMovForm(): void {
+    this.registeringSlot.set(null);
     this.movConcepto.set('');
     this.movTipo.set('ingreso');
     this.movImporte.set('');
@@ -273,19 +328,49 @@ export class CasoDetailComponent implements OnInit {
     this.showMovForm.set(true);
   }
 
+  openRegistrarSlot(slot: GestoriaSlot): void {
+    this.registeringSlot.set(slot);
+    this.movConcepto.set(slot.nombre);
+    this.movTipo.set(this.tipoCostoToMovTipo(slot.tipoCosto));
+    this.movImporte.set(slot.importeEstimado != null ? String(slot.importeEstimado) : '');
+    this.movEsEntrada.set(false);
+    this.movFecha.set(new Date().toISOString().slice(0, 10));
+    this.movNotas.set('');
+    this.showMovForm.set(true);
+  }
+
+  private tipoCostoToMovTipo(tipoCosto: string): MovimientoTipo {
+    switch (tipoCosto) {
+      case 'suplido':
+      case 'costas_judiciales': return 'suplido';
+      case 'cuota_litis':
+      case 'honorarios_base': return 'honorario';
+      case 'provisiones_fondos':
+      case 'saldos_clientes': return 'ingreso';
+      default: return 'gasto';
+    }
+  }
+
   async saveMovimiento(): Promise<void> {
     const c = this.caso();
     if (!c || !this.movConcepto().trim() || !this.movImporte()) return;
     this.savingMov.set(true);
     try {
-      await this.gestoriaService.addMovimiento(c.id, {
+      const movData = {
         tipo: this.movTipo(),
         concepto: this.movConcepto().trim(),
         importe: parseFloat(this.movImporte()),
         esEntrada: this.movEsEntrada(),
         fecha: this.movFecha(),
         notas: this.movNotas().trim() || undefined,
-      });
+      };
+      const slot = this.registeringSlot();
+      if (slot) {
+        await this.gestoriaService.registerSlot(c.id, slot, movData);
+        this.registeringSlot.set(null);
+      } else {
+        await this.gestoriaService.addMovimiento(c.id, movData);
+      }
       const updated = await this.casosService.getCaso(c.id);
       this.caso.set(updated);
       this.showMovForm.set(false);
@@ -300,6 +385,49 @@ export class CasoDetailComponent implements OnInit {
     await this.gestoriaService.deleteMovimiento(c.id, movId);
     const updated = await this.casosService.getCaso(c.id);
     this.caso.set(updated);
+  }
+
+  async unregisterSlot(slot: GestoriaSlot): Promise<void> {
+    const c = this.caso();
+    if (!c) return;
+    await this.gestoriaService.unregisterSlot(c.id, slot);
+  }
+
+  closeMovForm(): void {
+    this.registeringSlot.set(null);
+    this.showMovForm.set(false);
+  }
+
+  // ── Documentos ─────────────────────────────────────────
+
+  triggerUpload(slotId: string): void {
+    const input = document.getElementById(`upload-${slotId}`) as HTMLInputElement | null;
+    input?.click();
+  }
+
+  async onFileSelected(event: Event, slot: CasoDocSlot): Promise<void> {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    const casoId = this.caso()?.id;
+    if (!file || !casoId) return;
+
+    this.uploadingSlotId.set(slot.id);
+    try {
+      await this.casoDocService.uploadSlot(casoId, slot, file);
+    } finally {
+      this.uploadingSlotId.set(null);
+      (event.target as HTMLInputElement).value = '';
+    }
+  }
+
+  async removeUpload(slot: CasoDocSlot): Promise<void> {
+    const casoId = this.caso()?.id;
+    if (!casoId) return;
+    this.uploadingSlotId.set(slot.id);
+    try {
+      await this.casoDocService.removeUpload(casoId, slot);
+    } finally {
+      this.uploadingSlotId.set(null);
+    }
   }
 
   // ── Helpers ────────────────────────────────────────────

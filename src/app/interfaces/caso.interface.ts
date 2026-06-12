@@ -7,6 +7,8 @@ export type HitoEstado = 'pendiente' | 'en_progreso' | 'completado' | 'cancelado
 
 export interface Hito {
   id: string;
+  casoId: string;
+  casoTitulo: string;
   titulo: string;
   descripcion?: string;
   fechaEstimada?: string;
@@ -14,6 +16,8 @@ export interface Hito {
   asignadoA?: string;
   estado: HitoEstado;
   orden: number;
+  horaAgenda?: string;   // HH:mm — slot asignado en la agenda
+  duracionAgenda?: number; // minutos
 }
 
 export interface ResumenFinanciero {
