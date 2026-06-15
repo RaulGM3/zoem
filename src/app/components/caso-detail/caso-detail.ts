@@ -3,32 +3,43 @@ import {
   ChangeDetectionStrategy, inject,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { DecimalPipe, TitleCasePipe } from '@angular/common';
-import {
-  LucideAngularModule,
-  ArrowLeft, Edit2, Check, X, Plus, Trash2, User,
-  TrendingUp, TrendingDown, Minus, ChevronRight,
-  CheckCircle2, Circle, Clock, XCircle, Loader,
-  FileText, Upload, FolderOpen, Download, CircleAlert,
-} from 'lucide-angular';
-import { CasosService } from '../../core/services/casos.service';
+import { toSignal, toObservable } from '@angular/core/rxjs-interop';
+import { debounceTime } from 'rxjs';
+import { CasosService, ActividadInput } from '../../core/services/casos.service';
 import { GestoriaService } from '../../core/services/gestoria.service';
 import { ContactService } from '../../core/services/contact.service';
 import { UsersService } from '../../core/services/users';
+import { UserSyncService } from '../../core/services/user-sync.service';
 import { CasoDocService } from '../../core/services/caso-doc.service';
+import { cycleHitoEstado, stampEstadoChange } from '../../core/hitos/hito-estado';
 import {
-  Caso, CasoEstado, CasoPrioridad, CasoTipo,
-  Hito, HitoEstado, MovimientoTipo,
-  CasoDocFolder, CasoDocSlot,
-  GestoriaSlot,
+  Caso, CasoDocSlot, CasoDocFile,
+  GestoriaSlot, Hito, HitoActividad,
   getContactDisplayName,
 } from '../../interfaces';
-
-type Tab = 'info' | 'hitos' | 'gestoria' | 'documentos';
+import { CasoDetailHeaderComponent, CasoTab } from './components/caso-detail-header/caso-detail-header';
+import { CasoInfoTabComponent, CasoInfoFormData } from './components/caso-info-tab/caso-info-tab';
+import { CasoHitosTabComponent } from './components/caso-hitos-tab/caso-hitos-tab';
+import { CasoGestoriaTabComponent } from './components/caso-gestoria-tab/caso-gestoria-tab';
+import {
+  CasoDocumentosTabComponent, DocUploadEvent,
+  FreeUploadEvent, CreateFolderEvent,
+} from './components/caso-documentos-tab/caso-documentos-tab';
+import { HitoFormDrawerComponent, HitoFormData } from './components/hito-form-drawer/hito-form-drawer';
+import { MovimientoFormDrawerComponent, MovimientoFormData } from './components/movimiento-form-drawer/movimiento-form-drawer';
 
 @Component({
   selector: 'app-caso-detail',
-  imports: [LucideAngularModule, RouterLink, DecimalPipe, TitleCasePipe],
+  imports: [
+    RouterLink,
+    CasoDetailHeaderComponent,
+    CasoInfoTabComponent,
+    CasoHitosTabComponent,
+    CasoGestoriaTabComponent,
+    CasoDocumentosTabComponent,
+    HitoFormDrawerComponent,
+    MovimientoFormDrawerComponent,
+  ],
   templateUrl: './caso-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -39,104 +50,80 @@ export class CasoDetailComponent implements OnInit {
   readonly gestoriaService = inject(GestoriaService);
   readonly contactService = inject(ContactService);
   readonly usersService = inject(UsersService);
+  private readonly userSync = inject(UserSyncService);
   readonly casoDocService = inject(CasoDocService);
 
-  readonly ArrowLeftIcon = ArrowLeft;
-  readonly Edit2Icon = Edit2;
-  readonly CheckIcon = Check;
-  readonly XIcon = X;
-  readonly PlusIcon = Plus;
-  readonly Trash2Icon = Trash2;
-  readonly UserIcon = User;
-  readonly TrendingUpIcon = TrendingUp;
-  readonly TrendingDownIcon = TrendingDown;
-  readonly MinusIcon = Minus;
-  readonly ChevronRightIcon = ChevronRight;
-  readonly CheckCircle2Icon = CheckCircle2;
-  readonly CircleIcon = Circle;
-  readonly ClockIcon = Clock;
-  readonly XCircleIcon = XCircle;
-  readonly LoaderIcon = Loader;
-  readonly FileTextIcon = FileText;
-  readonly UploadIcon = Upload;
-  readonly FolderOpenIcon = FolderOpen;
-  readonly DownloadIcon = Download;
-  readonly CircleAlertIcon = CircleAlert;
+  readonly caso = signal<Caso | null>(null);
+  readonly loading = signal(true);
 
-  caso = signal<Caso | null>(null);
-  loading = signal(true);
-  activeTab = signal<Tab>('info');
+  // Los hitos y su feed de actividad son streams real-time (no estado a mano).
+  // La vista reacciona en vivo a cualquier cambio, propio o de otro usuario.
+  private readonly casoId = this.route.snapshot.paramMap.get('id')!;
+  readonly hitos = toSignal(this.casosService.hitosStream(this.casoId), { initialValue: [] as Hito[] });
+  readonly actividad = toSignal(this.casosService.actividadStream(this.casoId), { initialValue: [] as HitoActividad[] });
 
-  // Edit info
-  editingInfo = signal(false);
-  editTitulo = signal('');
-  editDescripcion = signal('');
-  editTipo = signal<CasoTipo>('Legal');
-  editEstado = signal<CasoEstado>('pendiente');
-  editPrioridad = signal<CasoPrioridad>('media');
-  editVencimiento = signal('');
-  savingInfo = signal(false);
+  // El tab activo es derivado de la URL (?tab=...), no de estado local.
+  // La URL es la fuente de verdad: deep linking + back button gratis.
+  private readonly queryParams = toSignal(this.route.queryParamMap, {
+    initialValue: this.route.snapshot.queryParamMap,
+  });
+  readonly activeTab = computed<CasoTab>(() => {
+    const tab = this.queryParams().get('tab');
+    return tab === 'hitos' || tab === 'gestoria' || tab === 'documentos' ? tab : 'info';
+  });
+
+  setTab(tab: CasoTab): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab: tab === 'info' ? null : tab },
+      queryParamsHandling: 'merge',
+    });
+  }
+
+  // Info
+  readonly editingInfo = signal(false);
+  readonly savingInfo = signal(false);
 
   // Contacts
-  contactSearch = signal('');
-  contactSearchResults = computed(() => {
-    const q = this.contactSearch().toLowerCase().trim();
+  // contactSearch = valor inmediato (bindeado al input para que escribir sea instantáneo).
+  // debouncedSearch = lo que realmente dispara el filtrado, 250ms después del último keystroke.
+  readonly contactSearch = signal('');
+  private readonly debouncedSearch = toSignal(
+    toObservable(this.contactSearch).pipe(debounceTime(250)),
+    { initialValue: '' }
+  );
+  readonly contactSearchResults = computed(() => {
+    const q = this.debouncedSearch().toLowerCase().trim();
+    const total = this.contactService.contacts().length;
+    console.log('[caso-detail.contactSearchResults] q =', JSON.stringify(q), '| contactos en memoria =', total, '| contactoIds del caso =', this.caso()?.contactoIds);
     if (!q || q.length < 2) return [];
     const linked = this.caso()?.contactoIds ?? [];
-    return this.contactService.contacts()
+    const results = this.contactService.contacts()
       .filter(c => !linked.includes(c.id) && getContactDisplayName(c).toLowerCase().includes(q))
       .slice(0, 5);
+    console.log('[caso-detail.contactSearchResults] resultados =', results.length);
+    return results;
   });
-  linkedContacts = computed(() => {
+  // Hay búsqueda activa (>=2 chars, ya debounceada) pero ningún contacto matcheó.
+  readonly noContactResults = computed(() =>
+    this.debouncedSearch().trim().length >= 2 && this.contactSearchResults().length === 0
+  );
+  readonly linkedContacts = computed(() => {
     const ids = this.caso()?.contactoIds ?? [];
     return this.contactService.contacts().filter(c => ids.includes(c.id));
   });
 
   // Hitos
-  showHitoForm = signal(false);
-  editingHitoId = signal<string | null>(null);
-  hitoTitulo = signal('');
-  hitoDescripcion = signal('');
-  hitoFechaEstimada = signal('');
-  hitoAsignadoA = signal('');
-  hitoEstado = signal<HitoEstado>('pendiente');
-  savingHito = signal(false);
-
-  hitosProgress = computed(() => {
-    const hitos = this.caso()?.hitos ?? [];
-    if (hitos.length === 0) return 0;
-    const completados = hitos.filter(h => h.estado === 'completado').length;
-    return Math.round((completados / hitos.length) * 100);
-  });
+  readonly showHitoForm = signal(false);
+  readonly editingHito = signal<Hito | null>(null);
+  readonly savingHito = signal(false);
 
   // Documentos
-  uploadingSlotId = signal<string | null>(null);
+  readonly uploadingSlotId = signal<string | null>(null);
+  // busy = carpetas/archivos libres (upload libre, crear/borrar carpeta, borrar file).
+  readonly docsBusy = signal(false);
 
-  slotsConRuta = computed(() => {
-    const folders = this.casoDocService.folders();
-    const folderMap = new Map<string, CasoDocFolder>(folders.map(f => [f.id, f]));
-
-    const buildPath = (folderId: string | null): string => {
-      if (!folderId) return '';
-      const parts: string[] = [];
-      let current: CasoDocFolder | undefined = folderMap.get(folderId);
-      while (current) {
-        parts.unshift(current.name);
-        current = current.parentId ? folderMap.get(current.parentId) : undefined;
-      }
-      return parts.join(' / ');
-    };
-
-    return this.casoDocService.slots().map(slot => ({
-      ...slot,
-      rutaCarpeta: buildPath(slot.folderId),
-    })).sort((a, b) => {
-      const folderCmp = a.rutaCarpeta.localeCompare(b.rutaCarpeta);
-      return folderCmp !== 0 ? folderCmp : a.name.localeCompare(b.name);
-    });
-  });
-
-  docsProgress = computed(() => {
+  readonly docsProgress = computed(() => {
     const slots = this.casoDocService.slots();
     if (slots.length === 0) return null;
     const subidos = slots.filter(s => s.status === 'subido').length;
@@ -144,31 +131,16 @@ export class CasoDetailComponent implements OnInit {
   });
 
   // Gestoría
-  showMovForm = signal(false);
-  movConcepto = signal('');
-  movTipo = signal<MovimientoTipo>('ingreso');
-  movImporte = signal('');
-  movEsEntrada = signal(true);
-  movFecha = signal('');
-  movNotas = signal('');
-  savingMov = signal(false);
-  registeringSlot = signal<GestoriaSlot | null>(null);
+  readonly showMovForm = signal(false);
+  readonly registeringSlot = signal<GestoriaSlot | null>(null);
+  readonly savingMov = signal(false);
 
-  slotsGestoriaProgress = computed(() => {
-    const slots = this.gestoriaService.slots();
-    if (slots.length === 0) return null;
-    const registrados = slots.filter(s => s.status === 'registrado').length;
-    return { registrados, total: slots.length };
-  });
-
-  tipos: CasoTipo[] = ['Legal', 'Fiscal', 'Laboral', 'Mercantil', 'Civil'];
-  estados: CasoEstado[] = ['pendiente', 'en_proceso', 'cerrado', 'urgente', 'archivado'];
-  prioridades: CasoPrioridad[] = ['alta', 'media', 'baja'];
-  hitoEstados: HitoEstado[] = ['pendiente', 'en_progreso', 'completado', 'cancelado'];
-  movTipos: MovimientoTipo[] = ['ingreso', 'suplido', 'honorario', 'gasto', 'otro'];
+  // Header badge counts
+  readonly gestoriaPending = computed(() => this.gestoriaService.slots().filter(s => s.status === 'pendiente').length);
+  readonly docsPending = computed(() => this.casoDocService.slots().filter(s => s.status === 'pendiente').length);
 
   async ngOnInit(): Promise<void> {
-    const id = this.route.snapshot.paramMap.get('id')!;
+    const id = this.casoId;
     await Promise.all([
       this.contactService.loadContacts(),
       this.usersService.loadMembers(),
@@ -184,29 +156,15 @@ export class CasoDetailComponent implements OnInit {
   // ── Info ───────────────────────────────────────────────
 
   startEditInfo(): void {
-    const c = this.caso()!;
-    this.editTitulo.set(c.titulo);
-    this.editDescripcion.set(c.descripcion ?? '');
-    this.editTipo.set(c.tipo);
-    this.editEstado.set(c.estado);
-    this.editPrioridad.set(c.prioridad);
-    this.editVencimiento.set(c.vencimiento ?? '');
     this.editingInfo.set(true);
   }
 
-  async saveInfo(): Promise<void> {
+  async onSaveInfo(data: CasoInfoFormData): Promise<void> {
     const id = this.caso()?.id;
     if (!id) return;
     this.savingInfo.set(true);
     try {
-      await this.casosService.updateCaso(id, {
-        titulo: this.editTitulo().trim(),
-        descripcion: this.editDescripcion().trim() || undefined,
-        tipo: this.editTipo(),
-        estado: this.editEstado(),
-        prioridad: this.editPrioridad(),
-        vencimiento: this.editVencimiento() || undefined,
-      });
+      await this.casosService.updateCaso(id, data);
       const updated = await this.casosService.getCaso(id);
       this.caso.set(updated);
       this.editingInfo.set(false);
@@ -219,8 +177,9 @@ export class CasoDetailComponent implements OnInit {
 
   async addContact(contactId: string): Promise<void> {
     const c = this.caso();
+    console.log('[caso-detail.addContact] contactId =', contactId, '| caso.contactoIds =', c?.contactoIds);
     if (!c) return;
-    const newIds = [...c.contactoIds, contactId];
+    const newIds = [...(c.contactoIds ?? []), contactId];
     await this.casosService.updateCaso(c.id, { contactoIds: newIds });
     this.caso.set({ ...c, contactoIds: newIds });
     this.contactSearch.set('');
@@ -234,56 +193,43 @@ export class CasoDetailComponent implements OnInit {
     this.caso.set({ ...c, contactoIds: newIds });
   }
 
-  getContactName(id: string): string {
-    const c = this.contactService.contacts().find(x => x.id === id);
-    return c ? getContactDisplayName(c) : id;
-  }
-
   // ── Hitos ──────────────────────────────────────────────
 
   openNewHitoForm(): void {
-    this.editingHitoId.set(null);
-    this.hitoTitulo.set('');
-    this.hitoDescripcion.set('');
-    this.hitoFechaEstimada.set('');
-    this.hitoAsignadoA.set('');
-    this.hitoEstado.set('pendiente');
+    this.editingHito.set(null);
     this.showHitoForm.set(true);
   }
 
   startEditHito(hito: Hito): void {
-    this.editingHitoId.set(hito.id);
-    this.hitoTitulo.set(hito.titulo);
-    this.hitoDescripcion.set(hito.descripcion ?? '');
-    this.hitoFechaEstimada.set(hito.fechaEstimada ?? '');
-    this.hitoAsignadoA.set(hito.asignadoA ?? '');
-    this.hitoEstado.set(hito.estado);
+    this.editingHito.set(hito);
     this.showHitoForm.set(true);
   }
 
-  async saveHito(): Promise<void> {
+  async onSaveHito(data: HitoFormData): Promise<void> {
     const c = this.caso();
-    if (!c || !this.hitoTitulo().trim()) return;
+    if (!c) return;
     this.savingHito.set(true);
     try {
-      const editId = this.editingHitoId();
+      const editing = this.editingHito();
+      const autorId = this.userSync.currentUser()?.id;
+      const estadoChanged = !editing || editing.estado !== data.estado;
       const hitoData = {
-        titulo: this.hitoTitulo().trim(),
-        ...(this.hitoDescripcion().trim() ? { descripcion: this.hitoDescripcion().trim() } : {}),
-        ...(this.hitoFechaEstimada() ? { fechaEstimada: this.hitoFechaEstimada() } : {}),
-        ...(this.hitoAsignadoA() ? { asignadoA: this.hitoAsignadoA() } : {}),
-        estado: this.hitoEstado(),
+        titulo: data.titulo,
+        estado: data.estado,
+        ...(data.descripcion ? { descripcion: data.descripcion } : {}),
+        ...(data.fechaEstimada ? { fechaEstimada: data.fechaEstimada } : {}),
+        ...(data.asignadoA ? { asignadoA: data.asignadoA } : {}),
+        ...(estadoChanged ? stampEstadoChange(autorId) : {}),
       };
 
-      if (editId) {
-        await this.casosService.updateHito(c.id, editId, hitoData);
-        this.caso.update(cur => cur
-          ? { ...cur, hitos: cur.hitos.map(h => h.id === editId ? { ...h, ...hitoData } : h) }
-          : null
-        );
+      if (editing) {
+        const actividad: ActividadInput = estadoChanged
+          ? { hitoTitulo: data.titulo, tipo: 'estado', autorId, estadoAnterior: editing.estado, estadoNuevo: data.estado }
+          : { hitoTitulo: data.titulo, tipo: 'editado', autorId };
+        await this.casosService.updateHito(c.id, editing.id, hitoData, actividad);
       } else {
-        const newHito = await this.casosService.addHito(c.id, c.titulo, { ...hitoData, orden: c.hitos.length });
-        this.caso.update(cur => cur ? { ...cur, hitos: [...cur.hitos, newHito] } : null);
+        // addHito ya registra el evento 'creado' internamente.
+        await this.casosService.addHito(c.id, c.titulo, { ...hitoData, orden: this.hitos().length }, autorId);
       }
       this.showHitoForm.set(false);
     } finally {
@@ -294,75 +240,55 @@ export class CasoDetailComponent implements OnInit {
   async deleteHito(hitoId: string): Promise<void> {
     const c = this.caso();
     if (!c) return;
-    await this.casosService.deleteHito(c.id, hitoId);
-    this.caso.update(cur => cur ? { ...cur, hitos: cur.hitos.filter(h => h.id !== hitoId) } : null);
+    const hito = this.hitos().find(h => h.id === hitoId);
+    await this.casosService.deleteHito(c.id, hitoId, {
+      hitoTitulo: hito?.titulo ?? 'hito',
+      autorId: this.userSync.currentUser()?.id,
+    });
   }
 
   async toggleHitoEstado(hito: Hito): Promise<void> {
     const c = this.caso();
     if (!c) return;
-    const next: HitoEstado = hito.estado === 'completado' ? 'pendiente' : 'completado';
-    await this.casosService.updateHito(c.id, hito.id, { estado: next });
-    this.caso.update(cur => cur
-      ? { ...cur, hitos: cur.hitos.map(h => h.id === hito.id ? { ...h, estado: next } : h) }
-      : null
-    );
-  }
-
-  getMemberName(userId?: string): string {
-    if (!userId) return '—';
-    const m = this.usersService.members().find(x => x.userId === userId);
-    return m ? `${m.nombre}${m.apellido ? ' ' + m.apellido : ''}` : userId;
+    const autorId = this.userSync.currentUser()?.id;
+    const nuevoEstado = cycleHitoEstado(hito.estado);
+    const patch = {
+      estado: nuevoEstado,
+      ...stampEstadoChange(autorId),
+    };
+    await this.casosService.updateHito(c.id, hito.id, patch, {
+      hitoTitulo: hito.titulo,
+      tipo: 'estado',
+      autorId,
+      estadoAnterior: hito.estado,
+      estadoNuevo: nuevoEstado,
+    });
   }
 
   // ── Gestoría ───────────────────────────────────────────
 
   openMovForm(): void {
     this.registeringSlot.set(null);
-    this.movConcepto.set('');
-    this.movTipo.set('ingreso');
-    this.movImporte.set('');
-    this.movEsEntrada.set(true);
-    this.movFecha.set(new Date().toISOString().slice(0, 10));
-    this.movNotas.set('');
     this.showMovForm.set(true);
   }
 
   openRegistrarSlot(slot: GestoriaSlot): void {
     this.registeringSlot.set(slot);
-    this.movConcepto.set(slot.nombre);
-    this.movTipo.set(this.tipoCostoToMovTipo(slot.tipoCosto));
-    this.movImporte.set(slot.importeEstimado != null ? String(slot.importeEstimado) : '');
-    this.movEsEntrada.set(false);
-    this.movFecha.set(new Date().toISOString().slice(0, 10));
-    this.movNotas.set('');
     this.showMovForm.set(true);
   }
 
-  private tipoCostoToMovTipo(tipoCosto: string): MovimientoTipo {
-    switch (tipoCosto) {
-      case 'suplido':
-      case 'costas_judiciales': return 'suplido';
-      case 'cuota_litis':
-      case 'honorarios_base': return 'honorario';
-      case 'provisiones_fondos':
-      case 'saldos_clientes': return 'ingreso';
-      default: return 'gasto';
-    }
-  }
-
-  async saveMovimiento(): Promise<void> {
+  async onSaveMov(data: MovimientoFormData): Promise<void> {
     const c = this.caso();
-    if (!c || !this.movConcepto().trim() || !this.movImporte()) return;
+    if (!c) return;
     this.savingMov.set(true);
     try {
       const movData = {
-        tipo: this.movTipo(),
-        concepto: this.movConcepto().trim(),
-        importe: parseFloat(this.movImporte()),
-        esEntrada: this.movEsEntrada(),
-        fecha: this.movFecha(),
-        notas: this.movNotas().trim() || undefined,
+        tipo: data.tipo,
+        concepto: data.concepto,
+        importe: data.importe,
+        esEntrada: data.esEntrada,
+        fecha: data.fecha,
+        notas: data.notas,
       };
       const slot = this.registeringSlot();
       if (slot) {
@@ -400,26 +326,18 @@ export class CasoDetailComponent implements OnInit {
 
   // ── Documentos ─────────────────────────────────────────
 
-  triggerUpload(slotId: string): void {
-    const input = document.getElementById(`upload-${slotId}`) as HTMLInputElement | null;
-    input?.click();
-  }
-
-  async onFileSelected(event: Event, slot: CasoDocSlot): Promise<void> {
-    const file = (event.target as HTMLInputElement).files?.[0];
+  async onUploadSlot(event: DocUploadEvent): Promise<void> {
     const casoId = this.caso()?.id;
-    if (!file || !casoId) return;
-
-    this.uploadingSlotId.set(slot.id);
+    if (!casoId) return;
+    this.uploadingSlotId.set(event.slot.id);
     try {
-      await this.casoDocService.uploadSlot(casoId, slot, file);
+      await this.casoDocService.uploadSlot(casoId, event.slot, event.file);
     } finally {
       this.uploadingSlotId.set(null);
-      (event.target as HTMLInputElement).value = '';
     }
   }
 
-  async removeUpload(slot: CasoDocSlot): Promise<void> {
+  async onRemoveSlot(slot: CasoDocSlot): Promise<void> {
     const casoId = this.caso()?.id;
     if (!casoId) return;
     this.uploadingSlotId.set(slot.id);
@@ -430,52 +348,47 @@ export class CasoDetailComponent implements OnInit {
     }
   }
 
-  // ── Helpers ────────────────────────────────────────────
-
-  getEstadoClass(estado: string): string {
-    const map: Record<string, string> = {
-      pendiente: 'bg-amber-100 text-amber-700',
-      en_proceso: 'bg-blue-100 text-blue-700',
-      cerrado: 'bg-slate-100 text-slate-500',
-      urgente: 'bg-red-100 text-red-700',
-      archivado: 'bg-slate-100 text-slate-400',
-    };
-    return map[estado] || 'bg-slate-100 text-slate-600';
+  async onUploadFile(event: FreeUploadEvent): Promise<void> {
+    const casoId = this.caso()?.id;
+    if (!casoId) return;
+    this.docsBusy.set(true);
+    try {
+      await this.casoDocService.uploadFile(casoId, event.folderId, event.file);
+    } finally {
+      this.docsBusy.set(false);
+    }
   }
 
-  getTipoClass(tipo: string): string {
-    const map: Record<string, string> = {
-      Legal: 'bg-violet-100 text-violet-700',
-      Fiscal: 'bg-blue-100 text-blue-700',
-      Laboral: 'bg-amber-100 text-amber-700',
-      Mercantil: 'bg-emerald-100 text-emerald-700',
-      Civil: 'bg-slate-100 text-slate-600',
-    };
-    return map[tipo] || 'bg-slate-100 text-slate-600';
+  async onDeleteFile(file: CasoDocFile): Promise<void> {
+    const casoId = this.caso()?.id;
+    if (!casoId) return;
+    this.docsBusy.set(true);
+    try {
+      await this.casoDocService.deleteFile(casoId, file);
+    } finally {
+      this.docsBusy.set(false);
+    }
   }
 
-  getHitoEstadoIcon(estado: HitoEstado): unknown {
-    if (estado === 'completado') return this.CheckCircle2Icon;
-    if (estado === 'en_progreso') return this.ClockIcon;
-    if (estado === 'cancelado') return this.XCircleIcon;
-    return this.CircleIcon;
+  async onCreateFolder(event: CreateFolderEvent): Promise<void> {
+    const casoId = this.caso()?.id;
+    if (!casoId) return;
+    this.docsBusy.set(true);
+    try {
+      await this.casoDocService.createFolder(casoId, event.parentId, event.name);
+    } finally {
+      this.docsBusy.set(false);
+    }
   }
 
-  getHitoEstadoColor(estado: HitoEstado): string {
-    if (estado === 'completado') return 'text-emerald-500';
-    if (estado === 'en_progreso') return 'text-blue-500';
-    if (estado === 'cancelado') return 'text-slate-400';
-    return 'text-slate-300';
-  }
-
-  getMovTipoClass(tipo: MovimientoTipo): string {
-    const map: Record<MovimientoTipo, string> = {
-      ingreso: 'bg-emerald-100 text-emerald-700',
-      suplido: 'bg-amber-100 text-amber-700',
-      honorario: 'bg-violet-100 text-violet-700',
-      gasto: 'bg-red-100 text-red-700',
-      otro: 'bg-slate-100 text-slate-600',
-    };
-    return map[tipo];
+  async onDeleteFolder(folderId: string): Promise<void> {
+    const casoId = this.caso()?.id;
+    if (!casoId) return;
+    this.docsBusy.set(true);
+    try {
+      await this.casoDocService.deleteFolder(casoId, folderId);
+    } finally {
+      this.docsBusy.set(false);
+    }
   }
 }

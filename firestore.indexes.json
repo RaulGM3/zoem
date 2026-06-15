@@ -7,6 +7,14 @@
         { "fieldPath": "casoId", "order": "ASCENDING" },
         { "fieldPath": "orden", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "hito_actividad",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "casoId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

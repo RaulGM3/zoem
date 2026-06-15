@@ -1,124 +1,124 @@
 <!-- Header -->
 <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
   <div>
-    <h1 class="text-2xl font-bold text-slate-900">Documentos</h1>
-    <p class="mt-1 text-sm text-slate-500">Gestiona contratos, propuestas e informes</p>
+    <h1 class="text-2xl font-bold text-slate-900">Plantillas de documentos</h1>
+    <p class="mt-1 text-sm text-slate-500">Sube un documento, la IA extrae los datos variables y genera versiones nuevas en segundos</p>
   </div>
-  <button class="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-500">
+  <button (click)="showDrawer.set(true)"
+    class="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-500">
     <lucide-icon [img]="PlusIcon" size="16"></lucide-icon>
-    Nuevo Documento
+    Nueva Plantilla
   </button>
 </div>
 
 <!-- Summary -->
-<div class="mb-6 grid gap-4 sm:grid-cols-4">
+<div class="mb-6 grid gap-4 sm:grid-cols-3">
   <div class="rounded-xl border border-slate-200 bg-white p-4 text-center">
-    <p class="text-2xl font-bold text-slate-900">{{ documents.length }}</p>
-    <p class="text-xs text-slate-400">Total</p>
+    <p class="text-2xl font-bold text-slate-900">{{ total() }}</p>
+    <p class="text-xs text-slate-400">Plantillas</p>
   </div>
   <div class="rounded-xl border border-slate-200 bg-white p-4 text-center">
-    <p class="text-2xl font-bold text-amber-600">{{ revisionCount() }}</p>
-    <p class="text-xs text-slate-400">En revisión</p>
+    <p class="text-2xl font-bold text-green-600">{{ listas() }}</p>
+    <p class="text-xs text-slate-400">Listas para generar</p>
   </div>
   <div class="rounded-xl border border-slate-200 bg-white p-4 text-center">
-    <p class="text-2xl font-bold text-green-600">{{ firmadoCount() }}</p>
-    <p class="text-xs text-slate-400">Firmados</p>
-  </div>
-  <div class="rounded-xl border border-slate-200 bg-white p-4 text-center">
-    <p class="text-2xl font-bold text-slate-500">{{ borradorCount() }}</p>
-    <p class="text-xs text-slate-400">Borradores</p>
+    <p class="text-2xl font-bold text-violet-600">{{ totalVariables() }}</p>
+    <p class="text-xs text-slate-400">Variables detectadas</p>
   </div>
 </div>
 
-<!-- Filters -->
-<div class="mb-4 flex flex-col gap-3 sm:flex-row">
-  <div class="relative flex-1">
-    <lucide-icon [img]="SearchIcon" size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></lucide-icon>
-    <input
-      type="text"
-      placeholder="Buscar documentos..."
-      [value]="search()"
-      (input)="search.set($any($event.target).value)"
-      class="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-44 pr-4 text-sm placeholder-slate-400 focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-100"
-    />
-  </div>
-  <select (change)="filterStatus.set($any($event.target).value)"
-    class="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-violet-300 focus:outline-none">
-    <option value="">Todos los estados</option>
-    <option value="borrador">Borrador</option>
-    <option value="revision">En revisión</option>
-    <option value="firmado">Firmado</option>
-    <option value="archivado">Archivado</option>
-  </select>
+<!-- Search -->
+<div class="mb-4 relative">
+  <lucide-icon [img]="SearchIcon" size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></lucide-icon>
+  <input
+    type="text"
+    placeholder="Buscar plantillas..."
+    [value]="search()"
+    (input)="search.set($any($event.target).value)"
+    class="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm placeholder-slate-400 focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-100"
+  />
 </div>
 
-<!-- Documents List -->
+<!-- Templates list -->
 <div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
   <div class="overflow-x-auto">
     <table class="w-full text-sm">
       <thead>
         <tr class="border-b bg-slate-50">
-          <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Documento</th>
-          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Cliente</th>
+          <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Plantilla</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Variables</th>
           <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Estado</th>
-          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Tamaño</th>
-          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Actualizado</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Actualizada</th>
           <th class="px-4 py-3"></th>
         </tr>
       </thead>
       <tbody class="divide-y divide-slate-100">
-        @for (doc of filtered(); track doc.id) {
-          <tr class="hover:bg-slate-50 transition-colors">
+        @for (template of filtered(); track template.id) {
+          <tr class="hover:bg-slate-50 transition-colors cursor-pointer" (click)="openTemplate(template)">
             <td class="px-5 py-4">
               <div class="flex items-center gap-3">
-                <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100">
-                  <lucide-icon [img]="getTypeIcon(doc.type)" size="18" class="text-slate-500"></lucide-icon>
+                <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-50">
+                  <lucide-icon [img]="FileTextIcon" size="18" class="text-violet-500"></lucide-icon>
                 </div>
                 <div>
-                  <p class="font-medium text-slate-900">{{ doc.name }}</p>
-                  <p class="text-xs text-slate-400">{{ doc.type }}</p>
+                  <p class="font-medium text-slate-900">{{ template.name }}</p>
+                  @if (template.sourceFileName) {
+                    <p class="text-xs text-slate-400">{{ template.sourceFileName }}</p>
+                  }
                 </div>
               </div>
             </td>
             <td class="px-4 py-4">
-              <p class="text-sm text-slate-700">{{ doc.client }}</p>
-              @if (doc.project) {
-                <p class="text-xs text-slate-400">{{ doc.project }}</p>
-              }
-            </td>
-            <td class="px-4 py-4">
-              <span class="rounded-full px-2.5 py-1 text-xs font-medium" [class]="getStatusClass(doc.status)">
-                {{ getStatusLabel(doc.status) }}
+              <span class="inline-flex items-center gap-1.5 text-sm text-slate-700">
+                <lucide-icon [img]="SparklesIcon" size="14" class="text-violet-400"></lucide-icon>
+                {{ template.variables.length || 0 }}
               </span>
             </td>
-            <td class="px-4 py-4 text-xs text-slate-500">{{ doc.size }}</td>
-            <td class="px-4 py-4 text-xs text-slate-500">{{ doc.updatedAt }}</td>
             <td class="px-4 py-4">
-              <div class="flex items-center gap-1">
-                <button class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
-                  <lucide-icon [img]="EyeIcon" size="15"></lucide-icon>
-                </button>
-                <button class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
-                  <lucide-icon [img]="DownloadIcon" size="15"></lucide-icon>
-                </button>
-                <button class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
-                  <lucide-icon [img]="EditIcon" size="15"></lucide-icon>
-                </button>
-                <button class="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500">
-                  <lucide-icon [img]="Trash2Icon" size="15"></lucide-icon>
-                </button>
+              <span class="rounded-full px-2.5 py-1 text-xs font-medium" [class]="getStatusClass(template.status)">
+                {{ getStatusLabel(template.status) }}
+              </span>
+            </td>
+            <td class="px-4 py-4 text-xs text-slate-500">{{ formatDate(template.updatedAt) }}</td>
+            <td class="px-4 py-4" (click)="$event.stopPropagation()">
+              <div class="flex items-center justify-end gap-1">
+                @if (deletingId() === template.id) {
+                  <span class="text-xs text-slate-500 mr-1">¿Eliminar?</span>
+                  <button (click)="confirmDelete(template)"
+                    class="rounded-lg px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50">Sí</button>
+                  <button (click)="deletingId.set(null)"
+                    class="rounded-lg px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100">No</button>
+                } @else {
+                  <button (click)="openTemplate(template)" aria-label="Generar documento"
+                    class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+                    <lucide-icon [img]="ArrowRightIcon" size="15"></lucide-icon>
+                  </button>
+                  <button (click)="deletingId.set(template.id)" aria-label="Eliminar plantilla"
+                    class="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500">
+                    <lucide-icon [img]="Trash2Icon" size="15"></lucide-icon>
+                  </button>
+                }
               </div>
             </td>
           </tr>
         }
-        @if (filtered().length === 0) {
+        @if (!loading() && filtered().length === 0) {
           <tr>
-            <td colspan="6" class="px-5 py-12 text-center text-sm text-slate-400">
-              No se encontraron documentos
+            <td colspan="5" class="px-5 py-12 text-center text-sm text-slate-400">
+              No hay plantillas de documentos. Crea la primera subiendo un PDF o Word.
             </td>
+          </tr>
+        }
+        @if (loading()) {
+          <tr>
+            <td colspan="5" class="px-5 py-12 text-center text-sm text-slate-400">Cargando…</td>
           </tr>
         }
       </tbody>
     </table>
   </div>
 </div>
+
+@if (showDrawer()) {
+  <app-nueva-plantilla-drawer (saved)="onSaved($event)" (closed)="showDrawer.set(false)" />
+}

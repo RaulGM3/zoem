@@ -3,6 +3,8 @@ import {
   Firestore,
   collection,
   doc,
+  addDoc,
+  deleteDoc,
   getDocs,
   updateDoc,
   serverTimestamp,
@@ -16,7 +18,7 @@ import {
 } from '@angular/fire/storage';
 import { Auth } from '@angular/fire/auth';
 import { CompanyService } from './company.service';
-import { CasoDocFolder, CasoDocSlot } from '../../interfaces';
+import { CasoDocFolder, CasoDocSlot, CasoDocFile } from '../../interfaces';
 
 @Injectable({ providedIn: 'root' })
 export class CasoDocService {
@@ -27,6 +29,7 @@ export class CasoDocService {
 
   readonly folders = signal<CasoDocFolder[]>([]);
   readonly slots = signal<CasoDocSlot[]>([]);
+  readonly files = signal<CasoDocFile[]>([]);
   readonly isLoading = signal(false);
 
   private get companyId(): string {
@@ -43,14 +46,20 @@ export class CasoDocService {
     return collection(this.firestore, 'companies', this.companyId, 'casos', casoId, 'doc_slots');
   }
 
+  private filesRef(casoId: string) {
+    return collection(this.firestore, 'companies', this.companyId, 'casos', casoId, 'doc_files');
+  }
+
   async load(casoId: string): Promise<void> {
     this.isLoading.set(true);
     this.folders.set([]);
     this.slots.set([]);
+    this.files.set([]);
     try {
-      const [foldersSnap, slotsSnap] = await Promise.all([
+      const [foldersSnap, slotsSnap, filesSnap] = await Promise.all([
         getDocs(this.foldersRef(casoId)),
         getDocs(this.slotsRef(casoId)),
+        getDocs(this.filesRef(casoId)),
       ]);
       this.folders.set(
         foldersSnap.docs
@@ -62,11 +71,102 @@ export class CasoDocService {
           .map(d => ({ id: d.id, ...d.data() }) as CasoDocSlot)
           .sort((a, b) => a.name.localeCompare(b.name))
       );
+      this.files.set(
+        filesSnap.docs
+          .map(d => ({ id: d.id, ...d.data() }) as CasoDocFile)
+          .sort((a, b) => a.name.localeCompare(b.name))
+      );
     } catch {
       // No active company or Firestore error
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  // ── Carpetas ───────────────────────────────────────────
+
+  async createFolder(casoId: string, parentId: string | null, name: string): Promise<void> {
+    const ref = await addDoc(this.foldersRef(casoId), {
+      parentId,
+      name,
+      createdAt: serverTimestamp(),
+    });
+    this.folders.update(list =>
+      [...list, { id: ref.id, parentId, name } as CasoDocFolder]
+        .sort((a, b) => a.name.localeCompare(b.name))
+    );
+  }
+
+  // Borra una carpeta y TODO su contenido recursivo: subcarpetas, slots y
+  // archivos libres (incluyendo sus blobs en Storage).
+  async deleteFolder(casoId: string, folderId: string): Promise<void> {
+    const childFolders = this.folders().filter(f => f.parentId === folderId);
+    for (const child of childFolders) {
+      await this.deleteFolder(casoId, child.id);
+    }
+
+    const filesInFolder = this.files().filter(f => f.folderId === folderId);
+    for (const file of filesInFolder) {
+      await this.deleteFile(casoId, file);
+    }
+
+    // Los slots requeridos no se borran: vuelven a "pendiente" y se desligan
+    // de la carpeta para no perder el checklist de la plantilla.
+    const slotsInFolder = this.slots().filter(s => s.folderId === folderId);
+    for (const slot of slotsInFolder) {
+      if (slot.status === 'subido') await this.removeUpload(casoId, slot);
+    }
+
+    await deleteDoc(doc(this.foldersRef(casoId), folderId));
+    this.folders.update(list => list.filter(f => f.id !== folderId));
+  }
+
+  // ── Archivos libres ────────────────────────────────────
+
+  async uploadFile(casoId: string, folderId: string | null, file: File): Promise<void> {
+    const companyId = this.companyId;
+    const timestamp = Date.now();
+    const storagePath = `companies/${companyId}/casos/${casoId}/docs/${folderId ?? 'root'}/${timestamp}_${file.name}`;
+    const storageRef = ref(this.storage, storagePath);
+
+    await uploadBytes(storageRef, file);
+    const downloadUrl = await getDownloadURL(storageRef);
+
+    const docRef = await addDoc(this.filesRef(casoId), {
+      folderId,
+      name: file.name,
+      storagePath,
+      downloadUrl,
+      mimeType: file.type || 'application/octet-stream',
+      sizeBytes: file.size,
+      uploadedBy: this.auth.currentUser?.uid ?? '',
+      uploadedAt: serverTimestamp(),
+      createdAt: serverTimestamp(),
+    });
+
+    this.files.update(list =>
+      [...list, {
+        id: docRef.id,
+        folderId,
+        name: file.name,
+        storagePath,
+        downloadUrl,
+        mimeType: file.type || 'application/octet-stream',
+        sizeBytes: file.size,
+      } as CasoDocFile].sort((a, b) => a.name.localeCompare(b.name))
+    );
+  }
+
+  async deleteFile(casoId: string, file: CasoDocFile): Promise<void> {
+    if (file.storagePath) {
+      try {
+        await deleteObject(ref(this.storage, file.storagePath));
+      } catch {
+        // File may not exist in Storage — continue
+      }
+    }
+    await deleteDoc(doc(this.filesRef(casoId), file.id));
+    this.files.update(list => list.filter(f => f.id !== file.id));
   }
 
   async uploadSlot(casoId: string, slot: CasoDocSlot, file: File): Promise<void> {

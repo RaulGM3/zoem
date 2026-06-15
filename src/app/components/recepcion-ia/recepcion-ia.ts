@@ -25,6 +25,7 @@ import { ContactService } from '../../core/services/contact.service';
 import type { LlamadaResumen } from '../../interfaces/llamada.interface';
 import type { Contact } from '../../interfaces/contact.interface';
 import type { Timestamp } from '@angular/fire/firestore';
+import { relativeTime } from '../../core/format/relative-time';
 
 @Component({
   selector: 'app-recepcion-ia',
@@ -167,12 +168,7 @@ export class RecepcionIAComponent implements OnInit {
   }
 
   formatRelative(ts: Timestamp): string {
-    const diffMin = Math.floor((Date.now() - ts.toDate().getTime()) / 60000);
-    if (diffMin < 1) return 'hace menos de un minuto';
-    if (diffMin < 60) return `hace ${diffMin} min`;
-    const diffHrs = Math.floor(diffMin / 60);
-    if (diffHrs < 24) return `hace ${diffHrs}h`;
-    return `hace ${Math.floor(diffHrs / 24)}d`;
+    return relativeTime(ts.toDate());
   }
 
   getUrgencyClass(u?: string): string {

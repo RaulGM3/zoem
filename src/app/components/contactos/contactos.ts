@@ -4,12 +4,13 @@ import { RouterLink, ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import {
   LucideAngularModule,
-  Users, Search, Plus, Phone, Mail, Building2,
+  Users, Plus, Phone, Mail, Building2,
   Eye, Edit, Trash2, ChevronRight, ChevronLeft, UserPlus, TrendingUp,
   GitMerge, Shield, Brain, ArrowRight, X, Check, LoaderCircle, StickyNote,
 } from 'lucide-angular';
 import { PIPELINE_DEALS } from '../../data/dummy-data';
 import { ContactService } from '../../core/services/contact.service';
+import { SearchService } from '../../core/services/search.service';
 import {
   Contact, PersonaFisica, PersonaJuridica, ContactStatus,
   getContactDisplayName, getContactInitials,
@@ -37,7 +38,6 @@ const RGPD_CONSENTIMIENTOS = [
 })
 export class ContactosComponent {
   readonly UsersIcon = Users;
-  readonly SearchIcon = Search;
   readonly PlusIcon = Plus;
   readonly PhoneIcon = Phone;
   readonly MailIcon = Mail;
@@ -61,9 +61,11 @@ export class ContactosComponent {
   readonly contactService = inject(ContactService);
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
+  private readonly searchSvc = inject(SearchService);
 
   activeTab = signal<ContactosTab>('contactos');
-  search = signal('');
+  /** Búsqueda centralizada en el header — scopeada a "contactos". */
+  readonly search = this.searchSvc.termFor('contactos');
   filterStatus = signal('');
   filterType = signal('');
   showDrawer = signal(false);
@@ -156,7 +158,11 @@ export class ContactosComponent {
     return this.contactService.contacts()
       .filter((c) => {
         const name = getContactDisplayName(c).toLowerCase();
-        const matchQ = !q || name.includes(q) || c.email.toLowerCase().includes(q);
+        const matchQ = !q
+          || name.includes(q)
+          || c.email.toLowerCase().includes(q)
+          || (c.phone ?? '').toLowerCase().includes(q)
+          || (c.mobile ?? '').toLowerCase().includes(q);
         const matchS = !s || c.status === s;
         const matchT = !t || c.type === t;
         return matchQ && matchS && matchT;

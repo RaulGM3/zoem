@@ -7,734 +7,100 @@
   </div>
 } @else {
   <div class="flex flex-col h-full">
-    <!-- Header -->
-    <div class="px-6 py-4 border-b border-slate-200 bg-white">
-      <div class="flex items-start justify-between gap-4">
-        <div class="flex items-start gap-3 min-w-0">
-          <a
-            routerLink="/casos"
-            class="mt-0.5 p-1.5 rounded-lg hover:bg-slate-100 shrink-0"
-            aria-label="Volver a casos"
-          >
-            <lucide-icon [img]="ArrowLeftIcon" class="w-4 h-4 text-slate-500" />
-          </a>
-          <div class="min-w-0">
-            @if (!editingInfo()) {
-              <div class="flex items-center gap-2 flex-wrap">
-                <h1 class="text-xl font-semibold text-slate-800 truncate">{{ caso()!.titulo }}</h1>
-                <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getEstadoClass(caso()!.estado)">
-                  {{ caso()!.estado }}
-                </span>
-                <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getTipoClass(caso()!.tipo)">
-                  {{ caso()!.tipo }}
-                </span>
-              </div>
-            }
-          </div>
-        </div>
-        @if (!editingInfo()) {
-          <button
-            (click)="startEditInfo()"
-            class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50"
-          >
-            <lucide-icon [img]="Edit2Icon" class="w-3.5 h-3.5" />
-            Editar
-          </button>
-        }
-      </div>
-
-      <!-- Tabs -->
-      <nav class="flex gap-1 mt-4" role="tablist">
-        @for (tab of [['info','Información'],['hitos','Hitos'],['gestoria','Gestoría'],['documentos','Documentos']]; track tab[0]) {
-          <button
-            role="tab"
-            [attr.aria-selected]="activeTab() === tab[0]"
-            [class]="activeTab() === tab[0]
-              ? 'px-4 py-1.5 text-sm font-medium rounded-lg bg-violet-100 text-violet-700'
-              : 'px-4 py-1.5 text-sm text-slate-500 rounded-lg hover:bg-slate-100'"
-            (click)="activeTab.set($any(tab[0]))"
-          >
-            {{ tab[1] }}
-            @if (tab[0] === 'hitos' && caso()!.hitos.length > 0) {
-              <span class="ml-1.5 text-xs opacity-70">{{ caso()!.hitos.length }}</span>
-            }
-            @if (tab[0] === 'gestoria' && gestoriaService.movimientos().length > 0) {
-              <span class="ml-1.5 text-xs opacity-70">{{ gestoriaService.movimientos().length }}</span>
-            }
-            @if (tab[0] === 'gestoria') {
-              @let pendingCosts = gestoriaService.slots().filter(s => s.status === 'pendiente').length;
-              @if (pendingCosts > 0) {
-                <span class="ml-1.5 inline-flex items-center justify-center w-4 h-4 text-xs rounded-full bg-amber-400 text-white font-semibold">{{ pendingCosts }}</span>
-              }
-            }
-            @if (tab[0] === 'documentos') {
-              @let pending = casoDocService.slots().filter(s => s.status === 'pendiente').length;
-              @if (pending > 0) {
-                <span class="ml-1.5 inline-flex items-center justify-center w-4 h-4 text-xs rounded-full bg-amber-400 text-white font-semibold">{{ pending }}</span>
-              }
-            }
-          </button>
-        }
-      </nav>
-    </div>
+    <app-caso-detail-header
+      [titulo]="caso()!.titulo"
+      [estado]="caso()!.estado"
+      [tipo]="caso()!.tipo"
+      [editing]="editingInfo()"
+      [activeTab]="activeTab()"
+      [hitosCount]="hitos().length"
+      [movimientosCount]="gestoriaService.movimientos().length"
+      [gestoriaPending]="gestoriaPending()"
+      [docsPending]="docsPending()"
+      (edit)="startEditInfo()"
+      (tabChange)="setTab($event)"
+    />
 
     <!-- Tab content -->
     <div class="flex-1 overflow-y-auto p-6">
 
-      <!-- ── TAB INFO ─────────────────────────────────── -->
       @if (activeTab() === 'info') {
-        @if (editingInfo()) {
-          <div class="bg-white rounded-xl border border-slate-200 p-6 space-y-4 max-w-2xl">
-            <h2 class="font-semibold text-slate-800">Editar caso</h2>
-
-            <div class="space-y-1">
-              <label class="text-sm font-medium text-slate-700">Título</label>
-              <input
-                type="text"
-                [value]="editTitulo()"
-                (input)="editTitulo.set($any($event.target).value)"
-                class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
-              />
-            </div>
-
-            <div class="space-y-1">
-              <label class="text-sm font-medium text-slate-700">Descripción</label>
-              <textarea
-                rows="3"
-                [value]="editDescripcion()"
-                (input)="editDescripcion.set($any($event.target).value)"
-                class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none"
-              ></textarea>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-              <div class="space-y-1">
-                <label class="text-sm font-medium text-slate-700">Tipo</label>
-                <select [value]="editTipo()" (change)="editTipo.set($any($event.target).value)"
-                  class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
-                  @for (t of tipos; track t) { <option [value]="t">{{ t }}</option> }
-                </select>
-              </div>
-              <div class="space-y-1">
-                <label class="text-sm font-medium text-slate-700">Estado</label>
-                <select [value]="editEstado()" (change)="editEstado.set($any($event.target).value)"
-                  class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
-                  @for (e of estados; track e) { <option [value]="e">{{ e }}</option> }
-                </select>
-              </div>
-              <div class="space-y-1">
-                <label class="text-sm font-medium text-slate-700">Prioridad</label>
-                <select [value]="editPrioridad()" (change)="editPrioridad.set($any($event.target).value)"
-                  class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
-                  @for (p of prioridades; track p) { <option [value]="p">{{ p }}</option> }
-                </select>
-              </div>
-              <div class="space-y-1">
-                <label class="text-sm font-medium text-slate-700">Vencimiento</label>
-                <input type="date" [value]="editVencimiento()" (input)="editVencimiento.set($any($event.target).value)"
-                  class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-              </div>
-            </div>
-
-            <div class="flex gap-2 pt-2">
-              <button (click)="editingInfo.set(false)"
-                class="px-4 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">
-                Cancelar
-              </button>
-              <button (click)="saveInfo()" [disabled]="savingInfo() || !editTitulo().trim()"
-                class="px-4 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50">
-                {{ savingInfo() ? 'Guardando...' : 'Guardar' }}
-              </button>
-            </div>
-          </div>
-        } @else {
-          <div class="space-y-6 max-w-2xl">
-            <!-- Info cards -->
-            <div class="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
-              @if (caso()!.descripcion) {
-                <p class="text-sm text-slate-600">{{ caso()!.descripcion }}</p>
-              }
-              <dl class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-                <div>
-                  <dt class="text-slate-400 text-xs uppercase tracking-wide">Tipo</dt>
-                  <dd><span [class]="'inline-flex mt-1 px-2 py-0.5 text-xs rounded-full font-medium ' + getTipoClass(caso()!.tipo)">{{ caso()!.tipo }}</span></dd>
-                </div>
-                <div>
-                  <dt class="text-slate-400 text-xs uppercase tracking-wide">Estado</dt>
-                  <dd><span [class]="'inline-flex mt-1 px-2 py-0.5 text-xs rounded-full font-medium ' + getEstadoClass(caso()!.estado)">{{ caso()!.estado }}</span></dd>
-                </div>
-                <div>
-                  <dt class="text-slate-400 text-xs uppercase tracking-wide">Prioridad</dt>
-                  <dd class="mt-1 capitalize text-slate-700">{{ caso()!.prioridad }}</dd>
-                </div>
-                <div>
-                  <dt class="text-slate-400 text-xs uppercase tracking-wide">Vencimiento</dt>
-                  <dd class="mt-1 text-slate-700">{{ caso()!.vencimiento ?? '—' }}</dd>
-                </div>
-              </dl>
-            </div>
-
-            <!-- Contacts -->
-            <div class="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
-              <h3 class="font-medium text-slate-800">Clientes vinculados</h3>
-
-              @if (linkedContacts().length > 0) {
-                <ul class="space-y-2">
-                  @for (c of linkedContacts(); track c.id) {
-                    <li class="flex items-center justify-between">
-                      <div class="flex items-center gap-2">
-                        <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
-                          <lucide-icon [img]="UserIcon" class="w-4 h-4 text-slate-400" />
-                        </div>
-                        <span class="text-sm text-slate-700">{{ getContactName(c.id) }}</span>
-                      </div>
-                      <button (click)="removeContact(c.id)"
-                        class="p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-500"
-                        [attr.aria-label]="'Quitar ' + getContactName(c.id)">
-                        <lucide-icon [img]="XIcon" class="w-3.5 h-3.5" />
-                      </button>
-                    </li>
-                  }
-                </ul>
-              } @else {
-                <p class="text-sm text-slate-400">No hay clientes vinculados</p>
-              }
-
-              <div class="relative">
-                <input
-                  type="text"
-                  placeholder="Buscar y añadir cliente..."
-                  [value]="contactSearch()"
-                  (input)="contactSearch.set($any($event.target).value)"
-                  class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
-                />
-                @if (contactSearchResults().length > 0) {
-                  <ul class="absolute top-full mt-1 left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg z-10 overflow-hidden">
-                    @for (r of contactSearchResults(); track r.id) {
-                      <li>
-                        <button
-                          class="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-violet-50"
-                          (click)="addContact(r.id)"
-                        >{{ getContactName(r.id) }}</button>
-                      </li>
-                    }
-                  </ul>
-                }
-              </div>
-            </div>
-          </div>
-        }
+        <app-caso-info-tab
+          [caso]="caso()!"
+          [editing]="editingInfo()"
+          [saving]="savingInfo()"
+          [linkedContacts]="linkedContacts()"
+          [searchResults]="contactSearchResults()"
+          [contactSearch]="contactSearch()"
+          [noResults]="noContactResults()"
+          (cancelEdit)="editingInfo.set(false)"
+          (saveInfo)="onSaveInfo($event)"
+          (searchChange)="contactSearch.set($event)"
+          (addContact)="addContact($event)"
+          (removeContact)="removeContact($event)"
+        />
       }
 
-      <!-- ── TAB HITOS ────────────────────────────────── -->
       @if (activeTab() === 'hitos') {
-        <div class="space-y-4 max-w-2xl">
-
-          <!-- Progress -->
-          @if (caso()!.hitos.length > 0) {
-            <div class="bg-white rounded-xl border border-slate-200 p-4">
-              <div class="flex items-center justify-between text-sm mb-2">
-                <span class="text-slate-600">Progreso general</span>
-                <span class="font-medium text-slate-800">{{ hitosProgress() }}%</span>
-              </div>
-              <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div
-                  class="h-full bg-violet-500 rounded-full transition-all"
-                  [style.width.%]="hitosProgress()"
-                ></div>
-              </div>
-              <p class="text-xs text-slate-400 mt-1.5">
-                {{ caso()!.hitos.filter(h => h.estado === 'completado').length }} de {{ caso()!.hitos.length }} completados
-              </p>
-            </div>
-          }
-
-          <!-- List -->
-          <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-            @if (caso()!.hitos.length === 0) {
-              <div class="p-10 text-center text-slate-400 text-sm">
-                <p>No hay hitos definidos</p>
-                <p class="text-xs mt-1">Añade hitos para hacer seguimiento del caso</p>
-              </div>
-            } @else {
-              <ul class="divide-y divide-slate-100">
-                @for (hito of caso()!.hitos; track hito.id) {
-                  <li class="p-4 flex items-start gap-3 group">
-                    <button
-                      (click)="toggleHitoEstado(hito)"
-                      [class]="getHitoEstadoColor(hito.estado)"
-                      [attr.aria-label]="hito.estado === 'completado' ? 'Marcar pendiente' : 'Marcar completado'"
-                      class="mt-0.5 shrink-0"
-                    >
-                      <lucide-icon [img]="$any(getHitoEstadoIcon(hito.estado))" class="w-5 h-5" />
-                    </button>
-                    <div class="flex-1 min-w-0">
-                      <p [class]="'text-sm font-medium ' + (hito.estado === 'completado' ? 'line-through text-slate-400' : 'text-slate-800')">
-                        {{ hito.titulo }}
-                      </p>
-                      @if (hito.descripcion) {
-                        <p class="text-xs text-slate-400 mt-0.5">{{ hito.descripcion }}</p>
-                      }
-                      <div class="flex items-center gap-3 mt-1 text-xs text-slate-400">
-                        @if (hito.fechaEstimada) {
-                          <span>{{ hito.fechaEstimada }}</span>
-                        }
-                        @if (hito.asignadoA) {
-                          <span>{{ getMemberName(hito.asignadoA) }}</span>
-                        }
-                      </div>
-                    </div>
-                    <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button (click)="startEditHito(hito)"
-                        class="p-1 rounded hover:bg-slate-100"
-                        aria-label="Editar hito">
-                        <lucide-icon [img]="Edit2Icon" class="w-3.5 h-3.5 text-slate-400" />
-                      </button>
-                      <button (click)="deleteHito(hito.id)"
-                        class="p-1 rounded hover:bg-red-50"
-                        aria-label="Eliminar hito">
-                        <lucide-icon [img]="Trash2Icon" class="w-3.5 h-3.5 text-red-400" />
-                      </button>
-                    </div>
-                  </li>
-                }
-              </ul>
-            }
-            <div class="p-3 border-t border-slate-100">
-              <button (click)="openNewHitoForm()"
-                class="w-full flex items-center justify-center gap-2 py-2 text-sm text-slate-500 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-colors">
-                <lucide-icon [img]="PlusIcon" class="w-4 h-4" />
-                Añadir hito
-              </button>
-            </div>
-          </div>
-        </div>
+        <app-caso-hitos-tab
+          [hitos]="hitos()"
+          [actividad]="actividad()"
+          [members]="usersService.members()"
+          (toggle)="toggleHitoEstado($event)"
+          (editHito)="startEditHito($event)"
+          (deleteHito)="deleteHito($event)"
+          (addHito)="openNewHitoForm()"
+        />
       }
 
-      <!-- ── TAB GESTORÍA ─────────────────────────────── -->
       @if (activeTab() === 'gestoria') {
-        <div class="space-y-4">
-
-          <!-- Costos previstos por plantilla -->
-          @if (gestoriaService.slots().length > 0) {
-            <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-              <div class="px-4 py-3 border-b border-slate-200">
-                <div class="flex items-center justify-between mb-1.5">
-                  <h3 class="text-sm font-medium text-slate-700">Costos previstos por plantilla</h3>
-                  @let sp = slotsGestoriaProgress();
-                  @if (sp) {
-                    <span class="text-xs text-slate-500">
-                      <span class="font-semibold text-slate-800">{{ sp.registrados }}</span> de {{ sp.total }} registrados
-                    </span>
-                  }
-                </div>
-                @let sp2 = slotsGestoriaProgress();
-                @if (sp2) {
-                  <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      class="h-full bg-violet-500 rounded-full transition-all duration-300"
-                      [style.width.%]="(sp2.registrados / sp2.total) * 100"
-                    ></div>
-                  </div>
-                }
-              </div>
-
-              <div class="divide-y divide-slate-100">
-                @for (slot of gestoriaService.slots(); track slot.id) {
-                  <div class="flex items-center gap-3 px-4 py-3">
-
-                    <lucide-icon
-                      [img]="slot.status === 'registrado' ? CheckCircle2Icon : CircleAlertIcon"
-                      [class]="'w-4 h-4 shrink-0 ' + (slot.status === 'registrado' ? 'text-emerald-500' : 'text-amber-400')"
-                    />
-
-                    <div class="flex-1 min-w-0">
-                      <p class="text-sm text-slate-700 font-medium truncate">{{ slot.nombre }}</p>
-                      <p class="text-xs text-slate-400">{{ slot.tipoCosto | titlecase }}</p>
-                    </div>
-
-                    <div class="flex items-center gap-3 shrink-0">
-                      @if (slot.importeEstimado != null) {
-                        <span class="text-sm text-slate-500">
-                          <span class="text-xs text-slate-400">est.</span>
-                          {{ slot.importeEstimado | number:'1.2-2' }} €
-                        </span>
-                      }
-                      @if (slot.status === 'registrado') {
-                        @if (slot.importeReal != null) {
-                          <span class="text-sm font-semibold text-emerald-700">
-                            {{ slot.importeReal | number:'1.2-2' }} €
-                          </span>
-                        }
-                        <span class="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 font-medium">Registrado</span>
-                        <button
-                          (click)="unregisterSlot(slot)"
-                          class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-300 hover:text-slate-500"
-                          title="Desasociar movimiento"
-                          aria-label="Desasociar movimiento"
-                        >
-                          <lucide-icon [img]="XIcon" class="w-3.5 h-3.5" />
-                        </button>
-                      } @else {
-                        <span class="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-700 font-medium">Pendiente</span>
-                        <button
-                          (click)="openRegistrarSlot(slot)"
-                          class="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-violet-600 text-white rounded-lg hover:bg-violet-700"
-                        >
-                          <lucide-icon [img]="PlusIcon" class="w-3 h-3" />
-                          Registrar
-                        </button>
-                      }
-                    </div>
-
-                  </div>
-                }
-              </div>
-            </div>
-          }
-
-          <!-- Summary cards -->
-          <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <div class="bg-white rounded-xl border border-slate-200 p-4">
-              <p class="text-xs text-slate-500 uppercase tracking-wide">Ingresos</p>
-              <p class="text-xl font-bold text-emerald-600 mt-1">
-                {{ caso()!.resumenFinanciero.totalIngresos | number:'1.2-2' }} €
-              </p>
-            </div>
-            <div class="bg-white rounded-xl border border-slate-200 p-4">
-              <p class="text-xs text-slate-500 uppercase tracking-wide">Suplidos</p>
-              <p class="text-xl font-bold text-amber-600 mt-1">
-                {{ caso()!.resumenFinanciero.totalSuplidos | number:'1.2-2' }} €
-              </p>
-            </div>
-            <div class="bg-white rounded-xl border border-slate-200 p-4">
-              <p class="text-xs text-slate-500 uppercase tracking-wide">Honorarios</p>
-              <p class="text-xl font-bold text-violet-600 mt-1">
-                {{ caso()!.resumenFinanciero.totalHonorarios | number:'1.2-2' }} €
-              </p>
-            </div>
-            <div class="bg-white rounded-xl border border-slate-200 p-4">
-              <p class="text-xs text-slate-500 uppercase tracking-wide">Saldo neto</p>
-              <p class="text-xl font-bold mt-1"
-                [class]="caso()!.resumenFinanciero.saldo >= 0 ? 'text-emerald-600' : 'text-red-600'">
-                {{ caso()!.resumenFinanciero.saldo | number:'1.2-2' }} €
-              </p>
-            </div>
-          </div>
-
-          <!-- Movements table -->
-          <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-            <div class="flex items-center justify-between px-4 py-3 border-b border-slate-200">
-              <h3 class="text-sm font-medium text-slate-700">Movimientos</h3>
-              <button (click)="openMovForm()"
-                class="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700">
-                <lucide-icon [img]="PlusIcon" class="w-3.5 h-3.5" />
-                Añadir
-              </button>
-            </div>
-
-            @if (gestoriaService.loading()) {
-              <div class="p-8 text-center text-slate-400 text-sm">Cargando movimientos...</div>
-            } @else if (gestoriaService.movimientos().length === 0) {
-              <div class="p-10 text-center text-slate-400 text-sm">
-                <p>Sin movimientos registrados</p>
-                <p class="text-xs mt-1">Registra ingresos, suplidos y honorarios de este caso</p>
-              </div>
-            } @else {
-              <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                  <thead class="bg-slate-50">
-                    <tr class="text-left text-slate-500 border-b border-slate-200">
-                      <th class="px-4 py-2.5 font-medium">Concepto</th>
-                      <th class="px-4 py-2.5 font-medium">Tipo</th>
-                      <th class="px-4 py-2.5 font-medium">Fecha</th>
-                      <th class="px-4 py-2.5 font-medium text-right">Importe</th>
-                      <th class="px-4 py-2.5"></th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-slate-100">
-                    @for (mov of gestoriaService.movimientos(); track mov.id) {
-                      <tr class="group">
-                        <td class="px-4 py-3">
-                          <p class="text-slate-800">{{ mov.concepto }}</p>
-                          @if (mov.notas) {
-                            <p class="text-xs text-slate-400">{{ mov.notas }}</p>
-                          }
-                        </td>
-                        <td class="px-4 py-3">
-                          <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getMovTipoClass(mov.tipo)">
-                            {{ mov.tipo }}
-                          </span>
-                        </td>
-                        <td class="px-4 py-3 text-slate-500">{{ mov.fecha }}</td>
-                        <td class="px-4 py-3 text-right font-medium"
-                          [class]="mov.esEntrada ? 'text-emerald-600' : 'text-red-600'">
-                          {{ mov.esEntrada ? '+' : '−' }}{{ mov.importe | number:'1.2-2' }} €
-                        </td>
-                        <td class="px-4 py-3 text-right">
-                          <button (click)="deleteMovimiento(mov.id)"
-                            class="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-50"
-                            aria-label="Eliminar movimiento">
-                            <lucide-icon [img]="Trash2Icon" class="w-3.5 h-3.5 text-red-400" />
-                          </button>
-                        </td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
-            }
-          </div>
-        </div>
+        <app-caso-gestoria-tab
+          [slots]="gestoriaService.slots()"
+          [movimientos]="gestoriaService.movimientos()"
+          [movimientosLoading]="gestoriaService.loading()"
+          [resumen]="caso()!.resumenFinanciero"
+          (registerSlot)="openRegistrarSlot($event)"
+          (unregisterSlot)="unregisterSlot($event)"
+          (addMov)="openMovForm()"
+          (deleteMov)="deleteMovimiento($event)"
+        />
       }
 
-      <!-- ── TAB DOCUMENTOS ──────────────────────────── -->
       @if (activeTab() === 'documentos') {
-        <div class="space-y-4 max-w-2xl">
-
-          @if (casoDocService.isLoading()) {
-            <div class="flex items-center justify-center h-32 text-slate-400 text-sm">
-              <lucide-icon [img]="LoaderIcon" class="w-4 h-4 mr-2 animate-spin" />
-              Cargando documentos...
-            </div>
-          } @else if (casoDocService.slots().length === 0) {
-            <div class="bg-white rounded-xl border border-slate-200 p-10 flex flex-col items-center gap-3 text-center">
-              <lucide-icon [img]="FolderOpenIcon" class="w-10 h-10 text-slate-300" />
-              <p class="text-slate-500 text-sm font-medium">Sin documentos requeridos</p>
-              <p class="text-slate-400 text-xs">Este caso no tiene una plantilla con estructura documental asociada.</p>
-            </div>
-          } @else {
-            <!-- Progress header -->
-            @let progress = docsProgress();
-            @if (progress) {
-              <div class="bg-white rounded-xl border border-slate-200 p-4">
-                <div class="flex items-center justify-between mb-2">
-                  <span class="text-sm font-medium text-slate-700">Documentos requeridos</span>
-                  <span class="text-sm text-slate-500">
-                    <span class="font-semibold text-slate-800">{{ progress.subidos }}</span> de {{ progress.total }} completados
-                  </span>
-                </div>
-                <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    class="h-full bg-violet-500 rounded-full transition-all duration-300"
-                    [style.width.%]="(progress.subidos / progress.total) * 100"
-                  ></div>
-                </div>
-              </div>
-            }
-
-            <!-- Slots list -->
-            <div class="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
-              @for (slot of slotsConRuta(); track slot.id) {
-                <div class="flex items-center gap-3 px-4 py-3">
-
-                  <!-- File icon + info -->
-                  <lucide-icon
-                    [img]="slot.status === 'subido' ? CheckCircle2Icon : FileTextIcon"
-                    [class]="'w-5 h-5 shrink-0 ' + (slot.status === 'subido' ? 'text-emerald-500' : 'text-slate-300')"
-                  />
-
-                  <div class="flex-1 min-w-0">
-                    @if (slot.rutaCarpeta) {
-                      <p class="text-xs text-slate-400 truncate">
-                        <lucide-icon [img]="FolderOpenIcon" class="w-3 h-3 inline-block mr-0.5 -mt-0.5" />
-                        {{ slot.rutaCarpeta }}
-                      </p>
-                    }
-                    <p class="text-sm text-slate-700 font-medium truncate">{{ slot.name }}</p>
-                    @if (slot.description) {
-                      <p class="text-xs text-slate-400 truncate">{{ slot.description }}</p>
-                    }
-                  </div>
-
-                  <!-- Status + actions -->
-                  <div class="flex items-center gap-2 shrink-0">
-                    @if (slot.status === 'subido') {
-                      <span class="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 font-medium">Subido</span>
-                      @if (slot.downloadUrl) {
-                        <a
-                          [href]="slot.downloadUrl"
-                          target="_blank"
-                          rel="noopener"
-                          class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600"
-                          aria-label="Descargar"
-                        >
-                          <lucide-icon [img]="DownloadIcon" class="w-4 h-4" />
-                        </a>
-                      }
-                      <button
-                        (click)="removeUpload(slot)"
-                        [disabled]="uploadingSlotId() === slot.id"
-                        class="p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400 disabled:opacity-50"
-                        aria-label="Eliminar documento"
-                      >
-                        @if (uploadingSlotId() === slot.id) {
-                          <lucide-icon [img]="LoaderIcon" class="w-4 h-4 animate-spin" />
-                        } @else {
-                          <lucide-icon [img]="Trash2Icon" class="w-4 h-4" />
-                        }
-                      </button>
-                    } @else {
-                      <span class="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-700 font-medium">Pendiente</span>
-                      <button
-                        (click)="triggerUpload(slot.id)"
-                        [disabled]="uploadingSlotId() === slot.id"
-                        class="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50"
-                      >
-                        @if (uploadingSlotId() === slot.id) {
-                          <lucide-icon [img]="LoaderIcon" class="w-3.5 h-3.5 animate-spin" />
-                          Subiendo...
-                        } @else {
-                          <lucide-icon [img]="UploadIcon" class="w-3.5 h-3.5" />
-                          Subir
-                        }
-                      </button>
-                      <input
-                        type="file"
-                        [id]="'upload-' + slot.id"
-                        class="hidden"
-                        (change)="onFileSelected($event, slot)"
-                        aria-hidden="true"
-                      />
-                    }
-                  </div>
-
-                </div>
-              }
-            </div>
-          }
-
-        </div>
+        <app-caso-documentos-tab
+          [folders]="casoDocService.folders()"
+          [slots]="casoDocService.slots()"
+          [files]="casoDocService.files()"
+          [loading]="casoDocService.isLoading()"
+          [uploadingSlotId]="uploadingSlotId()"
+          [busy]="docsBusy()"
+          [progress]="docsProgress()"
+          (uploadSlot)="onUploadSlot($event)"
+          (removeSlot)="onRemoveSlot($event)"
+          (uploadFile)="onUploadFile($event)"
+          (deleteFile)="onDeleteFile($event)"
+          (createFolder)="onCreateFolder($event)"
+          (deleteFolder)="onDeleteFolder($event)"
+        />
       }
 
     </div>
   </div>
 }
 
-<!-- ── Hito form drawer ────────────────────────────── -->
-@if (showHitoForm()) {
-  <div class="fixed inset-0 z-40 bg-black/30" (click)="showHitoForm.set(false)" aria-hidden="true"></div>
-  <aside class="fixed right-0 top-0 h-full w-full max-w-sm bg-white shadow-2xl z-50 flex flex-col"
-    role="dialog" aria-modal="true" aria-labelledby="hito-drawer-title">
-    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-      <h2 id="hito-drawer-title" class="text-base font-semibold text-slate-800">
-        {{ editingHitoId() ? 'Editar hito' : 'Nuevo hito' }}
-      </h2>
-      <button (click)="showHitoForm.set(false)" class="p-1.5 rounded-lg hover:bg-slate-100" aria-label="Cerrar">
-        <lucide-icon [img]="XIcon" class="w-4 h-4 text-slate-500" />
-      </button>
-    </div>
-    <div class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-      <div class="space-y-1">
-        <label class="text-sm font-medium text-slate-700">Título <span class="text-red-500">*</span></label>
-        <input type="text" [value]="hitoTitulo()" (input)="hitoTitulo.set($any($event.target).value)"
-          class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-      </div>
-      <div class="space-y-1">
-        <label class="text-sm font-medium text-slate-700">Descripción</label>
-        <textarea rows="2" [value]="hitoDescripcion()" (input)="hitoDescripcion.set($any($event.target).value)"
-          class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none"></textarea>
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        <div class="space-y-1">
-          <label class="text-sm font-medium text-slate-700">Estado</label>
-          <select [value]="hitoEstado()" (change)="hitoEstado.set($any($event.target).value)"
-            class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
-            @for (e of hitoEstados; track e) { <option [value]="e">{{ e }}</option> }
-          </select>
-        </div>
-        <div class="space-y-1">
-          <label class="text-sm font-medium text-slate-700">Fecha estimada</label>
-          <input type="date" [value]="hitoFechaEstimada()" (input)="hitoFechaEstimada.set($any($event.target).value)"
-            class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-        </div>
-      </div>
-      <div class="space-y-1">
-        <label class="text-sm font-medium text-slate-700">Responsable</label>
-        <select [value]="hitoAsignadoA()" (change)="hitoAsignadoA.set($any($event.target).value)"
-          class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
-          <option value="">Sin asignar</option>
-          @for (m of usersService.members(); track m.id) {
-            <option [value]="m.userId">{{ m.nombre }}{{ m.apellido ? ' ' + m.apellido : '' }}</option>
-          }
-        </select>
-      </div>
-    </div>
-    <div class="px-6 py-4 border-t border-slate-200 flex gap-3 justify-end">
-      <button (click)="showHitoForm.set(false)"
-        class="px-4 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">
-        Cancelar
-      </button>
-      <button (click)="saveHito()" [disabled]="savingHito() || !hitoTitulo().trim()"
-        class="px-4 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50">
-        {{ savingHito() ? 'Guardando...' : (editingHitoId() ? 'Guardar' : 'Añadir') }}
-      </button>
-    </div>
-  </aside>
-}
+<app-hito-form-drawer
+  [visible]="showHitoForm()"
+  [saving]="savingHito()"
+  [editingHito]="editingHito()"
+  [members]="usersService.members()"
+  (saved)="onSaveHito($event)"
+  (closed)="showHitoForm.set(false)"
+/>
 
-<!-- ── Movimiento form drawer ──────────────────────── -->
-@if (showMovForm()) {
-  <div class="fixed inset-0 z-40 bg-black/30" (click)="closeMovForm()" aria-hidden="true"></div>
-  <aside class="fixed right-0 top-0 h-full w-full max-w-sm bg-white shadow-2xl z-50 flex flex-col"
-    role="dialog" aria-modal="true" aria-labelledby="mov-drawer-title">
-    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-      <h2 id="mov-drawer-title" class="text-base font-semibold text-slate-800">Nuevo movimiento</h2>
-      <button (click)="closeMovForm()" class="p-1.5 rounded-lg hover:bg-slate-100" aria-label="Cerrar">
-        <lucide-icon [img]="XIcon" class="w-4 h-4 text-slate-500" />
-      </button>
-    </div>
-    <div class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-      <div class="space-y-1">
-        <label class="text-sm font-medium text-slate-700">Concepto <span class="text-red-500">*</span></label>
-        <input type="text" [value]="movConcepto()" (input)="movConcepto.set($any($event.target).value)"
-          placeholder="Ej. Provisión de fondos"
-          class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        <div class="space-y-1">
-          <label class="text-sm font-medium text-slate-700">Tipo</label>
-          <select [value]="movTipo()" (change)="movTipo.set($any($event.target).value)"
-            class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
-            @for (t of movTipos; track t) { <option [value]="t">{{ t }}</option> }
-          </select>
-        </div>
-        <div class="space-y-1">
-          <label class="text-sm font-medium text-slate-700">Importe (€) <span class="text-red-500">*</span></label>
-          <input type="number" min="0" step="0.01" [value]="movImporte()" (input)="movImporte.set($any($event.target).value)"
-            class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-        </div>
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        <div class="space-y-1">
-          <label class="text-sm font-medium text-slate-700">Dirección</label>
-          <select [value]="movEsEntrada() ? 'true' : 'false'" (change)="movEsEntrada.set($any($event.target).value === 'true')"
-            class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
-            <option value="true">Entrada (cobrado)</option>
-            <option value="false">Salida (pagado)</option>
-          </select>
-        </div>
-        <div class="space-y-1">
-          <label class="text-sm font-medium text-slate-700">Fecha</label>
-          <input type="date" [value]="movFecha()" (input)="movFecha.set($any($event.target).value)"
-            class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-        </div>
-      </div>
-      <div class="space-y-1">
-        <label class="text-sm font-medium text-slate-700">Notas</label>
-        <textarea rows="2" [value]="movNotas()" (input)="movNotas.set($any($event.target).value)"
-          class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none"></textarea>
-      </div>
-    </div>
-    <div class="px-6 py-4 border-t border-slate-200 flex gap-3 justify-end">
-      <button (click)="closeMovForm()"
-        class="px-4 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">
-        Cancelar
-      </button>
-      <button (click)="saveMovimiento()" [disabled]="savingMov() || !movConcepto().trim() || !movImporte()"
-        class="px-4 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50">
-        {{ savingMov() ? 'Guardando...' : 'Guardar' }}
-      </button>
-    </div>
-  </aside>
-}
+<app-movimiento-form-drawer
+  [visible]="showMovForm()"
+  [saving]="savingMov()"
+  [prefillSlot]="registeringSlot()"
+  (saved)="onSaveMov($event)"
+  (closed)="closeMovForm()"
+/>

@@ -4,8 +4,21 @@ import {
 } from '@angular/core';
 import { LucideAngularModule, X, Clock, Trash2, Plus } from 'lucide-angular';
 import type { Anotacion, CalendarItem, EventGroup, ItemColor } from '../../calendario.types';
-
-type HitoEstado = NonNullable<CalendarItem['hitoEstado']>;
+import type { EventoEstado, HitoEstado } from '../../../../interfaces';
+import {
+  HITO_ESTADOS,
+  HITO_ESTADO_LABEL,
+  HITO_ESTADO_BADGE_CLASS,
+  HITO_OVERDUE_LABEL,
+  HITO_OVERDUE_BADGE_CLASS,
+  nextHitoEstado,
+  isHitoOverdue,
+} from '../../../../core/hitos/hito-estado';
+import {
+  EVENTO_ESTADOS,
+  EVENTO_ESTADO_LABEL,
+  EVENTO_ESTADO_BADGE_CLASS,
+} from '../../../../interfaces';
 
 export interface ItemTimeChange {
   id: string;
@@ -101,6 +114,14 @@ function snap(minutes: number): number {
   return Math.round(minutes / SNAP_MINUTES) * SNAP_MINUTES;
 }
 
+function todayStr(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function clamp(val: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, val));
 }
@@ -192,7 +213,7 @@ export class DayScheduleComponent {
 
   readonly itemTimeChanged = output<ItemTimeChange>();
   readonly hitoStatusChanged = output<{ id: string; casoId: string; estado: HitoEstado }>();
-  readonly eventoStatusChanged = output<{ id: string; status: CalendarItem['status'] }>();
+  readonly eventoStatusChanged = output<{ id: string; estado: EventoEstado }>();
   readonly annotationAdded = output<{ itemId: string; casoId?: string; texto: string }>();
   readonly annotationDeleted = output<{ itemId: string; casoId?: string; anotacionId: string }>();
   readonly itemColorChanged = output<{ id: string; color: ItemColor | null }>();
@@ -202,9 +223,11 @@ export class DayScheduleComponent {
   readonly Trash2Icon = Trash2;
   readonly PlusIcon = Plus;
 
-  readonly HITO_ESTADOS: readonly HitoEstado[] = ['pendiente', 'en_progreso', 'completado', 'cancelado'];
-  readonly EVENTO_STATUSES: ReadonlyArray<CalendarItem['status']> = ['pendiente', 'confirmada', 'cancelada'];
+  readonly HITO_ESTADOS = HITO_ESTADOS;
+  readonly EVENTO_ESTADOS = EVENTO_ESTADOS;
   readonly ALL_COLORS = ALL_COLORS;
+
+  private readonly today = todayStr();
 
   readonly hours = HOURS;
   readonly hourHeight = HOUR_HEIGHT;
@@ -309,24 +332,31 @@ export class DayScheduleComponent {
     return `pointer-events-none absolute rounded-lg border-2 border-dashed z-10 ${drag}`;
   }
 
-  getHitoEstadoBadgeClass(estado: HitoEstado): string {
-    const map: Record<HitoEstado, string> = {
-      pendiente:   'bg-amber-100 text-amber-700',
-      en_progreso: 'bg-blue-100 text-blue-700',
-      completado:  'bg-green-100 text-green-700',
-      cancelado:   'bg-slate-100 text-slate-500',
-    };
-    return map[estado] ?? 'bg-slate-100 text-slate-500';
+  // ── estado (badge en el bloque) ──────────────────────────────────────
+  // Fuente de verdad única: hito-estado.ts y evento.interface.ts. No reinventar
+  // mapas locales — antes esto mostraba 'Pte.'/'✓' divergentes del resto de la app.
+
+  isHitoOverdue(item: CalendarItem): boolean {
+    return isHitoOverdue(item.hitoEstado, item.date, this.today);
   }
 
-  getHitoEstadoLabel(estado: HitoEstado): string {
-    const map: Record<HitoEstado, string> = {
-      pendiente:   'Pte.',
-      en_progreso: 'En proceso',
-      completado:  '✓',
-      cancelado:   '✗',
-    };
-    return map[estado] ?? estado;
+  /** Etiqueta del badge de estado del hito en el bloque (incluye "Vencido"). */
+  getHitoBadgeLabel(item: CalendarItem): string {
+    if (this.isHitoOverdue(item)) return HITO_OVERDUE_LABEL;
+    return HITO_ESTADO_LABEL[item.hitoEstado!];
+  }
+
+  getHitoBadgeClass(item: CalendarItem): string {
+    if (this.isHitoOverdue(item)) return HITO_OVERDUE_BADGE_CLASS;
+    return HITO_ESTADO_BADGE_CLASS[item.hitoEstado!];
+  }
+
+  getEventoBadgeLabel(estado: EventoEstado): string {
+    return EVENTO_ESTADO_LABEL[estado];
+  }
+
+  getEventoBadgeClass(estado: EventoEstado): string {
+    return EVENTO_ESTADO_BADGE_CLASS[estado];
   }
 
   // ── etiquetas de tiempo ──────────────────────────────────────────────
@@ -403,8 +433,11 @@ export class DayScheduleComponent {
   advanceHito(event: MouseEvent, item: CalendarItem): void {
     event.stopPropagation();
     if (!item.casoId || !item.hitoEstado || item.hitoEstado === 'completado') return;
-    const next: HitoEstado = item.hitoEstado === 'pendiente' ? 'en_progreso' : 'completado';
-    this.hitoStatusChanged.emit({ id: item.id, casoId: item.casoId, estado: next });
+    this.hitoStatusChanged.emit({
+      id: item.id,
+      casoId: item.casoId,
+      estado: nextHitoEstado(item.hitoEstado),
+    });
   }
 
   // ── drag: mover ──────────────────────────────────────────────────────
@@ -552,38 +585,21 @@ export class DayScheduleComponent {
   }
 
   getHitoEstadoFullLabel(estado: HitoEstado): string {
-    const map: Record<HitoEstado, string> = {
-      pendiente: 'Pendiente', en_progreso: 'En proceso', completado: 'Completado', cancelado: 'Cancelado',
-    };
-    return map[estado];
+    return HITO_ESTADO_LABEL[estado];
   }
 
-  getEventoStatusLabel(status: CalendarItem['status']): string {
-    const map: Record<CalendarItem['status'], string> = {
-      pendiente: 'Pendiente', confirmada: 'Confirmada', cancelada: 'Cancelada',
-    };
-    return map[status];
+  getEventoEstadoLabel(estado: EventoEstado): string {
+    return EVENTO_ESTADO_LABEL[estado];
   }
 
   getHitoEstadoBtnClass(estado: HitoEstado, isActive: boolean): string {
     if (!isActive) return 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50';
-    const map: Record<HitoEstado, string> = {
-      pendiente:   'bg-amber-100 text-amber-700 ring-2 ring-amber-300 ring-offset-1',
-      en_progreso: 'bg-blue-100 text-blue-700 ring-2 ring-blue-300 ring-offset-1',
-      completado:  'bg-green-100 text-green-700 ring-2 ring-green-300 ring-offset-1',
-      cancelado:   'bg-slate-100 text-slate-600 ring-2 ring-slate-300 ring-offset-1',
-    };
-    return map[estado];
+    return `${HITO_ESTADO_BADGE_CLASS[estado]} ring-2 ring-offset-1 ring-current/30`;
   }
 
-  getEventoStatusBtnClass(status: CalendarItem['status'], isActive: boolean): string {
+  getEventoEstadoBtnClass(estado: EventoEstado, isActive: boolean): string {
     if (!isActive) return 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50';
-    const map: Record<CalendarItem['status'], string> = {
-      pendiente:  'bg-amber-100 text-amber-700 ring-2 ring-amber-300 ring-offset-1',
-      confirmada: 'bg-green-100 text-green-700 ring-2 ring-green-300 ring-offset-1',
-      cancelada:  'bg-slate-100 text-slate-600 ring-2 ring-slate-300 ring-offset-1',
-    };
-    return map[status];
+    return `${EVENTO_ESTADO_BADGE_CLASS[estado]} ring-2 ring-offset-1 ring-current/30`;
   }
 
   getModalHeaderColor(item: CalendarItem): string {
@@ -608,11 +624,11 @@ export class DayScheduleComponent {
     this.selectedItem.update(i => i ? { ...i, hitoEstado: estado } : null);
   }
 
-  setEventoStatus(status: CalendarItem['status']): void {
+  setEventoEstado(estado: EventoEstado): void {
     const item = this.selectedItem();
     if (!item) return;
-    this.eventoStatusChanged.emit({ id: item.id, status });
-    this.selectedItem.update(i => i ? { ...i, status } : null);
+    this.eventoStatusChanged.emit({ id: item.id, estado });
+    this.selectedItem.update(i => i ? { ...i, eventoEstado: estado } : null);
   }
 
   addAnnotation(): void {

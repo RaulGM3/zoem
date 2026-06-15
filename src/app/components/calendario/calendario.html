@@ -30,6 +30,7 @@
     [groupedEvents]="groupedEvents()"
     [hasSelectedDates]="selectedDates().size > 0"
     (hitoStatusChanged)="updateHitoEstado($event)"
+    (eventoStatusChanged)="updateEventoEstado($event)"
     (itemTimeChanged)="updateItemTime($event)"
     (itemColorChanged)="updateItemColor($event)"
   />

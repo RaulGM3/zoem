@@ -2,6 +2,7 @@ import { Component, OnInit, signal, computed, ChangeDetectionStrategy, inject } 
 import { Router } from '@angular/router';
 import { CasosService } from '../../core/services/casos.service';
 import { PlantillasService } from '../../core/services/plantillas.service';
+import { SearchService } from '../../core/services/search.service';
 import type { Caso, CasoEstado, CasoTipo, CreateCasoData } from '../../interfaces';
 import { CasosHeaderComponent } from './components/casos-header/casos-header';
 import { CasosStatsComponent } from './components/casos-stats/casos-stats';
@@ -25,8 +26,10 @@ export class CasosComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly casosService = inject(CasosService);
   private readonly plantillasService = inject(PlantillasService);
+  private readonly searchSvc = inject(SearchService);
 
-  readonly search = signal('');
+  /** Búsqueda centralizada en el header — scopeada a "casos". */
+  readonly search = this.searchSvc.termFor('casos');
   readonly filterEstado = signal('');
   readonly filterTipo = signal('');
   readonly showDrawer = signal(false);

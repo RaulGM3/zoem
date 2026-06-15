@@ -8,12 +8,10 @@
   />
 
   <app-casos-filter-bar
-    [search]="search()"
     [filterEstado]="filterEstado()"
     [filterTipo]="filterTipo()"
     [estados]="estados"
     [tipos]="tipos"
-    (searchChange)="search.set($event)"
     (filterEstadoChange)="filterEstado.set($event)"
     (filterTipoChange)="filterTipo.set($event)"
   />

@@ -19,6 +19,29 @@ export interface Hito {
   horaAgenda?: string;   // HH:mm — slot asignado en la agenda
   duracionAgenda?: number; // minutos
   calendarColor?: string | null;
+  estadoActualizadoPor?: string; // userId de quién cambió el estado por última vez
+  estadoActualizadoEn?: string;  // ISO datetime del último cambio de estado
+}
+
+/** Acciones auditables sobre un hito. */
+export type HitoActividadTipo = 'creado' | 'editado' | 'estado' | 'eliminado';
+
+/**
+ * Evento del feed de actividad de un hito: deja anotado QUIÉN hizo QUÉ y cuándo.
+ * Se guarda como colección plana (igual que los hitos) con `casoId` para filtrar,
+ * y se consume en tiempo real. `hitoTitulo` es un snapshot para que el evento siga
+ * siendo legible aunque el hito se elimine después.
+ */
+export interface HitoActividad {
+  id: string;
+  casoId: string;
+  hitoId: string;
+  hitoTitulo: string;
+  tipo: HitoActividadTipo;
+  autorId?: string;
+  estadoAnterior?: HitoEstado;
+  estadoNuevo?: HitoEstado;
+  createdAt: Timestamp;
 }
 
 export interface ResumenFinanciero {

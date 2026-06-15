@@ -34,14 +34,17 @@ export class ContactService {
   async loadContacts(): Promise<void> {
     this.isLoading.set(true);
     try {
+      const companyId = this.companyId;
+      console.log('[ContactService.loadContacts] companyId =', companyId);
       const q = query(
         collection(this.firestore, 'contacts'),
-        where('companyId', '==', this.companyId)
+        where('companyId', '==', companyId)
       );
       const snapshot = await getDocs(q);
+      console.log('[ContactService.loadContacts] docs encontrados =', snapshot.size);
       this.contacts.set(snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Contact));
-    } catch {
-      // No active company or Firestore error — leave contacts empty
+    } catch (err) {
+      console.error('[ContactService.loadContacts] ERROR (esto se estaba tragando el catch):', err);
     } finally {
       this.isLoading.set(false);
     }

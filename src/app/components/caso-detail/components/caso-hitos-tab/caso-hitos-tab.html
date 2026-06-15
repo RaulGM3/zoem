@@ -1,0 +1,103 @@
+<div class="space-y-4 max-w-2xl">
+
+  <!-- Progress -->
+  @if (hitos().length > 0) {
+    <div class="bg-white rounded-xl border border-slate-200 p-4">
+      <div class="flex items-center justify-between text-sm mb-2">
+        <span class="text-slate-600">Progreso general</span>
+        <span class="font-medium text-slate-800">{{ progress() }}%</span>
+      </div>
+      <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+        <div
+          class="h-full bg-violet-500 rounded-full transition-all"
+          [style.width.%]="progress()"
+        ></div>
+      </div>
+      <p class="text-xs text-slate-400 mt-1.5">
+        {{ completados() }} de {{ hitos().length }} completados
+      </p>
+    </div>
+  }
+
+  <!-- List -->
+  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    @if (hitos().length === 0) {
+      <div class="p-10 text-center text-slate-400 text-sm">
+        <p>No hay hitos definidos</p>
+        <p class="text-xs mt-1">Añade hitos para hacer seguimiento del caso</p>
+      </div>
+    } @else {
+      <ul class="divide-y divide-slate-100">
+        @for (hito of hitos(); track hito.id) {
+          <li class="p-4 flex items-start gap-3 group">
+            <button
+              (click)="toggle.emit(hito)"
+              [class]="getHitoEstadoColor(hito.estado)"
+              [attr.aria-label]="'Cambiar estado del hito, actual: ' + getHitoEstadoLabel(hito.estado)"
+              [attr.title]="getHitoEstadoLabel(hito.estado)"
+              class="mt-0.5 shrink-0"
+            >
+              <lucide-icon [img]="getHitoEstadoIcon(hito.estado)" class="w-5 h-5" />
+            </button>
+            <div class="flex-1 min-w-0">
+              <p [class]="'text-sm font-medium ' + (hito.estado === 'completado' ? 'line-through text-slate-400' : 'text-slate-800')">
+                {{ hito.titulo }}
+              </p>
+              @if (hito.descripcion) {
+                <p class="text-xs text-slate-400 mt-0.5">{{ hito.descripcion }}</p>
+              }
+              <div class="flex items-center gap-3 mt-1 text-xs text-slate-400">
+                @if (hito.fechaEstimada) {
+                  <span>{{ hito.fechaEstimada }}</span>
+                }
+                @if (hito.asignadoA) {
+                  <span>{{ getMemberName(hito.asignadoA) }}</span>
+                }
+                @if (hito.estadoActualizadoPor) {
+                  <span>{{ getHitoEstadoLabel(hito.estado) }} · por {{ getMemberName(hito.estadoActualizadoPor) }}</span>
+                }
+              </div>
+            </div>
+            <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button (click)="editHito.emit(hito)"
+                class="p-1 rounded hover:bg-slate-100"
+                aria-label="Editar hito">
+                <lucide-icon [img]="Edit2Icon" class="w-3.5 h-3.5 text-slate-400" />
+              </button>
+              <button (click)="deleteHito.emit(hito.id)"
+                class="p-1 rounded hover:bg-red-50"
+                aria-label="Eliminar hito">
+                <lucide-icon [img]="Trash2Icon" class="w-3.5 h-3.5 text-red-400" />
+              </button>
+            </div>
+          </li>
+        }
+      </ul>
+    }
+    <div class="p-3 border-t border-slate-100">
+      <button (click)="addHito.emit()"
+        class="w-full flex items-center justify-center gap-2 py-2 text-sm text-slate-500 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-colors">
+        <lucide-icon [img]="PlusIcon" class="w-4 h-4" />
+        Añadir hito
+      </button>
+    </div>
+  </div>
+
+  <!-- Feed de actividad: quién le dio a qué, en tiempo real -->
+  @if (actividad().length > 0) {
+    <div class="bg-white rounded-xl border border-slate-200 p-4">
+      <h3 class="text-sm font-medium text-slate-700 mb-3">Actividad</h3>
+      <ul class="space-y-3">
+        @for (act of actividad(); track act.id) {
+          <li class="flex items-start gap-3">
+            <span class="mt-1.5 w-2 h-2 rounded-full shrink-0" [class]="actividadDotClass(act)"></span>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm text-slate-700">{{ describeActividad(act) }}</p>
+              <p class="text-xs text-slate-400 mt-0.5">{{ actividadTiempo(act) }}</p>
+            </div>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+</div>

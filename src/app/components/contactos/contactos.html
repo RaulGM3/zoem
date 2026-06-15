@@ -51,18 +51,6 @@
     <div class="p-4">
       <!-- Filters -->
       <div class="mb-4 flex flex-col gap-3 sm:flex-row">
-        <div class="relative flex-1">
-          <lucide-icon [img]="SearchIcon" size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></lucide-icon>
-
-          <input
-            type="text"
-            placeholder="Buscar por nombre o email..."
-            [value]="search()"
-            (input)="search.set($any($event.target).value)"
-            class="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-44 pr-4 text-sm placeholder-slate-400 focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-100"
-            aria-label="Buscar contacto"
-          />
-        </div>
         <select (change)="filterStatus.set($any($event.target).value)"
           class="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-violet-300 focus:outline-none"
           aria-label="Filtrar por estado">

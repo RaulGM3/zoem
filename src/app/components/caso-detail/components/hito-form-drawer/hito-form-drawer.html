@@ -1,0 +1,60 @@
+@if (visible()) {
+  <div class="fixed inset-0 z-40 bg-black/30" (click)="closed.emit()" aria-hidden="true"></div>
+  <aside class="fixed right-0 top-0 h-full w-full max-w-sm bg-white shadow-2xl z-50 flex flex-col"
+    role="dialog" aria-modal="true" aria-labelledby="hito-drawer-title">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+      <h2 id="hito-drawer-title" class="text-base font-semibold text-slate-800">
+        {{ editingHito() ? 'Editar hito' : 'Nuevo hito' }}
+      </h2>
+      <button (click)="closed.emit()" class="p-1.5 rounded-lg hover:bg-slate-100" aria-label="Cerrar">
+        <lucide-icon [img]="XIcon" class="w-4 h-4 text-slate-500" />
+      </button>
+    </div>
+    <div class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+      <div class="space-y-1">
+        <label class="text-sm font-medium text-slate-700">Título <span class="text-red-500">*</span></label>
+        <input type="text" [value]="formTitulo()" (input)="formTitulo.set($any($event.target).value)"
+          class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+      </div>
+      <div class="space-y-1">
+        <label class="text-sm font-medium text-slate-700">Descripción</label>
+        <textarea rows="2" [value]="formDescripcion()" (input)="formDescripcion.set($any($event.target).value)"
+          class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none"></textarea>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="space-y-1">
+          <label class="text-sm font-medium text-slate-700">Estado</label>
+          <select [value]="formEstado()" (change)="formEstado.set($any($event.target).value)"
+            class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
+            @for (e of estados; track e) { <option [value]="e">{{ estadoLabel[e] }}</option> }
+          </select>
+        </div>
+        <div class="space-y-1">
+          <label class="text-sm font-medium text-slate-700">Fecha estimada</label>
+          <input type="date" [value]="formFechaEstimada()" (input)="formFechaEstimada.set($any($event.target).value)"
+            class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+        </div>
+      </div>
+      <div class="space-y-1">
+        <label class="text-sm font-medium text-slate-700">Responsable</label>
+        <select [value]="formAsignadoA()" (change)="formAsignadoA.set($any($event.target).value)"
+          class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
+          <option value="">Sin asignar</option>
+          @for (m of members(); track m.id) {
+            <option [value]="m.userId">{{ m.nombre }}{{ m.apellido ? ' ' + m.apellido : '' }}</option>
+          }
+        </select>
+      </div>
+    </div>
+    <div class="px-6 py-4 border-t border-slate-200 flex gap-3 justify-end">
+      <button (click)="closed.emit()"
+        class="px-4 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">
+        Cancelar
+      </button>
+      <button (click)="submit()" [disabled]="saving() || !formTitulo().trim()"
+        class="px-4 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50">
+        {{ saving() ? 'Guardando...' : (editingHito() ? 'Guardar' : 'Añadir') }}
+      </button>
+    </div>
+  </aside>
+}

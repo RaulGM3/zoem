@@ -2,6 +2,7 @@ import { inject, Injectable, signal } from '@angular/core';
 import {
   Firestore,
   collection,
+  collectionData,
   doc,
   addDoc,
   updateDoc,
@@ -12,6 +13,7 @@ import {
   serverTimestamp,
   deleteField,
 } from '@angular/fire/firestore';
+import type { Observable } from 'rxjs';
 import { CompanyService } from './company.service';
 import { UserSyncService } from './user-sync.service';
 import type { Evento, CreateEventoData } from '../../interfaces';
@@ -39,6 +41,16 @@ export class EventosService {
 
   private get eventosRef() {
     return collection(this.firestore, 'companies', this.companyId, 'eventos');
+  }
+
+  /**
+   * Stream real-time de los eventos de la empresa. A diferencia de `loadEventos`
+   * (disparo único con getDocs), esto emite ante cada cambio en Firestore, así el
+   * calendario refleja altas/ediciones/estados sin recargar.
+   */
+  eventosStream(): Observable<Evento[]> {
+    const q = query(this.eventosRef, orderBy('fecha'));
+    return collectionData(q, { idField: 'id' }) as Observable<Evento[]>;
   }
 
   async loadEventos(): Promise<void> {

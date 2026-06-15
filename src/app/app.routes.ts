@@ -76,6 +76,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'documentos/:id',
+        loadComponent: () =>
+          import('./components/doc-template-detail/doc-template-detail').then(
+            (m) => m.DocTemplateDetailComponent
+          ),
+      },
+      {
         path: 'tesoreria',
         loadComponent: () =>
           import('./components/tesoreria/tesoreria').then((m) => m.TesoreriaComponent),

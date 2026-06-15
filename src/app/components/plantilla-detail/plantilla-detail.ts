@@ -7,10 +7,12 @@ import {
   LucideAngularModule,
   ArrowLeft, Save, GripVertical, X, Trash2, Pencil,
   FolderPlus, FilePlus, Folder, FolderOpen, Check, File, ArrowLeft as ArrowLeftSmall,
+  Link2, Search,
 } from 'lucide-angular';
 import { PlantillasService } from '../../core/services/plantillas.service';
 import { PlantillaFolderService } from '../../core/services/plantilla-folder.service';
 import { PlantillaFileService } from '../../core/services/plantilla-file.service';
+import { DocTemplateService } from '../../core/services/doc-template.service';
 import { UsersService } from '../../core/services/users';
 import {
   CasoPlantilla, CasoTipo, HitoPlantilla, PartidaCosto, TipoCosto,
@@ -43,6 +45,7 @@ export class PlantillaDetailComponent implements OnInit {
   private readonly plantillasService = inject(PlantillasService);
   readonly folderService = inject(PlantillaFolderService);
   readonly fileService = inject(PlantillaFileService);
+  readonly docTemplateService = inject(DocTemplateService);
   private readonly usersService = inject(UsersService);
 
   readonly ArrowLeftIcon = ArrowLeft;
@@ -58,6 +61,8 @@ export class PlantillaDetailComponent implements OnInit {
   readonly CheckIcon = Check;
   readonly FileIcon = File;
   readonly ArrowLeftSmallIcon = ArrowLeftSmall;
+  readonly Link2Icon = Link2;
+  readonly SearchIcon = Search;
 
   readonly tipos = TIPOS_CASO;
   readonly tiposCosto = TIPOS_COSTO;
@@ -120,6 +125,15 @@ export class PlantillaDetailComponent implements OnInit {
   renameValue = signal('');
   deletingFolderId = signal<string | null>(null);
   deletingFileId = signal<string | null>(null);
+  linkingFileId = signal<string | null>(null);
+  templateSearch = signal('');
+
+  readonly filteredDocTemplates = computed(() => {
+    const q = this.templateSearch().toLowerCase();
+    return this.docTemplateService.templates().filter(t =>
+      !q || t.name.toLowerCase().includes(q)
+    );
+  });
 
   readonly docCurrentFolders = computed(() =>
     this.folderService.folders().filter(f => f.parentId === this.docCurrentFolderId())
@@ -146,6 +160,7 @@ export class PlantillaDetailComponent implements OnInit {
 
     this.folderService.loadFolders(id);
     this.fileService.loadFiles(id);
+    void this.docTemplateService.loadTemplates();
 
     const m = this.usersService.members();
     this.hitoAsignado.set(m.length === 1 ? m[0].userId : '');
@@ -464,5 +479,25 @@ export class PlantillaDetailComponent implements OnInit {
   async deleteFile(file: PlantillaFile): Promise<void> {
     await this.fileService.deleteFile(file.id, this.plantillaId);
     this.deletingFileId.set(null);
+  }
+
+  getDocTemplateName(docTemplateId: string): string {
+    return this.docTemplateService.templates().find(t => t.id === docTemplateId)?.name ?? 'Plantilla';
+  }
+
+  openLinkPicker(file: PlantillaFile): void {
+    this.templateSearch.set('');
+    this.linkingFileId.set(file.id);
+  }
+
+  async linkTemplate(docTemplateId: string): Promise<void> {
+    const fileId = this.linkingFileId();
+    if (!fileId) return;
+    await this.fileService.linkTemplate(fileId, docTemplateId);
+    this.linkingFileId.set(null);
+  }
+
+  async unlinkTemplate(file: PlantillaFile): Promise<void> {
+    await this.fileService.linkTemplate(file.id, null);
   }
 }

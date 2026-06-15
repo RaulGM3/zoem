@@ -5,6 +5,7 @@ import {
   doc,
   getDocs,
   addDoc,
+  updateDoc,
   deleteDoc,
   query,
   where,
@@ -58,6 +59,16 @@ export class PlantillaFileService {
       updatedAt: serverTimestamp(),
     });
     await this.loadFiles(plantillaId);
+  }
+
+  async linkTemplate(fileId: string, docTemplateId: string | null): Promise<void> {
+    await updateDoc(doc(this.firestore, 'plantilla_files', fileId), {
+      docTemplateId,
+      updatedAt: serverTimestamp(),
+    });
+    this.files.update((list) =>
+      list.map((f) => (f.id === fileId ? { ...f, docTemplateId } : f))
+    );
   }
 
   async deleteFile(fileId: string, plantillaId: string): Promise<void> {

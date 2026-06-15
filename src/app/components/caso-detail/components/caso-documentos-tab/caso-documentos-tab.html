@@ -1,0 +1,257 @@
+<div class="space-y-4 max-w-3xl">
+
+  @if (loading()) {
+    <div class="flex items-center justify-center h-32 text-slate-400 text-sm">
+      <lucide-icon [img]="LoaderIcon" class="w-4 h-4 mr-2 animate-spin" />
+      Cargando documentos...
+    </div>
+  } @else {
+
+    <!-- Progress header (global, todos los slots requeridos del caso) -->
+    @let p = progress();
+    @if (p) {
+      <div class="bg-white rounded-xl border border-slate-200 p-4">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm font-medium text-slate-700">Documentos requeridos</span>
+          <span class="text-sm text-slate-500">
+            <span class="font-semibold text-slate-800">{{ p.subidos }}</span> de {{ p.total }} completados
+          </span>
+        </div>
+        <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+          <div
+            class="h-full bg-violet-500 rounded-full transition-all duration-300"
+            [style.width.%]="(p.subidos / p.total) * 100"
+          ></div>
+        </div>
+      </div>
+    }
+
+    <!-- Toolbar: breadcrumb + acciones -->
+    <div class="flex items-center gap-2 flex-wrap">
+      <nav class="flex items-center gap-1 text-sm flex-1 min-w-0" aria-label="Ruta de carpetas">
+        <button
+          (click)="navigateToRoot()"
+          class="px-1.5 py-0.5 rounded hover:bg-slate-100 text-slate-500 hover:text-slate-700 shrink-0"
+        >
+          Documentos
+        </button>
+        @for (folder of folderPath(); track folder.id; let i = $index) {
+          <lucide-icon [img]="ChevronRightIcon" class="w-3.5 h-3.5 text-slate-300 shrink-0" />
+          <button
+            (click)="navigateToBreadcrumb(i)"
+            class="px-1.5 py-0.5 rounded hover:bg-slate-100 text-slate-600 hover:text-slate-800 truncate"
+          >
+            {{ folder.name }}
+          </button>
+        }
+      </nav>
+
+      <div class="flex items-center gap-2 shrink-0">
+        <button
+          (click)="startCreateFolder()"
+          [disabled]="busy()"
+          class="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+        >
+          <lucide-icon [img]="FolderPlusIcon" class="w-3.5 h-3.5" />
+          Carpeta
+        </button>
+        <button
+          (click)="triggerFreeUpload()"
+          [disabled]="busy()"
+          class="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50"
+        >
+          @if (busy()) {
+            <lucide-icon [img]="LoaderIcon" class="w-3.5 h-3.5 animate-spin" />
+          } @else {
+            <lucide-icon [img]="UploadIcon" class="w-3.5 h-3.5" />
+          }
+          Subir archivo
+        </button>
+        <input type="file" id="upload-free" class="hidden" (change)="onFreeFileSelected($event)" aria-hidden="true" />
+      </div>
+    </div>
+
+    <!-- Nueva carpeta inline -->
+    @if (isCreatingFolder()) {
+      <div class="flex items-center gap-2 bg-white rounded-xl border border-violet-200 p-3">
+        <lucide-icon [img]="FolderIcon" class="w-4 h-4 text-violet-400 shrink-0" />
+        <input
+          type="text"
+          [value]="newFolderName()"
+          (input)="newFolderName.set($any($event.target).value)"
+          (keyup.enter)="confirmCreateFolder()"
+          (keyup.escape)="cancelCreateFolder()"
+          placeholder="Nombre de la carpeta"
+          class="flex-1 text-sm bg-transparent outline-none text-slate-700 placeholder:text-slate-300"
+          aria-label="Nombre de la nueva carpeta"
+        />
+        <button (click)="confirmCreateFolder()" class="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-500" aria-label="Crear carpeta">
+          <lucide-icon [img]="CheckIcon" class="w-4 h-4" />
+        </button>
+        <button (click)="cancelCreateFolder()" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400" aria-label="Cancelar">
+          <lucide-icon [img]="XIcon" class="w-4 h-4" />
+        </button>
+      </div>
+    }
+
+    <!-- Contenido del nivel actual -->
+    <div class="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
+
+      @if (isEmptyHere() && !isCreatingFolder()) {
+        <div class="flex flex-col items-center gap-3 text-center p-10">
+          <lucide-icon [img]="FolderOpenIcon" class="w-10 h-10 text-slate-300" />
+          <p class="text-slate-500 text-sm font-medium">Carpeta vacía</p>
+          <p class="text-slate-400 text-xs">Crea una carpeta o sube un archivo para empezar.</p>
+        </div>
+      }
+
+      <!-- Carpetas -->
+      @for (folder of currentFolders(); track folder.id) {
+        <div class="flex items-center gap-3 px-4 py-3 group">
+          <button (click)="openFolder(folder)" class="flex items-center gap-3 flex-1 min-w-0 text-left">
+            <lucide-icon [img]="FolderIcon" class="w-5 h-5 text-amber-400 shrink-0" />
+            <span class="text-sm text-slate-700 font-medium truncate">{{ folder.name }}</span>
+          </button>
+          @if (confirmingDeleteFolderId() === folder.id) {
+            <span class="text-xs text-slate-400">¿Borrar y todo su contenido?</span>
+            <button (click)="confirmDeleteFolder(folder.id)" class="p-1.5 rounded-lg hover:bg-red-50 text-red-500" aria-label="Confirmar borrado">
+              <lucide-icon [img]="CheckIcon" class="w-4 h-4" />
+            </button>
+            <button (click)="confirmingDeleteFolderId.set(null)" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400" aria-label="Cancelar">
+              <lucide-icon [img]="XIcon" class="w-4 h-4" />
+            </button>
+          } @else {
+            <button
+              (click)="requestDeleteFolder(folder.id)"
+              class="p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100"
+              aria-label="Eliminar carpeta"
+            >
+              <lucide-icon [img]="Trash2Icon" class="w-4 h-4" />
+            </button>
+          }
+        </div>
+      }
+
+      <!-- Slots requeridos (de la plantilla) en este nivel -->
+      @for (slot of currentSlots(); track slot.id) {
+        <div class="flex items-center gap-3 px-4 py-3">
+          <lucide-icon
+            [img]="slot.status === 'subido' ? CheckCircle2Icon : FileTextIcon"
+            [class]="'w-5 h-5 shrink-0 ' + (slot.status === 'subido' ? 'text-emerald-500' : 'text-slate-300')"
+          />
+          <div class="flex-1 min-w-0">
+            <p class="text-sm text-slate-700 font-medium truncate">{{ slot.name }}</p>
+            @if (slot.description) {
+              <p class="text-xs text-slate-400 truncate">{{ slot.description }}</p>
+            }
+          </div>
+
+          <div class="flex items-center gap-2 shrink-0">
+            @if (slot.status === 'subido') {
+              <span class="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 font-medium">Subido</span>
+              @if (slot.downloadUrl) {
+                <button
+                  (click)="openPreview({ name: slot.name, downloadUrl: slot.downloadUrl!, mimeType: slot.mimeType })"
+                  class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+                  aria-label="Previsualizar"
+                >
+                  <lucide-icon [img]="EyeIcon" class="w-4 h-4" />
+                </button>
+              }
+              <button
+                (click)="removeSlot.emit(slot)"
+                [disabled]="uploadingSlotId() === slot.id"
+                class="p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400 disabled:opacity-50"
+                aria-label="Quitar documento"
+              >
+                @if (uploadingSlotId() === slot.id) {
+                  <lucide-icon [img]="LoaderIcon" class="w-4 h-4 animate-spin" />
+                } @else {
+                  <lucide-icon [img]="Trash2Icon" class="w-4 h-4" />
+                }
+              </button>
+            } @else {
+              <span class="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-700 font-medium">Pendiente</span>
+              <button
+                (click)="triggerSlotUpload(slot.id)"
+                [disabled]="uploadingSlotId() === slot.id"
+                class="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50"
+              >
+                @if (uploadingSlotId() === slot.id) {
+                  <lucide-icon [img]="LoaderIcon" class="w-3.5 h-3.5 animate-spin" />
+                  Subiendo...
+                } @else {
+                  <lucide-icon [img]="UploadIcon" class="w-3.5 h-3.5" />
+                  Subir
+                }
+              </button>
+              <input
+                type="file"
+                [id]="'upload-slot-' + slot.id"
+                class="hidden"
+                (change)="onSlotFileSelected($event, slot)"
+                aria-hidden="true"
+              />
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Archivos libres en este nivel -->
+      @for (file of currentFiles(); track file.id) {
+        <div class="flex items-center gap-3 px-4 py-3 group">
+          <lucide-icon [img]="FileTextIcon" class="w-5 h-5 shrink-0 text-sky-400" />
+          <div class="flex-1 min-w-0">
+            <p class="text-sm text-slate-700 font-medium truncate">{{ file.name }}</p>
+            @if (file.sizeBytes) {
+              <p class="text-xs text-slate-400">{{ formatFileSize(file.sizeBytes) }}</p>
+            }
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button
+              (click)="openPreview({ name: file.name, downloadUrl: file.downloadUrl, mimeType: file.mimeType })"
+              class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+              aria-label="Previsualizar"
+            >
+              <lucide-icon [img]="EyeIcon" class="w-4 h-4" />
+            </button>
+            <a
+              [href]="file.downloadUrl"
+              target="_blank"
+              rel="noopener"
+              download
+              class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+              aria-label="Descargar"
+            >
+              <lucide-icon [img]="DownloadIcon" class="w-4 h-4" />
+            </a>
+            @if (confirmingDeleteFileId() === file.id) {
+              <button (click)="confirmDeleteFile(file)" class="p-1.5 rounded-lg hover:bg-red-50 text-red-500" aria-label="Confirmar borrado">
+                <lucide-icon [img]="CheckIcon" class="w-4 h-4" />
+              </button>
+              <button (click)="confirmingDeleteFileId.set(null)" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400" aria-label="Cancelar">
+                <lucide-icon [img]="XIcon" class="w-4 h-4" />
+              </button>
+            } @else {
+              <button
+                (click)="requestDeleteFile(file.id)"
+                class="p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100"
+                aria-label="Eliminar archivo"
+              >
+                <lucide-icon [img]="Trash2Icon" class="w-4 h-4" />
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+    </div>
+  }
+
+  <!-- Modal de previsualización -->
+  @let pv = preview();
+  @if (pv) {
+    <app-caso-doc-preview [docu]="pv" (close)="closePreview()" />
+  }
+
+</div>

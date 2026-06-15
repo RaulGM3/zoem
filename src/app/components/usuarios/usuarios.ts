@@ -1,6 +1,6 @@
 import { Component, signal, computed, ChangeDetectionStrategy, inject, OnInit, OnDestroy } from '@angular/core';
 import {
-  LucideAngularModule, UserCog, Users, Shield, Plus, Search,
+  LucideAngularModule, UserCog, Users, Shield, Plus,
   Mail, MoreHorizontal, CheckCircle2, Clock, XCircle, Trash2,
 } from 'lucide-angular';
 import { Timestamp } from '@angular/fire/firestore';
@@ -9,6 +9,7 @@ import { UsersService } from '../../core/services/users';
 import { PermissionService } from '../../core/services/permission.service';
 import { InvitationService } from '../../core/services/invitation.service';
 import { CompanyService } from '../../core/services/company.service';
+import { SearchService } from '../../core/services/search.service';
 import { FIRM_ROLE_COLORS } from '../../interfaces/member';
 import type { CompanyInvitation } from '../../interfaces/invitation';
 import { InviteDrawerComponent, type InviteFormData } from './components/invite-drawer/invite-drawer';
@@ -33,7 +34,6 @@ export class UsuariosComponent implements OnInit, OnDestroy {
   readonly UsersIcon = Users;
   readonly ShieldIcon = Shield;
   readonly PlusIcon = Plus;
-  readonly SearchIcon = Search;
   readonly MailIcon = Mail;
   readonly MoreHorizontalIcon = MoreHorizontal;
   readonly CheckCircle2Icon = CheckCircle2;
@@ -45,11 +45,13 @@ export class UsuariosComponent implements OnInit, OnDestroy {
   private readonly permissionService = inject(PermissionService);
   private readonly invitationService = inject(InvitationService);
   private readonly companyService = inject(CompanyService);
+  private readonly searchSvc = inject(SearchService);
 
   private invitationsSub?: Subscription;
 
   activeTab = signal<UsuariosTab>('usuarios');
-  search = signal('');
+  /** Búsqueda centralizada en el header — scopeada a "personal". */
+  readonly search = this.searchSvc.termFor('personal');
   actividad = ACTIVIDAD;
 
   readonly isLoading = this.usersService.isLoading;
@@ -66,7 +68,9 @@ export class UsuariosComponent implements OnInit, OnDestroy {
     const q = this.search().toLowerCase();
     if (!q) return this.usersService.members();
     return this.usersService.members().filter(u =>
-      u.nombre.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+      u.nombre.toLowerCase().includes(q)
+      || u.email.toLowerCase().includes(q)
+      || (u.telefono ?? '').toLowerCase().includes(q)
     );
   });
 

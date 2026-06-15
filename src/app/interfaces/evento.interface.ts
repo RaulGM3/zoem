@@ -3,6 +3,28 @@ import { Timestamp } from '@angular/fire/firestore';
 export type EventoPrioridad = 'alta' | 'media' | 'baja' | 'ninguna';
 export type EventoRecurrencia = 'ninguna' | 'diaria' | 'semanal' | 'mensual' | 'anual';
 export type EventoColor = 'rojo' | 'naranja' | 'amarillo' | 'verde' | 'azul' | 'violeta' | 'gris';
+export type EventoEstado = 'confirmado' | 'tentativo' | 'en_progreso' | 'completado' | 'cancelado';
+
+/** Fuente de verdad de presentación para el estado de un Evento (estilo Google Calendar). */
+export const EVENTO_ESTADOS: readonly EventoEstado[] = [
+  'confirmado', 'tentativo', 'en_progreso', 'completado', 'cancelado',
+];
+
+export const EVENTO_ESTADO_LABEL: Record<EventoEstado, string> = {
+  confirmado: 'Confirmado',
+  tentativo: 'Tentativo',
+  en_progreso: 'En proceso',
+  completado: 'Completado',
+  cancelado: 'Cancelado',
+};
+
+export const EVENTO_ESTADO_BADGE_CLASS: Record<EventoEstado, string> = {
+  confirmado: 'bg-emerald-100 text-emerald-700',
+  tentativo: 'bg-amber-100 text-amber-700',
+  en_progreso: 'bg-blue-100 text-blue-700',
+  completado: 'bg-green-100 text-green-700',
+  cancelado: 'bg-slate-100 text-slate-500',
+};
 
 export const EVENTO_COLORS: Record<EventoColor, { label: string; bg: string; text: string; dot: string; border: string }> = {
   rojo:     { label: 'Rojo',     bg: 'bg-red-100',    text: 'text-red-700',    dot: 'bg-red-500',    border: 'border-l-red-500' },
@@ -40,6 +62,7 @@ export interface Evento {
   horaInicio?: string; // HH:mm
   horaFin?: string;    // HH:mm
   todoDia: boolean;
+  estado?: EventoEstado;
   recurrencia: EventoRecurrencia;
   prioridad: EventoPrioridad;
   color: EventoColor;

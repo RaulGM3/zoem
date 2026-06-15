@@ -4,22 +4,16 @@ import {
   Calendar, Phone, Users, FileText, Bell,
 } from 'lucide-angular';
 import type { CalendarItem, EventGroup } from '../../calendario.types';
-
-type HitoEstado = NonNullable<CalendarItem['hitoEstado']>;
-
-const HITO_ESTADO_LABEL: Record<HitoEstado, string> = {
-  pendiente: 'Pendiente',
-  en_progreso: 'En proceso',
-  completado: 'Completado',
-  cancelado: 'Cancelado',
-};
-
-const HITO_ESTADO_CLASS: Record<HitoEstado, string> = {
-  pendiente: 'bg-amber-100 text-amber-700',
-  en_progreso: 'bg-blue-100 text-blue-700',
-  completado: 'bg-green-100 text-green-700',
-  cancelado: 'bg-slate-100 text-slate-500',
-};
+import type { HitoEstado } from '../../../../interfaces';
+import {
+  HITO_ESTADO_LABEL,
+  HITO_ESTADO_BADGE_CLASS,
+  HITO_OVERDUE_LABEL,
+  HITO_OVERDUE_BADGE_CLASS,
+  nextHitoEstado,
+  prevHitoEstado,
+  isHitoOverdue,
+} from '../../../../core/hitos/hito-estado';
 
 function todayStr(): string {
   const d = new Date();
@@ -45,31 +39,27 @@ export class CalendarEventListComponent {
   private readonly today = todayStr();
 
   isOverdue(event: CalendarItem): boolean {
-    const estado = event.hitoEstado;
-    if (!estado || estado === 'completado' || estado === 'cancelado') return false;
-    return event.date < this.today;
+    return isHitoOverdue(event.hitoEstado, event.date, this.today);
   }
 
   getHitoEstadoLabel(event: CalendarItem): string {
-    if (this.isOverdue(event)) return 'Vencido';
+    if (this.isOverdue(event)) return HITO_OVERDUE_LABEL;
     return HITO_ESTADO_LABEL[event.hitoEstado!] ?? event.hitoEstado!;
   }
 
   getHitoEstadoClass(event: CalendarItem): string {
-    if (this.isOverdue(event)) return 'bg-red-100 text-red-700';
-    return HITO_ESTADO_CLASS[event.hitoEstado!] ?? 'bg-slate-100 text-slate-600';
+    if (this.isOverdue(event)) return HITO_OVERDUE_BADGE_CLASS;
+    return HITO_ESTADO_BADGE_CLASS[event.hitoEstado!] ?? 'bg-slate-100 text-slate-600';
   }
 
   advanceHito(event: CalendarItem): void {
     if (!event.casoId || !event.hitoEstado || event.hitoEstado === 'completado') return;
-    const next: HitoEstado = event.hitoEstado === 'pendiente' ? 'en_progreso' : 'completado';
-    this.hitoStatusChanged.emit({ id: event.id, casoId: event.casoId, estado: next });
+    this.hitoStatusChanged.emit({ id: event.id, casoId: event.casoId, estado: nextHitoEstado(event.hitoEstado) });
   }
 
   revertHito(event: CalendarItem): void {
     if (!event.casoId || !event.hitoEstado || event.hitoEstado === 'pendiente') return;
-    const prev: HitoEstado = event.hitoEstado === 'completado' ? 'en_progreso' : 'pendiente';
-    this.hitoStatusChanged.emit({ id: event.id, casoId: event.casoId, estado: prev });
+    this.hitoStatusChanged.emit({ id: event.id, casoId: event.casoId, estado: prevHitoEstado(event.hitoEstado) });
   }
 
   getTypeIcon(type: string): LucideIconData {

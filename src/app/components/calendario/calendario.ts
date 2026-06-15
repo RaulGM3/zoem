@@ -1,11 +1,16 @@
 import {
-  Component, OnInit, signal, computed,
+  Component, signal, computed,
   ChangeDetectionStrategy, inject, viewChild,
 } from '@angular/core';
+import { toSignal, toObservable } from '@angular/core/rxjs-interop';
+import { combineLatest, filter, map, switchMap } from 'rxjs';
 import { LucideAngularModule, Plus } from 'lucide-angular';
 import { CasosService } from '../../core/services/casos.service';
+import { CompanyService } from '../../core/services/company.service';
 import { EventosService } from '../../core/services/eventos.service';
-import type { CreateEventoData, Evento, Hito, HitoEstado } from '../../interfaces';
+import { UserSyncService } from '../../core/services/user-sync.service';
+import { HITO_ESTADO_CALENDAR_STATUS, stampEstadoChange } from '../../core/hitos/hito-estado';
+import type { CreateEventoData, Evento, EventoColor, EventoEstado, Hito, HitoEstado } from '../../interfaces';
 import type { CalendarItem, EventGroup, ViewMode, WeekDay } from './calendario.types';
 import { CalendarNavComponent } from './components/calendar-nav/calendar-nav';
 import { DayScheduleComponent, type ItemTimeChange } from './components/day-schedule/day-schedule';
@@ -23,13 +28,31 @@ function minutesToTime(totalMinutes: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-const DAY_NAMES = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do'];
-const STATUS_MAP: Record<HitoEstado, CalendarItem['status']> = {
-  pendiente: 'pendiente',
-  en_progreso: 'pendiente',
+/** Color intrínseco del evento (EventoColor) → paleta del calendario (ItemColor). */
+const EVENTO_COLOR_TO_ITEM: Record<EventoColor, ItemColor> = {
+  rojo: 'red',
+  naranja: 'amber',
+  amarillo: 'amber',
+  verde: 'green',
+  azul: 'blue',
+  violeta: 'violet',
+  gris: 'slate',
+};
+
+function mapEventoColor(color: EventoColor | undefined): ItemColor {
+  return color ? EVENTO_COLOR_TO_ITEM[color] : 'slate';
+}
+
+/** Estado del evento → status genérico del CalendarItem. */
+const EVENTO_ESTADO_TO_STATUS: Record<EventoEstado, CalendarItem['status']> = {
+  confirmado: 'confirmada',
   completado: 'confirmada',
+  tentativo: 'pendiente',
+  en_progreso: 'pendiente',
   cancelado: 'cancelada',
 };
+
+const DAY_NAMES = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do'];
 
 function localDateStr(d: Date): string {
   const y = d.getFullYear();
@@ -53,9 +76,11 @@ function mondayOf(d: Date): string {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block h-full' },
 })
-export class CalendarioComponent implements OnInit {
+export class CalendarioComponent {
   private readonly casosService = inject(CasosService);
+  private readonly companyService = inject(CompanyService);
   private readonly eventosService = inject(EventosService);
+  private readonly userSync = inject(UserSyncService);
   private readonly nav = viewChild(CalendarNavComponent);
 
   readonly PlusIcon = Plus;
@@ -65,7 +90,32 @@ export class CalendarioComponent implements OnInit {
   readonly showDrawer = signal(false);
   readonly saving = signal(false);
 
-  allItems = signal<CalendarItem[]>([]);
+  /**
+   * Read model único del calendario: stream real-time de Firestore (hitos +
+   * eventos) combinado y mapeado a CalendarItem. Es la ÚNICA fuente de verdad —
+   * las mutaciones solo escriben en Firestore y el stream refleja el cambio.
+   * No hay actualizaciones optimistas manuales que mantener en sync.
+   */
+  readonly allItems = toSignal(
+    toObservable(this.companyService.activeCompany).pipe(
+      // Espera a que haya empresa activa; re-suscribe si el usuario cambia de empresa.
+      filter(company => company !== null),
+      switchMap(() =>
+        combineLatest([
+          this.casosService.hitosParaCalendarioStream(),
+          this.eventosService.eventosStream(),
+        ]),
+      ),
+      map(([hitos, eventos]) => [
+        ...hitos
+          .filter(h => h.estado !== 'cancelado' && h.fechaEstimada)
+          .map(h => this.hitoToItem(h)),
+        ...eventos.map(e => this.eventoToItem(e)),
+      ]),
+    ),
+    { initialValue: [] as CalendarItem[] },
+  );
+
   currentWeekStart = signal<string>(mondayOf(new Date()));
   selectedDates = signal<Set<string>>(new Set([localDateStr(new Date())]));
   viewMode = signal<ViewMode>('week');
@@ -138,22 +188,6 @@ export class CalendarioComponent implements OnInit {
       .map(([date, items]) => ({ date, items, label: this.formatDateLabel(date) }));
   });
 
-  async ngOnInit(): Promise<void> {
-    const [hitos] = await Promise.all([
-      this.casosService.getHitosParaCalendario(),
-      this.eventosService.loadEventos(),
-    ]);
-
-    const hitoItems = hitos
-      .filter(h => h.estado !== 'cancelado' && h.fechaEstimada)
-      .map(h => this.hitoToItem(h));
-
-    const eventoItems = this.eventosService.eventos()
-      .map(e => this.eventoToItem(e));
-
-    this.allItems.set([...hitoItems, ...eventoItems]);
-  }
-
   toggleDate(date: string): void {
     this.selectedDates.update(set => {
       const next = new Set(set);
@@ -207,22 +241,20 @@ export class CalendarioComponent implements OnInit {
   }
 
   async updateHitoEstado(event: { id: string; casoId: string; estado: HitoEstado }): Promise<void> {
-    await this.casosService.updateHito(event.casoId, event.id, { estado: event.estado });
-    this.allItems.update(items =>
-      items.map(item =>
-        item.id === event.id
-          ? { ...item, hitoEstado: event.estado, status: STATUS_MAP[event.estado] }
-          : item
-      )
-    );
+    // Solo persiste: el stream real-time refleja el cambio en el read model.
+    await this.casosService.updateHito(event.casoId, event.id, {
+      estado: event.estado,
+      ...stampEstadoChange(this.userSync.currentUser()?.id),
+    });
+  }
+
+  async updateEventoEstado(event: { id: string; estado: EventoEstado }): Promise<void> {
+    await this.eventosService.updateEvento(event.id, { estado: event.estado });
   }
 
   async updateItemTime(event: ItemTimeChange): Promise<void> {
     if (event.horaInicio === null) {
       // Desagendar
-      this.allItems.update(items =>
-        items.map(i => i.id === event.id ? { ...i, horaInicio: undefined, duracionMinutos: undefined } : i)
-      );
       if (event.itemType === 'hito') {
         await this.casosService.clearHitoSchedule(event.id);
       } else {
@@ -230,18 +262,6 @@ export class CalendarioComponent implements OnInit {
       }
     } else {
       // Programar / actualizar (con posible cambio de día)
-      this.allItems.update(items =>
-        items.map(i =>
-          i.id === event.id
-            ? {
-                ...i,
-                horaInicio: event.horaInicio!,
-                duracionMinutos: event.duracionMinutos!,
-                ...(event.date ? { date: event.date } : {}),
-              }
-            : i
-        )
-      );
       if (event.itemType === 'hito') {
         await this.casosService.updateHito(event.casoId ?? '', event.id, {
           horaAgenda: event.horaInicio!,
@@ -263,8 +283,7 @@ export class CalendarioComponent implements OnInit {
   async onSaveEvento(data: CreateEventoData): Promise<void> {
     this.saving.set(true);
     try {
-      const nuevo = await this.eventosService.createEvento(data);
-      this.allItems.update(items => [...items, this.eventoToItem(nuevo)]);
+      await this.eventosService.createEvento(data);
       this.showDrawer.set(false);
     } finally {
       this.saving.set(false);
@@ -274,9 +293,6 @@ export class CalendarioComponent implements OnInit {
   async updateItemColor({ id, color }: { id: string; color: ItemColor | null }): Promise<void> {
     const item = this.allItems().find(i => i.id === id);
     if (!item) return;
-    this.allItems.update(items =>
-      items.map(i => i.id === id ? { ...i, color: color ?? undefined } : i)
-    );
     if (item.hitoEstado !== undefined && item.casoId) {
       await this.casosService.updateHito(item.casoId, id, { calendarColor: color });
     } else {
@@ -285,19 +301,24 @@ export class CalendarioComponent implements OnInit {
   }
 
   private eventoToItem(e: Evento): CalendarItem {
+    const estado: EventoEstado = e.estado ?? 'confirmado';
+    // El color del evento elegido al crearlo (EventoColor) es la base; el
+    // calendarColor — override específico del calendario — gana si existe.
+    const color = (e.calendarColor as ItemColor | undefined) ?? mapEventoColor(e.color);
     return {
       id: e.id,
       title: e.titulo,
       client: e.todoDia || !e.horaInicio ? 'Todo el día' : e.horaInicio,
       type: 'reunion',
       date: e.fecha,
-      status: 'confirmada',
+      status: EVENTO_ESTADO_TO_STATUS[estado],
+      eventoEstado: estado,
+      color,
       ...(e.descripcion ? { description: e.descripcion } : {}),
       ...(!e.todoDia && e.horaInicio ? { horaInicio: e.horaInicio } : {}),
       ...(!e.todoDia && e.horaInicio && e.horaFin
         ? { duracionMinutos: timeToMinutes(e.horaFin) - timeToMinutes(e.horaInicio) }
         : {}),
-      ...(e.calendarColor ? { color: e.calendarColor as ItemColor } : {}),
     };
   }
 
@@ -308,7 +329,7 @@ export class CalendarioComponent implements OnInit {
       client: h.casoTitulo,
       type: 'entrega',
       date: h.fechaEstimada!,
-      status: STATUS_MAP[h.estado],
+      status: HITO_ESTADO_CALENDAR_STATUS[h.estado],
       hitoEstado: h.estado,
       casoId: h.casoId,
       ...(h.descripcion ? { description: h.descripcion } : {}),

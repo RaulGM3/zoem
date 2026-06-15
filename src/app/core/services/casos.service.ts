@@ -2,12 +2,12 @@ import { inject, Injectable, signal } from '@angular/core';
 import {
   Firestore,
   collection,
+  collectionData,
   doc,
   getDoc,
   getDocs,
   addDoc,
   updateDoc,
-  deleteDoc,
   writeBatch,
   query,
   where,
@@ -15,12 +15,16 @@ import {
   serverTimestamp,
   deleteField,
 } from '@angular/fire/firestore';
+import type { Observable } from 'rxjs';
 import { CompanyService } from './company.service';
 import { PlantillasService } from './plantillas.service';
 import {
   Caso,
   CasoPlantilla,
   Hito,
+  HitoActividad,
+  HitoActividadTipo,
+  HitoEstado,
   MovimientoGestoria,
   RESUMEN_FINANCIERO_VACIO,
   ResumenFinanciero,
@@ -28,6 +32,15 @@ import {
 
 type CasoCreate = Omit<Caso, 'id' | 'companyId' | 'hitos' | 'resumenFinanciero' | 'createdAt' | 'updatedAt'> & {
   plantillaId?: string;
+};
+
+/** Datos para registrar una acción en el feed de actividad de un hito. */
+export type ActividadInput = {
+  hitoTitulo: string;
+  tipo: HitoActividadTipo;
+  autorId?: string;
+  estadoAnterior?: HitoEstado;
+  estadoNuevo?: HitoEstado;
 };
 
 function stripUndefined<T extends object>(obj: T): Partial<T> {
@@ -57,6 +70,10 @@ export class CasosService {
 
   private get hitosRef() {
     return collection(this.firestore, 'companies', this.companyId, 'hitos');
+  }
+
+  private get actividadRef() {
+    return collection(this.firestore, 'companies', this.companyId, 'hito_actividad');
   }
 
   async loadCasos(): Promise<void> {
@@ -152,18 +169,59 @@ export class CasosService {
     this.casos.update(list => list.filter(c => c.id !== id));
   }
 
-  async addHito(casoId: string, casoTitulo: string, data: Omit<Hito, 'id' | 'casoId' | 'casoTitulo'>): Promise<Hito> {
+  /** Construye el documento de un evento de actividad listo para el batch. */
+  private buildActividad(casoId: string, hitoId: string, input: ActividadInput): object {
+    return stripUndefined({
+      casoId,
+      hitoId,
+      hitoTitulo: input.hitoTitulo,
+      tipo: input.tipo,
+      autorId: input.autorId,
+      estadoAnterior: input.estadoAnterior,
+      estadoNuevo: input.estadoNuevo,
+      createdAt: serverTimestamp(),
+    });
+  }
+
+  async addHito(casoId: string, casoTitulo: string, data: Omit<Hito, 'id' | 'casoId' | 'casoTitulo'>, autorId?: string): Promise<Hito> {
     const hito: Omit<Hito, 'id'> = { casoId, casoTitulo, ...data };
-    const ref = await addDoc(this.hitosRef, stripUndefined(hito) as object);
-    return { id: ref.id, ...hito };
+    const batch = writeBatch(this.firestore);
+    const hitoRef = doc(this.hitosRef);
+    batch.set(hitoRef, stripUndefined(hito) as object);
+    batch.set(doc(this.actividadRef), this.buildActividad(casoId, hitoRef.id, {
+      hitoTitulo: data.titulo,
+      tipo: 'creado',
+      autorId,
+    }));
+    await batch.commit();
+    return { id: hitoRef.id, ...hito };
   }
 
-  async updateHito(_casoId: string, hitoId: string, data: Partial<Omit<Hito, 'id'>>): Promise<void> {
-    await updateDoc(doc(this.hitosRef, hitoId), stripUndefined(data) as object);
+  /**
+   * Actualiza un hito y, si se pasa `actividad`, registra el evento en el feed
+   * dentro del mismo batch. `actividad` es opcional para no acoplar a los
+   * consumidores que sólo mueven el hito (p.ej. el calendario al agendar).
+   */
+  async updateHito(casoId: string, hitoId: string, data: Partial<Omit<Hito, 'id'>>, actividad?: ActividadInput): Promise<void> {
+    const batch = writeBatch(this.firestore);
+    batch.update(doc(this.hitosRef, hitoId), stripUndefined(data) as object);
+    if (actividad) {
+      batch.set(doc(this.actividadRef), this.buildActividad(casoId, hitoId, actividad));
+    }
+    await batch.commit();
   }
 
-  async deleteHito(_casoId: string, hitoId: string): Promise<void> {
-    await deleteDoc(doc(this.hitosRef, hitoId));
+  async deleteHito(casoId: string, hitoId: string, info?: { hitoTitulo: string; autorId?: string }): Promise<void> {
+    const batch = writeBatch(this.firestore);
+    batch.delete(doc(this.hitosRef, hitoId));
+    if (info) {
+      batch.set(doc(this.actividadRef), this.buildActividad(casoId, hitoId, {
+        hitoTitulo: info.hitoTitulo,
+        tipo: 'eliminado',
+        autorId: info.autorId,
+      }));
+    }
+    await batch.commit();
   }
 
   async clearHitoSchedule(hitoId: string): Promise<void> {
@@ -173,9 +231,34 @@ export class CasosService {
     });
   }
 
-  async getHitosParaCalendario(): Promise<Hito[]> {
-    const snap = await getDocs(query(this.hitosRef, orderBy('fechaEstimada')));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }) as Hito);
+  /**
+   * Stream real-time de los hitos de la empresa para el calendario. Emite ante
+   * cada cambio (estado, agenda, fecha) para que la vista no dependa de recargar.
+   * Nota: `orderBy('fechaEstimada')` excluye hitos sin esa fecha — el calendario
+   * los filtra de todos modos.
+   */
+  hitosParaCalendarioStream(): Observable<Hito[]> {
+    const q = query(this.hitosRef, orderBy('fechaEstimada'));
+    return collectionData(q, { idField: 'id' }) as Observable<Hito[]>;
+  }
+
+  /**
+   * Stream real-time de los hitos de UN caso, ordenados por `orden`. Reemplaza
+   * el `getDocs` de disparo único: la vista de detalle reacciona en vivo a
+   * cualquier cambio (propio o de otro usuario) sin sincronizar a mano.
+   */
+  hitosStream(casoId: string): Observable<Hito[]> {
+    const q = query(this.hitosRef, where('casoId', '==', casoId), orderBy('orden'));
+    return collectionData(q, { idField: 'id' }) as Observable<Hito[]>;
+  }
+
+  /**
+   * Stream real-time del feed de actividad de un caso (lo más reciente primero):
+   * quién creó, editó, cambió de estado o eliminó cada hito.
+   */
+  actividadStream(casoId: string): Observable<HitoActividad[]> {
+    const q = query(this.actividadRef, where('casoId', '==', casoId), orderBy('createdAt', 'desc'));
+    return collectionData(q, { idField: 'id' }) as Observable<HitoActividad[]>;
   }
 
   private async copyPlantillaDocStructure(companyId: string, casoId: string, plantillaId: string): Promise<void> {

@@ -62,15 +62,52 @@
       </button>
 
       <!-- Search -->
-      <div class="hidden flex-1 md:block md:max-w-md">
+      <div class="relative hidden flex-1 md:block md:max-w-md">
         <div class="relative">
           <lucide-icon [img]="SearchIcon" size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></lucide-icon>
           <input
+            #searchInput
             type="text"
-            placeholder="Buscar expedientes, contactos, documentos..."
-            class="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-10 pr-4 text-sm text-slate-700 placeholder-slate-400 focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-100"
+            role="combobox"
+            aria-label="Búsqueda global"
+            [attr.aria-expanded]="searchMenuOpen()"
+            [value]="searchSvc.term()"
+            [placeholder]="searchSvc.activeMeta()?.placeholder ?? 'Buscar contactos, casos, personal...'"
+            (input)="searchSvc.setTerm($any($event.target).value)"
+            (click)="searchMenuOpen.set(true)"
+            class="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-10 pr-24 text-sm text-slate-700 placeholder-slate-400 focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-100"
           />
+          @if (searchSvc.activeMeta(); as meta) {
+            <span class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded-md bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-600">
+              {{ meta.label }}
+            </span>
+          }
         </div>
+
+        @if (searchMenuOpen()) {
+          <!-- Backdrop para cerrar al hacer click fuera -->
+          <div class="fixed inset-0 z-40" (click)="searchMenuOpen.set(false)"></div>
+
+          <!-- Panel de categorías -->
+          <div class="absolute left-0 right-0 top-full z-50 mt-2 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+            <p class="px-2 py-1 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+              ¿Qué quieres buscar?
+            </p>
+            @for (cat of searchSvc.categories; track cat.key) {
+              <button
+                type="button"
+                (click)="selectSearchCategory(cat.key)"
+                class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-violet-50 hover:text-violet-600"
+                [class.bg-violet-50]="searchSvc.category() === cat.key"
+                [class.text-violet-600]="searchSvc.category() === cat.key"
+                [class.text-slate-600]="searchSvc.category() !== cat.key"
+              >
+                <lucide-icon [img]="categoryIcons[cat.key]" size="18"></lucide-icon>
+                {{ cat.label }}
+              </button>
+            }
+          </div>
+        }
       </div>
 
       <!-- Right -->

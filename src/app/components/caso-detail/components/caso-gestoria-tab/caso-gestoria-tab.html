@@ -1,0 +1,173 @@
+<div class="space-y-4">
+
+  <!-- Costos previstos por plantilla -->
+  @if (slots().length > 0) {
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div class="px-4 py-3 border-b border-slate-200">
+        <div class="flex items-center justify-between mb-1.5">
+          <h3 class="text-sm font-medium text-slate-700">Costos previstos por plantilla</h3>
+          @let sp = slotsProgress();
+          @if (sp) {
+            <span class="text-xs text-slate-500">
+              <span class="font-semibold text-slate-800">{{ sp.registrados }}</span> de {{ sp.total }} registrados
+            </span>
+          }
+        </div>
+        @let sp2 = slotsProgress();
+        @if (sp2) {
+          <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div
+              class="h-full bg-violet-500 rounded-full transition-all duration-300"
+              [style.width.%]="(sp2.registrados / sp2.total) * 100"
+            ></div>
+          </div>
+        }
+      </div>
+
+      <div class="divide-y divide-slate-100">
+        @for (slot of slots(); track slot.id) {
+          <div class="flex items-center gap-3 px-4 py-3">
+
+            <lucide-icon
+              [img]="slot.status === 'registrado' ? CheckCircle2Icon : CircleAlertIcon"
+              [class]="'w-4 h-4 shrink-0 ' + (slot.status === 'registrado' ? 'text-emerald-500' : 'text-amber-400')"
+            />
+
+            <div class="flex-1 min-w-0">
+              <p class="text-sm text-slate-700 font-medium truncate">{{ slot.nombre }}</p>
+              <p class="text-xs text-slate-400">{{ slot.tipoCosto | titlecase }}</p>
+            </div>
+
+            <div class="flex items-center gap-3 shrink-0">
+              @if (slot.importeEstimado != null) {
+                <span class="text-sm text-slate-500">
+                  <span class="text-xs text-slate-400">est.</span>
+                  {{ slot.importeEstimado | number:'1.2-2' }} €
+                </span>
+              }
+              @if (slot.status === 'registrado') {
+                @if (slot.importeReal != null) {
+                  <span class="text-sm font-semibold text-emerald-700">
+                    {{ slot.importeReal | number:'1.2-2' }} €
+                  </span>
+                }
+                <span class="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 font-medium">Registrado</span>
+                <button
+                  (click)="unregisterSlot.emit(slot)"
+                  class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-300 hover:text-slate-500"
+                  title="Desasociar movimiento"
+                  aria-label="Desasociar movimiento"
+                >
+                  <lucide-icon [img]="XIcon" class="w-3.5 h-3.5" />
+                </button>
+              } @else {
+                <span class="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-700 font-medium">Pendiente</span>
+                <button
+                  (click)="registerSlot.emit(slot)"
+                  class="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-violet-600 text-white rounded-lg hover:bg-violet-700"
+                >
+                  <lucide-icon [img]="PlusIcon" class="w-3 h-3" />
+                  Registrar
+                </button>
+              }
+            </div>
+
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Summary cards -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div class="bg-white rounded-xl border border-slate-200 p-4">
+      <p class="text-xs text-slate-500 uppercase tracking-wide">Ingresos</p>
+      <p class="text-xl font-bold text-emerald-600 mt-1">
+        {{ resumen().totalIngresos | number:'1.2-2' }} €
+      </p>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-4">
+      <p class="text-xs text-slate-500 uppercase tracking-wide">Suplidos</p>
+      <p class="text-xl font-bold text-amber-600 mt-1">
+        {{ resumen().totalSuplidos | number:'1.2-2' }} €
+      </p>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-4">
+      <p class="text-xs text-slate-500 uppercase tracking-wide">Honorarios</p>
+      <p class="text-xl font-bold text-violet-600 mt-1">
+        {{ resumen().totalHonorarios | number:'1.2-2' }} €
+      </p>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-4">
+      <p class="text-xs text-slate-500 uppercase tracking-wide">Saldo neto</p>
+      <p class="text-xl font-bold mt-1"
+        [class]="resumen().saldo >= 0 ? 'text-emerald-600' : 'text-red-600'">
+        {{ resumen().saldo | number:'1.2-2' }} €
+      </p>
+    </div>
+  </div>
+
+  <!-- Movements table -->
+  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="flex items-center justify-between px-4 py-3 border-b border-slate-200">
+      <h3 class="text-sm font-medium text-slate-700">Movimientos</h3>
+      <button (click)="addMov.emit()"
+        class="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700">
+        <lucide-icon [img]="PlusIcon" class="w-3.5 h-3.5" />
+        Añadir
+      </button>
+    </div>
+
+    @if (movimientosLoading()) {
+      <div class="p-8 text-center text-slate-400 text-sm">Cargando movimientos...</div>
+    } @else if (movimientos().length === 0) {
+      <div class="p-10 text-center text-slate-400 text-sm">
+        <p>Sin movimientos registrados</p>
+        <p class="text-xs mt-1">Registra ingresos, suplidos y honorarios de este caso</p>
+      </div>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50">
+            <tr class="text-left text-slate-500 border-b border-slate-200">
+              <th class="px-4 py-2.5 font-medium">Concepto</th>
+              <th class="px-4 py-2.5 font-medium">Tipo</th>
+              <th class="px-4 py-2.5 font-medium">Fecha</th>
+              <th class="px-4 py-2.5 font-medium text-right">Importe</th>
+              <th class="px-4 py-2.5"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (mov of movimientos(); track mov.id) {
+              <tr class="group">
+                <td class="px-4 py-3">
+                  <p class="text-slate-800">{{ mov.concepto }}</p>
+                  @if (mov.notas) {
+                    <p class="text-xs text-slate-400">{{ mov.notas }}</p>
+                  }
+                </td>
+                <td class="px-4 py-3">
+                  <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getMovTipoClass(mov.tipo)">
+                    {{ mov.tipo }}
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-slate-500">{{ mov.fecha }}</td>
+                <td class="px-4 py-3 text-right font-medium"
+                  [class]="mov.esEntrada ? 'text-emerald-600' : 'text-red-600'">
+                  {{ mov.esEntrada ? '+' : '−' }}{{ mov.importe | number:'1.2-2' }} €
+                </td>
+                <td class="px-4 py-3 text-right">
+                  <button (click)="deleteMov.emit(mov.id)"
+                    class="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-50"
+                    aria-label="Eliminar movimiento">
+                    <lucide-icon [img]="Trash2Icon" class="w-3.5 h-3.5 text-red-400" />
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>

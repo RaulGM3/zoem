@@ -1,0 +1,183 @@
+@if (editing()) {
+  <div class="bg-white rounded-xl border border-slate-200 p-6 space-y-4 max-w-2xl">
+    <h2 class="font-semibold text-slate-800">Editar caso</h2>
+
+    <div class="space-y-1">
+      <label class="text-sm font-medium text-slate-700">Título</label>
+      <input
+        type="text"
+        [value]="editTitulo()"
+        (input)="editTitulo.set($any($event.target).value)"
+        class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+      />
+    </div>
+
+    <div class="space-y-1">
+      <label class="text-sm font-medium text-slate-700">Descripción</label>
+      <textarea
+        rows="3"
+        [value]="editDescripcion()"
+        (input)="editDescripcion.set($any($event.target).value)"
+        class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none"
+      ></textarea>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div class="space-y-1">
+        <label class="text-sm font-medium text-slate-700">Tipo</label>
+        <select [value]="editTipo()" (change)="editTipo.set($any($event.target).value)"
+          class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
+          @for (t of tipos; track t) { <option [value]="t">{{ t }}</option> }
+        </select>
+      </div>
+      <div class="space-y-1">
+        <label class="text-sm font-medium text-slate-700">Estado</label>
+        <select [value]="editEstado()" (change)="editEstado.set($any($event.target).value)"
+          class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
+          @for (e of estados; track e) { <option [value]="e">{{ e }}</option> }
+        </select>
+      </div>
+      <div class="space-y-1">
+        <label class="text-sm font-medium text-slate-700">Prioridad</label>
+        <select [value]="editPrioridad()" (change)="editPrioridad.set($any($event.target).value)"
+          class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
+          @for (p of prioridades; track p) { <option [value]="p">{{ p }}</option> }
+        </select>
+      </div>
+      <div class="space-y-1">
+        <label class="text-sm font-medium text-slate-700">Vencimiento</label>
+        <input type="date" [value]="editVencimiento()" (input)="editVencimiento.set($any($event.target).value)"
+          class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+      </div>
+    </div>
+
+    <div class="flex gap-2 pt-2">
+      <button (click)="cancelEdit.emit()"
+        class="px-4 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">
+        Cancelar
+      </button>
+      <button (click)="submit()" [disabled]="saving() || !editTitulo().trim()"
+        class="px-4 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50">
+        {{ saving() ? 'Guardando...' : 'Guardar' }}
+      </button>
+    </div>
+  </div>
+} @else {
+  <div class="space-y-6 max-w-2xl">
+    <!-- Info cards -->
+    <div class="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+      @if (caso().descripcion) {
+        <p class="text-sm text-slate-600">{{ caso().descripcion }}</p>
+      }
+      <dl class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+        <div>
+          <dt class="text-slate-400 text-xs uppercase tracking-wide">Tipo</dt>
+          <dd><span [class]="'inline-flex mt-1 px-2 py-0.5 text-xs rounded-full font-medium ' + getTipoClass(caso().tipo)">{{ caso().tipo }}</span></dd>
+        </div>
+        <div>
+          <dt class="text-slate-400 text-xs uppercase tracking-wide">Estado</dt>
+          <dd><span [class]="'inline-flex mt-1 px-2 py-0.5 text-xs rounded-full font-medium ' + getEstadoClass(caso().estado)">{{ caso().estado }}</span></dd>
+        </div>
+        <div>
+          <dt class="text-slate-400 text-xs uppercase tracking-wide">Prioridad</dt>
+          <dd class="mt-1 capitalize text-slate-700">{{ caso().prioridad }}</dd>
+        </div>
+        <div>
+          <dt class="text-slate-400 text-xs uppercase tracking-wide">Vencimiento</dt>
+          <dd class="mt-1 text-slate-700">{{ caso().vencimiento ?? '—' }}</dd>
+        </div>
+      </dl>
+    </div>
+
+    <!-- Contacts -->
+    <div class="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+      <h3 class="font-medium text-slate-800">Clientes vinculados</h3>
+
+      @if (linkedContacts().length > 0) {
+        <ul class="space-y-2">
+          @for (c of linkedContacts(); track c.id) {
+            <li class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
+                  <lucide-icon [img]="UserIcon" class="w-4 h-4 text-slate-400" />
+                </div>
+                <span class="text-sm text-slate-700">{{ displayName(c) }}</span>
+              </div>
+              <button (click)="askRemoveContact(c)"
+                class="p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-500"
+                [attr.aria-label]="'Quitar ' + displayName(c)">
+                <lucide-icon [img]="XIcon" class="w-3.5 h-3.5" />
+              </button>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="text-sm text-slate-400">No hay clientes vinculados</p>
+      }
+
+      <div class="relative">
+        <input
+          type="text"
+          placeholder="Buscar y añadir cliente..."
+          [value]="contactSearch()"
+          (input)="onSearchInput($any($event.target).value)"
+          class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+        />
+        @if (searchResults().length > 0) {
+          <ul class="absolute top-full mt-1 left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg z-10 overflow-hidden">
+            @for (r of searchResults(); track r.id) {
+              <li>
+                <button
+                  class="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-violet-50"
+                  (click)="addContact.emit(r.id)"
+                >{{ displayName(r) }}</button>
+              </li>
+            }
+          </ul>
+        } @else if (noResults()) {
+          <p class="mt-2 text-sm text-slate-500">
+            No se encontraron clientes.
+            <span class="text-slate-400">Revisa la primera mayúscula y las tildes</span>
+          </p>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+@if (contactToDelete()) {
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+    (click)="cancelRemoveContact()"
+    role="presentation"
+  >
+    <div
+      class="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4"
+      (click)="$event.stopPropagation()"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="remove-contact-title"
+    >
+      <h3 id="remove-contact-title" class="text-base font-semibold text-slate-800">Quitar cliente</h3>
+      <p class="mt-2 text-sm text-slate-500">
+        ¿Seguro que quieres quitar a
+        <span class="font-medium text-slate-700">{{ displayName(contactToDelete()!) }}</span>
+        de este caso? El contacto no se elimina, solo se desvincula.
+      </p>
+      <div class="mt-5 flex gap-3 justify-end">
+        <button
+          class="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg"
+          (click)="cancelRemoveContact()"
+        >
+          Cancelar
+        </button>
+        <button
+          class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg"
+          (click)="confirmRemoveContact()"
+        >
+          Quitar
+        </button>
+      </div>
+    </div>
+  </div>
+}

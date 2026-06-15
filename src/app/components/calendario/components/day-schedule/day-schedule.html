@@ -7,8 +7,9 @@
 
   <!-- Hitos sin programar -->
   @if (unscheduledItems().length > 0) {
-    <div class="mb-3 shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+    <div class="mb-3 shrink-0 rounded-xl border-2 border-violet-200 bg-violet-50 p-3 shadow-sm ring-1 ring-violet-100">
+      <p class="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-violet-700">
+        <span class="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-violet-500"></span>
         Sin programar — click para añadir al horario
       </p>
       <div class="flex flex-wrap gap-2">
@@ -127,14 +128,19 @@
                           {{ item.title }}
                         </p>
                         <div class="flex shrink-0 items-center gap-0.5">
-                          @if (item.hitoEstado && item.hitoEstado !== 'cancelado') {
+                          @if (item.hitoEstado) {
                             <button
-                              class="rounded px-1 py-0.5 text-[9px] font-semibold leading-none transition-opacity hover:opacity-80"
-                              [class]="getHitoEstadoBadgeClass(item.hitoEstado)"
+                              class="max-w-18 truncate rounded px-1 py-0.5 text-[9px] font-semibold leading-none transition-opacity hover:opacity-80"
+                              [class]="getHitoBadgeClass(item)"
                               (pointerdown)="$event.stopPropagation()"
                               (click)="advanceHito($event, item)"
                               [attr.aria-label]="'Avanzar estado de ' + item.title"
-                            >{{ getHitoEstadoLabel(item.hitoEstado) }}</button>
+                            >{{ getHitoBadgeLabel(item) }}</button>
+                          } @else if (item.eventoEstado) {
+                            <span
+                              class="max-w-18 truncate rounded px-1 py-0.5 text-[9px] font-semibold leading-none"
+                              [class]="getEventoBadgeClass(item.eventoEstado)"
+                            >{{ getEventoBadgeLabel(item.eventoEstado) }}</span>
                           }
                           <button
                             class="flex h-4 w-4 items-center justify-center rounded opacity-40 transition-opacity hover:opacity-100"
@@ -248,12 +254,12 @@
           <div>
             <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Estado</p>
             <div class="flex flex-wrap gap-2">
-              @for (status of EVENTO_STATUSES; track status) {
+              @for (estado of EVENTO_ESTADOS; track estado) {
                 <button
                   class="rounded-lg px-3 py-1.5 text-xs font-medium transition-all"
-                  [class]="getEventoStatusBtnClass(status, item.status === status)"
-                  (click)="setEventoStatus(status)"
-                >{{ getEventoStatusLabel(status) }}</button>
+                  [class]="getEventoEstadoBtnClass(estado, item.eventoEstado === estado)"
+                  (click)="setEventoEstado(estado)"
+                >{{ getEventoEstadoLabel(estado) }}</button>
               }
             </div>
           </div>

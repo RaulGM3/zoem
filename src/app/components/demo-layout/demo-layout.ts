@@ -1,5 +1,6 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, inject, viewChild, type ElementRef } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { SearchService, type SearchCategory } from '../../core/services/search.service';
 import {
   LucideAngularModule,
   LucideIconData,
@@ -57,6 +58,25 @@ export class DemoLayoutComponent {
   readonly SettingsIcon = Settings;
   readonly LogOutIcon = LogOut;
 
+  readonly searchSvc = inject(SearchService);
+  readonly searchMenuOpen = signal(false);
+  private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
+
+  /** Íconos por categoría — el adapter lucide vive acá, no en el servicio. */
+  readonly categoryIcons: Record<SearchCategory, LucideIconData> = {
+    contactos: Users,
+    casos: Briefcase,
+    personal: UserCog,
+  };
+
+  selectSearchCategory(key: SearchCategory): void {
+    this.searchSvc.selectCategory(key);
+    this.searchMenuOpen.set(false);
+    // Mantener el foco en el input para tipear de inmediato tras elegir categoría.
+    // El header no se destruye al navegar (es el layout), así que el input persiste.
+    this.searchInput()?.nativeElement.focus();
+  }
+
   sidebarOpen = signal(false);
 
   navCategories: NavCategory[] = [
@@ -83,7 +103,7 @@ export class DemoLayoutComponent {
         { name: 'Casos', href: '/casos', icon: Briefcase },
         { name: 'Calendario', href: '/calendario', icon: Calendar },
         { name: 'Eventos', href: '/eventos', icon: CalendarPlus },
-        // { name: 'Documentos', href: '/documentos', icon: FileText },
+        { name: 'Documentos', href: '/documentos', icon: FileText },
       ],
     },
     {
