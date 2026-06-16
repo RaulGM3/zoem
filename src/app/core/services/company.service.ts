@@ -18,6 +18,10 @@ export interface Company {
   slug: string;
   plan?: string;
   isActive: boolean;
+  /** Saldo bancario real cargado manualmente, para cotejar con el sistema. */
+  saldoBancario?: number;
+  /** Fecha (ISO yyyy-mm-dd) en que se actualizó el saldo bancario. */
+  saldoBancarioFecha?: string;
   createdAt?: unknown;
   updatedAt?: unknown;
 }
@@ -85,5 +89,17 @@ export class CompanyService {
 
   async updateCompany(id: string, data: { name?: string; plan?: string; isActive?: boolean }): Promise<void> {
     await updateDoc(doc(this.firestore, 'companies', id), { ...data, updatedAt: serverTimestamp() });
+  }
+
+  /** Guarda el saldo bancario manual y refresca la company activa en memoria. */
+  async updateSaldoBancario(id: string, saldoBancario: number, fecha: string): Promise<void> {
+    await updateDoc(doc(this.firestore, 'companies', id), {
+      saldoBancario,
+      saldoBancarioFecha: fecha,
+      updatedAt: serverTimestamp(),
+    });
+    this.activeCompany.update(c =>
+      c && c.id === id ? { ...c, saldoBancario, saldoBancarioFecha: fecha } : c
+    );
   }
 }

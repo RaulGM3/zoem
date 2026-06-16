@@ -18,7 +18,7 @@
       <div class="grid grid-cols-2 gap-3">
         <div class="space-y-1">
           <label class="text-sm font-medium text-slate-700">Tipo</label>
-          <select [value]="formTipo()" (change)="formTipo.set($any($event.target).value)"
+          <select [value]="formTipo()" (change)="onTipoChange($any($event.target).value)"
             class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
             @for (t of tipos; track t) { <option [value]="t">{{ t }}</option> }
           </select>
@@ -33,10 +33,14 @@
         <div class="space-y-1">
           <label class="text-sm font-medium text-slate-700">Dirección</label>
           <select [value]="formEsEntrada() ? 'true' : 'false'" (change)="formEsEntrada.set($any($event.target).value === 'true')"
-            class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
+            [disabled]="!direccionManual()"
+            class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed">
             <option value="true">Entrada (cobrado)</option>
             <option value="false">Salida (pagado)</option>
           </select>
+          @if (!direccionManual()) {
+            <p class="text-xs text-slate-400">Determinada por el tipo</p>
+          }
         </div>
         <div class="space-y-1">
           <label class="text-sm font-medium text-slate-700">Fecha</label>

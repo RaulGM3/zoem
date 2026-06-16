@@ -1,3 +1,5 @@
+import type { RegistroHoraHito } from '../../interfaces';
+
 export type ItemColor = 'violet' | 'indigo' | 'blue' | 'green' | 'amber' | 'red' | 'pink' | 'slate';
 
 export interface Anotacion {
@@ -21,6 +23,8 @@ export interface CalendarItem {
   duracionMinutos?: number; // duración en minutos (default 60)
   anotaciones?: Anotacion[];
   color?: ItemColor;
+  asignadosA?: string[];            // multi-asignación del hito (userIds)
+  registrosHoras?: RegistroHoraHito[]; // horas reales declaradas (cobro por horas)
 }
 
 export interface WeekDay {

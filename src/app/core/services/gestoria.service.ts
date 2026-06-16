@@ -10,6 +10,7 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  writeBatch,
 } from '@angular/fire/firestore';
 import { CompanyService } from './company.service';
 import { CasosService } from './casos.service';
@@ -18,6 +19,16 @@ import { Auth } from '@angular/fire/auth';
 
 type MovimientoCreate = Pick<MovimientoGestoria, 'tipo' | 'concepto' | 'importe' | 'esEntrada' | 'fecha' | 'notas'>;
 type MovimientoOpt = Omit<MovimientoCreate, 'notas'> & { notas?: string };
+
+/**
+ * Firestore rechaza valores `undefined`. Elimina las claves con `undefined`
+ * antes de escribir (p. ej. `notas` cuando el form viene vacío).
+ */
+function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, value]) => value !== undefined)
+  ) as Partial<T>;
+}
 
 @Injectable({ providedIn: 'root' })
 export class GestoriaService {
@@ -57,10 +68,32 @@ export class GestoriaService {
     }
   }
 
+  /**
+   * Persiste el nuevo orden de los slots dentro del caso. Cada slot recibe
+   * un `orden` según su posición en la lista recibida (ya reordenada).
+   */
+  async reorderSlots(casoId: string, orderedSlots: GestoriaSlot[]): Promise<void> {
+    const batch = writeBatch(this.firestore);
+    orderedSlots.forEach((slot, index) => {
+      batch.update(doc(this.slotsRef(casoId), slot.id), {
+        orden: index,
+        updatedAt: serverTimestamp(),
+      });
+    });
+    await batch.commit();
+
+    const ordenById = new Map(orderedSlots.map((s, i) => [s.id, i]));
+    this.slots.update(list =>
+      [...list]
+        .map(s => (ordenById.has(s.id) ? { ...s, orden: ordenById.get(s.id)! } : s))
+        .sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999) || a.nombre.localeCompare(b.nombre))
+    );
+  }
+
   async registerSlot(casoId: string, slot: GestoriaSlot, movData: MovimientoOpt): Promise<void> {
     const companyId = this.companyId;
     const movRef = await addDoc(this.gestoriaRef(casoId), {
-      ...movData,
+      ...stripUndefined(movData),
       casoId,
       companyId,
       createdBy: this.auth.currentUser?.uid ?? '',
@@ -105,6 +138,13 @@ export class GestoriaService {
           : s
       )
     );
+
+    // Al des-registrar también desaparece su movimiento asociado del cálculo, por lo
+    // que hay que recalcular el resumen y el conteo de slots (igual que registerSlot).
+    await Promise.all([
+      this.loadMovimientos(casoId),
+      this.casosService.recalcularResumen(casoId),
+    ]);
   }
 
   async loadMovimientos(casoId: string): Promise<void> {
@@ -121,7 +161,7 @@ export class GestoriaService {
   async addMovimiento(casoId: string, data: MovimientoCreate): Promise<void> {
     const companyId = this.companyId;
     await addDoc(this.gestoriaRef(casoId), {
-      ...data,
+      ...stripUndefined(data),
       casoId,
       companyId,
       createdBy: this.auth.currentUser?.uid ?? '',
@@ -136,7 +176,7 @@ export class GestoriaService {
   async updateMovimiento(casoId: string, id: string, data: Partial<MovimientoCreate>): Promise<void> {
     await updateDoc(
       doc(this.firestore, 'companies', this.companyId, 'casos', casoId, 'gestoria', id),
-      data
+      stripUndefined(data)
     );
     await Promise.all([
       this.loadMovimientos(casoId),

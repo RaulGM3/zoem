@@ -60,6 +60,7 @@ export class UsersService {
             role: normalizeFirmRole(data['role'] ?? ''),
             departamento: data['departamento'] ?? '',
             estado: (data['estado'] ?? 'activo') as MemberEstado,
+            ...(data['tarifaHoraria'] !== undefined ? { tarifaHoraria: data['tarifaHoraria'] } : {}),
             ultimoLogin: data['ultimoLogin'] ?? null,
             createdAt: data['createdAt'],
           } as CompanyMember;
@@ -72,7 +73,7 @@ export class UsersService {
 
   async updateMember(
     id: string,
-    patch: Partial<Pick<CompanyMember, 'role' | 'estado' | 'departamento'>>
+    patch: Partial<Pick<CompanyMember, 'role' | 'estado' | 'departamento' | 'tarifaHoraria'>>
   ): Promise<void> {
     await updateDoc(doc(this.firestore, 'companyMembers', id), {
       ...patch,

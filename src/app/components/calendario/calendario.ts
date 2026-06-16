@@ -9,8 +9,9 @@ import { CasosService } from '../../core/services/casos.service';
 import { CompanyService } from '../../core/services/company.service';
 import { EventosService } from '../../core/services/eventos.service';
 import { UserSyncService } from '../../core/services/user-sync.service';
+import { UsersService } from '../../core/services/users';
 import { HITO_ESTADO_CALENDAR_STATUS, stampEstadoChange } from '../../core/hitos/hito-estado';
-import type { CreateEventoData, Evento, EventoColor, EventoEstado, Hito, HitoEstado } from '../../interfaces';
+import type { CreateEventoData, Evento, EventoColor, EventoEstado, Hito, HitoEstado, RegistroHoraHito } from '../../interfaces';
 import type { CalendarItem, EventGroup, ViewMode, WeekDay } from './calendario.types';
 import { CalendarNavComponent } from './components/calendar-nav/calendar-nav';
 import { DayScheduleComponent, type ItemTimeChange } from './components/day-schedule/day-schedule';
@@ -81,7 +82,15 @@ export class CalendarioComponent {
   private readonly companyService = inject(CompanyService);
   private readonly eventosService = inject(EventosService);
   private readonly userSync = inject(UserSyncService);
+  private readonly usersService = inject(UsersService);
   private readonly nav = viewChild(CalendarNavComponent);
+
+  /** Miembros del despacho — para asignar y registrar horas en los hitos. */
+  readonly members = this.usersService.members;
+
+  constructor() {
+    this.usersService.loadMembers();
+  }
 
   readonly PlusIcon = Plus;
   readonly dayNames = DAY_NAMES;
@@ -323,6 +332,22 @@ export class CalendarioComponent {
   }
 
   private hitoToItem(h: Hito): CalendarItem {
+    // Los hitos se representan en el grid por sus SEGMENTOS de horas (registrosHoras).
+    // Compat: si un hito legacy sólo tiene horaAgenda, sintetizamos un segmento para
+    // que siga apareciendo; al arrastrarlo/separarlo se materializa en registrosHoras.
+    let registrosHoras = h.registrosHoras;
+    if ((!registrosHoras || registrosHoras.length === 0) && h.horaAgenda && h.fechaEstimada) {
+      const start = timeToMinutes(h.horaAgenda);
+      const dur = h.duracionAgenda ?? 60;
+      registrosHoras = [{
+        id: `${h.id}_agenda`,
+        userId: h.asignadosA?.[0] ?? h.asignadoA ?? '',
+        fecha: h.fechaEstimada,
+        horaInicio: h.horaAgenda,
+        horaFin: minutesToTime(start + dur),
+        minutos: dur,
+      }];
+    }
     return {
       id: h.id,
       title: h.titulo,
@@ -333,10 +358,15 @@ export class CalendarioComponent {
       hitoEstado: h.estado,
       casoId: h.casoId,
       ...(h.descripcion ? { description: h.descripcion } : {}),
-      ...(h.horaAgenda ? { horaInicio: h.horaAgenda } : {}),
-      ...(h.duracionAgenda ? { duracionMinutos: h.duracionAgenda } : {}),
       ...(h.calendarColor ? { color: h.calendarColor as ItemColor } : {}),
+      ...(h.asignadosA ? { asignadosA: h.asignadosA } : {}),
+      ...(registrosHoras ? { registrosHoras } : {}),
     };
+  }
+
+  /** Persiste los registros de horas declarados desde el editor del calendario. */
+  async updateRegistrosHoras(event: { hitoId: string; registros: RegistroHoraHito[] }): Promise<void> {
+    await this.casosService.setRegistrosHoras(event.hitoId, event.registros);
   }
 
   private formatDateLabel(dateStr: string): string {

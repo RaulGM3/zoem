@@ -7,7 +7,8 @@ export interface HitoFormData {
   titulo: string;
   descripcion?: string;
   fechaEstimada?: string;
-  asignadoA?: string;
+  asignadoA?: string;       // compat: primer asignado
+  asignadosA?: string[];    // multi-asignación
   estado: HitoEstado;
 }
 
@@ -31,7 +32,7 @@ export class HitoFormDrawerComponent {
   readonly formTitulo = signal('');
   readonly formDescripcion = signal('');
   readonly formFechaEstimada = signal('');
-  readonly formAsignadoA = signal('');
+  readonly formAsignadosA = signal<string[]>([]);
   readonly formEstado = signal<HitoEstado>('pendiente');
 
   readonly estados = HITO_ESTADOS;
@@ -44,20 +45,33 @@ export class HitoFormDrawerComponent {
         this.formTitulo.set(h?.titulo ?? '');
         this.formDescripcion.set(h?.descripcion ?? '');
         this.formFechaEstimada.set(h?.fechaEstimada ?? '');
-        this.formAsignadoA.set(h?.asignadoA ?? '');
+        // Compat: si el hito sólo tiene asignadoA (legacy), lo sembramos como primer asignado.
+        this.formAsignadosA.set(h?.asignadosA ?? (h?.asignadoA ? [h.asignadoA] : []));
         this.formEstado.set(h?.estado ?? 'pendiente');
       }
     });
   }
 
+  isAsignado(userId: string): boolean {
+    return this.formAsignadosA().includes(userId);
+  }
+
+  toggleAsignado(userId: string): void {
+    this.formAsignadosA.update(list =>
+      list.includes(userId) ? list.filter(id => id !== userId) : [...list, userId]
+    );
+  }
+
   submit(): void {
     const titulo = this.formTitulo().trim();
     if (!titulo) return;
+    const asignados = this.formAsignadosA();
     this.saved.emit({
       titulo,
       descripcion: this.formDescripcion().trim() || undefined,
       fechaEstimada: this.formFechaEstimada() || undefined,
-      asignadoA: this.formAsignadoA() || undefined,
+      asignadoA: asignados[0] ?? undefined,
+      asignadosA: asignados.length > 0 ? asignados : undefined,
       estado: this.formEstado(),
     });
   }

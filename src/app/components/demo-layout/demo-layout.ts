@@ -84,7 +84,7 @@ export class DemoLayoutComponent {
       category: 'Principal',
       items: [
         { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-        { name: 'Informes', href: '/informes', icon: BarChart3, badge: 'Nuevo' },
+        // { name: 'Informes', href: '/informes', icon: BarChart3, badge: 'Nuevo' },
       ],
     },
     {
@@ -102,16 +102,16 @@ export class DemoLayoutComponent {
         { name: 'Contactos', href: '/contactos', icon: Users },
         { name: 'Casos', href: '/casos', icon: Briefcase },
         { name: 'Calendario', href: '/calendario', icon: Calendar },
-        { name: 'Eventos', href: '/eventos', icon: CalendarPlus },
+        // { name: 'Eventos', href: '/eventos', icon: CalendarPlus },
         { name: 'Documentos', href: '/documentos', icon: FileText },
       ],
     },
-    {
-      category: 'Comunicaciones',
-      items: [
-        { name: 'Centro de Mensajes', href: '/comunicaciones', icon: Send, badge: 'Nuevo' },
-      ],
-    },
+    // {
+    //   category: 'Comunicaciones',
+    //   items: [
+    //     { name: 'Centro de Mensajes', href: '/comunicaciones', icon: Send, badge: 'Nuevo' },
+    //   ],
+    // },
     {
       category: 'Finanzas',
       items: [

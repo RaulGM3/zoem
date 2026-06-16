@@ -25,8 +25,26 @@
       </div>
 
       <div class="divide-y divide-slate-100">
-        @for (slot of slots(); track slot.id) {
-          <div class="flex items-center gap-3 px-4 py-3">
+        @for (slot of orderedSlots(); track slot.id; let i = $index) {
+          <div
+            draggable="true"
+            (dragstart)="onSlotDragStart($event, i)"
+            (dragover)="onSlotDragOver($event, i)"
+            (drop)="onSlotDrop($event)"
+            (dragend)="onSlotDragEnd()"
+            class="flex items-center gap-3 px-4 py-3 transition-colors"
+            [class.bg-violet-50]="dragOver() === i"
+            [class.opacity-50]="dragFrom() === i"
+          >
+
+            <button
+              type="button"
+              class="cursor-grab active:cursor-grabbing p-0.5 text-slate-300 hover:text-slate-500 shrink-0 touch-none"
+              title="Arrastrar para reordenar"
+              aria-label="Arrastrar para reordenar"
+            >
+              <lucide-icon [img]="GripVerticalIcon" class="w-4 h-4" />
+            </button>
 
             <lucide-icon
               [img]="slot.status === 'registrado' ? CheckCircle2Icon : CircleAlertIcon"

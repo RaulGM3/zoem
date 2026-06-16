@@ -19,11 +19,16 @@ import {
   FolderOpen,
   PhoneOutgoing,
   Archive,
+  Link2,
 } from 'lucide-angular';
 import { LlamadasService } from '../../core/services/llamadas.service';
 import { ContactService } from '../../core/services/contact.service';
 import type { LlamadaResumen } from '../../interfaces/llamada.interface';
-import type { Contact } from '../../interfaces/contact.interface';
+import {
+  type Contact,
+  getContactDisplayName,
+  getContactInitials,
+} from '../../interfaces';
 import type { Timestamp } from '@angular/fire/firestore';
 import { relativeTime } from '../../core/format/relative-time';
 
@@ -55,22 +60,13 @@ export class RecepcionIAComponent implements OnInit {
   readonly FolderOpenIcon = FolderOpen;
   readonly PhoneOutgoingIcon = PhoneOutgoing;
   readonly ArchiveIcon = Archive;
+  readonly Link2Icon = Link2;
 
   readonly loading = this.llamadasSvc.loading;
 
   readonly filterEstado = signal('');
   readonly search = signal('');
   readonly selectedLlamada = signal<LlamadaResumen | null>(null);
-
-  private readonly contactPhoneSet = computed(() => {
-    const normalize = (p: string) => p.replace(/\D/g, '');
-    const phones = new Set<string>();
-    for (const c of this.contactSvc.contacts()) {
-      if (c.phone) phones.add(normalize(c.phone));
-      if (c.mobile) phones.add(normalize(c.mobile));
-    }
-    return phones;
-  });
 
   readonly filtered = computed(() => {
     const q = this.search().toLowerCase();
@@ -107,12 +103,16 @@ export class RecepcionIAComponent implements OnInit {
   }
 
   isKnownContact(ll: LlamadaResumen): boolean {
-    const phone = ll.datosCapturados?.telefono;
-    if (!phone) return false;
-    return this.contactPhoneSet().has(phone.replace(/\D/g, ''));
+    return !!this.getMatchedContact(ll);
   }
 
   getMatchedContact(ll: LlamadaResumen): Contact | undefined {
+    // 1) Vínculo manual explícito
+    if (ll.contactId) {
+      const linked = this.contactSvc.contacts().find((c) => c.id === ll.contactId);
+      if (linked) return linked;
+    }
+    // 2) Match automático por teléfono
     const phone = ll.datosCapturados?.telefono;
     if (!phone) return undefined;
     const normalized = phone.replace(/\D/g, '');
@@ -121,6 +121,52 @@ export class RecepcionIAComponent implements OnInit {
       if (c.mobile && c.mobile.replace(/\D/g, '') === normalized) return true;
       return false;
     });
+  }
+
+  // --- Asociar a contacto existente ---
+
+  readonly associatingLlamada = signal<LlamadaResumen | null>(null);
+  readonly contactQuery = signal('');
+
+  readonly contactResults = computed<Contact[]>(() => {
+    const q = this.contactQuery().trim().toLowerCase();
+    const contacts = this.contactSvc.contacts();
+    const list = !q
+      ? contacts
+      : contacts.filter((c) => {
+          const name = getContactDisplayName(c).toLowerCase();
+          return (
+            name.includes(q) ||
+            c.email.toLowerCase().includes(q) ||
+            (c.phone ?? '').toLowerCase().includes(q) ||
+            (c.mobile ?? '').toLowerCase().includes(q)
+          );
+        });
+    return list.slice(0, 20);
+  });
+
+  contactName(c: Contact): string {
+    return getContactDisplayName(c);
+  }
+
+  contactInitials(c: Contact): string {
+    return getContactInitials(c);
+  }
+
+  openAssociate(ll: LlamadaResumen): void {
+    this.contactQuery.set('');
+    this.associatingLlamada.set(ll);
+  }
+
+  closeAssociate(): void {
+    this.associatingLlamada.set(null);
+  }
+
+  async asociarAContacto(contact: Contact): Promise<void> {
+    const ll = this.associatingLlamada();
+    if (!ll) return;
+    await this.llamadasSvc.asociarContacto(ll.conversationId, contact.id);
+    this.closeAssociate();
   }
 
   openTranscript(llamada: LlamadaResumen): void {

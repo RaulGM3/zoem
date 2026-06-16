@@ -86,8 +86,8 @@
           <p class="text-lg font-bold text-violet-700">{{ (c.totalBilled ?? 0) | number:'1.0-0' }} €</p>
         </div>
         <div class="text-center p-3 bg-blue-50 rounded-lg">
-          <p class="text-xs text-slate-500 mb-1">Proyectos activos</p>
-          <p class="text-lg font-bold text-blue-700">{{ c.activeProjects ?? 0 }}</p>
+          <p class="text-xs text-slate-500 mb-1">Casos</p>
+          <p class="text-lg font-bold text-blue-700">{{ casos().length }}</p>
         </div>
       </div>
     </div>
@@ -96,7 +96,7 @@
     <div class="lg:col-span-2 bg-white rounded-xl border border-slate-200">
       <div class="flex border-b border-slate-200 overflow-x-auto">
         <button (click)="activeTab.set('general')" [class]="activeTab() === 'general' ? 'px-4 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">General</button>
-        <button (click)="activeTab.set('proyectos')" [class]="activeTab() === 'proyectos' ? 'px-4 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Proyectos ({{ proyectos().length }})</button>
+        <button (click)="activeTab.set('casos')" [class]="activeTab() === 'casos' ? 'px-4 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Casos ({{ casos().length }})</button>
         <button (click)="activeTab.set('facturas')" [class]="activeTab() === 'facturas' ? 'px-4 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Facturas ({{ facturas().length }})</button>
         <button (click)="activeTab.set('comunicaciones')" [class]="activeTab() === 'comunicaciones' ? 'px-4 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Comunicaciones</button>
         <button (click)="activeTab.set('documentos')" [class]="activeTab() === 'documentos' ? 'px-4 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Documentos ({{ totalDocumentos() }})</button>
@@ -129,27 +129,28 @@
         </div>
       }
 
-      @if (activeTab() === 'proyectos') {
+      @if (activeTab() === 'casos') {
         <div class="p-5 space-y-3">
-          @if (proyectos().length === 0) {
-            <p class="text-sm text-slate-400 text-center py-8">Sin proyectos asociados</p>
+          @if (casos().length === 0) {
+            <p class="text-sm text-slate-400 text-center py-8">Sin casos asociados</p>
           }
-          @for (p of proyectos(); track p.id) {
-            <div class="border border-slate-200 rounded-lg p-4">
-              <div class="flex items-start justify-between mb-2">
-                <div>
-                  <p class="font-medium text-slate-800">{{ p.description }}</p>
-                  <p class="text-xs text-slate-400">{{ p.id }} · {{ p.type }}</p>
+          @for (caso of casos(); track caso.id) {
+            <button type="button" (click)="verCaso(caso)"
+              class="w-full text-left border border-slate-200 rounded-lg p-4 hover:bg-slate-50 hover:border-violet-200 transition-colors">
+              <div class="flex items-start justify-between gap-3 mb-2">
+                <div class="min-w-0">
+                  <p class="font-medium text-slate-800 truncate">{{ caso.titulo }}</p>
+                  <p class="text-xs text-slate-400">{{ caso.tipo }}@if (caso.vencimiento) { · Vence {{ caso.vencimiento }} }</p>
                 </div>
-                <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getProjectStatusClass(p.status)">{{ p.status }}</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <div class="flex-1 bg-slate-100 rounded-full h-1.5">
-                  <div class="bg-violet-500 h-1.5 rounded-full" [style.width]="p.progress + '%'"></div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getCasoPrioridadClass(caso.prioridad)">{{ caso.prioridad }}</span>
+                  <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getCasoEstadoClass(caso.estado)">{{ getCasoEstadoLabel(caso.estado) }}</span>
                 </div>
-                <span class="text-xs text-slate-500">{{ p.progress }}%</span>
               </div>
-            </div>
+              @if (caso.descripcion) {
+                <p class="text-xs text-slate-500 line-clamp-2">{{ caso.descripcion }}</p>
+              }
+            </button>
           }
         </div>
       }
@@ -176,12 +177,21 @@
 
       @if (activeTab() === 'comunicaciones') {
         <div class="p-5 space-y-3">
-          @for (h of historialComunicacion; track h.id) {
+          @if (comunicaciones().length === 0) {
+            <p class="text-sm text-slate-400 text-center py-8">Sin comunicaciones registradas en recepción IA</p>
+          }
+          @for (ll of comunicaciones(); track ll.conversationId) {
             <div class="flex items-start gap-3 p-3 border border-slate-200 rounded-lg">
-              <span class="text-xl">{{ getComunicacionIcon(h.tipo) }}</span>
-              <div>
-                <p class="font-medium text-slate-800 text-sm">{{ h.descripcion }}</p>
-                <p class="text-xs text-slate-400 mt-0.5">{{ h.fecha }}</p>
+              <span class="text-xl" aria-hidden="true">📞</span>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center justify-between gap-2">
+                  <p class="font-medium text-slate-800 text-sm truncate">{{ llamadaTitulo(ll) }}</p>
+                  <span class="text-xs text-slate-400 shrink-0">{{ formatDuracion(ll.duracionSegundos) }}</span>
+                </div>
+                @if (ll.datosCapturados.descripcionCaso) {
+                  <p class="text-xs text-slate-500 mt-0.5 line-clamp-2">{{ ll.datosCapturados.descripcionCaso }}</p>
+                }
+                <p class="text-xs text-slate-400 mt-0.5">{{ llamadaFecha(ll) }}</p>
               </div>
             </div>
           }

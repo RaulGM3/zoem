@@ -76,7 +76,7 @@
         <!-- Contacts Grid -->
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           @for (c of filtered(); track c.id) {
-            <div class="rounded-xl border border-slate-200 bg-white p-5 transition-shadow hover:shadow-md">
+            <div [routerLink]="['/contactos', c.id]" class="cursor-pointer rounded-xl border border-slate-200 bg-white p-5 transition-shadow hover:shadow-md">
               <div class="flex items-start justify-between mb-4">
                 <div class="flex items-center gap-3">
                   <div class="flex h-12 w-12 items-center justify-center rounded-full bg-violet-100 text-sm font-bold text-violet-700">
@@ -94,15 +94,23 @@
                 </span>
               </div>
               <div class="space-y-2 text-xs text-slate-500">
-                <div class="flex items-center gap-2">
-                  <lucide-icon [img]="MailIcon" size="12" class="text-slate-400 shrink-0"></lucide-icon>
-                  <span class="truncate">{{ c.email }}</span>
-                </div>
+                @if (c.email) {
+                  <a [href]="'mailto:' + c.email"
+                    (click)="$event.stopPropagation()"
+                    class="flex items-center gap-2 hover:text-violet-600"
+                    [attr.aria-label]="'Enviar email a ' + c.email">
+                    <lucide-icon [img]="MailIcon" size="12" class="text-slate-400 shrink-0"></lucide-icon>
+                    <span class="truncate">{{ c.email }}</span>
+                  </a>
+                }
                 @if (getPhone(c)) {
-                  <div class="flex items-center gap-2">
+                  <a [href]="'tel:' + getPhone(c)"
+                    (click)="$event.stopPropagation()"
+                    class="flex items-center gap-2 hover:text-violet-600"
+                    [attr.aria-label]="'Llamar a ' + getPhone(c)">
                     <lucide-icon [img]="PhoneIcon" size="12" class="text-slate-400 shrink-0"></lucide-icon>
                     <span>{{ getPhone(c) }}</span>
-                  </div>
+                  </a>
                 }
                 @if (getSector(c)) {
                   <div class="flex items-center gap-2">
@@ -132,21 +140,18 @@
                   @if (c.lastContact) { Último: {{ c.lastContact }} }
                 </p>
                 <div class="flex gap-1 shrink-0">
-                  <a [routerLink]="['/contactos', c.id]" class="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Ver contacto">
-                    <lucide-icon [img]="EyeIcon" size="14"></lucide-icon>
-                  </a>
-                  <button (click)="openEdit(c)" class="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Editar contacto">
+                  <button (click)="openEdit(c); $event.stopPropagation()" class="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Editar contacto">
                     <lucide-icon [img]="EditIcon" size="14"></lucide-icon>
                   </button>
                   @if (deleteConfirmId() === c.id) {
-                    <button (click)="confirmDelete(c.id)" class="rounded p-1 text-red-500 hover:bg-red-50" aria-label="Confirmar eliminación">
+                    <button (click)="confirmDelete(c.id); $event.stopPropagation()" class="rounded p-1 text-red-500 hover:bg-red-50" aria-label="Confirmar eliminación">
                       <lucide-icon [img]="CheckIcon" size="14"></lucide-icon>
                     </button>
-                    <button (click)="deleteConfirmId.set(null)" class="rounded p-1 text-slate-400 hover:bg-slate-100" aria-label="Cancelar">
+                    <button (click)="deleteConfirmId.set(null); $event.stopPropagation()" class="rounded p-1 text-slate-400 hover:bg-slate-100" aria-label="Cancelar">
                       <lucide-icon [img]="XIcon" size="14"></lucide-icon>
                     </button>
                   } @else {
-                    <button (click)="deleteConfirmId.set(c.id)" class="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500" aria-label="Eliminar contacto">
+                    <button (click)="deleteConfirmId.set(c.id); $event.stopPropagation()" class="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500" aria-label="Eliminar contacto">
                       <lucide-icon [img]="Trash2Icon" size="14"></lucide-icon>
                     </button>
                   }
@@ -337,14 +342,12 @@
 }
 
 <!-- Modal panel -->
+@if (showDrawer()) {
 <div
-  class="fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300"
-  [class.opacity-0]="!showDrawer()"
-  [class.pointer-events-none]="!showDrawer()"
+  class="fixed inset-0 z-50 flex items-center justify-center p-4"
 >
 <aside
-  class="pointer-events-auto bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col transform transition-transform duration-300"
-  [class.scale-95]="!showDrawer()"
+  class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
   role="dialog"
   aria-modal="true"
   [attr.aria-label]="editingId() ? 'Editar contacto' : 'Nuevo contacto'"
@@ -677,3 +680,4 @@
   </div>
 </aside>
 </div>
+}

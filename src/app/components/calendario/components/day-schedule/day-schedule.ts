@@ -2,9 +2,9 @@ import {
   Component, ChangeDetectionStrategy, input, output,
   signal, computed, viewChild, ElementRef, effect,
 } from '@angular/core';
-import { LucideAngularModule, X, Clock, Trash2, Plus } from 'lucide-angular';
+import { LucideAngularModule, X, Clock, Trash2, Plus, Scissors, Euro, Flag, CalendarClock } from 'lucide-angular';
 import type { Anotacion, CalendarItem, EventGroup, ItemColor } from '../../calendario.types';
-import type { EventoEstado, HitoEstado } from '../../../../interfaces';
+import type { CompanyMember, EventoEstado, HitoEstado, RegistroHoraHito } from '../../../../interfaces';
 import {
   HITO_ESTADOS,
   HITO_ESTADO_LABEL,
@@ -48,6 +48,36 @@ interface ResizeState {
 interface ItemLayout {
   colIndex: number;
   totalCols: number;
+}
+
+/** Segmento de horas de un hito posicionado en una columna del grid. */
+interface GridRegistro {
+  reg: RegistroHoraHito;
+  hitoId: string;
+  casoId?: string;
+  title: string;
+  color: ItemColor;
+  item: CalendarItem;
+}
+
+interface RegistroDragState {
+  reg: RegistroHoraHito;
+  hitoId: string;
+  casoId?: string;
+  offsetMinutes: number;
+  currentStartMinutes: number;
+  originalStartMinutes: number;
+  currentDate: string;
+  originalDate: string;
+}
+
+interface RegistroResizeState {
+  reg: RegistroHoraHito;
+  hitoId: string;
+  casoId?: string;
+  startY: number;
+  originalDuration: number;
+  currentDuration: number;
 }
 
 const TYPE_COLOR: Record<string, ItemColor> = {
@@ -210,6 +240,7 @@ function computeColumnLayout(items: CalendarItem[]): Map<string, ItemLayout> {
 export class DayScheduleComponent {
   readonly groupedEvents = input.required<EventGroup[]>();
   readonly hasSelectedDates = input.required<boolean>();
+  readonly members = input<CompanyMember[]>([]);
 
   readonly itemTimeChanged = output<ItemTimeChange>();
   readonly hitoStatusChanged = output<{ id: string; casoId: string; estado: HitoEstado }>();
@@ -217,11 +248,16 @@ export class DayScheduleComponent {
   readonly annotationAdded = output<{ itemId: string; casoId?: string; texto: string }>();
   readonly annotationDeleted = output<{ itemId: string; casoId?: string; anotacionId: string }>();
   readonly itemColorChanged = output<{ id: string; color: ItemColor | null }>();
+  readonly registrosChanged = output<{ hitoId: string; casoId?: string; registros: RegistroHoraHito[] }>();
 
   readonly XIcon = X;
   readonly ClockIcon = Clock;
   readonly Trash2Icon = Trash2;
   readonly PlusIcon = Plus;
+  readonly ScissorsIcon = Scissors;
+  readonly EuroIcon = Euro;
+  readonly FlagIcon = Flag;
+  readonly CalendarClockIcon = CalendarClock;
 
   readonly HITO_ESTADOS = HITO_ESTADOS;
   readonly EVENTO_ESTADOS = EVENTO_ESTADOS;
@@ -238,19 +274,55 @@ export class DayScheduleComponent {
 
   readonly dragging = signal<DragState | null>(null);
   readonly resizing = signal<ResizeState | null>(null);
+  readonly draggingReg = signal<RegistroDragState | null>(null);
+  readonly resizingReg = signal<RegistroResizeState | null>(null);
   readonly selectedItem = signal<CalendarItem | null>(null);
   readonly newAnnotationText = signal('');
 
+  /** Copia de trabajo de los registros de horas mientras el editor está abierto (null = cerrado). */
+  readonly horasEditor = signal<RegistroHoraHito[] | null>(null);
+
+  /** Total de horas de la copia de trabajo del editor. */
+  readonly horasEditorTotal = computed(() => {
+    const regs = this.horasEditor();
+    if (!regs) return 0;
+    const min = regs.reduce((s, r) => s + r.minutos, 0);
+    return Math.round((min / 60) * 100) / 100;
+  });
+
+  // Un hito está "sin programar" si no tiene segmentos de horas; un evento, si no
+  // tiene hora. Los hitos se representan por sus segmentos, no por horaAgenda.
   readonly unscheduledItems = computed<CalendarItem[]>(() =>
-    this.groupedEvents().flatMap(g => g.items.filter(i => !i.horaInicio))
+    this.groupedEvents().flatMap(g => g.items.filter(i =>
+      i.hitoEstado === undefined ? !i.horaInicio : (i.registrosHoras?.length ?? 0) === 0
+    ))
   );
 
-  /** Layout de columnas por item (para eventos superpuestos side-by-side) */
+  /**
+   * Layout de columnas para colocar bloques superpuestos side-by-side. Incluye
+   * tanto eventos (por su hora) como segmentos de hito (cada registro), de modo
+   * que un evento y un segmento que coinciden en horario no se pisen.
+   */
   readonly layouts = computed<Map<string, ItemLayout>>(() => {
     const map = new Map<string, ItemLayout>();
+    const drag = this.draggingReg();
     for (const group of this.groupedEvents()) {
-      const scheduled = group.items.filter(i => !!i.horaInicio);
-      computeColumnLayout(scheduled).forEach((layout, id) => map.set(id, layout));
+      const renderables: CalendarItem[] = [];
+      for (const item of group.items) {
+        if (item.hitoEstado === undefined) {
+          if (item.horaInicio) renderables.push(item);
+        } else {
+          for (const r of item.registrosHoras ?? []) {
+            const isDragging = drag?.reg.id === r.id;
+            const fecha = isDragging ? drag!.currentDate : r.fecha;
+            if (fecha === group.date) {
+              const horaInicio = isDragging ? minutesToTime(drag!.currentStartMinutes) : r.horaInicio;
+              renderables.push({ ...item, id: r.id, horaInicio, duracionMinutos: r.minutos });
+            }
+          }
+        }
+      }
+      computeColumnLayout(renderables).forEach((layout, id) => map.set(id, layout));
     }
     return map;
   });
@@ -270,9 +342,243 @@ export class DayScheduleComponent {
 
   // ── consultas ────────────────────────────────────────────────────────
 
+  /** Eventos agendados de una fecha. Los hitos se rinden por segmentos, no aquí. */
   scheduledItemsForDate(date: string): CalendarItem[] {
     const group = this.groupedEvents().find(g => g.date === date);
-    return (group?.items ?? []).filter(i => !!i.horaInicio);
+    return (group?.items ?? []).filter(i => i.hitoEstado === undefined && !!i.horaInicio);
+  }
+
+  /** ¿Es un hito (vs un evento)? Fuente: la presencia de hitoEstado. */
+  isHito(item: CalendarItem): boolean {
+    return item.hitoEstado !== undefined;
+  }
+
+  // ── registros de horas en el grid ────────────────────────────────────
+
+  /** Segmentos de hito (registrosHoras) que caen en una fecha concreta. */
+  gridRegistrosForDate(date: string): GridRegistro[] {
+    const result: GridRegistro[] = [];
+    for (const g of this.groupedEvents()) {
+      for (const item of g.items) {
+        if (item.hitoEstado === undefined) continue; // solo hitos
+        for (const r of item.registrosHoras ?? []) {
+          if (r.fecha === date) {
+            result.push({ reg: r, hitoId: item.id, casoId: item.casoId, title: item.title, color: this.effectiveColor(item), item });
+          }
+        }
+      }
+    }
+    return result;
+  }
+
+  /** Layout (left/width) de un segmento dentro de su columna, vía el mapa compartido. */
+  getRegLeft(r: RegistroHoraHito): string {
+    const layout = this.layouts().get(r.id);
+    if (!layout || layout.totalCols === 1) return '2px';
+    return `calc(${(layout.colIndex / layout.totalCols) * 100}% + 2px)`;
+  }
+
+  getRegWidth(r: RegistroHoraHito): string {
+    const layout = this.layouts().get(r.id);
+    if (!layout || layout.totalCols === 1) return 'calc(100% - 4px)';
+    return `calc(${(1 / layout.totalCols) * 100}% - 4px)`;
+  }
+
+  private findItemById(hitoId: string): CalendarItem | null {
+    for (const g of this.groupedEvents()) {
+      const found = g.items.find(i => i.id === hitoId);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  isDraggingReg(r: RegistroHoraHito): boolean {
+    return this.draggingReg()?.reg.id === r.id;
+  }
+
+  isResizingReg(r: RegistroHoraHito): boolean {
+    return this.resizingReg()?.reg.id === r.id;
+  }
+
+  getRegTop(r: RegistroHoraHito): number {
+    const d = this.draggingReg();
+    if (d?.reg.id === r.id) return minutesToPx(d.currentStartMinutes);
+    return minutesToPx(timeToMinutes(r.horaInicio));
+  }
+
+  /** Top de la sombra fantasma del segmento (posición original, sin drag). */
+  getRegGhostTop(r: RegistroHoraHito): number {
+    return minutesToPx(timeToMinutes(r.horaInicio));
+  }
+
+  getRegHeight(r: RegistroHoraHito): number {
+    const rz = this.resizingReg();
+    const mins = rz?.reg.id === r.id ? rz.currentDuration : r.minutos;
+    return Math.max(minutesToPx(mins), minutesToPx(MIN_DURATION));
+  }
+
+  getRegTimeLabel(r: RegistroHoraHito): string {
+    const d = this.draggingReg();
+    if (d?.reg.id === r.id) {
+      const dur = d.reg.minutos;
+      return `${minutesToTime(d.currentStartMinutes)} – ${minutesToTime(d.currentStartMinutes + dur)}`;
+    }
+    const rz = this.resizingReg();
+    if (rz?.reg.id === r.id) {
+      return `${r.horaInicio} – ${minutesToTime(timeToMinutes(r.horaInicio) + rz.currentDuration)}`;
+    }
+    return `${r.horaInicio} – ${r.horaFin}`;
+  }
+
+  private makeRegistro(userId: string, fecha: string, startMin: number, dur: number): RegistroHoraHito {
+    return {
+      id: this.newRegistroId(),
+      userId,
+      fecha,
+      horaInicio: minutesToTime(startMin),
+      horaFin: minutesToTime(startMin + dur),
+      minutos: dur,
+    };
+  }
+
+  /**
+   * "Separar": crea un nuevo segmento del hito a continuación del actual, dejando
+   * un hueco de 1h (la pausa para comer/descansar). El usuario luego lo arrastra
+   * y redimensiona donde le convenga (p.ej. 10–12 y 13–14).
+   */
+  splitRegistro(event: Event, gr: GridRegistro): void {
+    event.stopPropagation();
+    const item = this.findItemById(gr.hitoId);
+    if (!item) return;
+    const gapStart = timeToMinutes(gr.reg.horaFin) + 60;
+    const start = clamp(gapStart, 0, 23 * 60);
+    const nuevo = this.makeRegistro(gr.reg.userId, gr.reg.fecha, start, DEFAULT_DURATION);
+    const registros = [...(item.registrosHoras ?? []), nuevo];
+    this.registrosChanged.emit({ hitoId: item.id, casoId: item.casoId, registros });
+  }
+
+  /** Borra un segmento (separación) del hito. Si era el último, queda sin programar. */
+  removeRegistro(event: Event, gr: GridRegistro): void {
+    event.stopPropagation();
+    const item = this.findItemById(gr.hitoId);
+    if (!item) return;
+    const registros = (item.registrosHoras ?? []).filter(r => r.id !== gr.reg.id);
+    if (registros.length === 0) return;
+    this.registrosChanged.emit({ hitoId: item.id, casoId: item.casoId, registros });
+  }
+
+  onRegistroPointerDown(event: PointerEvent, gr: GridRegistro): void {
+    if (gr.reg.facturado) return; // los facturados son inmutables
+    if ((event.target as HTMLElement).closest('.resize-handle')) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    const area = this.scheduleAreaRef()?.nativeElement;
+    const header = this.headerRef()?.nativeElement;
+    if (!area) return;
+
+    const headerHeight = header?.offsetHeight ?? 40;
+    const areaRect = area.getBoundingClientRect();
+    const yInGrid = event.clientY - areaRect.top - headerHeight + area.scrollTop;
+    const clickMinutes = pxToMinutes(yInGrid);
+    const start = timeToMinutes(gr.reg.horaInicio);
+
+    this.draggingReg.set({
+      reg: gr.reg,
+      hitoId: gr.hitoId,
+      casoId: gr.casoId,
+      offsetMinutes: clamp(clickMinutes - start, 0, gr.reg.minutos - 1),
+      currentStartMinutes: start,
+      originalStartMinutes: start,
+      currentDate: gr.reg.fecha,
+      originalDate: gr.reg.fecha,
+    });
+    area.setPointerCapture(event.pointerId);
+  }
+
+  onRegistroResizePointerDown(event: PointerEvent, gr: GridRegistro): void {
+    if (gr.reg.facturado) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const area = this.scheduleAreaRef()?.nativeElement;
+    if (!area) return;
+    this.resizingReg.set({
+      reg: gr.reg,
+      hitoId: gr.hitoId,
+      casoId: gr.casoId,
+      startY: event.clientY,
+      originalDuration: gr.reg.minutos,
+      currentDuration: gr.reg.minutos,
+    });
+    area.setPointerCapture(event.pointerId);
+  }
+
+  private handleRegDragMove(event: PointerEvent, drag: RegistroDragState): void {
+    const area = this.scheduleAreaRef()?.nativeElement;
+    const header = this.headerRef()?.nativeElement;
+    if (!area) return;
+    const headerHeight = header?.offsetHeight ?? 40;
+    const areaRect = area.getBoundingClientRect();
+    const yInGrid = event.clientY - areaRect.top - headerHeight + area.scrollTop;
+    const pointerMinutes = pxToMinutes(yInGrid);
+    const dur = drag.reg.minutos;
+    const newStart = snap(clamp(pointerMinutes - drag.offsetMinutes, 0, 24 * 60 - dur));
+    const newDate = this.getDateAtPointer(event) ?? drag.currentDate;
+    this.draggingReg.update(d => d ? { ...d, currentStartMinutes: newStart, currentDate: newDate } : null);
+  }
+
+  private handleRegResizeMove(event: PointerEvent, resize: RegistroResizeState): void {
+    const deltaY = event.clientY - resize.startY;
+    const deltaMins = pxToMinutes(deltaY);
+    const newDur = snap(clamp(resize.originalDuration + deltaMins, MIN_DURATION, 23 * 60));
+    this.resizingReg.update(r => r ? { ...r, currentDuration: newDur } : null);
+  }
+
+  private finalizeRegDrag(drag: RegistroDragState): void {
+    this.draggingReg.set(null);
+    const item = this.findItemById(drag.hitoId);
+    const timeChanged = drag.currentStartMinutes !== drag.originalStartMinutes;
+    const dateChanged = drag.currentDate !== drag.originalDate;
+    if (!timeChanged && !dateChanged) {
+      // Click sin arrastrar → abre el detalle del hito.
+      if (item) this.selectedItem.set(item);
+      return;
+    }
+    if (!item) return;
+    const dur = drag.reg.minutos;
+    const start = drag.currentStartMinutes;
+    const updated: RegistroHoraHito = {
+      ...drag.reg,
+      fecha: drag.currentDate,
+      horaInicio: minutesToTime(start),
+      horaFin: minutesToTime(start + dur),
+      minutos: dur,
+    };
+    const registros = (item.registrosHoras ?? []).map(r => r.id === drag.reg.id ? updated : r);
+    this.registrosChanged.emit({ hitoId: drag.hitoId, casoId: drag.casoId, registros });
+  }
+
+  private finalizeRegResize(resize: RegistroResizeState): void {
+    this.resizingReg.set(null);
+    if (resize.currentDuration === resize.originalDuration) return;
+    const item = this.findItemById(resize.hitoId);
+    if (!item) return;
+    const start = timeToMinutes(resize.reg.horaInicio);
+    const updated: RegistroHoraHito = {
+      ...resize.reg,
+      horaFin: minutesToTime(start + resize.currentDuration),
+      minutos: resize.currentDuration,
+    };
+    const registros = (item.registrosHoras ?? []).map(r => r.id === resize.reg.id ? updated : r);
+    this.registrosChanged.emit({ hitoId: resize.hitoId, casoId: resize.casoId, registros });
+  }
+
+  getRegClass(gr: GridRegistro): string {
+    const color = COLOR_ITEM[gr.color];
+    const dragging = this.isDraggingReg(gr.reg) ? 'shadow-xl opacity-90 z-20' : 'z-[2]';
+    const cursor = gr.reg.facturado ? 'cursor-default' : 'cursor-grab';
+    // Mismo estilo que un bloque de hito (color + borde izq.); el segmento ES el hito.
+    return `absolute rounded-lg border-l-4 overflow-hidden select-none touch-none ${color} ${cursor} ${dragging}`;
   }
 
   isDraggingItem(item: CalendarItem): boolean {
@@ -410,11 +716,19 @@ export class DayScheduleComponent {
   }
 
   scheduleItem(item: CalendarItem): void {
+    const start = this.findAvailableSlot(item);
+    if (item.hitoEstado !== undefined) {
+      // Un hito se programa creando su primer segmento de horas.
+      const userId = item.asignadosA?.[0] ?? this.members()[0]?.userId ?? '';
+      const reg = this.makeRegistro(userId, item.date, start, DEFAULT_DURATION);
+      this.registrosChanged.emit({ hitoId: item.id, casoId: item.casoId, registros: [reg] });
+      return;
+    }
     this.itemTimeChanged.emit({
       id: item.id,
       casoId: item.casoId,
-      itemType: item.hitoEstado !== undefined ? 'hito' : 'evento',
-      horaInicio: minutesToTime(this.findAvailableSlot(item)),
+      itemType: 'evento',
+      horaInicio: minutesToTime(start),
       duracionMinutos: DEFAULT_DURATION,
     });
   }
@@ -495,19 +809,29 @@ export class DayScheduleComponent {
     const drag = this.dragging();
     if (drag) { this.handleDragMove(event, drag); return; }
     const resize = this.resizing();
-    if (resize) { this.handleResizeMove(event, resize); }
+    if (resize) { this.handleResizeMove(event, resize); return; }
+    const dragReg = this.draggingReg();
+    if (dragReg) { this.handleRegDragMove(event, dragReg); return; }
+    const resizeReg = this.resizingReg();
+    if (resizeReg) { this.handleRegResizeMove(event, resizeReg); }
   }
 
   onSchedulePointerUp(_event: PointerEvent): void {
     const drag = this.dragging();
     if (drag) { this.finalizeDrag(drag); return; }
     const resize = this.resizing();
-    if (resize) { this.finalizeResize(resize); }
+    if (resize) { this.finalizeResize(resize); return; }
+    const dragReg = this.draggingReg();
+    if (dragReg) { this.finalizeRegDrag(dragReg); return; }
+    const resizeReg = this.resizingReg();
+    if (resizeReg) { this.finalizeRegResize(resizeReg); }
   }
 
   onSchedulePointerCancel(): void {
     this.dragging.set(null);
     this.resizing.set(null);
+    this.draggingReg.set(null);
+    this.resizingReg.set(null);
   }
 
   private handleDragMove(event: PointerEvent, drag: DragState): void {
@@ -574,6 +898,100 @@ export class DayScheduleComponent {
   closeModal(): void {
     this.selectedItem.set(null);
     this.newAnnotationText.set('');
+    this.horasEditor.set(null);
+  }
+
+  // ── editor de horas (cobro por horas) ────────────────────────────────
+
+  private newRegistroId(): string {
+    return (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  }
+
+  private bloqueDefault(item: CalendarItem, fecha: string): RegistroHoraHito {
+    const userId = item.asignadosA?.[0] ?? this.members()[0]?.userId ?? '';
+    const horaInicio = item.horaInicio ?? '09:00';
+    const fin = timeToMinutes(horaInicio) + (item.duracionMinutos ?? DEFAULT_DURATION);
+    const horaFin = minutesToTime(fin);
+    return {
+      id: this.newRegistroId(),
+      userId,
+      fecha,
+      horaInicio,
+      horaFin,
+      minutos: Math.max(0, fin - timeToMinutes(horaInicio)),
+    };
+  }
+
+  /** Abre el editor de horas sembrando la copia de trabajo desde el hito. */
+  openHorasEditor(): void {
+    const item = this.selectedItem();
+    if (!item) return;
+    const existentes = (item.registrosHoras ?? []).map(r => ({ ...r }));
+    this.horasEditor.set(existentes.length > 0 ? existentes : [this.bloqueDefault(item, item.date)]);
+  }
+
+  cancelHorasEditor(): void {
+    this.horasEditor.set(null);
+  }
+
+  addBloque(): void {
+    const item = this.selectedItem();
+    if (!item) return;
+    this.horasEditor.update(regs => regs ? [...regs, this.bloqueDefault(item, item.date)] : regs);
+  }
+
+  /** "Separar": duplica un bloque en el día siguiente para repartir el trabajo. */
+  splitBloque(id: string): void {
+    this.horasEditor.update(regs => {
+      if (!regs) return regs;
+      const src = regs.find(r => r.id === id);
+      if (!src) return regs;
+      const next = new Date(src.fecha + 'T00:00:00');
+      next.setDate(next.getDate() + 1);
+      const fecha = next.toISOString().slice(0, 10);
+      return [...regs, { ...src, id: this.newRegistroId(), fecha }];
+    });
+  }
+
+  removeBloque(id: string): void {
+    this.horasEditor.update(regs => regs ? regs.filter(r => r.id !== id) : regs);
+  }
+
+  private recomputeMinutos(r: RegistroHoraHito): number {
+    return Math.max(0, timeToMinutes(r.horaFin) - timeToMinutes(r.horaInicio));
+  }
+
+  updateBloqueField(id: string, field: 'fecha' | 'horaInicio' | 'horaFin' | 'userId', event: Event): void {
+    const value = (event.target as HTMLInputElement | HTMLSelectElement).value;
+    this.horasEditor.update(regs => {
+      if (!regs) return regs;
+      return regs.map(r => {
+        if (r.id !== id) return r;
+        const updated = { ...r, [field]: value } as RegistroHoraHito;
+        updated.minutos = this.recomputeMinutos(updated);
+        return updated;
+      });
+    });
+  }
+
+  /** Persiste los registros (descarta los facturados, que son inmutables, conservándolos). */
+  saveHoras(): void {
+    const item = this.selectedItem();
+    const regs = this.horasEditor();
+    if (!item || !regs) return;
+    const limpios = regs.filter(r => r.minutos > 0 && r.userId);
+    this.registrosChanged.emit({ hitoId: item.id, casoId: item.casoId, registros: limpios });
+    this.selectedItem.update(i => i ? { ...i, registrosHoras: limpios } : null);
+    this.horasEditor.set(null);
+  }
+
+  /** Nombre del miembro a partir de su userId (para el desplegable y resúmenes). */
+  memberName(userId: string): string {
+    return this.members().find(m => m.userId === userId)?.nombre ?? 'Sin asignar';
+  }
+
+  bloqueHoras(r: RegistroHoraHito): number {
+    return Math.round((r.minutos / 60) * 100) / 100;
   }
 
   getItemTypeLabel(item: CalendarItem): string {

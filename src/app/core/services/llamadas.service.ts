@@ -42,6 +42,14 @@ export class LlamadasService {
     this.llamadas.update((list) => list.filter((l) => l.conversationId !== conversationId));
   }
 
+  /** Vincula manualmente la llamada a un contacto existente. */
+  async asociarContacto(conversationId: string, contactId: string): Promise<void> {
+    await updateDoc(doc(this.llamadasRef, conversationId), { contactId });
+    this.llamadas.update((list) =>
+      list.map((l) => (l.conversationId === conversationId ? { ...l, contactId } : l))
+    );
+  }
+
   async getLlamada(id: string): Promise<LlamadaResumen | null> {
     const snap = await getDoc(doc(this.llamadasRef, id));
     if (!snap.exists()) return null;

@@ -38,6 +38,8 @@ export interface CompanyMember {
   role: FirmRole;
   departamento: string;
   estado: MemberEstado;
+  /** Fee por hora del miembro (opcional). Solo el admin del despacho lo edita. */
+  tarifaHoraria?: number;
   ultimoLogin: Timestamp | null;
   createdAt: Timestamp;
 }

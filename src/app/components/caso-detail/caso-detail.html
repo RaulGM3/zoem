@@ -46,10 +46,12 @@
           [hitos]="hitos()"
           [actividad]="actividad()"
           [members]="usersService.members()"
+          [isAdmin]="permissionService.isAdmin()"
           (toggle)="toggleHitoEstado($event)"
           (editHito)="startEditHito($event)"
           (deleteHito)="deleteHito($event)"
           (addHito)="openNewHitoForm()"
+          (facturarHoras)="facturarHorasHito($event)"
         />
       }
 
@@ -61,6 +63,7 @@
           [resumen]="caso()!.resumenFinanciero"
           (registerSlot)="openRegistrarSlot($event)"
           (unregisterSlot)="unregisterSlot($event)"
+          (reorderSlots)="reorderSlots($event)"
           (addMov)="openMovForm()"
           (deleteMov)="deleteMovimiento($event)"
         />

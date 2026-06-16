@@ -5,7 +5,7 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import {
   LucideAngularModule,
   Users, Plus, Phone, Mail, Building2,
-  Eye, Edit, Trash2, ChevronRight, ChevronLeft, UserPlus, TrendingUp,
+  Edit, Trash2, ChevronRight, ChevronLeft, UserPlus, TrendingUp,
   GitMerge, Shield, Brain, ArrowRight, X, Check, LoaderCircle, StickyNote,
 } from 'lucide-angular';
 import { PIPELINE_DEALS } from '../../data/dummy-data';
@@ -42,7 +42,6 @@ export class ContactosComponent {
   readonly PhoneIcon = Phone;
   readonly MailIcon = Mail;
   readonly Building2Icon = Building2;
-  readonly EyeIcon = Eye;
   readonly EditIcon = Edit;
   readonly Trash2Icon = Trash2;
   readonly ChevronRightIcon = ChevronRight;

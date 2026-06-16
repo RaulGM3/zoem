@@ -16,16 +16,20 @@ import {
   deleteField,
 } from '@angular/fire/firestore';
 import type { Observable } from 'rxjs';
+import { Auth } from '@angular/fire/auth';
 import { CompanyService } from './company.service';
 import { PlantillasService } from './plantillas.service';
 import {
   Caso,
   CasoPlantilla,
+  CompanyMember,
+  GestoriaSlot,
   Hito,
   HitoActividad,
   HitoActividadTipo,
   HitoEstado,
   MovimientoGestoria,
+  RegistroHoraHito,
   RESUMEN_FINANCIERO_VACIO,
   ResumenFinanciero,
 } from '../../interfaces';
@@ -54,6 +58,7 @@ export class CasosService {
   private readonly firestore = inject(Firestore);
   private readonly companyService = inject(CompanyService);
   private readonly plantillasService = inject(PlantillasService);
+  private readonly auth = inject(Auth);
 
   readonly casos = signal<Caso[]>([]);
   readonly loading = signal(false);
@@ -232,6 +237,87 @@ export class CasosService {
   }
 
   /**
+   * Reemplaza el array de registros de horas de un hito (cobro por horas).
+   * El editor del calendario gestiona el array en cliente y persiste el set
+   * completo, evitando carreras de splice sobre el documento.
+   */
+  async setRegistrosHoras(hitoId: string, registros: RegistroHoraHito[]): Promise<void> {
+    // Los segmentos son la única fuente de la presencia del hito en el grid.
+    // Migramos los campos legacy de agenda para que no resuciten un segmento
+    // sintetizado tras borrar todos (ver hitoToItem en calendario.ts).
+    await updateDoc(doc(this.hitosRef, hitoId), {
+      registrosHoras: registros,
+      horaAgenda: deleteField(),
+      duracionAgenda: deleteField(),
+    });
+  }
+
+  /**
+   * Convierte las horas declaradas (no facturadas) de un hito en movimientos de
+   * gestoría tipo `honorario`, agrupando por miembro y aplicando su `tarifaHoraria`.
+   * El importe queda congelado en el movimiento (snapshot de tarifa). Marca cada
+   * registro como `facturado` enlazando su `movimientoId`. Los miembros sin tarifa
+   * (o tarifa 0) se omiten. Recalcula el resumen al final.
+   *
+   * Escribe el movimiento directamente (sin GestoriaService) para evitar la
+   * dependencia circular: GestoriaService ya inyecta CasosService.
+   */
+  async facturarHorasHito(casoId: string, hito: Hito, members: CompanyMember[]): Promise<{ facturados: number; omitidos: number }> {
+    const registros = hito.registrosHoras ?? [];
+    const pendientes = registros.filter(r => !r.facturado);
+    if (pendientes.length === 0) return { facturados: 0, omitidos: 0 };
+
+    const porUsuario = new Map<string, RegistroHoraHito[]>();
+    for (const r of pendientes) {
+      const arr = porUsuario.get(r.userId) ?? [];
+      arr.push(r);
+      porUsuario.set(r.userId, arr);
+    }
+
+    const companyId = this.companyId;
+    const gestoriaRef = collection(this.firestore, 'companies', companyId, 'casos', casoId, 'gestoria');
+    const createdBy = this.auth.currentUser?.uid ?? '';
+    const fecha = new Date().toISOString().slice(0, 10);
+
+    const registrosActualizados = [...registros];
+    let facturados = 0;
+    let omitidos = 0;
+
+    for (const [userId, regs] of porUsuario) {
+      const member = members.find(m => m.userId === userId);
+      const tarifa = member?.tarifaHoraria;
+      if (!tarifa || tarifa <= 0) { omitidos += regs.length; continue; }
+
+      const minutos = regs.reduce((s, r) => s + r.minutos, 0);
+      const horas = Math.round((minutos / 60) * 100) / 100;
+      const importe = Math.round(horas * tarifa * 100) / 100;
+      const nombre = member?.nombre ?? 'Miembro';
+
+      const movRef = await addDoc(gestoriaRef, {
+        tipo: 'honorario',
+        concepto: `Horas ${nombre} (${horas}h × ${tarifa}€) — ${hito.titulo}`,
+        importe,
+        esEntrada: false,
+        fecha,
+        casoId,
+        companyId,
+        createdBy,
+        createdAt: serverTimestamp(),
+      });
+
+      for (const r of regs) {
+        const idx = registrosActualizados.findIndex(u => u.id === r.id);
+        if (idx >= 0) registrosActualizados[idx] = { ...registrosActualizados[idx], facturado: true, movimientoId: movRef.id };
+      }
+      facturados++;
+    }
+
+    await updateDoc(doc(this.hitosRef, hito.id), { registrosHoras: registrosActualizados });
+    await this.recalcularResumen(casoId);
+    return { facturados, omitidos };
+  }
+
+  /**
    * Stream real-time de los hitos de la empresa para el calendario. Emite ante
    * cada cambio (estado, agenda, fecha) para que la vista no dependa de recargar.
    * Nota: `orderBy('fechaEstimada')` excluye hitos sin esa fecha — el calendario
@@ -362,8 +448,9 @@ export class CasosService {
   async recalcularResumen(casoId: string): Promise<void> {
     const companyId = this.companyId;
     const gestoriaRef = collection(this.firestore, 'companies', companyId, 'casos', casoId, 'gestoria');
-    const snapshot = await getDocs(gestoriaRef);
-    const movimientos = snapshot.docs.map(d => d.data() as MovimientoGestoria);
+    const slotsRef = collection(this.firestore, 'companies', companyId, 'casos', casoId, 'gestoria_slots');
+    const [movSnap, slotsSnap] = await Promise.all([getDocs(gestoriaRef), getDocs(slotsRef)]);
+    const movimientos = movSnap.docs.map(d => d.data() as MovimientoGestoria);
 
     const resumen: ResumenFinanciero = { ...RESUMEN_FINANCIERO_VACIO };
     for (const m of movimientos) {
@@ -373,13 +460,54 @@ export class CasosService {
     }
     resumen.saldo = resumen.totalIngresos - resumen.totalSuplidos - resumen.totalHonorarios;
 
+    // Denormalizamos el conteo de slots para que facturación evalúe "ejecutado"
+    // leyendo sólo el doc del caso, sin abrir la subcolección por cada render.
+    const gestoriaResumenSlots = {
+      total: slotsSnap.size,
+      registrados: slotsSnap.docs.filter(d => (d.data() as GestoriaSlot).status === 'registrado').length,
+    };
+
     await updateDoc(doc(this.firestore, 'companies', companyId, 'casos', casoId), {
       resumenFinanciero: resumen,
+      gestoriaResumenSlots,
       updatedAt: serverTimestamp(),
     });
 
     this.casos.update(list =>
-      list.map(c => (c.id === casoId ? { ...c, resumenFinanciero: resumen } : c))
+      list.map(c => (c.id === casoId ? { ...c, resumenFinanciero: resumen, gestoriaResumenSlots } : c))
+    );
+  }
+
+  /** Marca el caso como facturado, enlazando la factura generada (auditoría). */
+  async marcarFacturado(casoId: string, facturaId: string): Promise<void> {
+    const facturadoAt = new Date().toISOString();
+    await updateDoc(doc(this.firestore, 'companies', this.companyId, 'casos', casoId), {
+      facturaId,
+      facturadoAt,
+      updatedAt: serverTimestamp(),
+    });
+    this.casos.update(list =>
+      list.map(c => (c.id === casoId ? { ...c, facturaId, facturadoAt } : c))
+    );
+  }
+
+  /**
+   * Confirma el cierre financiero de un caso: lo marca como `cerrado` y guarda el
+   * snapshot del saldo bancario corroborado y la fecha de confirmación (auditoría).
+   */
+  async confirmarCierre(casoId: string, opts: { saldoBancario?: number }): Promise<void> {
+    const cierreConfirmadoAt = new Date().toISOString();
+    const patch = stripUndefined({
+      estado: 'cerrado' as const,
+      cierreConfirmadoAt,
+      cierreSaldoBancario: opts.saldoBancario,
+    });
+    await updateDoc(doc(this.firestore, 'companies', this.companyId, 'casos', casoId), {
+      ...patch,
+      updatedAt: serverTimestamp(),
+    });
+    this.casos.update(list =>
+      list.map(c => (c.id === casoId ? { ...c, ...patch } as Caso : c))
     );
   }
 }

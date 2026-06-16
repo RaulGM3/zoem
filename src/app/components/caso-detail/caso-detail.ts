@@ -11,6 +11,7 @@ import { ContactService } from '../../core/services/contact.service';
 import { UsersService } from '../../core/services/users';
 import { UserSyncService } from '../../core/services/user-sync.service';
 import { CasoDocService } from '../../core/services/caso-doc.service';
+import { PermissionService } from '../../core/services/permission.service';
 import { cycleHitoEstado, stampEstadoChange } from '../../core/hitos/hito-estado';
 import {
   Caso, CasoDocSlot, CasoDocFile,
@@ -52,6 +53,7 @@ export class CasoDetailComponent implements OnInit {
   readonly usersService = inject(UsersService);
   private readonly userSync = inject(UserSyncService);
   readonly casoDocService = inject(CasoDocService);
+  readonly permissionService = inject(PermissionService);
 
   readonly caso = signal<Caso | null>(null);
   readonly loading = signal(true);
@@ -219,6 +221,7 @@ export class CasoDetailComponent implements OnInit {
         ...(data.descripcion ? { descripcion: data.descripcion } : {}),
         ...(data.fechaEstimada ? { fechaEstimada: data.fechaEstimada } : {}),
         ...(data.asignadoA ? { asignadoA: data.asignadoA } : {}),
+        ...(data.asignadosA ? { asignadosA: data.asignadosA } : {}),
         ...(estadoChanged ? stampEstadoChange(autorId) : {}),
       };
 
@@ -235,6 +238,21 @@ export class CasoDetailComponent implements OnInit {
     } finally {
       this.savingHito.set(false);
     }
+  }
+
+  /**
+   * Convierte las horas declaradas (no facturadas) de un hito en honorarios de
+   * gestoría, agrupando por miembro y aplicando su tarifa. Refresca el caso para
+   * reflejar el nuevo total de honorarios en el resumen financiero.
+   */
+  async facturarHorasHito(hito: Hito): Promise<void> {
+    const c = this.caso();
+    if (!c) return;
+    await this.casosService.facturarHorasHito(c.id, hito, this.usersService.members());
+    await Promise.all([
+      this.gestoriaService.loadMovimientos(c.id),
+      (async () => this.caso.set(await this.casosService.getCaso(c.id)))(),
+    ]);
   }
 
   async deleteHito(hitoId: string): Promise<void> {
@@ -317,6 +335,12 @@ export class CasoDetailComponent implements OnInit {
     const c = this.caso();
     if (!c) return;
     await this.gestoriaService.unregisterSlot(c.id, slot);
+  }
+
+  async reorderSlots(orderedSlots: GestoriaSlot[]): Promise<void> {
+    const c = this.caso();
+    if (!c) return;
+    await this.gestoriaService.reorderSlots(c.id, orderedSlots);
   }
 
   closeMovForm(): void {

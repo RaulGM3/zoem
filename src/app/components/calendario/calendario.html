@@ -29,10 +29,12 @@
     class="block min-h-0 flex-1"
     [groupedEvents]="groupedEvents()"
     [hasSelectedDates]="selectedDates().size > 0"
+    [members]="members()"
     (hitoStatusChanged)="updateHitoEstado($event)"
     (eventoStatusChanged)="updateEventoEstado($event)"
     (itemTimeChanged)="updateItemTime($event)"
     (itemColorChanged)="updateItemColor($event)"
+    (registrosChanged)="updateRegistrosHoras($event)"
   />
 </div>
 

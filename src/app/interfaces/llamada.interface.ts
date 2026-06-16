@@ -28,4 +28,6 @@ export interface LlamadaResumen {
   datosCapturados: DatosCapturados;
   creadoEn: Timestamp;
   descartada?: boolean;
+  /** Vínculo manual a un contacto existente cuando no hay match por teléfono. */
+  contactId?: string;
 }

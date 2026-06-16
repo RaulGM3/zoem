@@ -65,6 +65,7 @@
                     <th class="pb-3 font-medium text-center">Estado</th>
                     <th class="pb-3 font-medium">Último acceso</th>
                     @if (isAdmin()) {
+                      <th class="pb-3 font-medium">Tarifa/h</th>
                       <th class="pb-3"></th>
                     }
                   </tr>
@@ -93,6 +94,19 @@
                       <td class="py-3 text-slate-400 text-xs">{{ formatLogin(usr.ultimoLogin) }}</td>
                       @if (isAdmin()) {
                         <td class="py-3">
+                          <div class="flex items-center gap-1">
+                            <input
+                              type="number" min="0" step="0.01" inputmode="decimal"
+                              [value]="usr.tarifaHoraria ?? ''"
+                              (change)="onTarifaChange(usr.id, $event)"
+                              placeholder="—"
+                              class="w-20 px-2 py-1 text-sm border border-slate-200 rounded-lg focus:border-violet-400 focus:outline-none focus:ring-1 focus:ring-violet-200"
+                              [attr.aria-label]="'Tarifa por hora de ' + usr.nombre"
+                            />
+                            <span class="text-xs text-slate-400">€</span>
+                          </div>
+                        </td>
+                        <td class="py-3">
                           <button class="p-1 hover:bg-slate-100 rounded" aria-label="Más opciones">
                             <lucide-icon [img]="MoreHorizontalIcon" class="w-4 h-4 text-slate-400" />
                           </button>
@@ -102,7 +116,7 @@
                   }
                   @if (filteredUsuarios().length === 0 && !isLoading()) {
                     <tr>
-                      <td colspan="6" class="py-8 text-center text-slate-400 text-sm">No se encontraron usuarios</td>
+                      <td [attr.colspan]="isAdmin() ? 7 : 5" class="py-8 text-center text-slate-400 text-sm">No se encontraron usuarios</td>
                     </tr>
                   }
                 </tbody>

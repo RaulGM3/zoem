@@ -2,182 +2,180 @@
 <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
   <div>
     <h1 class="text-2xl font-bold text-slate-900">Facturación</h1>
-    <p class="mt-1 text-sm text-slate-500">Gestiona tus facturas y controla los cobros</p>
-  </div>
-  <button class="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-500">
-    <lucide-icon [img]="PlusIcon" size="16"></lucide-icon>
-    Nueva Factura
-  </button>
-</div>
-
-<!-- Semáforo fiscal + VeriFactu -->
-<div class="mb-4 grid gap-4 sm:grid-cols-2">
-  <div class="rounded-xl border border-slate-200 bg-white p-4 flex items-center gap-4">
-    <div class="relative flex items-center justify-center w-12 h-12 shrink-0">
-      <div class="w-4 h-4 bg-emerald-500 rounded-full"></div>
-      <div class="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-30"></div>
-    </div>
-    <div>
-      <p class="text-sm font-semibold text-slate-700">Semáforo Fiscal</p>
-      <p class="text-xs text-emerald-600 font-medium">Al día — Sin incidencias</p>
-      <p class="text-xs text-slate-400 mt-0.5">Próximo vencimiento: 20 Jul 2026</p>
-    </div>
-  </div>
-  <div class="rounded-xl border border-slate-200 bg-white p-4 flex items-center gap-4">
-    <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
-      <lucide-icon [img]="ShieldCheckIcon" class="w-6 h-6 text-blue-600" />
-    </div>
-    <div>
-      <p class="text-sm font-semibold text-slate-700">VeriFactu</p>
-      <div class="flex items-center gap-2 mt-0.5">
-        <div class="flex-1 bg-slate-100 rounded-full h-1.5 max-w-24">
-          <div class="bg-blue-500 h-1.5 rounded-full w-full"></div>
-        </div>
-        <span class="text-xs font-semibold text-blue-700">100%</span>
-      </div>
-      <p class="text-xs text-slate-400 mt-0.5">Todas las facturas certificadas</p>
-    </div>
+    <p class="mt-1 text-sm text-slate-500">Sumatoria de la gestoría de los casos abiertos y cierre controlado</p>
   </div>
 </div>
 
-<!-- Summary Cards -->
-<div class="mb-6 grid gap-4 sm:grid-cols-3">
+<!-- Summary Cards: sumatoria de casos abiertos -->
+<div class="mb-6 grid gap-4 sm:grid-cols-4">
   <div class="rounded-xl border border-slate-200 bg-white p-5">
     <div class="flex items-center gap-3 mb-3">
-      <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-green-50">
-        <lucide-icon [img]="CheckCircle2Icon" size="20" class="text-green-600"></lucide-icon>
+      <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50">
+        <lucide-icon [img]="TrendingUpIcon" size="20" class="text-emerald-600"></lucide-icon>
       </div>
-      <p class="text-sm text-slate-500">Cobrado</p>
+      <p class="text-sm text-slate-500">Ingresos</p>
     </div>
-    <p class="text-3xl font-bold text-slate-900">{{ totalInvoiced() | number:'1.0-0' }}€</p>
-    <p class="mt-1 text-xs text-green-600">Facturas pagadas</p>
+    <p class="text-2xl font-bold text-slate-900">{{ totales().ingresos | number:'1.0-0' }}€</p>
   </div>
   <div class="rounded-xl border border-slate-200 bg-white p-5">
     <div class="flex items-center gap-3 mb-3">
       <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50">
         <lucide-icon [img]="ClockIcon" size="20" class="text-amber-600"></lucide-icon>
       </div>
-      <p class="text-sm text-slate-500">Pendiente</p>
+      <p class="text-sm text-slate-500">Suplidos</p>
     </div>
-    <p class="text-3xl font-bold text-slate-900">{{ totalPending() | number:'1.0-0' }}€</p>
-    <p class="mt-1 text-xs text-amber-600">Esperando pago</p>
+    <p class="text-2xl font-bold text-slate-900">{{ totales().suplidos | number:'1.0-0' }}€</p>
   </div>
   <div class="rounded-xl border border-slate-200 bg-white p-5">
     <div class="flex items-center gap-3 mb-3">
-      <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-red-50">
-        <lucide-icon [img]="AlertCircleIcon" size="20" class="text-red-600"></lucide-icon>
+      <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-50">
+        <lucide-icon [img]="ReceiptIcon" size="20" class="text-violet-600"></lucide-icon>
       </div>
-      <p class="text-sm text-slate-500">Vencido</p>
+      <p class="text-sm text-slate-500">Honorarios</p>
     </div>
-    <p class="text-3xl font-bold text-slate-900">{{ totalOverdue() | number:'1.0-0' }}€</p>
-    <p class="mt-1 text-xs text-red-500">Requiere atención</p>
+    <p class="text-2xl font-bold text-slate-900">{{ totales().honorarios | number:'1.0-0' }}€</p>
+  </div>
+  <div class="rounded-xl border border-slate-200 bg-white p-5">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100">
+        <lucide-icon [img]="EuroIcon" size="20" class="text-slate-600"></lucide-icon>
+      </div>
+      <p class="text-sm text-slate-500">Saldo</p>
+    </div>
+    <p class="text-2xl font-bold" [class.text-emerald-600]="totales().saldo >= 0" [class.text-red-600]="totales().saldo < 0">
+      {{ totales().saldo | number:'1.0-0' }}€
+    </p>
   </div>
 </div>
 
 <!-- Tabs -->
 <div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
   <div class="flex border-b border-slate-200 overflow-x-auto">
-    <button (click)="activeTab.set('facturas')" [class]="activeTab() === 'facturas' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Facturas</button>
+    <button (click)="activeTab.set('casos')" [class]="activeTab() === 'casos' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Casos abiertos</button>
+    <button (click)="activeTab.set('archivo')" [class]="activeTab() === 'archivo' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Archivo</button>
     <button (click)="activeTab.set('fiscal')" [class]="activeTab() === 'fiscal' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Panel Fiscal</button>
     <button (click)="activeTab.set('horas')" [class]="activeTab() === 'horas' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Registro de Horas</button>
   </div>
 
-  <!-- TAB: Facturas -->
-  @if (activeTab() === 'facturas') {
-    <div class="p-4">
-      <!-- Filters -->
-      <div class="mb-4 flex flex-col gap-3 sm:flex-row">
-        <div class="relative flex-1">
-          <lucide-icon [img]="SearchIcon" size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></lucide-icon>
-          <input
-            type="text"
-            placeholder="Buscar por cliente o número..."
-            [value]="search()"
-            (input)="search.set($any($event.target).value)"
-            class="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-44 pr-4 text-sm placeholder-slate-400 focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-100"
-            aria-label="Buscar factura"
-          />
-        </div>
-        <select (change)="filterStatus.set($any($event.target).value)"
-          class="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-violet-300 focus:outline-none"
-          aria-label="Filtrar por estado">
-          <option value="">Todos los estados</option>
-          <option value="pagada">Pagada</option>
-          <option value="pendiente">Pendiente</option>
-          <option value="vencida">Vencida</option>
-          <option value="borrador">Borrador</option>
-        </select>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="border-b bg-slate-50">
-              <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Nº / Cliente</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Proyecto</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Importe</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Estado</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Emisión</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Vencimiento</th>
-              <th class="px-4 py-3"></th>
+  <!-- TAB: Casos abiertos -->
+  @if (activeTab() === 'casos') {
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b bg-slate-50">
+            <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Caso</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Ingresos</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Suplidos</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Honorarios</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Saldo</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Gestoría</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (caso of casosAbiertos(); track caso.id) {
+            <tr class="hover:bg-slate-50 transition-colors">
+              <td class="px-5 py-4">
+                <p class="font-semibold text-slate-900">{{ caso.titulo }}</p>
+                <p class="text-xs text-slate-400">{{ caso.tipo }}</p>
+              </td>
+              <td class="px-4 py-4 text-right text-slate-600">{{ caso.resumenFinanciero.totalIngresos | number:'1.0-0' }}€</td>
+              <td class="px-4 py-4 text-right text-slate-600">{{ caso.resumenFinanciero.totalSuplidos | number:'1.0-0' }}€</td>
+              <td class="px-4 py-4 text-right text-slate-600">{{ caso.resumenFinanciero.totalHonorarios | number:'1.0-0' }}€</td>
+              <td class="px-4 py-4 text-right font-semibold"
+                [class.text-emerald-600]="caso.resumenFinanciero.saldo >= 0"
+                [class.text-red-600]="caso.resumenFinanciero.saldo < 0">
+                {{ caso.resumenFinanciero.saldo | number:'1.0-0' }}€
+              </td>
+              <td class="px-4 py-4">
+                <div class="flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full shrink-0"
+                    [class.bg-emerald-500]="esEjecutado(caso)"
+                    [class.bg-amber-400]="!esEjecutado(caso)"></span>
+                  <span class="text-xs" [class.text-emerald-600]="esEjecutado(caso)" [class.text-slate-500]="!esEjecutado(caso)">
+                    {{ esEjecutado(caso) ? 'Ejecutada' : slotsLabel(caso) }}
+                  </span>
+                </div>
+              </td>
+              <td class="px-4 py-4">
+                <div class="flex items-center justify-end gap-2">
+                  @if (caso.facturaId) {
+                    <span class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
+                      <lucide-icon [img]="FileCheckIcon" size="13"></lucide-icon> Facturado
+                    </span>
+                  } @else {
+                    <button (click)="abrirFactura(caso)" [disabled]="!esEjecutado(caso)"
+                      class="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40">
+                      <lucide-icon [img]="ReceiptIcon" size="14"></lucide-icon> Generar factura
+                    </button>
+                  }
+                  <button (click)="abrirCierre(caso)" [disabled]="!esEjecutado(caso)"
+                    class="inline-flex items-center gap-1 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-40">
+                    <lucide-icon [img]="CheckCircle2Icon" size="14"></lucide-icon> Cerrar caso
+                  </button>
+                </div>
+              </td>
             </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100">
-            @for (inv of filtered(); track inv.id) {
-              <tr class="hover:bg-slate-50 transition-colors">
-                <td class="px-5 py-4">
-                  <p class="font-semibold text-slate-900">{{ inv.client }}</p>
-                  <p class="text-xs text-slate-400"># {{ inv.number }}</p>
-                </td>
-                <td class="px-4 py-4 text-xs text-slate-500">{{ inv.project || '—' }}</td>
-                <td class="px-4 py-4">
-                  <p class="font-semibold text-slate-900">{{ inv.total | number:'1.2-2' }}€</p>
-                  <p class="text-xs text-slate-400">Base: {{ inv.amount | number:'1.2-2' }}€</p>
-                </td>
-                <td class="px-4 py-4">
-                  <span class="rounded-full px-2.5 py-1 text-xs font-medium" [class]="getStatusClass(inv.status)">
-                    {{ getStatusLabel(inv.status) }}
-                  </span>
-                </td>
-                <td class="px-4 py-4 text-xs text-slate-500">{{ inv.issueDate }}</td>
-                <td class="px-4 py-4">
-                  <span class="text-xs"
-                    [class.text-red-600]="inv.status === 'vencida'"
-                    [class.font-semibold]="inv.status === 'vencida'"
-                    [class.text-slate-500]="inv.status !== 'vencida'">
-                    {{ inv.dueDate }}
-                  </span>
-                </td>
-                <td class="px-4 py-4">
-                  <div class="flex items-center gap-1">
-                    <button class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Ver factura">
-                      <lucide-icon [img]="EyeIcon" size="15"></lucide-icon>
-                    </button>
-                    <button class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Descargar factura">
-                      <lucide-icon [img]="DownloadIcon" size="15"></lucide-icon>
-                    </button>
-                    @if (inv.status === 'pendiente' || inv.status === 'vencida') {
-                      <button class="rounded-lg p-1.5 text-slate-400 hover:bg-violet-50 hover:text-violet-700" aria-label="Enviar factura">
-                        <lucide-icon [img]="SendIcon" size="15"></lucide-icon>
-                      </button>
-                    }
-                  </div>
-                </td>
-              </tr>
-            }
-            @if (filtered().length === 0) {
-              <tr>
-                <td colspan="7" class="px-5 py-12 text-center text-sm text-slate-400">
-                  No se encontraron facturas
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+          }
+          @if (casosAbiertos().length === 0) {
+            <tr>
+              <td colspan="7" class="px-5 py-12 text-center text-sm text-slate-400">
+                {{ loading() ? 'Cargando casos…' : 'No hay casos abiertos' }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
     </div>
   }
 
-  <!-- TAB: Panel Fiscal -->
+  <!-- TAB: Archivo -->
+  @if (activeTab() === 'archivo') {
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b bg-slate-50">
+            <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Caso</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Saldo final</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Saldo bancario</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Cerrado</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Factura</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (caso of casosArchivados(); track caso.id) {
+            <tr class="hover:bg-slate-50 transition-colors">
+              <td class="px-5 py-4">
+                <p class="font-semibold text-slate-900">{{ caso.titulo }}</p>
+                <p class="text-xs text-slate-400">{{ caso.tipo }}</p>
+              </td>
+              <td class="px-4 py-4 text-right text-slate-600">{{ caso.resumenFinanciero.saldo | number:'1.0-0' }}€</td>
+              <td class="px-4 py-4 text-right text-slate-600">
+                {{ caso.cierreSaldoBancario != null ? (caso.cierreSaldoBancario | number:'1.0-0') + '€' : '—' }}
+              </td>
+              <td class="px-4 py-4 text-xs text-slate-500">{{ caso.cierreConfirmadoAt ? (caso.cierreConfirmadoAt | slice:0:10) : '—' }}</td>
+              <td class="px-4 py-4">
+                @if (caso.facturaId) {
+                  <span class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
+                    <lucide-icon [img]="FileCheckIcon" size="13"></lucide-icon> Emitida
+                  </span>
+                } @else {
+                  <span class="text-xs text-slate-400">Sin factura</span>
+                }
+              </td>
+            </tr>
+          }
+          @if (casosArchivados().length === 0) {
+            <tr>
+              <td colspan="5" class="px-5 py-12 text-center text-sm text-slate-400">No hay casos cerrados</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- TAB: Panel Fiscal (mock) -->
   @if (activeTab() === 'fiscal') {
     <div class="p-5 space-y-5">
       <div class="space-y-2">
@@ -204,18 +202,6 @@
         }
       </div>
 
-      <div class="flex flex-wrap gap-3">
-        <button class="flex items-center gap-2 px-4 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700">
-          <lucide-icon [img]="FileTextIcon" class="w-4 h-4" />Generar modelos
-        </button>
-        <button class="flex items-center gap-2 px-4 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600">
-          <lucide-icon [img]="DownloadIcon" class="w-4 h-4" />Exportar XML
-        </button>
-        <button class="flex items-center gap-2 px-4 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600">
-          <lucide-icon [img]="ExternalLinkIcon" class="w-4 h-4" />Acceder a la AEAT
-        </button>
-      </div>
-
       <div class="p-4 bg-blue-50 rounded-xl border border-blue-200 text-sm">
         <div class="flex items-center gap-2 mb-2">
           <lucide-icon [img]="ShieldCheckIcon" class="w-4 h-4 text-blue-600" />
@@ -226,7 +212,7 @@
     </div>
   }
 
-  <!-- TAB: Registro de Horas -->
+  <!-- TAB: Registro de Horas (mock) -->
   @if (activeTab() === 'horas') {
     <div class="p-5 space-y-4">
       <div class="grid grid-cols-3 gap-3">
@@ -280,3 +266,117 @@
     </div>
   }
 </div>
+
+<!-- Drawer: Generar factura -->
+@if (facturaCaso(); as caso) {
+  <div class="fixed inset-0 z-50 flex justify-end bg-slate-900/40" (click)="cerrarFacturaDrawer()">
+    <div class="h-full w-full max-w-md overflow-y-auto bg-white shadow-xl" (click)="$event.stopPropagation()">
+      <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900">Generar factura</h2>
+          <p class="text-xs text-slate-400">{{ caso.titulo }}</p>
+        </div>
+        <button (click)="cerrarFacturaDrawer()" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" aria-label="Cerrar">
+          <lucide-icon [img]="XIcon" size="18"></lucide-icon>
+        </button>
+      </div>
+
+      <div class="space-y-4 p-5">
+        <div class="flex items-center justify-between">
+          <label for="ivaRate" class="text-sm font-medium text-slate-700">Tasa de IVA (%)</label>
+          <input id="ivaRate" type="number" min="0" [value]="ivaRate()" (input)="setIvaRate($any($event.target).value)"
+            class="w-24 rounded-lg border border-slate-200 px-3 py-1.5 text-right text-sm focus:border-violet-300 focus:outline-none" />
+        </div>
+
+        <div class="space-y-2">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Líneas</p>
+          @for (linea of lineas(); track linea.concepto; let i = $index) {
+            <div class="flex items-center gap-3 rounded-lg border border-slate-200 p-3">
+              <div class="flex-1">
+                <p class="text-sm font-medium text-slate-800">{{ linea.concepto }}</p>
+                <label class="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+                  <input type="checkbox" [checked]="linea.aplicaIva" (change)="toggleLineaIva(i)" class="rounded border-slate-300 text-violet-600 focus:ring-violet-200" />
+                  Aplicar IVA
+                </label>
+              </div>
+              <div class="flex items-center gap-1">
+                <input type="number" [value]="linea.base" (input)="setLineaBase(i, $any($event.target).value)"
+                  class="w-28 rounded-lg border border-slate-200 px-3 py-1.5 text-right text-sm focus:border-violet-300 focus:outline-none"
+                  [attr.aria-label]="'Base de ' + linea.concepto" />
+                <span class="text-sm text-slate-400">€</span>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="space-y-1 rounded-lg bg-slate-50 p-4 text-sm">
+          <div class="flex justify-between text-slate-600"><span>Base imponible</span><span>{{ facturaPreview().base | number:'1.2-2' }}€</span></div>
+          <div class="flex justify-between text-slate-600"><span>IVA</span><span>{{ facturaPreview().iva | number:'1.2-2' }}€</span></div>
+          <div class="flex justify-between border-t border-slate-200 pt-1 font-bold text-slate-900"><span>Total</span><span>{{ facturaPreview().total | number:'1.2-2' }}€</span></div>
+        </div>
+      </div>
+
+      <div class="flex gap-3 border-t border-slate-200 px-5 py-4">
+        <button (click)="cerrarFacturaDrawer()" class="flex-1 rounded-lg border border-slate-200 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
+        <button (click)="confirmarFactura()" [disabled]="saving()"
+          class="flex-1 rounded-lg bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-50">
+          {{ saving() ? 'Generando…' : 'Generar factura' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Modal: Cerrar caso -->
+@if (cierreCaso(); as caso) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" (click)="cerrarCierreModal()">
+    <div class="w-full max-w-md rounded-xl bg-white shadow-xl" (click)="$event.stopPropagation()">
+      <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+        <h2 class="text-lg font-bold text-slate-900">Cerrar caso</h2>
+        <button (click)="cerrarCierreModal()" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" aria-label="Cerrar">
+          <lucide-icon [img]="XIcon" size="18"></lucide-icon>
+        </button>
+      </div>
+
+      <div class="space-y-4 p-5">
+        <p class="text-sm text-slate-600">
+          Vas a cerrar <span class="font-semibold text-slate-900">{{ caso.titulo }}</span>. Confirma que la gestoría está
+          revisada y cuadra con bancos antes de continuar. Esta acción lo mueve al archivo.
+        </p>
+
+        @if (!caso.facturaId) {
+          <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">
+            Este caso aún no tiene factura generada. Puedes cerrarlo igualmente, pero se recomienda facturar antes.
+          </div>
+        }
+
+        <label class="flex items-start gap-2 text-sm text-slate-700">
+          <input type="checkbox" [checked]="movimientosOk()" (change)="movimientosOk.set($any($event.target).checked)"
+            class="mt-0.5 rounded border-slate-300 text-violet-600 focus:ring-violet-200" />
+          Confirmo que todos los movimientos financieros están contemplados correctamente.
+        </label>
+
+        <label class="flex items-start gap-2 text-sm text-slate-700">
+          <input type="checkbox" [checked]="bancoOk()" (change)="bancoOk.set($any($event.target).checked)"
+            class="mt-0.5 rounded border-slate-300 text-violet-600 focus:ring-violet-200" />
+          <span>
+            Confirmo que el saldo está corroborado en bancos.
+            @if (saldoBancario() != null) {
+              <span class="text-slate-400">(Saldo bancario: {{ saldoBancario() | number:'1.0-0' }}€)</span>
+            } @else {
+              <span class="text-slate-400">(Sin saldo bancario registrado — corroboración manual)</span>
+            }
+          </span>
+        </label>
+      </div>
+
+      <div class="flex gap-3 border-t border-slate-200 px-5 py-4">
+        <button (click)="cerrarCierreModal()" class="flex-1 rounded-lg border border-slate-200 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
+        <button (click)="confirmarCierre()" [disabled]="!puedeCerrar() || saving()"
+          class="flex-1 rounded-lg bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50">
+          {{ saving() ? 'Cerrando…' : 'Confirmar cierre' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

@@ -10,22 +10,19 @@ import {
   ChevronRight, User, FolderPlus, Upload, Folder, FolderOpen,
   Check, X, Pencil, Download, Trash2,
 } from 'lucide-angular';
-import { PROJECTS, INVOICES } from '../../data/dummy-data';
+import { INVOICES } from '../../data/dummy-data';
 import { ContactService } from '../../core/services/contact.service';
 import { ContactFolderService } from '../../core/services/contact-folder.service';
 import { ContactFileService } from '../../core/services/contact-file.service';
+import { CasosService } from '../../core/services/casos.service';
+import { LlamadasService } from '../../core/services/llamadas.service';
 import {
-  Contact, ContactFolder, ContactFile,
+  Contact, ContactFolder, ContactFile, Caso,
   getContactDisplayName, getContactInitials,
 } from '../../interfaces';
+import type { LlamadaResumen } from '../../interfaces/llamada.interface';
 
-type ContactoTab = 'general' | 'proyectos' | 'facturas' | 'comunicaciones' | 'documentos';
-
-const HISTORIAL_COMUNICACION = [
-  { id: 'C-001', tipo: 'llamada', descripcion: 'Llamada de seguimiento semanal', fecha: 'Hoy, 10:30' },
-  { id: 'C-002', tipo: 'email', descripcion: 'Propuesta enviada por email', fecha: 'Ayer, 14:00' },
-  { id: 'C-003', tipo: 'reunion', descripcion: 'Reunión presencial en oficinas', fecha: 'Hace 1 semana' },
-];
+type ContactoTab = 'general' | 'casos' | 'facturas' | 'comunicaciones' | 'documentos';
 
 @Component({
   selector: 'app-contacto-detail',
@@ -63,6 +60,8 @@ export class ContactoDetailComponent {
   readonly folderService = inject(ContactFolderService);
   readonly fileService = inject(ContactFileService);
   private readonly contactService = inject(ContactService);
+  private readonly casosService = inject(CasosService);
+  private readonly llamadasService = inject(LlamadasService);
 
   activeTab = signal<ContactoTab>('general');
 
@@ -86,6 +85,8 @@ export class ContactoDetailComponent {
       this.contactService.getContact(contactId).then((c) => this.contacto.set(c));
       this.folderService.loadFolders(contactId);
       this.fileService.loadFiles(contactId);
+      this.casosService.loadCasos();
+      this.llamadasService.loadLlamadas();
       // Reset browser state when contact changes
       this.currentFolderId.set(null);
       this.folderPath.set([]);
@@ -97,13 +98,34 @@ export class ContactoDetailComponent {
     return c ? getContactDisplayName(c) : '';
   });
 
-  proyectos = computed(() =>
-    PROJECTS.filter((p) => p.client === this.name())
+  /** Casos cuyo `contactoIds` incluye este contacto. */
+  casos = computed(() =>
+    this.casosService.casos().filter((c) => c.contactoIds?.includes(this.id()))
   );
 
   facturas = computed(() =>
     INVOICES.filter((f) => f.client === this.name())
   );
+
+  /**
+   * Comunicaciones de recepción IA vinculadas al contacto: por `contactId`
+   * manual o por match automático de teléfono.
+   */
+  comunicaciones = computed<LlamadaResumen[]>(() => {
+    const c = this.contacto();
+    if (!c) return [];
+    const id = this.id();
+    const phones = new Set(
+      [c.phone, c.mobile]
+        .filter((p): p is string => !!p)
+        .map((p) => p.replace(/\D/g, ''))
+    );
+    return this.llamadasService.llamadas().filter((ll) => {
+      if (ll.contactId === id) return true;
+      const tel = ll.datosCapturados?.telefono;
+      return !!tel && phones.has(tel.replace(/\D/g, ''));
+    });
+  });
 
   totalDocumentos = computed(() => this.fileService.files().length);
 
@@ -114,8 +136,6 @@ export class ContactoDetailComponent {
   currentFiles = computed(() =>
     this.fileService.files().filter((f) => f.folderId === this.currentFolderId())
   );
-
-  historialComunicacion = HISTORIAL_COMUNICACION;
 
   historialFacturacion = [
     { mes: 'Ene', valor: 4200 },
@@ -187,13 +207,36 @@ export class ContactoDetailComponent {
     return map[status] ?? status;
   }
 
-  getProjectStatusClass(status: string): string {
+  getCasoEstadoClass(estado: string): string {
     const map: Record<string, string> = {
-      'En curso': 'bg-blue-100 text-blue-700',
-      Pendiente: 'bg-amber-100 text-amber-700',
-      Completado: 'bg-green-100 text-green-700',
+      pendiente: 'bg-amber-100 text-amber-700',
+      en_proceso: 'bg-blue-100 text-blue-700',
+      cerrado: 'bg-green-100 text-green-700',
+      urgente: 'bg-red-100 text-red-700',
+      archivado: 'bg-slate-100 text-slate-500',
     };
-    return map[status] ?? 'bg-slate-100 text-slate-600';
+    return map[estado] ?? 'bg-slate-100 text-slate-600';
+  }
+
+  getCasoEstadoLabel(estado: string): string {
+    const map: Record<string, string> = {
+      pendiente: 'Pendiente', en_proceso: 'En proceso', cerrado: 'Cerrado',
+      urgente: 'Urgente', archivado: 'Archivado',
+    };
+    return map[estado] ?? estado;
+  }
+
+  getCasoPrioridadClass(prioridad: string): string {
+    const map: Record<string, string> = {
+      alta: 'bg-red-100 text-red-700',
+      media: 'bg-amber-100 text-amber-700',
+      baja: 'bg-slate-100 text-slate-500',
+    };
+    return map[prioridad] ?? 'bg-slate-100 text-slate-600';
+  }
+
+  verCaso(caso: Caso): void {
+    this.router.navigate(['/casos', caso.id]);
   }
 
   getInvoiceStatusClass(status: string): string {
@@ -206,8 +249,22 @@ export class ContactoDetailComponent {
     return map[status] ?? 'bg-slate-100 text-slate-600';
   }
 
-  getComunicacionIcon(tipo: string): string {
-    return tipo === 'llamada' ? '📞' : tipo === 'email' ? '✉️' : '🤝';
+  llamadaTitulo(ll: LlamadaResumen): string {
+    return ll.tituloResumen?.trim() || ll.resumen || 'Llamada';
+  }
+
+  llamadaFecha(ll: LlamadaResumen): string {
+    if (!ll.creadoEn) return '—';
+    return ll.creadoEn.toDate().toLocaleString('es-ES', {
+      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    });
+  }
+
+  formatDuracion(seconds: number): string {
+    if (seconds < 60) return `${seconds}s`;
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return s > 0 ? `${m}m ${s}s` : `${m}m`;
   }
 
   barHeight(valor: number): string {

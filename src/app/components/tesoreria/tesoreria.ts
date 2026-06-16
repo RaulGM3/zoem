@@ -1,15 +1,14 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, ChangeDetectionStrategy, OnInit } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import {
-  LucideAngularModule, Wallet, TrendingUp, TrendingDown, Clock,
-  AlertCircle, CheckCircle2, RefreshCw, ArrowRight, Building2, CreditCard,
+  LucideAngularModule, Wallet, TrendingUp, TrendingDown, Landmark,
+  CheckCircle2, AlertTriangle, Save, Scale,
 } from 'lucide-angular';
-import {
-  TESORERIA_COBROS, BANCO_TRANSACCIONES, RENTABILIDAD_CLIENTES,
-} from '../../data/dummy-data';
-import { ChangeDetectionStrategy } from '@angular/core';
+import { CasosService } from '../../core/services/casos.service';
+import { CompanyService } from '../../core/services/company.service';
 
-type TesoreriaTab = 'cobros' | 'conciliacion' | 'rentabilidad';
+/** Umbral (€) por debajo del cual consideramos el cotejo conciliado. */
+const COTEJO_TOLERANCIA = 0.01;
 
 @Component({
   selector: 'app-tesoreria',
@@ -17,74 +16,88 @@ type TesoreriaTab = 'cobros' | 'conciliacion' | 'rentabilidad';
   templateUrl: './tesoreria.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class TesoreriaComponent {
+export class TesoreriaComponent implements OnInit {
+  private readonly casosService = inject(CasosService);
+  private readonly companyService = inject(CompanyService);
+
   readonly WalletIcon = Wallet;
   readonly TrendingUpIcon = TrendingUp;
   readonly TrendingDownIcon = TrendingDown;
-  readonly ClockIcon = Clock;
-  readonly AlertCircleIcon = AlertCircle;
+  readonly LandmarkIcon = Landmark;
   readonly CheckCircle2Icon = CheckCircle2;
-  readonly RefreshCwIcon = RefreshCw;
-  readonly ArrowRightIcon = ArrowRight;
-  readonly Building2Icon = Building2;
-  readonly CreditCardIcon = CreditCard;
+  readonly AlertTriangleIcon = AlertTriangle;
+  readonly SaveIcon = Save;
+  readonly ScaleIcon = Scale;
 
-  activeTab = signal<TesoreriaTab>('cobros');
+  readonly casos = this.casosService.casos;
+  readonly loading = this.casosService.loading;
+  readonly savingSaldo = signal(false);
 
-  cobros = TESORERIA_COBROS;
-  transacciones = BANCO_TRANSACCIONES;
-  rentabilidad = RENTABILIDAD_CLIENTES;
+  /** Input editable del saldo bancario (string para el campo de texto). */
+  readonly saldoBancarioInput = signal('');
 
-  stats = [
-    { label: 'Efectivo disponible', value: '34.280 €', change: '+8% vs mes anterior', positive: true },
-    { label: 'Previsión 30 días', value: '41.500 €', change: '6 cobros esperados', positive: true },
-    { label: 'Previsión 60 días', value: '58.200 €', change: '12 cobros esperados', positive: true },
-    { label: 'Cobros vencidos', value: '28.400 €', change: '4 facturas sin cobrar', positive: false },
-  ];
+  /** Contabilidad agregada de todos los casos a partir de sus resúmenes. */
+  readonly balanceGeneral = computed(() => {
+    return this.casos().reduce(
+      (acc, c) => {
+        const r = c.resumenFinanciero;
+        acc.totalIngresos += r?.totalIngresos ?? 0;
+        acc.totalSuplidos += r?.totalSuplidos ?? 0;
+        acc.totalHonorarios += r?.totalHonorarios ?? 0;
+        acc.saldo += r?.saldo ?? 0;
+        return acc;
+      },
+      { totalIngresos: 0, totalSuplidos: 0, totalHonorarios: 0, saldo: 0 }
+    );
+  });
 
-  totalVencido = computed(() => this.cobros.reduce((s, c) => s + c.importe, 0));
-  conciliadasCount = computed(() => this.transacciones.filter(t => t.estado === 'conciliado').length);
-  conciliacionRate = computed(() => Math.round((this.conciliadasCount() / this.transacciones.length) * 100));
+  /** Casos con actividad financiera, ordenados por saldo descendente. */
+  readonly casosContables = computed(() =>
+    this.casos()
+      .filter(c => {
+        const r = c.resumenFinanciero;
+        return (r?.totalIngresos || r?.totalSuplidos || r?.totalHonorarios);
+      })
+      .sort((a, b) => (b.resumenFinanciero?.saldo ?? 0) - (a.resumenFinanciero?.saldo ?? 0))
+  );
 
-  getNivelClass(nivel: string): string {
-    const map: Record<string, string> = {
-      recordatorio: 'bg-blue-100 text-blue-700',
-      formal: 'bg-amber-100 text-amber-700',
-      remesa: 'bg-orange-100 text-orange-700',
-      aviso_legal: 'bg-red-100 text-red-700',
+  /** Saldo bancario guardado en la company activa. */
+  readonly saldoBancario = computed(() => this.companyService.activeCompany()?.saldoBancario ?? null);
+  readonly saldoBancarioFecha = computed(() => this.companyService.activeCompany()?.saldoBancarioFecha ?? null);
+
+  /** Diferencia entre lo que dice el banco y lo que dice el sistema. */
+  readonly cotejo = computed(() => {
+    const banco = this.saldoBancario();
+    if (banco === null) return null;
+    const sistema = this.balanceGeneral().saldo;
+    const diferencia = banco - sistema;
+    return {
+      banco,
+      sistema,
+      diferencia,
+      conciliado: Math.abs(diferencia) < COTEJO_TOLERANCIA,
     };
-    return map[nivel] || 'bg-slate-100 text-slate-600';
+  });
+
+  async ngOnInit(): Promise<void> {
+    await this.casosService.loadCasos();
+    const actual = this.saldoBancario();
+    if (actual !== null) this.saldoBancarioInput.set(String(actual));
   }
 
-  getNivelLabel(nivel: string): string {
-    const map: Record<string, string> = {
-      recordatorio: 'Recordatorio',
-      formal: 'Formal',
-      remesa: 'Remesa',
-      aviso_legal: 'Aviso Legal',
-    };
-    return map[nivel] || nivel;
-  }
+  async guardarSaldoBancario(): Promise<void> {
+    const company = this.companyService.activeCompany();
+    const raw = this.saldoBancarioInput().trim();
+    if (!company || raw === '') return;
+    const saldo = parseFloat(raw.replace(',', '.'));
+    if (Number.isNaN(saldo)) return;
 
-  getEstadoClass(estado: string): string {
-    const map: Record<string, string> = {
-      conciliado: 'bg-green-100 text-green-700',
-      pendiente: 'bg-amber-100 text-amber-700',
-      sin_conciliar: 'bg-red-100 text-red-700',
-    };
-    return map[estado] || 'bg-slate-100 text-slate-600';
-  }
-
-  getEstadoLabel(estado: string): string {
-    const map: Record<string, string> = {
-      conciliado: 'Conciliado',
-      pendiente: 'Pendiente',
-      sin_conciliar: 'Sin conciliar',
-    };
-    return map[estado] || estado;
-  }
-
-  isPositive(importe: number): boolean {
-    return importe >= 0;
+    this.savingSaldo.set(true);
+    try {
+      const hoy = new Date().toISOString().slice(0, 10);
+      await this.companyService.updateSaldoBancario(company.id, saldo, hoy);
+    } finally {
+      this.savingSaldo.set(false);
+    }
   }
 }

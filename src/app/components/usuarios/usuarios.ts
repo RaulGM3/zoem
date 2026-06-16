@@ -143,6 +143,14 @@ export class UsuariosComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Guarda la tarifa por hora de un miembro (vacío = sin tarifa). Solo admin. */
+  async onTarifaChange(memberId: string, event: Event): Promise<void> {
+    const raw = (event.target as HTMLInputElement).value.trim();
+    const tarifa = raw === '' ? undefined : Number(raw);
+    if (tarifa !== undefined && (Number.isNaN(tarifa) || tarifa < 0)) return;
+    await this.usersService.updateMember(memberId, { tarifaHoraria: tarifa });
+  }
+
   formatLogin(ts: Timestamp | null): string {
     if (!ts) return '—';
     const date = ts.toDate();

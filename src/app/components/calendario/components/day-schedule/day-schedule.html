@@ -65,6 +65,7 @@
           <!-- Columnas de días -->
           @for (group of groupedEvents(); track group.date) {
             @let drag = dragging();
+            @let dragReg = draggingReg();
 
             <div
               class="relative min-w-40 flex-1 border-l border-slate-100"
@@ -124,31 +125,29 @@
                   >
                     <div class="flex h-full flex-col p-1.5 pb-4">
                       <div class="flex min-h-0 items-start gap-1">
+                        <lucide-icon
+                          [img]="CalendarClockIcon"
+                          size="11"
+                          class="mt-px shrink-0 opacity-70"
+                          aria-label="Evento"
+                        ></lucide-icon>
                         <p class="min-w-0 flex-1 truncate text-[11px] font-semibold leading-tight">
                           {{ item.title }}
                         </p>
                         <div class="flex shrink-0 items-center gap-0.5">
-                          @if (item.hitoEstado) {
-                            <button
-                              class="max-w-18 truncate rounded px-1 py-0.5 text-[9px] font-semibold leading-none transition-opacity hover:opacity-80"
-                              [class]="getHitoBadgeClass(item)"
-                              (pointerdown)="$event.stopPropagation()"
-                              (click)="advanceHito($event, item)"
-                              [attr.aria-label]="'Avanzar estado de ' + item.title"
-                            >{{ getHitoBadgeLabel(item) }}</button>
-                          } @else if (item.eventoEstado) {
+                          @if (item.eventoEstado) {
                             <span
                               class="max-w-18 truncate rounded px-1 py-0.5 text-[9px] font-semibold leading-none"
                               [class]="getEventoBadgeClass(item.eventoEstado)"
                             >{{ getEventoBadgeLabel(item.eventoEstado) }}</span>
                           }
                           <button
-                            class="flex h-4 w-4 items-center justify-center rounded opacity-40 transition-opacity hover:opacity-100"
+                            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-red-200 text-red-700 transition-colors hover:bg-red-500 hover:text-white active:scale-95"
                             (pointerdown)="$event.stopPropagation()"
                             (click)="unscheduleItem($event, item)"
                             [attr.aria-label]="'Quitar ' + item.title + ' del horario'"
                           >
-                            <lucide-icon [img]="XIcon" size="10"></lucide-icon>
+                            <lucide-icon [img]="XIcon" size="13"></lucide-icon>
                           </button>
                         </div>
                       </div>
@@ -170,6 +169,116 @@
                     </div>
                   </div>
                 }
+              }
+
+              <!-- Bloques de hito = segmentos de horas (arrastrables, separables) -->
+              @for (gr of gridRegistrosForDate(group.date); track gr.reg.id) {
+                @let regDragging = isDraggingReg(gr.reg);
+                @let regCross = regDragging && !!dragReg && dragReg.currentDate !== group.date;
+
+                @if (regDragging) {
+                  <div
+                    class="pointer-events-none absolute rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 opacity-40"
+                    [style.left]="getRegLeft(gr.reg)"
+                    [style.width]="getRegWidth(gr.reg)"
+                    [style.top.px]="getRegGhostTop(gr.reg)"
+                    [style.height.px]="getRegHeight(gr.reg)"
+                    aria-hidden="true"
+                  ></div>
+                }
+
+                @if (!regCross) {
+                  <div
+                    [class]="getRegClass(gr)"
+                    [style.left]="getRegLeft(gr.reg)"
+                    [style.width]="getRegWidth(gr.reg)"
+                    [style.top.px]="getRegTop(gr.reg)"
+                    [style.height.px]="getRegHeight(gr.reg)"
+                    [style.cursor]="regDragging ? 'grabbing' : 'grab'"
+                    (pointerdown)="onRegistroPointerDown($event, gr)"
+                    role="button"
+                    tabindex="0"
+                    [attr.aria-label]="gr.title + ' — ' + getRegTimeLabel(gr.reg)"
+                  >
+                    <div class="flex h-full flex-col gap-1 p-1.5 pb-4">
+                      <!-- Fila 1: icono + título -->
+                      <div class="flex min-h-0 items-start gap-1">
+                        <lucide-icon [img]="FlagIcon" size="11" class="mt-px shrink-0 opacity-70" aria-label="Hito"></lucide-icon>
+                        <p class="min-w-0 flex-1 truncate text-[11px] font-semibold leading-tight">{{ gr.title }}</p>
+                      </div>
+                      <!-- Fila 2: estado -->
+                      <div class="flex items-center gap-1">
+                        @if (gr.item.hitoEstado) {
+                          <button
+                            class="truncate rounded-md px-2 py-1 text-[10px] font-semibold leading-none transition-all hover:brightness-110 active:scale-95"
+                            [class]="getHitoBadgeClass(gr.item)"
+                            (pointerdown)="$event.stopPropagation()"
+                            (click)="advanceHito($event, gr.item)"
+                            [attr.aria-label]="'Avanzar estado de ' + gr.title"
+                          >{{ getHitoBadgeLabel(gr.item) }}</button>
+                        }
+                        @if (gr.reg.facturado) {
+                          <span class="rounded-md bg-green-200 px-2 py-1 text-[10px] font-semibold leading-none text-green-800" title="Horas facturadas">€ Facturado</span>
+                        }
+                      </div>
+                      <!-- Fila 3: acciones + tiempo -->
+                      <div class="flex items-center gap-1.5">
+                        <p class="min-w-0 flex-1 truncate text-[10px] leading-none opacity-70">
+                          {{ memberName(gr.reg.userId) }} · {{ getRegTimeLabel(gr.reg) }}
+                        </p>
+                        @if (!gr.reg.facturado) {
+                          <button
+                            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-violet-200 text-violet-700 transition-colors hover:bg-violet-500 hover:text-white active:scale-95"
+                            (pointerdown)="$event.stopPropagation()"
+                            (click)="splitRegistro($event, gr)"
+                            [attr.aria-label]="'Separar horas de ' + gr.title"
+                            title="Separar (pausa para comer/descansar)"
+                          >
+                            <lucide-icon [img]="ScissorsIcon" size="13"></lucide-icon>
+                          </button>
+                          @let isLastRegistro = (gr.item.registrosHoras?.length ?? 0) <= 1;
+                          <button
+                            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors active:scale-95"
+                            [class]="isLastRegistro ? 'bg-slate-100 text-slate-300 cursor-not-allowed' : 'bg-red-200 text-red-700 hover:bg-red-500 hover:text-white'"
+                            [disabled]="isLastRegistro"
+                            (pointerdown)="$event.stopPropagation()"
+                            (click)="removeRegistro($event, gr)"
+                            [attr.aria-label]="isLastRegistro ? 'No se puede eliminar el único bloque de horas' : 'Borrar este bloque de horas'"
+                            [title]="isLastRegistro ? 'Debe existir al menos un bloque' : 'Borrar separación'"
+                          >
+                            <lucide-icon [img]="XIcon" size="13"></lucide-icon>
+                          </button>
+                        }
+                      </div>
+                    </div>
+                    @if (!gr.reg.facturado) {
+                      <div
+                        class="resize-handle absolute inset-x-0 bottom-0 flex h-3 cursor-ns-resize items-center justify-center"
+                        (pointerdown)="onRegistroResizePointerDown($event, gr)"
+                        role="slider"
+                        aria-orientation="vertical"
+                        aria-label="Cambiar duración de las horas"
+                      >
+                        <div class="h-0.5 w-6 rounded-full bg-current opacity-30"></div>
+                      </div>
+                    }
+                  </div>
+                }
+              }
+
+              <!-- Preview de segmento de hito arrastrado entre columnas -->
+              @if (dragReg && dragReg.currentDate === group.date && dragReg.originalDate !== group.date) {
+                <div
+                  class="pointer-events-none absolute rounded-lg border-2 border-dashed border-violet-400 bg-violet-100/60 text-violet-800 z-20"
+                  style="left: 2px; width: calc(100% - 4px)"
+                  [style.top.px]="getRegTop(dragReg.reg)"
+                  [style.height.px]="getRegHeight(dragReg.reg)"
+                >
+                  <div class="p-1.5">
+                    <p class="truncate text-[11px] font-semibold leading-tight">{{ memberName(dragReg.reg.userId) }}</p>
+                    <p class="mt-0.5 text-[10px] opacity-70">{{ getRegTimeLabel(dragReg.reg) }}</p>
+                  </div>
+                </div>
               }
 
               <!-- Preview de drag entre columnas (aparece en la columna destino) -->
@@ -246,6 +355,101 @@
                 >{{ getHitoEstadoFullLabel(estado) }}</button>
               }
             </div>
+          </div>
+        }
+
+        <!-- Registro de horas (cobro por horas) — solo hitos -->
+        @if (item.hitoEstado !== undefined) {
+          <div>
+            <div class="mb-2 flex items-center justify-between">
+              <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Horas trabajadas</p>
+              @if (horasEditor() === null) {
+                <button
+                  class="flex items-center gap-1 rounded-lg bg-violet-50 px-2 py-1 text-[11px] font-medium text-violet-700 transition-colors hover:bg-violet-100"
+                  (click)="openHorasEditor()"
+                >
+                  <lucide-icon [img]="ClockIcon" size="12"></lucide-icon>
+                  {{ (item.registrosHoras?.length ?? 0) > 0 ? 'Editar horas' : 'Registrar horas' }}
+                </button>
+              }
+            </div>
+
+            @if (horasEditor(); as regs) {
+              <!-- Editor de bloques -->
+              <div class="space-y-2">
+                @for (r of regs; track r.id) {
+                  <div class="flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 p-2"
+                       [class.opacity-60]="r.facturado">
+                    <select
+                      class="min-w-0 flex-1 rounded border border-slate-200 bg-white px-1.5 py-1 text-[11px] text-slate-700 focus:border-violet-300 focus:outline-none"
+                      [value]="r.userId" [disabled]="r.facturado"
+                      (change)="updateBloqueField(r.id, 'userId', $event)"
+                      aria-label="Miembro">
+                      @for (m of members(); track m.id) {
+                        <option [value]="m.userId">{{ m.nombre }}</option>
+                      }
+                    </select>
+                    <input type="date" [value]="r.fecha" [disabled]="r.facturado"
+                      (change)="updateBloqueField(r.id, 'fecha', $event)"
+                      class="rounded border border-slate-200 bg-white px-1.5 py-1 text-[11px] text-slate-700 focus:border-violet-300 focus:outline-none"
+                      aria-label="Fecha" />
+                    <input type="time" [value]="r.horaInicio" [disabled]="r.facturado"
+                      (change)="updateBloqueField(r.id, 'horaInicio', $event)"
+                      class="rounded border border-slate-200 bg-white px-1.5 py-1 text-[11px] text-slate-700 focus:border-violet-300 focus:outline-none"
+                      aria-label="Hora inicio" />
+                    <span class="text-[11px] text-slate-400">–</span>
+                    <input type="time" [value]="r.horaFin" [disabled]="r.facturado"
+                      (change)="updateBloqueField(r.id, 'horaFin', $event)"
+                      class="rounded border border-slate-200 bg-white px-1.5 py-1 text-[11px] text-slate-700 focus:border-violet-300 focus:outline-none"
+                      aria-label="Hora fin" />
+                    <span class="ml-auto text-[11px] font-medium text-slate-500">{{ bloqueHoras(r) }}h</span>
+                    @if (r.facturado) {
+                      <span class="rounded bg-green-100 px-1.5 py-0.5 text-[9px] font-semibold text-green-700">Facturado</span>
+                    } @else {
+                      <button class="flex h-6 w-6 items-center justify-center rounded text-slate-400 transition-colors hover:bg-violet-100 hover:text-violet-600"
+                        (click)="splitBloque(r.id)" [attr.aria-label]="'Separar bloque en otro día'">
+                        <lucide-icon [img]="ScissorsIcon" size="12"></lucide-icon>
+                      </button>
+                      <button class="flex h-6 w-6 items-center justify-center rounded text-slate-400 transition-colors hover:bg-red-100 hover:text-red-500"
+                        (click)="removeBloque(r.id)" [attr.aria-label]="'Eliminar bloque'">
+                        <lucide-icon [img]="Trash2Icon" size="12"></lucide-icon>
+                      </button>
+                    }
+                  </div>
+                }
+
+                <div class="flex items-center justify-between pt-1">
+                  <button class="flex items-center gap-1 text-[11px] font-medium text-violet-600 hover:underline"
+                    (click)="addBloque()">
+                    <lucide-icon [img]="PlusIcon" size="12"></lucide-icon> Añadir bloque
+                  </button>
+                  <span class="text-[11px] font-semibold text-slate-600">Total: {{ horasEditorTotal() }}h</span>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-1">
+                  <button class="rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100"
+                    (click)="cancelHorasEditor()">Cancelar</button>
+                  <button class="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-700"
+                    (click)="saveHoras()">Guardar horas</button>
+                </div>
+              </div>
+            } @else if ((item.registrosHoras?.length ?? 0) > 0) {
+              <!-- Resumen de horas registradas -->
+              <ul class="space-y-1">
+                @for (r of item.registrosHoras!; track r.id) {
+                  <li class="flex items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-1.5 text-[11px] text-slate-600">
+                    <span class="font-medium text-slate-700">{{ memberName(r.userId) }}</span>
+                    <span class="text-slate-400">{{ r.fecha }} · {{ r.horaInicio }}–{{ r.horaFin }}</span>
+                    <span class="ml-auto font-medium">{{ bloqueHoras(r) }}h</span>
+                    @if (r.facturado) {
+                      <span class="rounded bg-green-100 px-1.5 py-0.5 text-[9px] font-semibold text-green-700">Facturado</span>
+                    }
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="text-xs italic text-slate-400">Sin horas registradas todavía</p>
+            }
           </div>
         }
 

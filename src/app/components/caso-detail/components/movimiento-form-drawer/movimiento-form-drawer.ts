@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, input, output, signal, effect } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output, signal, computed, effect } from '@angular/core';
 import { LucideAngularModule, X } from 'lucide-angular';
 import type { GestoriaSlot, MovimientoTipo } from '../../../../interfaces';
 
@@ -36,6 +36,34 @@ export class MovimientoFormDrawerComponent {
 
   readonly tipos: readonly MovimientoTipo[] = ['ingreso', 'suplido', 'honorario', 'gasto', 'otro'];
 
+  /** Dirección determinada por el tipo. `null` = el usuario la elige manualmente. */
+  private static readonly DIRECCION_POR_TIPO: Record<MovimientoTipo, boolean | null> = {
+    ingreso: true,
+    suplido: false,
+    honorario: false,
+    gasto: false,
+    otro: null,
+  };
+
+  /** La dirección solo es editable cuando el tipo no la determina (`otro`). */
+  readonly direccionManual = computed(
+    () => MovimientoFormDrawerComponent.DIRECCION_POR_TIPO[this.formTipo()] === null,
+  );
+
+  onTipoChange(tipo: MovimientoTipo): void {
+    this.applyTipo(tipo, this.formEsEntrada());
+  }
+
+  /**
+   * Setea el tipo y deriva la dirección de la regla.
+   * `fallback` aplica solo para `otro`, donde la dirección es manual.
+   */
+  private applyTipo(tipo: MovimientoTipo, fallback: boolean): void {
+    this.formTipo.set(tipo);
+    const direccion = MovimientoFormDrawerComponent.DIRECCION_POR_TIPO[tipo];
+    this.formEsEntrada.set(direccion ?? fallback);
+  }
+
   constructor() {
     effect(() => {
       if (this.visible()) this.prefill();
@@ -47,14 +75,12 @@ export class MovimientoFormDrawerComponent {
     const today = new Date().toISOString().slice(0, 10);
     if (slot) {
       this.formConcepto.set(slot.nombre);
-      this.formTipo.set(this.tipoCostoToMovTipo(slot.tipoCosto));
       this.formImporte.set(slot.importeEstimado != null ? String(slot.importeEstimado) : '');
-      this.formEsEntrada.set(false);
+      this.applyTipo(this.tipoCostoToMovTipo(slot.tipoCosto), false);
     } else {
       this.formConcepto.set('');
-      this.formTipo.set('ingreso');
       this.formImporte.set('');
-      this.formEsEntrada.set(true);
+      this.applyTipo('ingreso', true);
     }
     this.formFecha.set(today);
     this.formNotas.set('');
