@@ -156,9 +156,21 @@
               <td class="px-4 py-4 text-xs text-slate-500">{{ caso.cierreConfirmadoAt ? (caso.cierreConfirmadoAt | slice:0:10) : '—' }}</td>
               <td class="px-4 py-4">
                 @if (caso.facturaId) {
-                  <span class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
-                    <lucide-icon [img]="FileCheckIcon" size="13"></lucide-icon> Emitida
-                  </span>
+                  <div class="flex flex-col gap-1">
+                    <span class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
+                      <lucide-icon [img]="FileCheckIcon" size="13"></lucide-icon> Emitida
+                    </span>
+                    @if (verifactuEstado(caso.facturaId); as vf) {
+                      <span
+                        class="inline-flex items-center gap-1 text-xs"
+                        [class]="verifactuBadgeClass(caso.facturaId)"
+                        [title]="vf.csv ? 'CSV: ' + vf.csv : (vf.error ?? 'Verifactu: ' + vf.estado)"
+                      >
+                        <lucide-icon [img]="verifactuBadgeIcon(caso.facturaId)" size="12"></lucide-icon>
+                        {{ vf.estado === 'enviado' ? 'Verifactu ✓' : vf.estado === 'error' ? 'Error AEAT' : 'Pendiente AEAT' }}
+                      </span>
+                    }
+                  </div>
                 } @else {
                   <span class="text-xs text-slate-400">Sin factura</span>
                 }
@@ -315,6 +327,13 @@
           <div class="flex justify-between border-t border-slate-200 pt-1 font-bold text-slate-900"><span>Total</span><span>{{ facturaPreview().total | number:'1.2-2' }}€</span></div>
         </div>
       </div>
+
+      @if (companyService.activeCompany()?.verifactu?.enabled) {
+        <div class="mx-5 mb-3 flex items-center gap-2 rounded-lg bg-violet-50 px-3 py-2 text-xs text-violet-700">
+          <lucide-icon [img]="ShieldCheckIcon" size="14" class="shrink-0"></lucide-icon>
+          Esta factura se registrará automáticamente en Verifactu (AEAT).
+        </div>
+      }
 
       <div class="flex gap-3 border-t border-slate-200 px-5 py-4">
         <button (click)="cerrarFacturaDrawer()" class="flex-1 rounded-lg border border-slate-200 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>

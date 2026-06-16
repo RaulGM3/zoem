@@ -12,7 +12,10 @@ import {
   where,
   serverTimestamp,
 } from '@angular/fire/firestore';
+import { Functions, httpsCallable } from '@angular/fire/functions';
 import { CompanyService } from './company.service';
+import { VerifactuClientService } from './verifactu-client.service';
+import { VerifactuEstado, VerifactuSubmitResponse } from '../../interfaces/verifactu.interface';
 
 export interface Invoice {
   id: string;
@@ -28,6 +31,7 @@ export interface Invoice {
   contactId?: string;
   projectId?: string;
   casoId?: string;
+  verifactu?: VerifactuEstado;
   createdAt?: unknown;
   updatedAt?: unknown;
 }
@@ -45,7 +49,9 @@ export interface InvoiceLinea {
 @Injectable({ providedIn: 'root' })
 export class InvoiceService {
   private readonly firestore = inject(Firestore);
+  private readonly functions = inject(Functions);
   private readonly companyService = inject(CompanyService);
+  private readonly verifactuClient = inject(VerifactuClientService);
 
   readonly invoices = signal<Invoice[]>([]);
   readonly isLoading = signal(false);
@@ -113,16 +119,62 @@ export class InvoiceService {
     const issue = new Date();
     const due = new Date(issue);
     due.setDate(due.getDate() + 30);
-    return this.createInvoice({
+
+    const invoiceData = {
       invoiceNumber: this.nextInvoiceNumber(),
       amount,
       vat,
       total,
-      status: 'pendiente',
+      status: 'pendiente' as const,
       issueDate: issue.toISOString().slice(0, 10),
       dueDate: due.toISOString().slice(0, 10),
       casoId,
-    });
+    };
+
+    const invoiceId = await this.createInvoice(invoiceData);
+    const company = this.companyService.activeCompany();
+
+    if (company?.verifactu?.enabled && company.nif) {
+      const fullInvoice: Invoice = { id: invoiceId, companyId: company.id, ...invoiceData };
+      this.submitVerifactu(invoiceId, fullInvoice, company.id);
+    }
+
+    return invoiceId;
+  }
+
+  private submitVerifactu(invoiceId: string, invoice: Invoice, companyId: string): void {
+    this.verifactuClient
+      .prepareVerifactu(invoice, companyId)
+      .then(async ({ registro, estadoInicial }) => {
+        await this.updateInvoice(invoiceId, { verifactu: estadoInicial });
+
+        const fn = httpsCallable<
+          { companyId: string; registro: unknown },
+          VerifactuSubmitResponse
+        >(this.functions, 'verifactuSubmit');
+
+        try {
+          const result = await fn({ companyId, registro });
+          const { csv, estado } = result.data;
+          const verifactuFinal: VerifactuEstado = {
+            ...estadoInicial,
+            estado: estado === 'aceptado' ? 'enviado' : 'error',
+            csv: csv || undefined,
+            enviadoAt: new Date().toISOString(),
+          };
+          await this.updateInvoice(invoiceId, { verifactu: verifactuFinal });
+        } catch (err) {
+          const verifactuError: VerifactuEstado = {
+            ...estadoInicial,
+            estado: 'error',
+            error: err instanceof Error ? err.message : 'Error desconocido',
+          };
+          await this.updateInvoice(invoiceId, { verifactu: verifactuError });
+        }
+      })
+      .catch(() => {
+        // Si falla la preparación local (ej. sin NIF) no bloqueamos la factura
+      });
   }
 
   async updateInvoice(id: string, data: Partial<Omit<Invoice, 'id' | 'companyId'>>): Promise<void> {

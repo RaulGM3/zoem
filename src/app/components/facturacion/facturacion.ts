@@ -4,8 +4,10 @@ import {
   LucideAngularModule,
   Receipt, Search, Plus, TrendingUp, Clock, CheckCircle2,
   AlertCircle, Download, Send, Eye, MoreHorizontal, Euro,
-  FileText, ShieldCheck, ExternalLink, Timer, X, Archive, FileCheck,
+  FileText, ShieldCheck, ShieldAlert, ShieldX, ExternalLink, Timer, X, Archive, FileCheck,
 } from 'lucide-angular';
+import type { VerifactuEstado } from '../../interfaces/verifactu.interface';
+import type { Invoice } from '../../core/services/invoice.service';
 import { REGISTRO_HORAS } from '../../data/dummy-data';
 import { CasosService } from '../../core/services/casos.service';
 import { InvoiceService, InvoiceLinea } from '../../core/services/invoice.service';
@@ -30,7 +32,7 @@ const MODELOS_FISCALES = [
 export class FacturacionComponent implements OnInit {
   private readonly casosService = inject(CasosService);
   private readonly invoiceService = inject(InvoiceService);
-  private readonly companyService = inject(CompanyService);
+  protected readonly companyService = inject(CompanyService);
 
   readonly ReceiptIcon = Receipt;
   readonly SearchIcon = Search;
@@ -46,6 +48,8 @@ export class FacturacionComponent implements OnInit {
   readonly EuroIcon = Euro;
   readonly FileTextIcon = FileText;
   readonly ShieldCheckIcon = ShieldCheck;
+  readonly ShieldAlertIcon = ShieldAlert;
+  readonly ShieldXIcon = ShieldX;
   readonly ExternalLinkIcon = ExternalLink;
   readonly TimerIcon = Timer;
   readonly XIcon = X;
@@ -180,6 +184,31 @@ export class FacturacionComponent implements OnInit {
     } finally {
       this.saving.set(false);
     }
+  }
+
+  // --- Verifactu helpers ---
+  private readonly invoiceMap = computed(() =>
+    new Map<string, Invoice>(this.invoiceService.invoices().map((i) => [i.id, i]))
+  );
+
+  verifactuEstado(facturaId?: string): VerifactuEstado | undefined {
+    if (!facturaId) return undefined;
+    return this.invoiceMap().get(facturaId)?.verifactu;
+  }
+
+  verifactuBadgeClass(facturaId?: string): string {
+    const estado = this.verifactuEstado(facturaId)?.estado;
+    if (estado === 'enviado') return 'text-green-400';
+    if (estado === 'pendiente') return 'text-amber-400';
+    if (estado === 'error') return 'text-red-400';
+    return 'text-neutral-500';
+  }
+
+  verifactuBadgeIcon(facturaId?: string) {
+    const estado = this.verifactuEstado(facturaId)?.estado;
+    if (estado === 'enviado') return this.ShieldCheckIcon;
+    if (estado === 'error') return this.ShieldXIcon;
+    return this.ShieldAlertIcon;
   }
 
   // --- Tabs mock (fuera de alcance) ---

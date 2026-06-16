@@ -184,3 +184,7 @@ export const elevenLabsWebhook = onRequest(
     res.status(200).json({ ok: true, conversationId: conversation_id });
   }
 );
+
+// ─── AEAT Verifactu ─────────────────────────────────────────────────────────
+export { storeAeatCredential } from './aeat/storeCredential';
+export { verifactuSubmit } from './aeat/verifactuSubmit';

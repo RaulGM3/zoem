@@ -12,16 +12,28 @@ import {
   serverTimestamp,
 } from '@angular/fire/firestore';
 
+export interface CompanyVerifactu {
+  enabled: boolean;
+  /** NIF del certificado digital almacenado en Secret Manager */
+  certNif?: string;
+  certTitular?: string;
+  certExpiry?: string; // ISO date
+  certStoredAt?: string;
+}
+
 export interface Company {
   id: string;
   name: string;
   slug: string;
+  /** NIF fiscal de la empresa (requerido para Verifactu) */
+  nif?: string;
   plan?: string;
   isActive: boolean;
   /** Saldo bancario real cargado manualmente, para cotejar con el sistema. */
   saldoBancario?: number;
   /** Fecha (ISO yyyy-mm-dd) en que se actualizó el saldo bancario. */
   saldoBancarioFecha?: string;
+  verifactu?: CompanyVerifactu;
   createdAt?: unknown;
   updatedAt?: unknown;
 }
@@ -87,8 +99,9 @@ export class CompanyService {
     return ref.id;
   }
 
-  async updateCompany(id: string, data: { name?: string; plan?: string; isActive?: boolean }): Promise<void> {
+  async updateCompany(id: string, data: Partial<Omit<Company, 'id' | 'createdAt' | 'updatedAt'>>): Promise<void> {
     await updateDoc(doc(this.firestore, 'companies', id), { ...data, updatedAt: serverTimestamp() });
+    this.activeCompany.update((c) => (c && c.id === id ? { ...c, ...data } : c));
   }
 
   /** Guarda el saldo bancario manual y refresca la company activa en memoria. */
