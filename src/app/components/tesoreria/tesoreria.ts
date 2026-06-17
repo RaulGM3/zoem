@@ -1,24 +1,29 @@
-import { Component, inject, signal, computed, ChangeDetectionStrategy, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, ChangeDetectionStrategy, OnInit, OnDestroy } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import {
   LucideAngularModule, Wallet, TrendingUp, TrendingDown, Landmark,
-  CheckCircle2, AlertTriangle, Save, Scale,
+  CheckCircle2, AlertTriangle, Save, Scale, TrendingUpDown,
 } from 'lucide-angular';
 import { CasosService } from '../../core/services/casos.service';
 import { CompanyService } from '../../core/services/company.service';
+import { GestoriaService } from '../../core/services/gestoria.service';
+import { Caso } from '../../interfaces';
+import { TesoresriaCasoDrawerComponent } from './components/tesoreria-caso-drawer/tesoreria-caso-drawer';
+import { RevisionMovimientosComponent } from './components/revision-movimientos/revision-movimientos';
 
 /** Umbral (€) por debajo del cual consideramos el cotejo conciliado. */
 const COTEJO_TOLERANCIA = 0.01;
 
 @Component({
   selector: 'app-tesoreria',
-  imports: [LucideAngularModule, DecimalPipe],
+  imports: [LucideAngularModule, DecimalPipe, TesoresriaCasoDrawerComponent, RevisionMovimientosComponent],
   templateUrl: './tesoreria.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class TesoreriaComponent implements OnInit {
+export class TesoreriaComponent implements OnInit, OnDestroy {
   private readonly casosService = inject(CasosService);
   private readonly companyService = inject(CompanyService);
+  private readonly gestoriaService = inject(GestoriaService);
 
   readonly WalletIcon = Wallet;
   readonly TrendingUpIcon = TrendingUp;
@@ -28,8 +33,10 @@ export class TesoreriaComponent implements OnInit {
   readonly AlertTriangleIcon = AlertTriangle;
   readonly SaveIcon = Save;
   readonly ScaleIcon = Scale;
+  readonly TrendingUpDownIcon = TrendingUpDown;
 
   readonly casos = this.casosService.casos;
+  readonly selectedCaso = signal<Caso | null>(null);
   readonly loading = this.casosService.loading;
   readonly savingSaldo = signal(false);
 
@@ -79,10 +86,40 @@ export class TesoreriaComponent implements OnInit {
     };
   });
 
+  /** Movimientos sin revisar (ni aprobados ni rechazados explícitamente). */
+  private readonly movimientosPendientes = computed(() =>
+    this.gestoriaService.todosMovimientos().filter(m => m.aprobado == null)
+  );
+
+  /** Saldo bancario proyectado: banco real ± impacto de movimientos pendientes. */
+  readonly proyeccionBancaria = computed(() => {
+    const banco = this.saldoBancario();
+    const impacto = this.movimientosPendientes().reduce(
+      (acc, m) => acc + (m.esEntrada ? m.importe : -m.importe),
+      0
+    );
+    return { banco, impacto, proyeccion: banco !== null ? banco + impacto : null };
+  });
+
+  /** Importe neto de movimientos pendientes agrupados por casoId. */
+  readonly pendientesPorCaso = computed(() => {
+    const map = new Map<string, number>();
+    for (const m of this.movimientosPendientes()) {
+      const prev = map.get(m.casoId) ?? 0;
+      map.set(m.casoId, prev + (m.esEntrada ? m.importe : -m.importe));
+    }
+    return map;
+  });
+
   async ngOnInit(): Promise<void> {
     await this.casosService.loadCasos();
+    this.gestoriaService.loadTodosMovimientos();
     const actual = this.saldoBancario();
     if (actual !== null) this.saldoBancarioInput.set(String(actual));
+  }
+
+  ngOnDestroy(): void {
+    this.gestoriaService.stopTodosMovimientos();
   }
 
   async guardarSaldoBancario(): Promise<void> {

@@ -2,15 +2,19 @@ import { inject, Injectable, signal } from '@angular/core';
 import {
   Firestore,
   collection,
+  collectionGroup,
   doc,
   addDoc,
   updateDoc,
   deleteDoc,
   getDocs,
+  onSnapshot,
   orderBy,
   query,
+  where,
   serverTimestamp,
   writeBatch,
+  type Unsubscribe,
 } from '@angular/fire/firestore';
 import { CompanyService } from './company.service';
 import { CasosService } from './casos.service';
@@ -38,8 +42,13 @@ export class GestoriaService {
   private readonly auth = inject(Auth);
 
   readonly movimientos = signal<MovimientoGestoria[]>([]);
+  readonly todosMovimientos = signal<MovimientoGestoria[]>([]);
   readonly slots = signal<GestoriaSlot[]>([]);
   readonly loading = signal(false);
+  readonly todosLoading = signal(false);
+
+  private movimientosUnsub: Unsubscribe | null = null;
+  private todosMovimientosUnsub: Unsubscribe | null = null;
 
   private get companyId(): string {
     const id = this.companyService.activeCompany()?.id;
@@ -123,6 +132,10 @@ export class GestoriaService {
   }
 
   async unregisterSlot(casoId: string, slot: GestoriaSlot): Promise<void> {
+    if (slot.movimientoId) {
+      await deleteDoc(doc(this.gestoriaRef(casoId), slot.movimientoId));
+    }
+
     await updateDoc(doc(this.slotsRef(casoId), slot.id), {
       status: 'pendiente',
       movimientoId: null,
@@ -141,21 +154,22 @@ export class GestoriaService {
 
     // Al des-registrar también desaparece su movimiento asociado del cálculo, por lo
     // que hay que recalcular el resumen y el conteo de slots (igual que registerSlot).
-    await Promise.all([
-      this.loadMovimientos(casoId),
-      this.casosService.recalcularResumen(casoId),
-    ]);
+    await this.casosService.recalcularResumen(casoId);
   }
 
-  async loadMovimientos(casoId: string): Promise<void> {
+  loadMovimientos(casoId: string): void {
+    this.movimientosUnsub?.();
     this.loading.set(true);
-    try {
-      const q = query(this.gestoriaRef(casoId), orderBy('fecha', 'desc'));
-      const snapshot = await getDocs(q);
+    const q = query(this.gestoriaRef(casoId), orderBy('fecha', 'desc'));
+    this.movimientosUnsub = onSnapshot(q, snapshot => {
       this.movimientos.set(snapshot.docs.map(d => ({ id: d.id, ...d.data() }) as MovimientoGestoria));
-    } finally {
       this.loading.set(false);
-    }
+    });
+  }
+
+  stopMovimientos(): void {
+    this.movimientosUnsub?.();
+    this.movimientosUnsub = null;
   }
 
   async addMovimiento(casoId: string, data: MovimientoCreate): Promise<void> {
@@ -167,10 +181,7 @@ export class GestoriaService {
       createdBy: this.auth.currentUser?.uid ?? '',
       createdAt: serverTimestamp(),
     });
-    await Promise.all([
-      this.loadMovimientos(casoId),
-      this.casosService.recalcularResumen(casoId),
-    ]);
+    await this.casosService.recalcularResumen(casoId);
   }
 
   async updateMovimiento(casoId: string, id: string, data: Partial<MovimientoCreate>): Promise<void> {
@@ -178,19 +189,63 @@ export class GestoriaService {
       doc(this.firestore, 'companies', this.companyId, 'casos', casoId, 'gestoria', id),
       stripUndefined(data)
     );
-    await Promise.all([
-      this.loadMovimientos(casoId),
-      this.casosService.recalcularResumen(casoId),
-    ]);
+    await this.casosService.recalcularResumen(casoId);
   }
 
   async deleteMovimiento(casoId: string, id: string): Promise<void> {
     await deleteDoc(
       doc(this.firestore, 'companies', this.companyId, 'casos', casoId, 'gestoria', id)
     );
-    await Promise.all([
-      this.loadMovimientos(casoId),
-      this.casosService.recalcularResumen(casoId),
-    ]);
+    await this.casosService.recalcularResumen(casoId);
+  }
+
+  loadTodosMovimientos(): void {
+    this.todosMovimientosUnsub?.();
+    this.todosLoading.set(true);
+    const companyId = this.companyId;
+    const q = query(
+      collectionGroup(this.firestore, 'gestoria'),
+      where('companyId', '==', companyId),
+      orderBy('fecha', 'desc'),
+    );
+    this.todosMovimientosUnsub = onSnapshot(q, snapshot => {
+      this.todosMovimientos.set(
+        snapshot.docs.map(d => ({ id: d.id, ...d.data() }) as MovimientoGestoria)
+      );
+      this.todosLoading.set(false);
+    });
+  }
+
+  stopTodosMovimientos(): void {
+    this.todosMovimientosUnsub?.();
+    this.todosMovimientosUnsub = null;
+  }
+
+  async aprobarMovimiento(casoId: string, movId: string, aprobado: boolean): Promise<void> {
+    const uid = this.auth.currentUser?.uid ?? '';
+    const docRef = doc(this.firestore, 'companies', this.companyId, 'casos', casoId, 'gestoria', movId);
+    await updateDoc(docRef, {
+      aprobado,
+      aprobadoAt: aprobado ? serverTimestamp() : null,
+      aprobadoPor: aprobado ? uid : null,
+    });
+    this.todosMovimientos.update(list =>
+      list.map(m => m.id === movId ? { ...m, aprobado } : m)
+    );
+  }
+
+  async aprobarTodos(movimientos: MovimientoGestoria[]): Promise<void> {
+    const uid = this.auth.currentUser?.uid ?? '';
+    const companyId = this.companyId;
+    const batch = writeBatch(this.firestore);
+    for (const mov of movimientos) {
+      const docRef = doc(this.firestore, 'companies', companyId, 'casos', mov.casoId, 'gestoria', mov.id);
+      batch.update(docRef, { aprobado: true, aprobadoAt: serverTimestamp(), aprobadoPor: uid });
+    }
+    await batch.commit();
+    const ids = new Set(movimientos.map(m => m.id));
+    this.todosMovimientos.update(list =>
+      list.map(m => ids.has(m.id) ? { ...m, aprobado: true } : m)
+    );
   }
 }

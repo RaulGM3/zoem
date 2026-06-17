@@ -19,11 +19,23 @@
         {{ balanceGeneral().totalIngresos | number:'1.2-2' }} €
       </p>
     </div>
+    @let p = proyeccionBancaria();
     <div class="bg-white rounded-xl border border-slate-200 p-4">
-      <p class="text-xs text-slate-500 uppercase tracking-wide">Suplidos</p>
-      <p class="text-2xl font-bold text-amber-600 mt-1">
-        {{ balanceGeneral().totalSuplidos | number:'1.2-2' }} €
-      </p>
+      <p class="text-xs text-slate-500 uppercase tracking-wide">Proyección bancaria</p>
+      @if (p.proyeccion !== null) {
+        <p class="text-2xl font-bold mt-1"
+          [class]="p.proyeccion >= 0 ? 'text-emerald-600' : 'text-red-600'">
+          {{ p.proyeccion | number:'1.2-2' }} €
+        </p>
+        @if (p.impacto !== 0) {
+          <p class="text-xs mt-1" [class]="p.impacto >= 0 ? 'text-emerald-500' : 'text-amber-500'">
+            {{ p.impacto >= 0 ? '+' : '−' }}{{ (p.impacto < 0 ? -p.impacto : p.impacto) | number:'1.2-2' }} € pendiente
+          </p>
+        }
+      } @else {
+        <p class="text-2xl font-bold text-slate-300 mt-1">— €</p>
+        <p class="text-xs text-slate-400 mt-1">Introduce saldo bancario</p>
+      }
     </div>
     <div class="bg-white rounded-xl border border-slate-200 p-4">
       <p class="text-xs text-slate-500 uppercase tracking-wide">Honorarios</p>
@@ -141,20 +153,25 @@
             <tr class="text-left text-slate-500 border-b border-slate-200">
               <th class="px-4 py-2.5 font-medium">Caso</th>
               <th class="px-4 py-2.5 font-medium text-right">Ingresos</th>
-              <th class="px-4 py-2.5 font-medium text-right">Suplidos</th>
+              <th class="px-4 py-2.5 font-medium text-right">Pendientes</th>
               <th class="px-4 py-2.5 font-medium text-right">Honorarios</th>
               <th class="px-4 py-2.5 font-medium text-right">Saldo</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
             @for (caso of casosContables(); track caso.id) {
-              <tr>
+              <tr
+                class="cursor-pointer hover:bg-violet-50 transition-colors"
+                (click)="selectedCaso.set(caso)"
+              >
                 <td class="px-4 py-3 text-slate-800 font-medium">{{ caso.titulo }}</td>
                 <td class="px-4 py-3 text-right text-emerald-600">
                   {{ caso.resumenFinanciero.totalIngresos | number:'1.2-2' }} €
                 </td>
-                <td class="px-4 py-3 text-right text-amber-600">
-                  {{ caso.resumenFinanciero.totalSuplidos | number:'1.2-2' }} €
+                @let pendiente = pendientesPorCaso().get(caso.id) ?? 0;
+                <td class="px-4 py-3 text-right"
+                  [class]="pendiente === 0 ? 'text-slate-400' : pendiente > 0 ? 'text-emerald-600' : 'text-amber-600'">
+                  {{ pendiente === 0 ? '—' : ((pendiente >= 0 ? '+' : '−') + ((pendiente < 0 ? -pendiente : pendiente) | number:'1.2-2') + ' €') }}
                 </td>
                 <td class="px-4 py-3 text-right text-violet-600">
                   {{ caso.resumenFinanciero.totalHonorarios | number:'1.2-2' }} €
@@ -170,7 +187,11 @@
             <tr class="font-semibold text-slate-700">
               <td class="px-4 py-3">Total</td>
               <td class="px-4 py-3 text-right text-emerald-600">{{ balanceGeneral().totalIngresos | number:'1.2-2' }} €</td>
-              <td class="px-4 py-3 text-right text-amber-600">{{ balanceGeneral().totalSuplidos | number:'1.2-2' }} €</td>
+              @let totalPendiente = proyeccionBancaria().impacto;
+              <td class="px-4 py-3 text-right"
+                [class]="totalPendiente === 0 ? 'text-slate-400' : totalPendiente > 0 ? 'text-emerald-600' : 'text-amber-600'">
+                {{ totalPendiente === 0 ? '—' : ((totalPendiente >= 0 ? '+' : '−') + ((totalPendiente < 0 ? -totalPendiente : totalPendiente) | number:'1.2-2') + ' €') }}
+              </td>
               <td class="px-4 py-3 text-right text-violet-600">{{ balanceGeneral().totalHonorarios | number:'1.2-2' }} €</td>
               <td class="px-4 py-3 text-right"
                 [class]="balanceGeneral().saldo >= 0 ? 'text-emerald-600' : 'text-red-600'">
@@ -182,4 +203,13 @@
       </div>
     }
   </div>
+
+  <!-- Revisión de movimientos -->
+  <app-revision-movimientos [conciliado]="cotejo()?.conciliado ?? false" />
+
 </div>
+
+<app-tesoreria-caso-drawer
+  [caso]="selectedCaso()"
+  (closed)="selectedCaso.set(null)"
+/>

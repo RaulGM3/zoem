@@ -1,0 +1,112 @@
+<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between px-4 py-3 border-b border-slate-200">
+    <div class="flex items-center gap-2">
+      <lucide-icon [img]="ClipboardCheckIcon" class="w-4 h-4 text-slate-500" />
+      <h3 class="text-sm font-medium text-slate-700">Revisión de movimientos</h3>
+      @if (progreso().total > 0) {
+        <span
+          class="text-xs font-medium px-2 py-0.5 rounded-full"
+          [class]="progreso().aprobados === progreso().total
+            ? 'bg-emerald-100 text-emerald-700'
+            : 'bg-slate-100 text-slate-600'"
+        >
+          {{ progreso().aprobados }}/{{ progreso().total }} aprobados
+        </span>
+      }
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="flex gap-1 px-4 py-2.5 border-b border-slate-100 bg-slate-50">
+    @for (f of [['todos','Todos'],['pendientes','Pendientes'],['aprobados','Aprobados']]; track f[0]) {
+      <button
+        type="button"
+        (click)="filtro.set($any(f[0]))"
+        class="px-3 py-1 text-xs font-medium rounded-full transition-colors"
+        [class]="filtro() === f[0]
+          ? 'bg-violet-600 text-white'
+          : 'text-slate-500 hover:bg-slate-200'"
+      >
+        {{ f[1] }}
+      </button>
+    }
+  </div>
+
+  <!-- Lista -->
+  @if (loading()) {
+    <div class="p-8 text-center text-slate-400 text-sm">Cargando movimientos...</div>
+  } @else if (movimientosEnriquecidos().length === 0) {
+    <div class="p-10 text-center text-slate-400 text-sm">
+      <p>Sin movimientos registrados</p>
+      <p class="text-xs mt-1">Los movimientos de gestoría aparecerán aquí para su revisión</p>
+    </div>
+  } @else if (movimientosFiltrados().length === 0) {
+    <div class="p-8 text-center text-slate-400 text-sm">
+      No hay movimientos en este filtro
+    </div>
+  } @else {
+    <ul class="divide-y divide-slate-100">
+      @for (mov of movimientosFiltrados(); track mov.id) {
+        <li class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors">
+
+          <!-- Toggle aprobación -->
+          <button
+            type="button"
+            (click)="toggleAprobado(mov)"
+            [disabled]="toggling() === mov.id"
+            class="shrink-0 transition-colors disabled:opacity-50"
+            [attr.aria-label]="mov.aprobado ? 'Quitar aprobación' : 'Aprobar movimiento'"
+          >
+            <lucide-icon
+              [img]="mov.aprobado ? CheckCircle2Icon : CircleIcon"
+              class="w-5 h-5"
+              [class]="mov.aprobado ? 'text-emerald-500' : 'text-slate-300 hover:text-slate-400'"
+            />
+          </button>
+
+          <!-- Info -->
+          <div class="flex-1 min-w-0">
+            <!-- Mobile: dos líneas; Desktop: una línea -->
+            <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+              <span class="text-xs text-slate-400 shrink-0">{{ mov.fecha }}</span>
+              <span class="text-xs text-slate-500 font-medium truncate">{{ mov.casoNombre }}</span>
+              <span
+                class="text-xs px-1.5 py-0.5 rounded font-medium shrink-0"
+                [class]="tipoClasses(mov.tipo)"
+              >{{ tipoLabel(mov.tipo) }}</span>
+            </div>
+            <p class="text-sm text-slate-800 truncate mt-0.5">{{ mov.concepto }}</p>
+          </div>
+
+          <!-- Importe -->
+          <span
+            class="text-sm font-semibold shrink-0"
+            [class]="mov.esEntrada ? 'text-emerald-600' : 'text-red-500'"
+          >
+            {{ mov.esEntrada ? '+' : '−' }}{{ mov.importe | number:'1.2-2' }} €
+          </span>
+        </li>
+      }
+    </ul>
+  }
+
+  <!-- Footer: Aprobar todos -->
+  @if (!loading() && puedeAprobarTodos()) {
+    <div class="px-4 py-3 border-t border-slate-200 bg-emerald-50 flex items-center justify-between gap-3">
+      <p class="text-xs text-emerald-700">
+        El cotejo está conciliado. Puedes confirmar todos los movimientos pendientes.
+      </p>
+      <button
+        type="button"
+        (click)="aprobarTodos()"
+        [disabled]="aprobandoTodos()"
+        class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 shrink-0"
+      >
+        <lucide-icon [img]="CheckCheckIcon" class="w-4 h-4" />
+        {{ aprobandoTodos() ? 'Aprobando...' : 'Aprobar todos' }}
+      </button>
+    </div>
+  }
+</div>

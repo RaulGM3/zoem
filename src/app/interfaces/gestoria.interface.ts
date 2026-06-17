@@ -14,4 +14,7 @@ export interface MovimientoGestoria {
   notas?: string;
   createdBy: string;
   createdAt: Timestamp;
+  aprobado?: boolean;
+  aprobadoAt?: Timestamp;
+  aprobadoPor?: string;
 }

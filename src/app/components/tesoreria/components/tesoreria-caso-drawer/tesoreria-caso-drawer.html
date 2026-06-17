@@ -1,0 +1,55 @@
+@if (caso(); as c) {
+  <!-- Backdrop -->
+  <div
+    class="fixed inset-0 bg-black/30 z-40"
+    (click)="closed.emit()"
+    aria-hidden="true"
+  ></div>
+
+  <!-- Panel -->
+  <aside
+    class="fixed right-0 top-0 h-full w-full max-w-2xl bg-slate-50 z-50 flex flex-col shadow-2xl"
+    role="dialog"
+    [attr.aria-label]="'Gestoría de ' + c.titulo"
+  >
+    <!-- Header -->
+    <div class="flex items-center justify-between px-5 py-4 bg-white border-b border-slate-200 shrink-0">
+      <div>
+        <h2 class="text-base font-semibold text-slate-800">{{ c.titulo }}</h2>
+        <p class="text-xs text-slate-500 mt-0.5">Gestoría del caso</p>
+      </div>
+      <button
+        type="button"
+        (click)="closed.emit()"
+        class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+        aria-label="Cerrar"
+      >
+        <lucide-icon [img]="XIcon" class="w-5 h-5" />
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div class="flex-1 overflow-y-auto p-5">
+      <app-caso-gestoria-tab
+        [slots]="slots()"
+        [movimientos]="movimientos()"
+        [movimientosLoading]="movimientosLoading()"
+        [resumen]="resumen()"
+        (addMov)="openMovForm()"
+        (deleteMov)="onDeleteMov($event)"
+        (registerSlot)="onRegisterSlot($event)"
+        (unregisterSlot)="onUnregisterSlot($event)"
+        (reorderSlots)="onReorderSlots($event)"
+      />
+    </div>
+  </aside>
+
+  <!-- Movimiento form drawer -->
+  <app-movimiento-form-drawer
+    [visible]="showMovForm()"
+    [saving]="savingMov()"
+    [prefillSlot]="prefillSlot()"
+    (saved)="onSaveMov($event)"
+    (closed)="showMovForm.set(false)"
+  />
+}
