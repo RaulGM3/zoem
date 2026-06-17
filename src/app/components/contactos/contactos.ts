@@ -1,12 +1,12 @@
 import { Component, signal, computed, inject, ChangeDetectionStrategy } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { RouterLink, ActivatedRoute } from '@angular/router';
+import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import {
   LucideAngularModule,
   Users, Plus, Phone, Mail, Building2,
   Edit, Trash2, ChevronRight, ChevronLeft, UserPlus, TrendingUp,
-  GitMerge, Shield, Brain, ArrowRight, X, Check, LoaderCircle, StickyNote,
+  GitMerge, Shield, Brain, ArrowRight, X, Check, LoaderCircle, StickyNote, Briefcase,
 } from 'lucide-angular';
 import { PIPELINE_DEALS } from '../../data/dummy-data';
 import { ContactService } from '../../core/services/contact.service';
@@ -56,10 +56,12 @@ export class ContactosComponent {
   readonly CheckIcon = Check;
   readonly Loader2Icon = LoaderCircle;
   readonly StickyNoteIcon = StickyNote;
+  readonly BriefcaseIcon = Briefcase;
 
   readonly contactService = inject(ContactService);
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly searchSvc = inject(SearchService);
 
   activeTab = signal<ContactosTab>('contactos');
@@ -376,6 +378,10 @@ export class ContactosComponent {
     this.formStep.set(1);
     this.showErrors.set(false);
     this.form.reset({ status: 'activo', nifType: 'dni', cifType: 'cif', pais: 'ES', nacionalidad: 'ES', estadoCivil: 'casado' });
+  }
+
+  abrirCaso(contactId: string): void {
+    this.router.navigate(['/casos'], { queryParams: { newCaso: '1', contactId } });
   }
 
   async confirmDelete(id: string) {

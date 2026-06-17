@@ -12,8 +12,11 @@
     </div>
     <button
       (click)="guardar()"
-      [class]="'flex items-center gap-2 px-4 py-2 text-sm rounded-lg font-medium transition-colors ' + (guardado() ? 'bg-emerald-600 text-white' : 'bg-violet-600 text-white hover:bg-violet-700')">
-      @if (guardado()) {
+      [disabled]="guardando()"
+      [class]="'flex items-center gap-2 px-4 py-2 text-sm rounded-lg font-medium transition-colors disabled:opacity-60 ' + (guardado() ? 'bg-emerald-600 text-white' : 'bg-violet-600 text-white hover:bg-violet-700')">
+      @if (guardando()) {
+        <lucide-icon [img]="LoaderIcon" class="w-4 h-4 animate-spin" />Guardando…
+      } @else if (guardado()) {
         <lucide-icon [img]="CheckCircle2Icon" class="w-4 h-4" />Guardado
       } @else {
         <lucide-icon [img]="SaveIcon" class="w-4 h-4" />Guardar cambios
@@ -26,18 +29,24 @@
     <div class="space-y-4">
       <div class="bg-white rounded-xl border border-slate-200 p-5 text-center">
         <div class="w-20 h-20 bg-violet-100 rounded-full flex items-center justify-center text-violet-700 font-bold text-2xl mx-auto mb-3">
-          CM
+          {{ initials() }}
         </div>
-        <p class="font-semibold text-slate-800">Carlos Mendoza</p>
-        <p class="text-sm text-slate-500 mt-0.5">Mendoza & Asociados</p>
-        <span class="mt-2 inline-block px-3 py-0.5 bg-violet-100 text-violet-700 text-xs font-semibold rounded-full">Plan Profesional</span>
+        <p class="font-semibold text-slate-800">{{ currentUser()?.displayName ?? currentUser()?.email }}</p>
+        @if (currentUser()?.despacho?.nombre) {
+          <p class="text-sm text-slate-500 mt-0.5">{{ currentUser()?.despacho?.nombre }}</p>
+        }
+        @if (currentUser()?.profesional?.especialidad) {
+          <span class="mt-2 inline-block px-3 py-0.5 bg-violet-100 text-violet-700 text-xs font-semibold rounded-full">
+            {{ currentUser()?.profesional?.especialidad }}
+          </span>
+        }
         <div class="mt-4">
           <div class="flex justify-between text-xs text-slate-500 mb-1">
             <span>Perfil completado</span>
-            <span>{{ completionPercent }}%</span>
+            <span>{{ completionPercent() }}%</span>
           </div>
           <div class="w-full bg-slate-100 rounded-full h-2">
-            <div class="bg-violet-500 h-2 rounded-full" [style.width]="completionPercent + '%'"></div>
+            <div class="bg-violet-500 h-2 rounded-full transition-all duration-500" [style.width]="completionPercent() + '%'"></div>
           </div>
         </div>
       </div>
@@ -45,16 +54,16 @@
       <div class="bg-white rounded-xl border border-slate-200 p-4 space-y-2 text-sm">
         <h3 class="font-semibold text-slate-700">Información de cuenta</h3>
         <div class="flex justify-between">
-          <span class="text-slate-500">Plan</span>
-          <span class="font-medium text-violet-700">Profesional</span>
+          <span class="text-slate-500">Email</span>
+          <span class="text-slate-600 truncate max-w-40">{{ currentUser()?.email }}</span>
         </div>
         <div class="flex justify-between">
           <span class="text-slate-500">Miembro desde</span>
-          <span class="text-slate-600">Enero 2024</span>
+          <span class="text-slate-600">{{ memberSince() }}</span>
         </div>
         <div class="flex justify-between">
           <span class="text-slate-500">ID de usuario</span>
-          <span class="text-slate-400 text-xs font-mono">USR-001</span>
+          <span class="text-slate-400 text-xs font-mono truncate max-w-27.5">{{ currentUser()?.id }}</span>
         </div>
       </div>
     </div>
@@ -144,6 +153,7 @@
           <div class="md:col-span-2 space-y-1">
             <label class="text-sm font-medium text-slate-700" for="especialidad">Especialidad principal</label>
             <select id="especialidad" formControlName="especialidad" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
+              <option value="">— Sin especificar —</option>
               @for (esp of especialidades; track esp) {
                 <option [value]="esp">{{ esp }}</option>
               }

@@ -28,7 +28,9 @@
   [visible]="showDrawer()"
   [plantillas]="plantillas()"
   [saving]="saving()"
+  [initialContact]="drawerInitialContact()"
+  [initialData]="drawerInitialData()"
   (saved)="saveNuevoCaso($event)"
-  (closed)="showDrawer.set(false)"
+  (closed)="showDrawer.set(false); drawerInitialContact.set(null); drawerInitialData.set(null)"
   (crearContacto)="goToContactos()"
 />

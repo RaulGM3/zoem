@@ -1,7 +1,7 @@
 import { computed, Injectable, signal } from '@angular/core';
 import { inject } from '@angular/core';
 import { Firestore, doc, getDoc, setDoc, updateDoc, serverTimestamp } from '@angular/fire/firestore';
-import { SystemRole, VerteyUser } from '../../interfaces/user';
+import { SystemRole, VerteyUser, VerteyUserDespacho, VerteyUserProfesional } from '../../interfaces/user';
 
 @Injectable({ providedIn: 'root' })
 export class UserSyncService {
@@ -35,6 +35,26 @@ export class UserSyncService {
     } else {
       this.currentUser.set(null);
     }
+  }
+
+  async updateUserProfile(
+    uid: string,
+    personal: { displayName: string; telefono: string; linkedin: string; biografia: string },
+    despacho: VerteyUserDespacho,
+    profesional: VerteyUserProfesional,
+  ): Promise<void> {
+    const userRef = doc(this.firestore, 'users', uid);
+    const data = {
+      displayName: personal.displayName,
+      telefono: personal.telefono,
+      linkedin: personal.linkedin,
+      biografia: personal.biografia,
+      despacho,
+      profesional,
+      updatedAt: serverTimestamp(),
+    };
+    await setDoc(userRef, data, { merge: true });
+    this.currentUser.update((u) => u ? { ...u, ...data } : u);
   }
 
   async updateUserCompany(uid: string, companyId: string, role: SystemRole): Promise<void> {

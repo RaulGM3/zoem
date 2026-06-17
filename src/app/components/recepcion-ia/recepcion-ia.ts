@@ -24,6 +24,7 @@ import {
 import { LlamadasService } from '../../core/services/llamadas.service';
 import { ContactService } from '../../core/services/contact.service';
 import type { LlamadaResumen } from '../../interfaces/llamada.interface';
+import type { CasoTipo, CasoPrioridad } from '../../interfaces';
 import {
   type Contact,
   getContactDisplayName,
@@ -177,8 +178,35 @@ export class RecepcionIAComponent implements OnInit {
     this.selectedLlamada.set(null);
   }
 
-  abrirCaso(_ll: LlamadaResumen): void {
-    this.router.navigate(['/casos']);
+  abrirCaso(ll: LlamadaResumen): void {
+    const contact = this.getMatchedContact(ll);
+    const queryParams: Record<string, string> = { newCaso: '1' };
+    if (contact) queryParams['contactId'] = contact.id;
+
+    const esp = (ll.datosCapturados?.especialidadJuridica ?? '').toLowerCase();
+    const tipo: CasoTipo =
+      esp.includes('laboral') ? 'Laboral' :
+      esp.includes('fiscal') ? 'Fiscal' :
+      esp.includes('mercantil') ? 'Mercantil' :
+      esp.includes('civil') ? 'Civil' : 'Legal';
+
+    const urg = (ll.datosCapturados?.nivelUrgencia ?? '').toLowerCase();
+    const prioridad: CasoPrioridad = urg === 'alta' || urg === 'urgente' ? 'alta' : urg === 'baja' ? 'baja' : 'media';
+
+    const clienteName = contact
+      ? getContactDisplayName(contact)
+      : (ll.datosCapturados?.nombreCliente ?? '');
+    const especialidadLabel = this.getEspecialidadLabel(ll.datosCapturados?.especialidadJuridica);
+    const titulo = clienteName && especialidadLabel
+      ? `${clienteName} - ${especialidadLabel}`
+      : clienteName || especialidadLabel;
+
+    const descripcion = ll.datosCapturados?.descripcionCaso ?? '';
+
+    this.router.navigate(['/casos'], {
+      queryParams,
+      state: { titulo, descripcion, tipo, prioridad, estado: 'en_proceso' },
+    });
   }
 
   agregarContacto(ll: LlamadaResumen): void {

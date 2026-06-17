@@ -18,6 +18,8 @@ export class NuevoCasoDrawerComponent {
   readonly visible = input.required<boolean>();
   readonly plantillas = input.required<CasoPlantilla[]>();
   readonly saving = input.required<boolean>();
+  readonly initialContact = input<Contact | null>(null);
+  readonly initialData = input<{ titulo?: string; descripcion?: string; tipo?: CasoTipo; prioridad?: CasoPrioridad; estado?: CasoEstado } | null>(null);
 
   readonly saved = output<CreateCasoData>();
   readonly closed = output<void>();
@@ -65,6 +67,16 @@ export class NuevoCasoDrawerComponent {
         if (this.contactService.contacts().length === 0) {
           this.contactService.loadContacts();
         }
+        const preContact = this.initialContact();
+        if (preContact) {
+          this.clienteSeleccionado.set(preContact);
+        }
+        const data = this.initialData();
+        if (data?.titulo)      this.formTitulo.set(data.titulo);
+        if (data?.descripcion) this.formDescripcion.set(data.descripcion);
+        if (data?.tipo)        this.formTipo.set(data.tipo);
+        if (data?.prioridad)   this.formPrioridad.set(data.prioridad);
+        if (data?.estado)      this.formEstado.set(data.estado);
       }
     });
   }

@@ -1,9 +1,12 @@
 import { Component, OnInit, signal, computed, ChangeDetectionStrategy, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { CasosService } from '../../core/services/casos.service';
 import { PlantillasService } from '../../core/services/plantillas.service';
+import { ContactService } from '../../core/services/contact.service';
 import { SearchService } from '../../core/services/search.service';
-import type { Caso, CasoEstado, CasoTipo, CreateCasoData } from '../../interfaces';
+import type { Caso, CasoEstado, CasoTipo, CasoPrioridad, CreateCasoData, Contact } from '../../interfaces';
+
+type DrawerInitialData = { titulo?: string; descripcion?: string; tipo?: CasoTipo; prioridad?: CasoPrioridad; estado?: CasoEstado };
 import { CasosHeaderComponent } from './components/casos-header/casos-header';
 import { CasosStatsComponent } from './components/casos-stats/casos-stats';
 import { CasosFilterBarComponent } from './components/casos-filter-bar/casos-filter-bar';
@@ -24,8 +27,10 @@ import { NuevoCasoDrawerComponent } from './components/nuevo-caso-drawer/nuevo-c
 })
 export class CasosComponent implements OnInit {
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly casosService = inject(CasosService);
   private readonly plantillasService = inject(PlantillasService);
+  private readonly contactService = inject(ContactService);
   private readonly searchSvc = inject(SearchService);
 
   /** Búsqueda centralizada en el header — scopeada a "casos". */
@@ -34,6 +39,8 @@ export class CasosComponent implements OnInit {
   readonly filterTipo = signal('');
   readonly showDrawer = signal(false);
   readonly saving = signal(false);
+  readonly drawerInitialContact = signal<Contact | null>(null);
+  readonly drawerInitialData = signal<DrawerInitialData | null>(null);
 
   readonly estados: readonly CasoEstado[] = ['pendiente', 'en_proceso', 'cerrado', 'urgente', 'archivado'];
   readonly tipos: readonly CasoTipo[] = ['Legal', 'Fiscal', 'Laboral', 'Mercantil', 'Civil'];
@@ -62,6 +69,21 @@ export class CasosComponent implements OnInit {
       this.casosService.loadCasos(),
       this.plantillasService.loadPlantillas(),
     ]);
+
+    const p = this.route.snapshot.queryParamMap;
+    if (p.get('newCaso') === '1') {
+      const contactId = p.get('contactId');
+      if (contactId) {
+        await this.contactService.loadContacts();
+        const contact = this.contactService.contacts().find(c => c.id === contactId) ?? null;
+        this.drawerInitialContact.set(contact);
+      }
+      const navState = history.state as DrawerInitialData | null;
+      if (navState?.titulo || navState?.descripcion || navState?.tipo || navState?.prioridad || navState?.estado) {
+        this.drawerInitialData.set(navState);
+      }
+      this.showDrawer.set(true);
+    }
   }
 
   async saveNuevoCaso(data: CreateCasoData): Promise<void> {
@@ -69,6 +91,17 @@ export class CasosComponent implements OnInit {
     try {
       const id = await this.casosService.createCaso(data);
       this.showDrawer.set(false);
+      this.drawerInitialContact.set(null);
+      this.drawerInitialData.set(null);
+
+      const contactId = data.contactoIds?.[0];
+      if (contactId) {
+        const contact = this.contactService.contacts().find(c => c.id === contactId);
+        if (contact?.status === 'potencial') {
+          await this.contactService.updateContact(contactId, { status: 'activo' });
+        }
+      }
+
       this.router.navigate(['/casos', id]);
     } finally {
       this.saving.set(false);

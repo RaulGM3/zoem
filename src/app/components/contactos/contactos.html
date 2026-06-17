@@ -140,6 +140,9 @@
                   @if (c.lastContact) { Último: {{ c.lastContact }} }
                 </p>
                 <div class="flex gap-1 shrink-0">
+                  <button (click)="abrirCaso(c.id); $event.stopPropagation()" class="rounded p-1 text-slate-400 hover:bg-violet-50 hover:text-violet-600" aria-label="Abrir caso para este contacto">
+                    <lucide-icon [img]="BriefcaseIcon" size="14"></lucide-icon>
+                  </button>
                   <button (click)="openEdit(c); $event.stopPropagation()" class="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Editar contacto">
                     <lucide-icon [img]="EditIcon" size="14"></lucide-icon>
                   </button>
