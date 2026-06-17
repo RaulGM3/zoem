@@ -5,6 +5,7 @@ import {
   computed,
   inject,
 } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Functions, httpsCallable } from '@angular/fire/functions';
 import { LucideAngularModule, ShieldCheck, ShieldAlert, ShieldX, Upload, Loader2 } from 'lucide-angular';
@@ -14,7 +15,7 @@ type EstadoCert = 'sin_configurar' | 'activo' | 'expirado';
 
 @Component({
   selector: 'app-credenciales-aeat',
-  imports: [LucideAngularModule, ReactiveFormsModule],
+  imports: [LucideAngularModule, ReactiveFormsModule, DatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="space-y-6">

@@ -1,6 +1,7 @@
-import { Component, signal, inject, viewChild, type ElementRef } from '@angular/core';
+import { Component, signal, computed, inject, viewChild, type ElementRef } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { SearchService, type SearchCategory } from '../../core/services/search.service';
+import { AuthService } from '../../auth/auth.service';
 import {
   LucideAngularModule,
   LucideIconData,
@@ -28,6 +29,8 @@ import {
   Settings,
   LogOut,
   X,
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-angular';
 
 export interface NavItem {
@@ -51,6 +54,8 @@ export interface NavCategory {
 export class DemoLayoutComponent {
   readonly LayersIcon = Layers;
   readonly ArrowLeftIcon = ArrowLeft;
+  readonly ChevronsLeftIcon = ChevronsLeft;
+  readonly ChevronsRightIcon = ChevronsRight;
   readonly BellIcon = Bell;
   readonly SearchIcon = Search;
   readonly MenuIcon = Menu;
@@ -59,6 +64,7 @@ export class DemoLayoutComponent {
   readonly LogOutIcon = LogOut;
 
   readonly searchSvc = inject(SearchService);
+  private readonly authSvc = inject(AuthService);
   readonly searchMenuOpen = signal(false);
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
@@ -78,6 +84,20 @@ export class DemoLayoutComponent {
   }
 
   sidebarOpen = signal(false);
+  sidebarCollapsed = signal(false);
+  sidebarClass = computed(() =>
+    this.sidebarCollapsed()
+      ? 'hidden flex-col border-r bg-white transition-all duration-300 ease-in-out lg:flex overflow-hidden w-16'
+      : 'hidden flex-col border-r bg-white transition-all duration-300 ease-in-out lg:flex overflow-hidden w-64'
+  );
+
+  toggleSidebar(): void {
+    this.sidebarCollapsed.update(v => !v);
+  }
+
+  async logout(): Promise<void> {
+    await this.authSvc.logout();
+  }
 
   navCategories: NavCategory[] = [
     {

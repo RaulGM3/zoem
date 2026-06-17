@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectionStrategy, inject, input, signal, computed } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, ViewChild, ElementRef, inject, input, signal, computed, effect } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   LucideAngularModule,
@@ -9,8 +9,16 @@ import {
   Sparkles,
   FileText,
   Trash2,
+  Pencil,
+  Tag,
+  Lock,
+  X,
 } from 'lucide-angular';
 import { DocTemplateService } from '../../core/services/doc-template.service';
+
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
 import { DocGenerationService } from '../../core/services/doc-generation.service';
 import type { DocTemplate, TemplateVariable } from '../../interfaces';
 
@@ -24,6 +32,7 @@ export class DocTemplateDetailComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly templateService = inject(DocTemplateService);
   private readonly generationService = inject(DocGenerationService);
+  @ViewChild('previewContent') private readonly previewContent?: ElementRef<HTMLElement>;
 
   readonly id = input.required<string>();
 
@@ -34,6 +43,10 @@ export class DocTemplateDetailComponent implements OnInit {
   readonly SparklesIcon = Sparkles;
   readonly FileTextIcon = FileText;
   readonly Trash2Icon = Trash2;
+  readonly PencilIcon = Pencil;
+  readonly TagIcon = Tag;
+  readonly LockIcon = Lock;
+  readonly XIcon = X;
 
   readonly template = signal<DocTemplate | null>(null);
   readonly loading = signal(true);
@@ -41,10 +54,53 @@ export class DocTemplateDetailComponent implements OnInit {
   readonly copied = signal(false);
   readonly downloading = signal(false);
   readonly confirmingDelete = signal(false);
+  readonly editMode = signal(false);
+  readonly pendingSelection = signal('');
+  readonly showNewVarForm = signal(false);
+  readonly newVarKey = signal('');
+  readonly newVarLabel = signal('');
+  readonly makeStaticFor = signal<string | null>(null);
+  readonly makeStaticValue = signal('');
+  readonly saving = signal(false);
+  readonly focusedVar = signal<string | null>(null);
+
+  constructor() {
+    effect(() => {
+      const key = this.focusedVar();
+      if (!key) return;
+      setTimeout(() => {
+        const container = this.previewContent?.nativeElement;
+        if (!container) return;
+        const mark = container.querySelector<HTMLElement>(`[data-var-key="${key}"]`);
+        mark?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 0);
+    });
+  }
 
   readonly rendered = computed(() => {
     const t = this.template();
-    return t ? this.generationService.interpolateForPreview(t.html, this.values()) : '';
+    const focused = this.focusedVar();
+    const vals = this.values();
+    if (!t) return '';
+    return t.html.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key: string) => {
+      const value = vals[key];
+      const isFocused = focused === key;
+      const baseClass = isFocused
+        ? 'rounded px-0.5 bg-violet-200 text-violet-900 ring-2 ring-violet-400'
+        : value
+          ? 'rounded bg-emerald-100 px-0.5 text-emerald-800'
+          : 'rounded bg-amber-100 px-0.5 text-amber-800';
+      const text = value ? escapeHtml(value) : `{{${key}}}`;
+      return `<mark data-var-key="${key}" class="${baseClass}">${text}</mark>`;
+    });
+  });
+
+  readonly renderedForEdit = computed(() => {
+    const t = this.template();
+    if (!t) return '';
+    return t.html.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key: string) =>
+      `<span class="bg-violet-100 text-violet-700 rounded px-0.5 font-mono text-xs" data-var-key="${key}">{{${key}}}</span>`
+    );
   });
 
   readonly filledCount = computed(() => {
@@ -72,6 +128,10 @@ export class DocTemplateDetailComponent implements OnInit {
 
   setValue(key: string, value: string): void {
     this.values.update(v => ({ ...v, [key]: value }));
+  }
+
+  onVarFocus(key: string): void {
+    this.focusedVar.set(key);
   }
 
   inputType(variable: TemplateVariable): string {
@@ -110,6 +170,84 @@ export class DocTemplateDetailComponent implements OnInit {
     if (!t) return;
     await this.templateService.deleteTemplate(t.id);
     this.goBack();
+  }
+
+  toggleEditMode(): void {
+    this.editMode.update(v => !v);
+    if (!this.editMode()) {
+      this.cancelNewVar();
+      this.makeStaticFor.set(null);
+    }
+  }
+
+  onPreviewMouseUp(): void {
+    if (!this.editMode()) return;
+    const text = window.getSelection()?.toString().trim() ?? '';
+    if (text) {
+      this.pendingSelection.set(text);
+      this.showNewVarForm.set(true);
+    }
+  }
+
+  cancelNewVar(): void {
+    this.showNewVarForm.set(false);
+    this.pendingSelection.set('');
+    this.newVarKey.set('');
+    this.newVarLabel.set('');
+    window.getSelection()?.removeAllRanges();
+  }
+
+  async promoteToVariable(): Promise<void> {
+    const t = this.template();
+    const text = this.pendingSelection();
+    const key = this.newVarKey().trim();
+    const label = this.newVarLabel().trim();
+    if (!t || !text || !key || !label) return;
+
+    const newHtml = t.html.replace(text, `{{${key}}}`);
+    const newVariables: TemplateVariable[] = [
+      ...t.variables,
+      { key, label, type: 'text', required: false },
+    ];
+
+    this.saving.set(true);
+    try {
+      await this.templateService.updateTemplate(t.id, { html: newHtml, variables: newVariables });
+      this.template.update(prev => prev ? { ...prev, html: newHtml, variables: newVariables } : prev);
+      this.cancelNewVar();
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  startDemote(variable: TemplateVariable): void {
+    this.makeStaticFor.set(variable.key);
+    this.makeStaticValue.set(variable.label);
+  }
+
+  cancelDemote(): void {
+    this.makeStaticFor.set(null);
+    this.makeStaticValue.set('');
+  }
+
+  async demoteToStatic(): Promise<void> {
+    const t = this.template();
+    const key = this.makeStaticFor();
+    const value = this.makeStaticValue().trim();
+    if (!t || !key) return;
+
+    const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g');
+    const newHtml = t.html.replace(regex, value);
+    const newVariables = t.variables.filter(v => v.key !== key);
+
+    this.saving.set(true);
+    try {
+      await this.templateService.updateTemplate(t.id, { html: newHtml, variables: newVariables });
+      this.template.update(prev => prev ? { ...prev, html: newHtml, variables: newVariables } : prev);
+      this.cancelDemote();
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   goBack(): void {

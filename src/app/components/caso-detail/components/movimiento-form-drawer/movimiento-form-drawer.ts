@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, input, output, signal, computed, effect } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output, signal, effect } from '@angular/core';
 import { LucideAngularModule, X } from 'lucide-angular';
 import type { GestoriaSlot, MovimientoTipo } from '../../../../interfaces';
 
@@ -36,32 +36,22 @@ export class MovimientoFormDrawerComponent {
 
   readonly tipos: readonly MovimientoTipo[] = ['ingreso', 'suplido', 'honorario', 'gasto', 'otro'];
 
-  /** Dirección determinada por el tipo. `null` = el usuario la elige manualmente. */
-  private static readonly DIRECCION_POR_TIPO: Record<MovimientoTipo, boolean | null> = {
+  /** Dirección por defecto según tipo, aplicada solo al prefill. */
+  private static readonly DIRECCION_POR_TIPO: Record<MovimientoTipo, boolean> = {
     ingreso: true,
     suplido: false,
     honorario: false,
     gasto: false,
-    otro: null,
+    otro: true,
   };
 
-  /** La dirección solo es editable cuando el tipo no la determina (`otro`). */
-  readonly direccionManual = computed(
-    () => MovimientoFormDrawerComponent.DIRECCION_POR_TIPO[this.formTipo()] === null,
-  );
-
   onTipoChange(tipo: MovimientoTipo): void {
-    this.applyTipo(tipo, this.formEsEntrada());
+    this.formTipo.set(tipo);
   }
 
-  /**
-   * Setea el tipo y deriva la dirección de la regla.
-   * `fallback` aplica solo para `otro`, donde la dirección es manual.
-   */
   private applyTipo(tipo: MovimientoTipo, fallback: boolean): void {
     this.formTipo.set(tipo);
-    const direccion = MovimientoFormDrawerComponent.DIRECCION_POR_TIPO[tipo];
-    this.formEsEntrada.set(direccion ?? fallback);
+    this.formEsEntrada.set(MovimientoFormDrawerComponent.DIRECCION_POR_TIPO[tipo] ?? fallback);
   }
 
   constructor() {

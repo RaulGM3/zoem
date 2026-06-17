@@ -26,6 +26,13 @@
           <button (click)="deleteTemplate()" class="rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50">Sí, eliminar</button>
           <button (click)="confirmingDelete.set(false)" class="rounded-lg px-3 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100">Cancelar</button>
         } @else {
+          <button (click)="toggleEditMode()" [attr.aria-pressed]="editMode()"
+            [class]="editMode()
+              ? 'inline-flex items-center gap-2 rounded-lg border border-violet-300 bg-violet-50 px-3 py-2.5 text-sm font-semibold text-violet-700'
+              : 'inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50'">
+            <lucide-icon [img]="PencilIcon" size="15"></lucide-icon>
+            {{ editMode() ? 'Editando' : 'Editar plantilla' }}
+          </button>
           <button (click)="confirmingDelete.set(true)" aria-label="Eliminar plantilla"
             class="rounded-lg p-2.5 text-slate-400 hover:bg-red-50 hover:text-red-500">
             <lucide-icon [img]="Trash2Icon" size="16"></lucide-icon>
@@ -44,10 +51,17 @@
       </div>
     </div>
 
+    @if (editMode()) {
+      <div class="mb-4 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-700">
+        <strong>Modo edición activo.</strong>
+        Selecciona texto en el documento para convertirlo en variable, o utiliza el botón <span class="font-mono">Hacer estático</span> en un campo para incrustarlo directamente en el documento.
+      </div>
+    }
+
     <div class="grid gap-6 lg:grid-cols-[380px_1fr]">
       <!-- Form -->
       <div class="space-y-4">
-        <div class="rounded-xl border border-slate-200 bg-white p-4">
+        <div class="flex flex-col rounded-xl border border-slate-200 bg-white p-4 max-h-[calc(100vh-200px)]">
           <div class="mb-4 flex items-center justify-between">
             <h2 class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
               <lucide-icon [img]="SparklesIcon" size="15" class="text-violet-500"></lucide-icon>
@@ -61,22 +75,40 @@
               [style.width.%]="t.variables.length ? (filledCount() / t.variables.length) * 100 : 0"></div>
           </div>
 
-          <div class="space-y-4">
+          <div class="flex-1 overflow-y-auto space-y-4 pb-2 pr-1">
             @for (v of t.variables; track v.key) {
               <div class="space-y-1">
-                <label [for]="'var-' + v.key" class="text-sm font-medium text-slate-700">
-                  {{ v.label }}
-                  @if (v.required) { <span class="text-red-500">*</span> }
-                </label>
+                <div class="flex items-center justify-between gap-2">
+                  <label [for]="'var-' + v.key" class="text-sm font-medium text-slate-700">
+                    {{ v.label }}
+                    @if (v.required) { <span class="text-red-500">*</span> }
+                  </label>
+                  @if (editMode()) {
+                    @if (makeStaticFor() === v.key) {
+                      <!-- inline demote form -->
+                    } @else {
+                      <button (click)="startDemote(v)" title="Hacer estático: reemplazar {{'{{'}}{{v.key}}{{'}}'}} por un valor fijo en el documento"
+                        class="flex shrink-0 items-center gap-1 rounded px-2 py-0.5 text-xs text-slate-400 hover:bg-amber-50 hover:text-amber-600">
+                        <lucide-icon [img]="LockIcon" size="12"></lucide-icon>
+                        Hacer estático
+                      </button>
+                    }
+                  }
+                </div>
+
                 @if (v.type === 'textarea') {
                   <textarea [id]="'var-' + v.key" rows="3"
-                    [value]="values()[v.key] ?? ''"
+                    [value]="values()[v.key] || ''"
                     (input)="setValue(v.key, $any($event.target).value)"
+                    (focus)="onVarFocus(v.key)"
+                    (blur)="focusedVar.set(null)"
                     class="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"></textarea>
                 } @else {
                   <input [id]="'var-' + v.key" [type]="inputType(v)"
-                    [value]="values()[v.key] ?? ''"
+                    [value]="values()[v.key] || ''"
                     (input)="setValue(v.key, $any($event.target).value)"
+                    (focus)="onVarFocus(v.key)"
+                    (blur)="focusedVar.set(null)"
                     [step]="v.type === 'currency' ? '0.01' : null"
                     class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
                 }
@@ -96,14 +128,81 @@
       </div>
 
       <!-- Viewer -->
-      <div class="rounded-xl border border-slate-200 bg-white">
+      <div class="flex flex-col rounded-xl border border-slate-200 bg-white max-h-[calc(100vh-200px)]" [class.border-violet-300]="editMode()">
         <div class="flex items-center gap-2 border-b border-slate-200 px-5 py-3">
           <lucide-icon [img]="FileTextIcon" size="15" class="text-slate-400"></lucide-icon>
           <h2 class="text-sm font-semibold text-slate-700">Vista previa</h2>
+          @if (editMode()) {
+            <span class="ml-auto text-xs text-violet-500">Selecciona texto para crear una variable</span>
+          }
         </div>
-        <div class="max-h-[75vh] overflow-y-auto px-8 py-6 text-sm leading-relaxed text-slate-800"
-          [innerHTML]="rendered()"></div>
+
+        @if (editMode() && showNewVarForm()) {
+          <div class="border-b border-violet-200 bg-violet-50 px-5 py-3 space-y-2">
+            <p class="text-xs font-medium text-violet-700">
+              Convertir "<em class="font-semibold">{{ pendingSelection() }}</em>" en variable
+            </p>
+            <div class="flex gap-2">
+              <input type="text"
+                [value]="newVarKey()"
+                (input)="newVarKey.set($any($event.target).value)"
+                placeholder="clave_variable (ej: nombre_cliente)"
+                class="flex-1 rounded-lg border border-violet-300 bg-white px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-300" />
+              <input type="text"
+                [value]="newVarLabel()"
+                (input)="newVarLabel.set($any($event.target).value)"
+                placeholder="Etiqueta (ej: Nombre del cliente)"
+                class="flex-1 rounded-lg border border-violet-300 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+            </div>
+            <div class="flex gap-2">
+              <button (click)="promoteToVariable()" [disabled]="saving() || !newVarKey().trim() || !newVarLabel().trim()"
+                class="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-500 disabled:opacity-50">
+                <lucide-icon [img]="TagIcon" size="12"></lucide-icon>
+                {{ saving() ? 'Guardando…' : 'Crear variable' }}
+              </button>
+              <button (click)="cancelNewVar()"
+                class="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-50">
+                <lucide-icon [img]="XIcon" size="12"></lucide-icon>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        }
+
+        <div #previewContent class="flex-1 overflow-y-auto px-8 py-6 pb-8 text-sm leading-relaxed text-slate-800"
+          [class.select-text]="editMode()"
+          (mouseup)="onPreviewMouseUp()"
+          [innerHTML]="editMode() ? renderedForEdit() : rendered()"></div>
       </div>
     </div>
+    <!-- Dialog: Hacer estático -->
+    @if (makeStaticFor()) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" (click)="cancelDemote()">
+        <div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="dialog-static-title">
+          <div class="mb-1 flex items-center gap-2">
+            <lucide-icon [img]="LockIcon" size="16" class="text-amber-500"></lucide-icon>
+            <h3 id="dialog-static-title" class="text-sm font-semibold text-slate-800">Hacer estático</h3>
+          </div>
+          <p class="mb-4 text-xs text-slate-500">
+            El marcador <span class="font-mono text-amber-700">{{'{{'}}{{ makeStaticFor() }}{{'}}'}}</span> será reemplazado por el texto que escribas a continuación y la variable se eliminará del formulario.
+          </p>
+          <input type="text"
+            [value]="makeStaticValue()"
+            (input)="makeStaticValue.set($any($event.target).value)"
+            placeholder="Valor estático…"
+            class="mb-4 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300" />
+          <div class="flex gap-2">
+            <button (click)="demoteToStatic()" [disabled]="saving() || !makeStaticValue().trim()"
+              class="flex-1 rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-500 disabled:opacity-50">
+              {{ saving() ? 'Guardando…' : 'Confirmar' }}
+            </button>
+            <button (click)="cancelDemote()"
+              class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    }
   }
 }
