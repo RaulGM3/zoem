@@ -8,12 +8,14 @@ import {
   getDocs,
   addDoc,
   updateDoc,
+  setDoc,
   writeBatch,
   query,
   where,
   orderBy,
   serverTimestamp,
   deleteField,
+  increment,
 } from '@angular/fire/firestore';
 import type { Observable } from 'rxjs';
 import { Auth } from '@angular/fire/auth';
@@ -454,11 +456,15 @@ export class CasosService {
 
     const resumen: ResumenFinanciero = { ...RESUMEN_FINANCIERO_VACIO };
     for (const m of movimientos) {
-      if (m.tipo === 'ingreso') resumen.totalIngresos += m.importe;
-      else if (m.tipo === 'suplido') resumen.totalSuplidos += m.importe;
-      else if (m.tipo === 'honorario') resumen.totalHonorarios += m.importe;
+      if (m.esEntrada) {
+        resumen.totalIngresos += m.importe;
+      } else {
+        resumen.totalEgresos += m.importe;
+        if (m.tipo === 'suplido') resumen.totalSuplidos += m.importe;
+        else if (m.tipo === 'honorario') resumen.totalHonorarios += m.importe;
+      }
     }
-    resumen.saldo = resumen.totalIngresos - resumen.totalSuplidos - resumen.totalHonorarios;
+    resumen.saldo = resumen.totalIngresos - resumen.totalEgresos;
 
     // Denormalizamos el conteo de slots para que facturación evalúe "ejecutado"
     // leyendo sólo el doc del caso, sin abrir la subcolección por cada render.
@@ -496,16 +502,34 @@ export class CasosService {
    * snapshot del saldo bancario corroborado y la fecha de confirmación (auditoría).
    */
   async confirmarCierre(casoId: string, opts: { saldoBancario?: number }): Promise<void> {
+    const companyId = this.companyId;
     const cierreConfirmadoAt = new Date().toISOString();
     const patch = stripUndefined({
       estado: 'cerrado' as const,
       cierreConfirmadoAt,
       cierreSaldoBancario: opts.saldoBancario,
     });
-    await updateDoc(doc(this.firestore, 'companies', this.companyId, 'casos', casoId), {
+    await updateDoc(doc(this.firestore, 'companies', companyId, 'casos', casoId), {
       ...patch,
       updatedAt: serverTimestamp(),
     });
+
+    // Acumular resumen financiero del caso cerrado en el documento histórico de tesorería
+    const caso = this.casos().find(c => c.id === casoId);
+    if (caso) {
+      const rf = caso.resumenFinanciero;
+      const resumenRef = doc(this.firestore, 'companies', companyId, 'tesoreria_meta', 'resumen');
+      await setDoc(resumenRef, {
+        totalIngresosCerrados: increment(rf.totalIngresos),
+        totalSuplidosCerrados: increment(rf.totalSuplidos),
+        totalHonorariosCerrados: increment(rf.totalHonorarios),
+        totalEgresosCerrados: increment(rf.totalEgresos),
+        saldoCerrados: increment(rf.saldo),
+        casosCount: increment(1),
+        ultimaActualizacion: serverTimestamp(),
+      }, { merge: true });
+    }
+
     this.casos.update(list =>
       list.map(c => (c.id === casoId ? { ...c, ...patch } as Caso : c))
     );

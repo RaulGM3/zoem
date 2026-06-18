@@ -1,0 +1,76 @@
+<div class="fixed inset-0 z-50 flex justify-end">
+  <div class="absolute inset-0 bg-black/30" (click)="closed.emit()"></div>
+  <div class="relative flex flex-col bg-white w-full max-w-md shadow-xl">
+    <!-- Header -->
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+      <div>
+        <h2 class="text-lg font-semibold text-gray-900">Retirar honorarios</h2>
+        <p class="text-xs text-gray-500 mt-0.5">Retiro de fondos independiente de un caso</p>
+      </div>
+      <button type="button" (click)="closed.emit()" class="p-1.5 rounded-lg hover:bg-gray-100">
+        <lucide-icon [img]="XIcon" class="size-5 text-gray-500"></lucide-icon>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-6 space-y-4">
+      <!-- Concepto -->
+      <div>
+        <label class="block text-xs font-medium text-gray-700 mb-1">Concepto *</label>
+        <input type="text" placeholder="Ej. Retiro honorarios Q2 2025"
+          class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+          [ngModel]="form().concepto" (ngModelChange)="form.update(f => ({...f, concepto: $event}))" />
+      </div>
+
+      <!-- Importe -->
+      <div>
+        <label class="block text-xs font-medium text-gray-700 mb-1">Importe (€) *</label>
+        <input type="number" min="0.01" step="0.01" placeholder="0,00"
+          class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+          [ngModel]="form().importe" (ngModelChange)="form.update(f => ({...f, importe: $event}))" />
+      </div>
+
+      <!-- Fecha -->
+      <div>
+        <label class="block text-xs font-medium text-gray-700 mb-1">Fecha *</label>
+        <input type="date"
+          class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+          [ngModel]="form().fecha" (ngModelChange)="form.update(f => ({...f, fecha: $event}))" />
+      </div>
+
+      <!-- Cuenta -->
+      @if (cuentas().length > 0) {
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">Cuenta / Caja</label>
+          <select class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+            [ngModel]="form().cuentaId" (ngModelChange)="form.update(f => ({...f, cuentaId: $event}))">
+            <option value="">Sin asignar</option>
+            @for (c of cuentas(); track c.id) {
+              <option [value]="c.id">{{ c.nombre }}{{ c.entidad ? ' · ' + c.entidad : '' }}</option>
+            }
+          </select>
+        </div>
+      }
+
+      <!-- Notas -->
+      <div>
+        <label class="block text-xs font-medium text-gray-700 mb-1">Notas</label>
+        <textarea rows="3" placeholder="Observaciones opcionales..."
+          class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 resize-none"
+          [ngModel]="form().notas" (ngModelChange)="form.update(f => ({...f, notas: $event}))"></textarea>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="flex justify-end gap-2 px-6 py-4 border-t border-gray-200">
+      <button type="button" (click)="closed.emit()"
+        class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">
+        Cancelar
+      </button>
+      <button type="button" (click)="save()"
+        [disabled]="saving() || !form().concepto.trim() || !form().importe"
+        class="px-5 py-2 text-sm font-medium bg-gray-900 text-white rounded-lg hover:bg-gray-700 disabled:opacity-40">
+        {{ saving() ? 'Guardando...' : 'Registrar retiro' }}
+      </button>
+    </div>
+  </div>
+</div>

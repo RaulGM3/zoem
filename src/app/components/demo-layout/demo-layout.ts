@@ -84,6 +84,7 @@ export class DemoLayoutComponent {
   }
 
   sidebarOpen = signal(false);
+  logoutDialogOpen = signal(false);
   sidebarCollapsed = signal(false);
   sidebarClass = computed(() =>
     this.sidebarCollapsed()
@@ -95,7 +96,8 @@ export class DemoLayoutComponent {
     this.sidebarCollapsed.update(v => !v);
   }
 
-  async logout(): Promise<void> {
+  async confirmLogout(): Promise<void> {
+    this.logoutDialogOpen.set(false);
     await this.authSvc.logout();
   }
 

@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, input, output, signal, effect } from '@angular/core';
 import { LucideAngularModule, X } from 'lucide-angular';
-import type { GestoriaSlot, MovimientoTipo } from '../../../../interfaces';
+import type { CuentaBancaria, GestoriaSlot, MovimientoTipo } from '../../../../interfaces';
 
 export interface MovimientoFormData {
   tipo: MovimientoTipo;
@@ -9,6 +9,7 @@ export interface MovimientoFormData {
   esEntrada: boolean;
   fecha: string;
   notas?: string;
+  cuentaId?: string;
 }
 
 @Component({
@@ -21,6 +22,7 @@ export class MovimientoFormDrawerComponent {
   readonly visible = input.required<boolean>();
   readonly saving = input.required<boolean>();
   readonly prefillSlot = input.required<GestoriaSlot | null>();
+  readonly cuentas = input<CuentaBancaria[]>([]);
 
   readonly saved = output<MovimientoFormData>();
   readonly closed = output<void>();
@@ -33,6 +35,7 @@ export class MovimientoFormDrawerComponent {
   readonly formEsEntrada = signal(true);
   readonly formFecha = signal('');
   readonly formNotas = signal('');
+  readonly formCuentaId = signal('');
 
   readonly tipos: readonly MovimientoTipo[] = ['ingreso', 'suplido', 'honorario', 'gasto', 'otro'];
 
@@ -74,6 +77,7 @@ export class MovimientoFormDrawerComponent {
     }
     this.formFecha.set(today);
     this.formNotas.set('');
+    this.formCuentaId.set('');
   }
 
   private tipoCostoToMovTipo(tipoCosto: string): MovimientoTipo {
@@ -98,6 +102,7 @@ export class MovimientoFormDrawerComponent {
       esEntrada: this.formEsEntrada(),
       fecha: this.formFecha(),
       notas: this.formNotas().trim() || undefined,
+      cuentaId: this.formCuentaId() || undefined,
     });
   }
 }

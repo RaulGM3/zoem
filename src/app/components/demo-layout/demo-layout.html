@@ -3,20 +3,29 @@
   <!-- Desktop Sidebar -->
   <aside [class]="sidebarClass()">
     <!-- Logo -->
-    <div class="flex h-16 items-center gap-2.5 border-b px-4 overflow-hidden">
-      <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-50">
-        <lucide-icon [img]="LayersIcon" size="20" class="text-violet-600"></lucide-icon>
+    @if (sidebarCollapsed()) {
+      <div class="flex h-16 items-center justify-center border-b">
+        <button
+          class="flex items-center justify-center rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+          aria-label="Expandir menú"
+          (click)="toggleSidebar()">
+          <lucide-icon [img]="ChevronsRightIcon" size="16"></lucide-icon>
+        </button>
       </div>
-      @if (!sidebarCollapsed()) {
+    } @else {
+      <div class="flex h-16 items-center gap-2.5 border-b px-4 overflow-hidden">
+        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-50">
+          <lucide-icon [img]="LayersIcon" size="20" class="text-violet-600"></lucide-icon>
+        </div>
         <span class="flex-1 text-xl font-bold tracking-tight whitespace-nowrap">Vertey</span>
-      }
-      <button
-        class="ml-auto shrink-0 flex items-center justify-center rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
-        [attr.aria-label]="sidebarCollapsed() ? 'Expandir menú' : 'Colapsar menú'"
-        (click)="toggleSidebar()">
-        <lucide-icon [img]="sidebarCollapsed() ? ChevronsRightIcon : ChevronsLeftIcon" size="16"></lucide-icon>
-      </button>
-    </div>
+        <button
+          class="ml-auto shrink-0 flex items-center justify-center rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+          aria-label="Colapsar menú"
+          (click)="toggleSidebar()">
+          <lucide-icon [img]="ChevronsLeftIcon" size="16"></lucide-icon>
+        </button>
+      </div>
+    }
 
     <!-- Navigation -->
     <nav class="flex-1 overflow-y-auto overflow-x-hidden px-2 py-4 space-y-5">
@@ -61,7 +70,7 @@
         class="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors"
         [class.justify-center]="sidebarCollapsed()"
         [title]="sidebarCollapsed() ? 'Cerrar Sesión' : ''"
-        (click)="logout()">
+        (click)="logoutDialogOpen.set(true)">
         <lucide-icon [img]="LogOutIcon" size="18" class="shrink-0"></lucide-icon>
         @if (!sidebarCollapsed()) {
           <span class="whitespace-nowrap">Cerrar Sesión</span>
@@ -187,3 +196,35 @@
   }
 
 </div>
+
+<!-- Logout confirmation dialog -->
+@if (logoutDialogOpen()) {
+  <div
+    class="fixed inset-0 z-100 flex items-center justify-center"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="logout-dialog-title">
+    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" (click)="logoutDialogOpen.set(false)"></div>
+    <div class="relative z-10 w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+      <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50">
+        <lucide-icon [img]="LogOutIcon" size="22" class="text-red-500"></lucide-icon>
+      </div>
+      <h2 id="logout-dialog-title" class="mb-1 text-base font-semibold text-slate-800">¿Cerrar sesión?</h2>
+      <p class="mb-6 text-sm text-slate-500">Se cerrará tu sesión actual y tendrás que volver a iniciarla.</p>
+      <div class="flex gap-3">
+        <button
+          type="button"
+          class="flex-1 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+          (click)="logoutDialogOpen.set(false)">
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="flex-1 rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-600"
+          (click)="confirmLogout()">
+          Cerrar sesión
+        </button>
+      </div>
+    </div>
+  </div>
+}

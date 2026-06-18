@@ -66,6 +66,7 @@ export interface ResumenFinanciero {
   totalIngresos: number;
   totalSuplidos: number;
   totalHonorarios: number;
+  totalEgresos: number;
   saldo: number;
 }
 
@@ -110,6 +111,7 @@ export const RESUMEN_FINANCIERO_VACIO: ResumenFinanciero = {
   totalIngresos: 0,
   totalSuplidos: 0,
   totalHonorarios: 0,
+  totalEgresos: 0,
   saldo: 0,
 };
 

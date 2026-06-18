@@ -59,7 +59,9 @@
             <div class="flex items-center gap-3 shrink-0">
               @if (slot.importeEstimado != null) {
                 <span class="text-sm text-slate-500">
-                  <span class="text-xs text-slate-400">est.</span>
+                  @if (slot.status !== 'registrado') {
+                    <span class="text-xs text-slate-400">est.</span>
+                  }
                   {{ slot.importeEstimado | number:'1.2-2' }} €
                 </span>
               }
@@ -97,32 +99,68 @@
   }
 
   <!-- Summary cards -->
-  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+  @let rm = resumenMov();
+  <div class="grid grid-cols-2 gap-3" [class]="rm.honorarios > 0 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'">
+
+    <!-- Ingresos -->
     <div class="bg-white rounded-xl border border-slate-200 p-4">
       <p class="text-xs text-slate-500 uppercase tracking-wide">Ingresos</p>
       <p class="text-xl font-bold text-emerald-600 mt-1">
-        {{ resumen().totalIngresos | number:'1.2-2' }} €
+        {{ rm.totalIngresos | number:'1.2-2' }} €
       </p>
     </div>
+
+    <!-- Egresos con desglose -->
     <div class="bg-white rounded-xl border border-slate-200 p-4">
-      <p class="text-xs text-slate-500 uppercase tracking-wide">Suplidos</p>
-      <p class="text-xl font-bold text-amber-600 mt-1">
-        {{ resumen().totalSuplidos | number:'1.2-2' }} €
+      <p class="text-xs text-slate-500 uppercase tracking-wide">Egresos</p>
+      <p class="text-xl font-bold text-red-500 mt-1">
+        {{ rm.totalEgresos | number:'1.2-2' }} €
       </p>
+      @if (rm.totalEgresos > 0) {
+        <div class="mt-2 space-y-0.5 border-t border-slate-100 pt-2">
+          @if (rm.suplidos > 0) {
+            <div class="flex justify-between text-xs text-slate-500">
+              <span>Suplidos</span><span>{{ rm.suplidos | number:'1.2-2' }} €</span>
+            </div>
+          }
+          @if (rm.honorarios > 0) {
+            <div class="flex justify-between text-xs text-slate-500">
+              <span>Honorarios</span><span>{{ rm.honorarios | number:'1.2-2' }} €</span>
+            </div>
+          }
+          @if (rm.gastos > 0) {
+            <div class="flex justify-between text-xs text-slate-500">
+              <span>Gastos</span><span>{{ rm.gastos | number:'1.2-2' }} €</span>
+            </div>
+          }
+          @if (rm.otros > 0) {
+            <div class="flex justify-between text-xs text-slate-500">
+              <span>Otros</span><span>{{ rm.otros | number:'1.2-2' }} €</span>
+            </div>
+          }
+        </div>
+      }
     </div>
+
+    <!-- Honorarios (solo si los hay) -->
+    @if (rm.honorarios > 0) {
+      <div class="bg-white rounded-xl border border-slate-200 p-4">
+        <p class="text-xs text-slate-500 uppercase tracking-wide">Honorarios</p>
+        <p class="text-xl font-bold text-violet-600 mt-1">
+          {{ rm.honorarios | number:'1.2-2' }} €
+        </p>
+      </div>
+    }
+
+    <!-- Saldo neto -->
     <div class="bg-white rounded-xl border border-slate-200 p-4">
-      <p class="text-xs text-slate-500 uppercase tracking-wide">Honorarios</p>
-      <p class="text-xl font-bold text-violet-600 mt-1">
-        {{ resumen().totalHonorarios | number:'1.2-2' }} €
-      </p>
-    </div>
-    <div class="bg-white rounded-xl border border-slate-200 p-4">
-      <p class="text-xs text-slate-500 uppercase tracking-wide">Saldo neto</p>
+      <p class="text-xs text-slate-500 uppercase tracking-wide">Saldo neto del caso</p>
       <p class="text-xl font-bold mt-1"
-        [class]="resumen().saldo >= 0 ? 'text-emerald-600' : 'text-red-600'">
-        {{ resumen().saldo | number:'1.2-2' }} €
+        [class]="rm.saldo >= 0 ? 'text-emerald-600' : 'text-red-600'">
+        {{ rm.saldo | number:'1.2-2' }} €
       </p>
     </div>
+
   </div>
 
   <!-- Movements table -->

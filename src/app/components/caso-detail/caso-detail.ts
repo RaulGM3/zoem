@@ -12,6 +12,7 @@ import { UsersService } from '../../core/services/users';
 import { UserSyncService } from '../../core/services/user-sync.service';
 import { CasoDocService } from '../../core/services/caso-doc.service';
 import { PermissionService } from '../../core/services/permission.service';
+import { CuentasService } from '../../core/services/cuentas.service';
 import { cycleHitoEstado, stampEstadoChange } from '../../core/hitos/hito-estado';
 import {
   Caso, CasoDocSlot, CasoDocFile,
@@ -54,6 +55,8 @@ export class CasoDetailComponent implements OnInit {
   private readonly userSync = inject(UserSyncService);
   readonly casoDocService = inject(CasoDocService);
   readonly permissionService = inject(PermissionService);
+  readonly cuentasService = inject(CuentasService);
+  readonly cuentas = this.cuentasService.cuentas;
 
   readonly caso = signal<Caso | null>(null);
   readonly loading = signal(true);

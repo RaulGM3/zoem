@@ -8,6 +8,7 @@ import {
 } from 'lucide-angular';
 import { GestoriaService } from '../../../../core/services/gestoria.service';
 import { CasosService } from '../../../../core/services/casos.service';
+import { CuentasService } from '../../../../core/services/cuentas.service';
 import { MovimientoGestoria, MovimientoTipo } from '../../../../interfaces';
 
 type Filtro = 'todos' | 'pendientes' | 'aprobados';
@@ -21,6 +22,7 @@ type Filtro = 'todos' | 'pendientes' | 'aprobados';
 export class RevisionMovimientosComponent implements OnInit, OnDestroy {
   private readonly gestoriaService = inject(GestoriaService);
   private readonly casosService = inject(CasosService);
+  private readonly cuentasService = inject(CuentasService);
 
   readonly ClipboardCheckIcon = ClipboardCheck;
   readonly CheckCircle2Icon = CheckCircle2;
@@ -33,7 +35,7 @@ export class RevisionMovimientosComponent implements OnInit, OnDestroy {
   readonly aprobandoTodos = signal(false);
   readonly toggling = signal<string | null>(null);
 
-  readonly filtro = signal<Filtro>('todos');
+  readonly filtro = signal<Filtro>('pendientes');
 
   private readonly movimientos = this.gestoriaService.todosMovimientos;
 
@@ -43,11 +45,19 @@ export class RevisionMovimientosComponent implements OnInit, OnDestroy {
     return mapa;
   });
 
+  private readonly cuentaNombres = computed(() => {
+    const mapa = new Map<string, string>();
+    for (const c of this.cuentasService.cuentas()) mapa.set(c.id, c.nombre);
+    return mapa;
+  });
+
   readonly movimientosEnriquecidos = computed(() => {
     const nombres = this.casoNombres();
+    const cuentas = this.cuentaNombres();
     return this.movimientos().map(m => ({
       ...m,
       casoNombre: nombres.get(m.casoId) ?? m.casoId,
+      cuentaNombre: m.cuentaId ? (cuentas.get(m.cuentaId) ?? null) : null,
     }));
   });
 

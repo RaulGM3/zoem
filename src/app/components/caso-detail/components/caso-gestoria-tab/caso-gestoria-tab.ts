@@ -41,6 +41,23 @@ export class CasoGestoriaTabComponent {
   readonly dragFrom = signal<number | null>(null);
   readonly dragOver = signal<number | null>(null);
 
+  readonly resumenMov = computed(() => {
+    const acc = { totalIngresos: 0, totalEgresos: 0, suplidos: 0, honorarios: 0, gastos: 0, otros: 0, saldo: 0 };
+    for (const m of this.movimientos()) {
+      if (m.esEntrada) {
+        acc.totalIngresos += m.importe;
+      } else {
+        acc.totalEgresos += m.importe;
+        if (m.tipo === 'suplido') acc.suplidos += m.importe;
+        else if (m.tipo === 'honorario') acc.honorarios += m.importe;
+        else if (m.tipo === 'gasto') acc.gastos += m.importe;
+        else acc.otros += m.importe;
+      }
+    }
+    acc.saldo = acc.totalIngresos - acc.totalEgresos;
+    return acc;
+  });
+
   readonly slotsProgress = computed(() => {
     const slots = this.slots();
     if (slots.length === 0) return null;

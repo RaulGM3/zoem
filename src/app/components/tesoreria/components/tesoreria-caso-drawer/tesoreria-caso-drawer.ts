@@ -8,6 +8,7 @@ import { CasoGestoriaTabComponent } from '../../../caso-detail/components/caso-g
 import { MovimientoFormDrawerComponent, type MovimientoFormData } from '../../../caso-detail/components/movimiento-form-drawer/movimiento-form-drawer';
 import { GestoriaService } from '../../../../core/services/gestoria.service';
 import { CasosService } from '../../../../core/services/casos.service';
+import { CuentasService } from '../../../../core/services/cuentas.service';
 
 @Component({
   selector: 'app-tesoreria-caso-drawer',
@@ -18,6 +19,9 @@ import { CasosService } from '../../../../core/services/casos.service';
 export class TesoresriaCasoDrawerComponent {
   private readonly gestoriaService = inject(GestoriaService);
   private readonly casosService = inject(CasosService);
+  private readonly cuentasService = inject(CuentasService);
+
+  readonly cuentas = this.cuentasService.cuentas;
 
   readonly caso = input.required<Caso | null>();
   readonly closed = output<void>();

@@ -17,4 +17,5 @@ export interface MovimientoGestoria {
   aprobado?: boolean;
   aprobadoAt?: Timestamp;
   aprobadoPor?: string;
+  cuentaId?: string;
 }

@@ -18,11 +18,12 @@ import {
 } from '@angular/fire/firestore';
 import { CompanyService } from './company.service';
 import { CasosService } from './casos.service';
-import { GestoriaSlot, MovimientoGestoria, MovimientoTipo } from '../../interfaces';
+import { GestoriaSlot, MovimientoGestoria, MovimientoTipo, Retiro } from '../../interfaces';
 import { Auth } from '@angular/fire/auth';
 
-type MovimientoCreate = Pick<MovimientoGestoria, 'tipo' | 'concepto' | 'importe' | 'esEntrada' | 'fecha' | 'notas'>;
-type MovimientoOpt = Omit<MovimientoCreate, 'notas'> & { notas?: string };
+type MovimientoCreate = Pick<MovimientoGestoria, 'tipo' | 'concepto' | 'importe' | 'esEntrada' | 'fecha' | 'notas' | 'cuentaId'>;
+type MovimientoOpt = Omit<MovimientoCreate, 'notas' | 'cuentaId'> & { notas?: string; cuentaId?: string };
+type RetiroCreate = Pick<Retiro, 'concepto' | 'importe' | 'fecha' | 'cuentaId' | 'notas'>;
 
 /**
  * Firestore rechaza valores `undefined`. Elimina las claves con `undefined`
@@ -43,12 +44,14 @@ export class GestoriaService {
 
   readonly movimientos = signal<MovimientoGestoria[]>([]);
   readonly todosMovimientos = signal<MovimientoGestoria[]>([]);
+  readonly retiros = signal<Retiro[]>([]);
   readonly slots = signal<GestoriaSlot[]>([]);
   readonly loading = signal(false);
   readonly todosLoading = signal(false);
 
   private movimientosUnsub: Unsubscribe | null = null;
   private todosMovimientosUnsub: Unsubscribe | null = null;
+  private retirosUnsub: Unsubscribe | null = null;
 
   private get companyId(): string {
     const id = this.companyService.activeCompany()?.id;
@@ -62,6 +65,10 @@ export class GestoriaService {
 
   private slotsRef(casoId: string) {
     return collection(this.firestore, 'companies', this.companyId, 'casos', casoId, 'gestoria_slots');
+  }
+
+  private retirosRef() {
+    return collection(this.firestore, 'companies', this.companyId, 'retiros');
   }
 
   async loadSlots(casoId: string): Promise<void> {
@@ -247,5 +254,32 @@ export class GestoriaService {
     this.todosMovimientos.update(list =>
       list.map(m => ids.has(m.id) ? { ...m, aprobado: true } : m)
     );
+  }
+
+  loadRetiros(): void {
+    this.retirosUnsub?.();
+    const q = query(this.retirosRef(), orderBy('fecha', 'desc'));
+    this.retirosUnsub = onSnapshot(q, snapshot => {
+      this.retiros.set(snapshot.docs.map(d => ({ id: d.id, ...d.data() }) as Retiro));
+    });
+  }
+
+  stopRetiros(): void {
+    this.retirosUnsub?.();
+    this.retirosUnsub = null;
+  }
+
+  async addRetiro(data: RetiroCreate): Promise<void> {
+    await addDoc(this.retirosRef(), {
+      ...stripUndefined(data as Record<string, unknown>),
+      companyId: this.companyId,
+      createdBy: this.auth.currentUser?.uid ?? '',
+      createdAt: serverTimestamp(),
+    });
+  }
+
+  async deleteRetiro(id: string): Promise<void> {
+    await deleteDoc(doc(this.retirosRef(), id));
+    this.retiros.update(list => list.filter(r => r.id !== id));
   }
 }

@@ -20,7 +20,7 @@
 
   <!-- Filtros -->
   <div class="flex gap-1 px-4 py-2.5 border-b border-slate-100 bg-slate-50">
-    @for (f of [['todos','Todos'],['pendientes','Pendientes'],['aprobados','Aprobados']]; track f[0]) {
+    @for (f of [['pendientes','Pendientes'],['aprobados','Aprobados'],['todos','Todos']]; track f[0]) {
       <button
         type="button"
         (click)="filtro.set($any(f[0]))"
@@ -76,6 +76,11 @@
                 class="text-xs px-1.5 py-0.5 rounded font-medium shrink-0"
                 [class]="tipoClasses(mov.tipo)"
               >{{ tipoLabel(mov.tipo) }}</span>
+              @if (mov.cuentaNombre) {
+                <span class="text-xs px-1.5 py-0.5 rounded font-medium bg-blue-50 text-blue-600 shrink-0">
+                  {{ mov.cuentaNombre }}
+                </span>
+              }
             </div>
             <p class="text-sm text-slate-800 truncate mt-0.5">{{ mov.concepto }}</p>
           </div>

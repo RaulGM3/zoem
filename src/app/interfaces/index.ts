@@ -21,3 +21,6 @@ export * from './registro-hora.interface';
 export * from './tarea.interface';
 export * from './member';
 export * from './evento.interface';
+export * from './cuenta-bancaria.interface';
+export * from './tesoreria-resumen.interface';
+export * from './retiro.interface';
