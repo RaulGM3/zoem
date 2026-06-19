@@ -1,9 +1,7 @@
 import { Component, inject, signal, computed, ChangeDetectionStrategy, OnInit, OnDestroy } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import {
-  LucideAngularModule, Wallet, TrendingUp, TrendingDown, Landmark,
-  CheckCircle2, AlertTriangle, Save, Scale, TrendingUpDown,
-  Building2, Plus, Settings, History, ArrowDownLeft,
+  LucideAngularModule, Wallet, Landmark, CheckCircle2, AlertTriangle, Save, Scale,
+  Building2, Settings, History, Lock,
 } from 'lucide-angular';
 import {
   Firestore, doc, onSnapshot, type Unsubscribe,
@@ -12,20 +10,31 @@ import { CasosService } from '../../core/services/casos.service';
 import { CompanyService } from '../../core/services/company.service';
 import { GestoriaService } from '../../core/services/gestoria.service';
 import { CuentasService } from '../../core/services/cuentas.service';
-import { Caso, TesoreriaResumen } from '../../interfaces';
+import { CierreCajaService } from '../../core/services/cierre-caja.service';
+import { ConciliacionService } from '../../core/services/conciliacion.service';
+import { parseExtractoCsv, autoMatch } from '../../core/conciliacion/conciliacion';
+import { Caso, CierreCuenta, TesoreriaResumen } from '../../interfaces';
 import { TesoresriaCasoDrawerComponent } from './components/tesoreria-caso-drawer/tesoreria-caso-drawer';
 import { RevisionMovimientosComponent } from './components/revision-movimientos/revision-movimientos';
 import { CuentasDrawerComponent } from './components/cuentas-drawer/cuentas-drawer';
-import { RetiroDrawerComponent } from './components/retiro-drawer/retiro-drawer';
+import { TesoreriaResumenTabComponent } from './components/resumen-tab/resumen-tab';
+import { TesoreriaCasosTabComponent } from './components/casos-tab/casos-tab';
+import { CierreCajaModalComponent } from './components/cierre-caja-modal/cierre-caja-modal';
+import { ConciliacionTabComponent } from './components/conciliacion-tab/conciliacion-tab';
+import { ReportesTabComponent } from './components/reportes-tab/reportes-tab';
 
 const COTEJO_TOLERANCIA = 0.01;
+
+export type TabTesoreria = 'resumen' | 'movimientos' | 'conciliacion' | 'reportes' | 'casos';
 
 @Component({
   selector: 'app-tesoreria',
   imports: [
-    LucideAngularModule, DecimalPipe,
+    LucideAngularModule,
     TesoresriaCasoDrawerComponent, RevisionMovimientosComponent,
-    CuentasDrawerComponent, RetiroDrawerComponent,
+    CuentasDrawerComponent,
+    TesoreriaResumenTabComponent, TesoreriaCasosTabComponent,
+    CierreCajaModalComponent, ConciliacionTabComponent, ReportesTabComponent,
   ],
   templateUrl: './tesoreria.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,44 +44,96 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
   private readonly companyService = inject(CompanyService);
   private readonly gestoriaService = inject(GestoriaService);
   private readonly cuentasService = inject(CuentasService);
+  private readonly cierreCajaService = inject(CierreCajaService);
+  private readonly conciliacionService = inject(ConciliacionService);
   private readonly firestore = inject(Firestore);
 
+  readonly importandoExtracto = signal(false);
+
   readonly WalletIcon = Wallet;
-  readonly TrendingUpIcon = TrendingUp;
-  readonly TrendingDownIcon = TrendingDown;
   readonly LandmarkIcon = Landmark;
   readonly CheckCircle2Icon = CheckCircle2;
   readonly AlertTriangleIcon = AlertTriangle;
   readonly SaveIcon = Save;
   readonly ScaleIcon = Scale;
-  readonly TrendingUpDownIcon = TrendingUpDown;
   readonly Building2Icon = Building2;
-  readonly PlusIcon = Plus;
   readonly SettingsIcon = Settings;
   readonly HistoryIcon = History;
-  readonly ArrowDownLeftIcon = ArrowDownLeft;
+  readonly LockIcon = Lock;
 
+  readonly activeTab = signal<TabTesoreria>('resumen');
   readonly casos = this.casosService.casos;
   readonly selectedCaso = signal<Caso | null>(null);
   readonly loading = this.casosService.loading;
   readonly savingSaldo = signal(false);
 
   readonly cuentas = this.cuentasService.cuentas;
-  readonly retiros = this.gestoriaService.retiros;
 
   readonly showCuentasDrawer = signal(false);
-  readonly showRetiroDrawer = signal(false);
+  readonly showCierreModal = signal(false);
+  readonly savingCierre = signal(false);
 
-  /** Resumen histórico de casos cerrados (desde tesoreria_meta/resumen). */
+  readonly cierres = this.cierreCajaService.cierres;
+
+  readonly lineasExtracto = this.conciliacionService.lineas;
+
+  /** IDs de movimientos ya casados contra una línea de extracto. */
+  private readonly movimientosCasados = computed(() => {
+    const set = new Set<string>();
+    for (const l of this.lineasExtracto()) {
+      if (l.estado === 'casado' && l.movimientoId) set.add(l.movimientoId);
+    }
+    return set;
+  });
+
+  /** Saldo real por cuenta derivado del extracto (última línea con saldo). */
+  private readonly saldoExtractoPorCuenta = computed(() => {
+    const map = new Map<string, number>();
+    // lineasExtracto viene ordenado por fecha desc; la primera con saldo de cada cuenta es la más reciente.
+    for (const l of this.lineasExtracto()) {
+      if (l.saldoPosterior != null && !map.has(l.cuentaId)) map.set(l.cuentaId, l.saldoPosterior);
+    }
+    return map;
+  });
+
+  /** Movimientos enriquecidos para el match manual del tab de conciliación. */
+  readonly movimientosConciliables = computed(() => {
+    const nombres = this.casoNombresMap();
+    const casados = this.movimientosCasados();
+    return this.gestoriaService.todosMovimientos().map(m => ({
+      id: m.id,
+      cuentaId: m.cuentaId,
+      fecha: m.fecha,
+      concepto: m.concepto,
+      importe: m.importe,
+      esEntrada: m.esEntrada,
+      casoNombre: nombres.get(m.casoId) ?? m.casoId,
+      conciliado: casados.has(m.id),
+    }));
+  });
+
+  readonly cierrePreview = computed((): CierreCuenta[] =>
+    this.cotejosPorCuenta().map(c => ({
+      cuentaId: c.cuenta.id,
+      nombre: c.cuenta.nombre,
+      tipo: c.cuenta.tipo,
+      ingresos: c.ingresos,
+      egresos: c.egresos,
+      sistema: c.sistema,
+      aprobado: c.proyeccion,
+      saldoReal: c.banco,
+      diferencia: c.diferencia,
+      conciliado: c.conciliado,
+    }))
+  );
+
   readonly resumenHistorico = signal<TesoreriaResumen | null>(null);
-
   private resumenHistoricoUnsub: Unsubscribe | null = null;
 
   readonly saldoBancarioInput = signal('');
 
-  /** Contabilidad agregada de todos los casos activos. */
-  readonly balanceGeneral = computed(() => {
-    return this.casos().reduce(
+  readonly balanceGeneral = computed(() =>
+    this.casos().reduce(
       (acc, c) => {
         const r = c.resumenFinanciero;
         acc.totalIngresos += r?.totalIngresos ?? 0;
@@ -82,22 +143,8 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
         return acc;
       },
       { totalIngresos: 0, totalSuplidos: 0, totalHonorarios: 0, saldo: 0 }
-    );
-  });
-
-  /** Balance combinado: activos + cerrados históricos + retiros. */
-  readonly balanceCombinado = computed(() => {
-    const activo = this.balanceGeneral();
-    const hist = this.resumenHistorico();
-    const totalRetiros = this.retiros().reduce((acc, r) => acc + r.importe, 0);
-    return {
-      totalIngresos: activo.totalIngresos + (hist?.totalIngresosCerrados ?? 0),
-      totalSuplidos: activo.totalSuplidos + (hist?.totalSuplidosCerrados ?? 0),
-      totalHonorarios: activo.totalHonorarios + (hist?.totalHonorariosCerrados ?? 0),
-      saldo: activo.saldo + (hist?.saldoCerrados ?? 0) - totalRetiros,
-      casosHistoricos: hist?.casosCount ?? 0,
-    };
-  });
+    )
+  );
 
   readonly casosContables = computed(() =>
     this.casos()
@@ -111,14 +158,18 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
   readonly saldoBancario = computed(() => this.companyService.activeCompany()?.saldoBancario ?? null);
   readonly saldoBancarioFecha = computed(() => this.companyService.activeCompany()?.saldoBancarioFecha ?? null);
 
-  /** Saldo aprobado de los movimientos de casos activos. */
   readonly saldoAprobado = computed(() =>
     this.gestoriaService.todosMovimientos()
       .filter(m => m.aprobado === true)
       .reduce((acc, m) => acc + (m.esEntrada ? m.importe : -m.importe), 0)
   );
 
-  /** Cotejo legacy (un solo saldo bancario en company) — solo se usa si no hay cuentas. */
+  readonly totalEgresos = computed(() =>
+    this.gestoriaService.todosMovimientos()
+      .filter(m => !m.esEntrada)
+      .reduce((acc, m) => acc + m.importe, 0)
+  );
+
   readonly cotejo = computed(() => {
     if (this.cuentas().length > 0) return null;
     const banco = this.saldoBancario();
@@ -133,24 +184,27 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
     };
   });
 
-  /** Cotejo por cuenta bancaria. */
   readonly cotejosPorCuenta = computed(() => {
-    const movimientos = this.gestoriaService.todosMovimientos().filter(m => m.aprobado === true);
-    const retiros = this.retiros();
+    const todos = this.gestoriaService.todosMovimientos();
 
     return this.cuentas().map(cuenta => {
-      const movsCuenta = movimientos.filter(m => m.cuentaId === cuenta.id);
-      const retirosCuenta = retiros.filter(r => r.cuentaId === cuenta.id);
-
-      const sistema =
-        movsCuenta.reduce((acc, m) => acc + (m.esEntrada ? m.importe : -m.importe), 0) -
-        retirosCuenta.reduce((acc, r) => acc + r.importe, 0);
-
-      const banco = cuenta.saldoBancario ?? null;
-      const diferencia = banco !== null ? banco - sistema : null;
+      const movs = todos.filter(m => m.cuentaId === cuenta.id);
+      const ingresos = movs.filter(m => m.esEntrada).reduce((a, m) => a + m.importe, 0);
+      const egresos = movs.filter(m => !m.esEntrada).reduce((a, m) => a + m.importe, 0);
+      const sistema = ingresos - egresos;
+      // Balance confirmado = solo movimientos aprobados (referencia para cotejo bancario)
+      const proyeccion = movs
+        .filter(m => m.aprobado === true)
+        .reduce((a, m) => a + (m.esEntrada ? m.importe : -m.importe), 0);
+      // Preferimos el saldo real del extracto importado; el tecleado a mano es el respaldo.
+      const banco = this.saldoExtractoPorCuenta().get(cuenta.id) ?? cuenta.saldoBancario ?? null;
+      const diferencia = banco !== null ? banco - proyeccion : null;
       return {
         cuenta,
+        ingresos,
+        egresos,
         sistema,
+        proyeccion,
         banco,
         diferencia,
         conciliado: diferencia !== null && Math.abs(diferencia) < COTEJO_TOLERANCIA,
@@ -158,29 +212,42 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
     });
   });
 
-  /** true si todas las cuentas con saldo registrado están conciliadas. */
+  readonly movimientosPendientes = computed(() =>
+    this.gestoriaService.todosMovimientos().filter(m => m.aprobado == null).length
+  );
+
   readonly todoConciliado = computed(() => {
     const cotejos = this.cotejosPorCuenta();
     if (cotejos.length === 0) return this.cotejo()?.conciliado ?? false;
     return cotejos.filter(c => c.banco !== null).every(c => c.conciliado);
   });
 
-  readonly totalEgresos = computed(() =>
-    this.gestoriaService.todosMovimientos()
-      .filter(m => !m.esEntrada)
-      .reduce((acc, m) => acc + m.importe, 0)
-  );
+  private readonly casoNombresMap = computed(() => {
+    const map = new Map<string, string>();
+    for (const c of this.casos()) map.set(c.id, c.titulo);
+    return map;
+  });
 
-  private readonly movimientosPendientes = computed(() =>
-    this.gestoriaService.todosMovimientos().filter(m => m.aprobado == null)
-  );
+  readonly movimientosPorCuenta = computed(() => {
+    const nombres = this.casoNombresMap();
+    const map = new Map<string, Array<ReturnType<typeof this.gestoriaService.todosMovimientos>[number] & { casoNombre: string }>>();
+    for (const m of this.gestoriaService.todosMovimientos()) {
+      if (!m.cuentaId) continue;
+      const enriched = { ...m, casoNombre: nombres.get(m.casoId) ?? m.casoId };
+      if (!map.has(m.cuentaId)) map.set(m.cuentaId, []);
+      map.get(m.cuentaId)!.push(enriched);
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => b.fecha.localeCompare(a.fecha));
+    }
+    return map;
+  });
 
   readonly proyeccionBancaria = computed(() => {
     const aprobado = this.saldoAprobado();
-    const impacto = this.movimientosPendientes().reduce(
-      (acc, m) => acc + (m.esEntrada ? m.importe : -m.importe),
-      0
-    );
+    const impacto = this.gestoriaService.todosMovimientos()
+      .filter(m => m.aprobado == null)
+      .reduce((acc, m) => acc + (m.esEntrada ? m.importe : -m.importe), 0);
     return { aprobado, impacto, proyeccion: aprobado + impacto };
   });
 
@@ -209,11 +276,81 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
     return map;
   });
 
+  // ── Reportes (Bloque 3) ────────────────────────────────────────────────
+  readonly rangoDesde = signal('');
+  readonly rangoHasta = signal('');
+
+  private static readonly TIPOS_REPORTE = ['ingreso', 'suplido', 'honorario', 'gasto', 'otro'] as const;
+
+  readonly movimientosEnRango = computed(() => {
+    const desde = this.rangoDesde();
+    const hasta = this.rangoHasta();
+    return this.gestoriaService.todosMovimientos().filter(m => {
+      if (desde && m.fecha < desde) return false;
+      if (hasta && m.fecha > hasta) return false;
+      return true;
+    });
+  });
+
+  readonly reporte = computed(() => {
+    const porTipo = new Map<string, { importe: number; base: number; cuota: number; count: number }>();
+    for (const t of TesoreriaComponent.TIPOS_REPORTE) porTipo.set(t, { importe: 0, base: 0, cuota: 0, count: 0 });
+
+    let ingresos = 0, egresos = 0, ivaRepercutido = 0, ivaSoportado = 0;
+    for (const m of this.movimientosEnRango()) {
+      const cuota = m.cuotaIva ?? 0;
+      const base = m.baseImponible ?? m.importe;
+      const t = porTipo.get(m.tipo)!;
+      t.importe += m.importe; t.base += base; t.cuota += cuota; t.count++;
+      if (m.esEntrada) { ingresos += m.importe; ivaRepercutido += cuota; }
+      else { egresos += m.importe; ivaSoportado += cuota; }
+    }
+
+    return {
+      porTipo: TesoreriaComponent.TIPOS_REPORTE.map(t => ({ tipo: t, ...porTipo.get(t)! })),
+      ingresos, egresos, saldo: ingresos - egresos,
+      ivaRepercutido, ivaSoportado, liquidacionIva: ivaRepercutido - ivaSoportado,
+      totalMovimientos: this.movimientosEnRango().length,
+    };
+  });
+
+  exportarCsv(): void {
+    const nombresCaso = this.casoNombresMap();
+    const nombresCuenta = new Map(this.cuentas().map(c => [c.id, c.nombre] as const));
+    const escapar = (v: string | number): string => {
+      const s = String(v ?? '');
+      return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const cabecera = ['Fecha', 'Caso', 'Tipo', 'Concepto', 'Cuenta', 'Direccion', 'Base', 'IVA', 'Importe', 'Aprobado'];
+    const filas = this.movimientosEnRango().map(m => [
+      m.fecha,
+      nombresCaso.get(m.casoId) ?? m.casoId,
+      m.tipo,
+      m.concepto,
+      m.cuentaId ? (nombresCuenta.get(m.cuentaId) ?? '') : '',
+      m.esEntrada ? 'Entrada' : 'Salida',
+      (m.baseImponible ?? m.importe).toFixed(2),
+      (m.cuotaIva ?? 0).toFixed(2),
+      m.importe.toFixed(2),
+      m.aprobado === true ? 'Si' : 'No',
+    ].map(escapar).join(';'));
+
+    const csv = [cabecera.join(';'), ...filas].join('\n');
+    const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tesoreria-${this.rangoDesde() || 'inicio'}_${this.rangoHasta() || 'hoy'}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   async ngOnInit(): Promise<void> {
     await this.casosService.loadCasos();
     this.gestoriaService.loadTodosMovimientos();
-    this.gestoriaService.loadRetiros();
     this.cuentasService.loadCuentas();
+    this.cierreCajaService.loadCierres();
+    this.conciliacionService.loadLineas();
     this.subscribeResumenHistorico();
     const actual = this.saldoBancario();
     if (actual !== null) this.saldoBancarioInput.set(String(actual));
@@ -221,9 +358,67 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.gestoriaService.stopTodosMovimientos();
-    this.gestoriaService.stopRetiros();
     this.cuentasService.stopCuentas();
+    this.cierreCajaService.stopCierres();
+    this.conciliacionService.stopLineas();
     this.resumenHistoricoUnsub?.();
+  }
+
+  async onImportarCsv(payload: { cuentaId: string; texto: string }): Promise<void> {
+    const { lineas, errores } = parseExtractoCsv(payload.texto);
+    if (lineas.length === 0) {
+      alert(errores[0] ?? 'No se pudieron leer líneas del archivo.');
+      return;
+    }
+    this.importandoExtracto.set(true);
+    try {
+      await this.conciliacionService.importarExtracto(payload.cuentaId, lineas);
+      if (errores.length > 0) {
+        alert(`Importadas ${lineas.length} líneas. ${errores.length} fila(s) se omitieron por datos inválidos.`);
+      }
+    } finally {
+      this.importandoExtracto.set(false);
+    }
+  }
+
+  async onAutoConciliar(cuentaId: string): Promise<void> {
+    const lineasPendientes = this.lineasExtracto()
+      .filter(l => l.cuentaId === cuentaId && l.estado === 'pendiente');
+    if (lineasPendientes.length === 0) return;
+
+    const movimientos = this.gestoriaService.todosMovimientos()
+      .filter(m => m.cuentaId === cuentaId && !this.movimientosCasados().has(m.id))
+      .map(m => ({ id: m.id, fecha: m.fecha, importe: m.importe, esEntrada: m.esEntrada }));
+
+    const matches = autoMatch(
+      lineasPendientes.map(l => ({ fecha: l.fecha, concepto: l.concepto, importe: l.importe })),
+      movimientos,
+    );
+    if (matches.length === 0) return;
+    await this.conciliacionService.aplicarMatches(cuentaId, lineasPendientes.map(l => l.id), matches);
+  }
+
+  async onCasar(e: { cuentaId: string; lineaId: string; movimientoId: string }): Promise<void> {
+    if (!e.movimientoId) return;
+    await this.conciliacionService.casarLinea(e.cuentaId, e.lineaId, e.movimientoId);
+  }
+
+  async onDesconciliar(e: { cuentaId: string; lineaId: string }): Promise<void> {
+    await this.conciliacionService.desconciliar(e.cuentaId, e.lineaId);
+  }
+
+  async onIgnorarLinea(e: { cuentaId: string; lineaId: string }): Promise<void> {
+    await this.conciliacionService.ignorarLinea(e.cuentaId, e.lineaId);
+  }
+
+  async realizarCierre(notas: string): Promise<void> {
+    this.savingCierre.set(true);
+    try {
+      await this.cierreCajaService.crearCierre(this.cierrePreview(), notas);
+      this.showCierreModal.set(false);
+    } finally {
+      this.savingCierre.set(false);
+    }
   }
 
   private subscribeResumenHistorico(): void {
@@ -241,9 +436,9 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
     await this.cuentasService.actualizarSaldo(cuentaId, saldo);
   }
 
-  async guardarSaldoBancario(): Promise<void> {
+  async guardarSaldoBancario(valor: string): Promise<void> {
     const company = this.companyService.activeCompany();
-    const raw = this.saldoBancarioInput().trim();
+    const raw = valor.trim();
     if (!company || raw === '') return;
     const saldo = parseFloat(raw.replace(',', '.'));
     if (Number.isNaN(saldo)) return;

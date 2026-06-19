@@ -3,10 +3,10 @@ import {
 } from '@angular/core';
 import { DecimalPipe, TitleCasePipe } from '@angular/common';
 import {
-  LucideAngularModule, Plus, Trash2, X, CheckCircle2, CircleAlert, GripVertical,
+  LucideAngularModule, Plus, Trash2, X, CheckCircle2, CircleAlert, GripVertical, Eye, EyeOff,
 } from 'lucide-angular';
 import type {
-  GestoriaSlot, MovimientoGestoria, MovimientoTipo, ResumenFinanciero,
+  CuentaBancaria, GestoriaSlot, MovimientoGestoria, MovimientoTipo, ResumenFinanciero,
 } from '../../../../interfaces';
 
 @Component({
@@ -21,6 +21,8 @@ export class CasoGestoriaTabComponent {
   readonly movimientos = input.required<MovimientoGestoria[]>();
   readonly movimientosLoading = input.required<boolean>();
   readonly resumen = input.required<ResumenFinanciero>();
+  readonly miembros = input<ReadonlyMap<string, string>>(new Map());
+  readonly cuentas = input<CuentaBancaria[]>([]);
 
   readonly registerSlot = output<GestoriaSlot>();
   readonly unregisterSlot = output<GestoriaSlot>();
@@ -34,6 +36,16 @@ export class CasoGestoriaTabComponent {
   readonly CheckCircle2Icon = CheckCircle2;
   readonly CircleAlertIcon = CircleAlert;
   readonly GripVerticalIcon = GripVertical;
+  readonly EyeIcon = Eye;
+  readonly EyeOffIcon = EyeOff;
+
+  readonly showRegistrados = signal(false);
+
+  readonly cuentaMap = computed(() => {
+    const map = new Map<string, string>();
+    for (const c of this.cuentas()) map.set(c.id, c.nombre);
+    return map;
+  });
 
   /** Copia local reordenable; se resincroniza cuando cambia el input. */
   readonly orderedSlots = linkedSignal<GestoriaSlot[]>(() => this.slots());
@@ -42,12 +54,18 @@ export class CasoGestoriaTabComponent {
   readonly dragOver = signal<number | null>(null);
 
   readonly resumenMov = computed(() => {
-    const acc = { totalIngresos: 0, totalEgresos: 0, suplidos: 0, honorarios: 0, gastos: 0, otros: 0, saldo: 0 };
+    const acc = {
+      totalIngresos: 0, totalEgresos: 0, suplidos: 0, honorarios: 0, gastos: 0, otros: 0,
+      saldo: 0, ivaRepercutido: 0, ivaSoportado: 0,
+    };
     for (const m of this.movimientos()) {
+      const cuota = m.cuotaIva ?? 0;
       if (m.esEntrada) {
         acc.totalIngresos += m.importe;
+        acc.ivaRepercutido += cuota;
       } else {
         acc.totalEgresos += m.importe;
+        acc.ivaSoportado += cuota;
         if (m.tipo === 'suplido') acc.suplidos += m.importe;
         else if (m.tipo === 'honorario') acc.honorarios += m.importe;
         else if (m.tipo === 'gasto') acc.gastos += m.importe;

@@ -1,4 +1,18 @@
 {
+  "hosting": {
+    "public": "dist/Zoem/browser",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
   "firestore": {
     "indexes": "firestore.indexes.json"
   },

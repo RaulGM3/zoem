@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { Functions, httpsCallable } from '@angular/fire/functions';
 
 const PLACEHOLDER_REGEX = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
 
@@ -13,15 +14,12 @@ function escapeHtml(value: string): string {
 
 @Injectable({ providedIn: 'root' })
 export class DocGenerationService {
-  /** Sustituye {{key}} por su valor (escapado). Los no rellenados quedan vacíos. */
+  private readonly functions = inject(Functions);
+
   interpolate(html: string, values: Record<string, string>): string {
     return html.replace(PLACEHOLDER_REGEX, (_, key: string) => escapeHtml(values[key] ?? ''));
   }
 
-  /**
-   * Igual que interpolate, pero los marcadores quedan resaltados.
-   * Clases (no estilos inline): el sanitizer de Angular elimina `style` pero conserva `class`.
-   */
   interpolateForPreview(html: string, values: Record<string, string>): string {
     return html.replace(PLACEHOLDER_REGEX, (_, key: string) => {
       const value = values[key];
@@ -41,21 +39,21 @@ export class DocGenerationService {
       });
       await navigator.clipboard.write([item]);
     } catch {
-      // Fallback: solo texto plano (contextos sin ClipboardItem)
       await navigator.clipboard.writeText(plainText);
     }
   }
 
   async downloadAsDocx(renderedHtml: string, fileName: string): Promise<void> {
-    const { default: htmlToDocx } = await import('html-to-docx');
-    const documentHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>${renderedHtml}</body></html>`;
-    const result = await htmlToDocx(documentHtml, null, {
-      orientation: 'portrait',
-      title: fileName,
+    const fn = httpsCallable<{ html: string; fileName: string }, { docx: string }>(
+      this.functions,
+      'generateDocx'
+    );
+    const result = await fn({ html: renderedHtml, fileName });
+
+    const byteArray = Uint8Array.from(atob(result.data.docx), (c) => c.charCodeAt(0));
+    const blob = new Blob([byteArray], {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     });
-    const blob = result instanceof Blob
-      ? result
-      : new Blob([result], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
 
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');

@@ -1,0 +1,86 @@
+<div class="space-y-4">
+
+  <!-- Filtro de periodo + export -->
+  <div class="bg-white rounded-xl border border-slate-200 p-4 flex flex-wrap items-end gap-4">
+    <div class="space-y-1">
+      <label class="text-xs font-medium text-slate-500 uppercase tracking-wide">Desde</label>
+      <input type="date" [value]="desde()" (input)="desdeChange.emit($any($event.target).value)"
+        class="block border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+    </div>
+    <div class="space-y-1">
+      <label class="text-xs font-medium text-slate-500 uppercase tracking-wide">Hasta</label>
+      <input type="date" [value]="hasta()" (input)="hastaChange.emit($any($event.target).value)"
+        class="block border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+    </div>
+    <span class="text-sm text-slate-500">{{ reporte().totalMovimientos }} movimientos en el periodo</span>
+    <button type="button" (click)="exportar.emit()" [disabled]="reporte().totalMovimientos === 0"
+      class="ml-auto flex items-center gap-2 px-3 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50">
+      <lucide-icon [img]="DownloadIcon" class="w-4 h-4" />
+      Exportar CSV
+    </button>
+  </div>
+
+  <!-- KPIs -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div class="bg-white rounded-xl border border-slate-200 p-4">
+      <p class="text-xs text-slate-500 uppercase tracking-wide">Ingresos</p>
+      <p class="text-xl font-bold text-emerald-600 mt-1">{{ reporte().ingresos | number:'1.2-2' }} €</p>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-4">
+      <p class="text-xs text-slate-500 uppercase tracking-wide">Egresos</p>
+      <p class="text-xl font-bold text-red-500 mt-1">{{ reporte().egresos | number:'1.2-2' }} €</p>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-4">
+      <p class="text-xs text-slate-500 uppercase tracking-wide">Resultado</p>
+      <p class="text-xl font-bold mt-1" [class]="reporte().saldo >= 0 ? 'text-emerald-600' : 'text-red-600'">
+        {{ reporte().saldo | number:'1.2-2' }} €
+      </p>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-4">
+      <p class="text-xs text-slate-500 uppercase tracking-wide">Liquidación IVA (303)</p>
+      <p class="text-xl font-bold mt-1" [class]="reporte().liquidacionIva >= 0 ? 'text-red-600' : 'text-emerald-600'">
+        {{ reporte().liquidacionIva | number:'1.2-2' }} €
+      </p>
+      <p class="text-xs text-slate-400 mt-0.5">
+        Rep. {{ reporte().ivaRepercutido | number:'1.2-2' }} · Sop. {{ reporte().ivaSoportado | number:'1.2-2' }}
+      </p>
+    </div>
+  </div>
+
+  <!-- Pérdidas y ganancias por tipo -->
+  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-200">
+      <lucide-icon [img]="BarChart3Icon" class="w-4 h-4 text-slate-500" />
+      <h3 class="text-sm font-medium text-slate-700">Pérdidas y ganancias por tipo</h3>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50">
+          <tr class="text-left text-slate-500 border-b border-slate-200">
+            <th class="px-4 py-2.5 font-medium">Tipo</th>
+            <th class="px-4 py-2.5 font-medium text-right">Nº</th>
+            <th class="px-4 py-2.5 font-medium text-right">Base imponible</th>
+            <th class="px-4 py-2.5 font-medium text-right">Cuota IVA</th>
+            <th class="px-4 py-2.5 font-medium text-right">Total</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (r of reporte().porTipo; track r.tipo) {
+            @if (r.count > 0) {
+              <tr>
+                <td class="px-4 py-3 text-slate-700">{{ r.tipo | titlecase }}</td>
+                <td class="px-4 py-3 text-right text-slate-500">{{ r.count }}</td>
+                <td class="px-4 py-3 text-right text-slate-600">{{ r.base | number:'1.2-2' }} €</td>
+                <td class="px-4 py-3 text-right text-slate-600">{{ r.cuota | number:'1.2-2' }} €</td>
+                <td class="px-4 py-3 text-right font-medium text-slate-800">{{ r.importe | number:'1.2-2' }} €</td>
+              </tr>
+            }
+          }
+          @if (reporte().totalMovimientos === 0) {
+            <tr><td colspan="5" class="px-4 py-10 text-center text-slate-400">Sin movimientos en el periodo seleccionado.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

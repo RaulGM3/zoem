@@ -12,313 +12,122 @@
       </div>
     </div>
     <div class="flex items-center gap-2">
-      <button type="button" (click)="showRetiroDrawer.set(true)"
-        class="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-gray-900 text-white rounded-lg hover:bg-gray-700">
-        <lucide-icon [img]="ArrowDownLeftIcon" class="w-4 h-4" />
-        Retirar honorarios
-      </button>
       <button type="button" (click)="showCuentasDrawer.set(true)"
         class="flex items-center gap-1.5 px-3 py-2 text-sm font-medium border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50">
         <lucide-icon [img]="SettingsIcon" class="w-4 h-4" />
         Cuentas
       </button>
+      <button type="button" (click)="showCierreModal.set(true)"
+        class="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors">
+        <lucide-icon [img]="LockIcon" class="w-4 h-4" />
+        Cierre de caja
+      </button>
     </div>
   </div>
 
-  <!-- Balance general -->
-  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-    @let bc = balanceCombinado();
-    <div class="bg-white rounded-xl border border-slate-200 p-4">
-      <p class="text-xs text-slate-500 uppercase tracking-wide">Ingresos</p>
-      <p class="text-2xl font-bold text-emerald-600 mt-1">
-        {{ bc.totalIngresos | number:'1.2-2' }} €
-      </p>
-    </div>
-    @let p = proyeccionBancaria();
-    <div class="bg-white rounded-xl border border-slate-200 p-4">
-      <p class="text-xs text-slate-500 uppercase tracking-wide">Proyección</p>
-      <p class="text-2xl font-bold mt-1"
-        [class]="p.proyeccion >= 0 ? 'text-emerald-600' : 'text-red-600'">
-        {{ p.proyeccion | number:'1.2-2' }} €
-      </p>
-      @if (p.impacto !== 0) {
-        <p class="text-xs mt-1" [class]="p.impacto >= 0 ? 'text-emerald-500' : 'text-amber-500'">
-          {{ p.impacto >= 0 ? '+' : '−' }}{{ (p.impacto < 0 ? -p.impacto : p.impacto) | number:'1.2-2' }} € pendiente
-        </p>
+  <!-- Tabs -->
+  <div class="flex gap-1 border-b border-slate-200">
+    <button type="button"
+      (click)="activeTab.set('resumen')"
+      class="px-4 py-2 text-sm font-medium rounded-t-lg transition-colors"
+      [class]="activeTab() === 'resumen'
+        ? 'bg-white border border-b-white border-slate-200 text-violet-700 -mb-px'
+        : 'text-slate-500 hover:text-slate-700'">
+      Resumen
+    </button>
+    <button type="button"
+      (click)="activeTab.set('movimientos')"
+      class="px-4 py-2 text-sm font-medium rounded-t-lg transition-colors"
+      [class]="activeTab() === 'movimientos'
+        ? 'bg-white border border-b-white border-slate-200 text-violet-700 -mb-px'
+        : 'text-slate-500 hover:text-slate-700'">
+      Movimientos
+      @if (movimientosPendientes() > 0) {
+        <span class="ml-1.5 inline-flex items-center justify-center w-4 h-4 text-xs rounded-full bg-amber-400 text-white font-semibold">{{ movimientosPendientes() }}</span>
       }
-    </div>
-    <div class="bg-white rounded-xl border border-slate-200 p-4">
-      <p class="text-xs text-slate-500 uppercase tracking-wide">Egresos</p>
-      <p class="text-2xl font-bold text-red-500 mt-1">
-        {{ totalEgresos() | number:'1.2-2' }} €
-      </p>
-    </div>
-    <div class="bg-white rounded-xl border border-slate-200 p-4">
-      <p class="text-xs text-slate-500 uppercase tracking-wide">Saldo aprobado</p>
-      <p class="text-2xl font-bold mt-1"
-        [class]="saldoAprobado() >= 0 ? 'text-emerald-600' : 'text-red-600'">
-        {{ saldoAprobado() | number:'1.2-2' }} €
-      </p>
-    </div>
+    </button>
+    <button type="button"
+      (click)="activeTab.set('conciliacion')"
+      class="px-4 py-2 text-sm font-medium rounded-t-lg transition-colors"
+      [class]="activeTab() === 'conciliacion'
+        ? 'bg-white border border-b-white border-slate-200 text-violet-700 -mb-px'
+        : 'text-slate-500 hover:text-slate-700'">
+      Conciliación
+    </button>
+    <button type="button"
+      (click)="activeTab.set('reportes')"
+      class="px-4 py-2 text-sm font-medium rounded-t-lg transition-colors"
+      [class]="activeTab() === 'reportes'
+        ? 'bg-white border border-b-white border-slate-200 text-violet-700 -mb-px'
+        : 'text-slate-500 hover:text-slate-700'">
+      Reportes
+    </button>
+    <button type="button"
+      (click)="activeTab.set('casos')"
+      class="px-4 py-2 text-sm font-medium rounded-t-lg transition-colors"
+      [class]="activeTab() === 'casos'
+        ? 'bg-white border border-b-white border-slate-200 text-violet-700 -mb-px'
+        : 'text-slate-500 hover:text-slate-700'">
+      Casos
+    </button>
   </div>
 
-  <!-- Cotejo por cuentas bancarias -->
-  @if (cuentas().length > 0) {
-    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-      <div class="flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-200">
-        <div class="flex items-center gap-2">
-          <lucide-icon [img]="ScaleIcon" class="w-4 h-4 text-slate-500" />
-          <h3 class="text-sm font-medium text-slate-700">Cotejo por cuenta</h3>
-        </div>
-        @if (todoConciliado()) {
-          <span class="text-xs text-emerald-600 font-medium flex items-center gap-1">
-            <lucide-icon [img]="CheckCircle2Icon" class="w-3.5 h-3.5" /> Todo conciliado
-          </span>
-        } @else {
-          <span class="text-xs text-amber-600 font-medium flex items-center gap-1">
-            <lucide-icon [img]="AlertTriangleIcon" class="w-3.5 h-3.5" /> Hay discrepancias
-          </span>
-        }
-      </div>
-      <div class="divide-y divide-slate-100">
-        @for (cotejoCuenta of cotejosPorCuenta(); track cotejoCuenta.cuenta.id) {
-          <div class="p-4 grid gap-4 md:grid-cols-3 items-center">
-            <!-- Cuenta -->
-            <div class="flex items-center gap-3">
-              <span class="flex items-center justify-center size-9 rounded-lg shrink-0"
-                [class]="cotejoCuenta.cuenta.tipo === 'banco' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'">
-                <lucide-icon [img]="cotejoCuenta.cuenta.tipo === 'banco' ? LandmarkIcon : WalletIcon" class="w-4 h-4" />
-              </span>
-              <div>
-                <p class="text-sm font-medium text-slate-800">{{ cotejoCuenta.cuenta.nombre }}</p>
-                @if (cotejoCuenta.cuenta.entidad) {
-                  <p class="text-xs text-slate-400">{{ cotejoCuenta.cuenta.entidad }}</p>
-                }
-              </div>
-            </div>
-            <!-- Saldo sistema vs saldo real -->
-            <div class="flex items-center gap-4">
-              <div>
-                <p class="text-xs text-slate-500">Sistema</p>
-                <p class="text-base font-semibold text-slate-700">{{ cotejoCuenta.sistema | number:'1.2-2' }} €</p>
-              </div>
-              <div>
-                <p class="text-xs text-slate-500">Real</p>
-                <div class="flex gap-1 items-center">
-                  <input type="number" step="0.01" [value]="cotejoCuenta.banco ?? ''"
-                    (change)="actualizarSaldoCuenta(cotejoCuenta.cuenta.id, $any($event.target).value)"
-                    placeholder="0.00"
-                    class="w-24 border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-violet-400" />
-                  <span class="text-xs text-slate-400">€</span>
-                </div>
-              </div>
-            </div>
-            <!-- Resultado -->
-            @if (cotejoCuenta.diferencia !== null) {
-              <div class="flex items-center gap-2 rounded-lg px-3 py-2"
-                [class]="cotejoCuenta.conciliado ? 'bg-emerald-50' : 'bg-amber-50'">
-                <lucide-icon
-                  [img]="cotejoCuenta.conciliado ? CheckCircle2Icon : AlertTriangleIcon"
-                  [class]="'w-4 h-4 shrink-0 ' + (cotejoCuenta.conciliado ? 'text-emerald-500' : 'text-amber-500')" />
-                <div>
-                  <p class="text-xs" [class]="cotejoCuenta.conciliado ? 'text-emerald-700' : 'text-amber-700'">
-                    {{ cotejoCuenta.conciliado ? 'Conciliado' : 'Discrepancia' }}
-                  </p>
-                  <p class="text-sm font-semibold" [class]="cotejoCuenta.conciliado ? 'text-emerald-700' : 'text-amber-700'">
-                    {{ cotejoCuenta.diferencia >= 0 ? '+' : '−' }}{{ (cotejoCuenta.diferencia < 0 ? -cotejoCuenta.diferencia : cotejoCuenta.diferencia) | number:'1.2-2' }} €
-                  </p>
-                </div>
-              </div>
-            } @else {
-              <p class="text-xs text-slate-400 px-3">Introduce el saldo real para cotejar</p>
-            }
-          </div>
-        }
-      </div>
-    </div>
-  } @else {
-    <!-- Cotejo legacy (sin cuentas configuradas) -->
-    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-      <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-200">
-        <lucide-icon [img]="ScaleIcon" class="w-4 h-4 text-slate-500" />
-        <h3 class="text-sm font-medium text-slate-700">Cotejo bancario</h3>
-      </div>
-      <div class="p-4 grid gap-4 md:grid-cols-3">
-        <div>
-          <label for="saldoBancario" class="block text-xs font-medium text-slate-500 mb-1.5">Saldo bancario real</label>
-          <div class="flex gap-2">
-            <div class="relative flex-1">
-              <input id="saldoBancario" type="number" inputmode="decimal" step="0.01"
-                [value]="saldoBancarioInput()"
-                (input)="saldoBancarioInput.set($any($event.target).value)"
-                placeholder="0.00"
-                class="w-full pl-3 pr-8 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400" />
-              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">€</span>
-            </div>
-            <button type="button" (click)="guardarSaldoBancario()" [disabled]="savingSaldo()"
-              class="flex items-center gap-1.5 px-3 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50">
-              <lucide-icon [img]="SaveIcon" class="w-3.5 h-3.5" />
-              Guardar
-            </button>
-          </div>
-          @if (saldoBancarioFecha()) {
-            <p class="text-xs text-slate-400 mt-1.5">Actualizado el {{ saldoBancarioFecha() }}</p>
-          }
-        </div>
-        <div class="flex items-center gap-2 rounded-lg bg-slate-50 px-4">
-          <lucide-icon [img]="LandmarkIcon" class="w-4 h-4 text-slate-400" />
-          <div>
-            <p class="text-xs text-slate-500">Saldo aprobado</p>
-            <p class="text-lg font-semibold text-slate-700">{{ saldoAprobado() | number:'1.2-2' }} €</p>
-          </div>
-        </div>
-        @let c = cotejo();
-        @if (c) {
-          <div class="flex items-center gap-3 rounded-lg px-4" [class]="c.conciliado ? 'bg-emerald-50' : 'bg-amber-50'">
-            <lucide-icon [img]="c.conciliado ? CheckCircle2Icon : AlertTriangleIcon"
-              [class]="'w-5 h-5 shrink-0 ' + (c.conciliado ? 'text-emerald-500' : 'text-amber-500')" />
-            <div>
-              <p class="text-xs" [class]="c.conciliado ? 'text-emerald-700' : 'text-amber-700'">
-                {{ c.conciliado ? 'Conciliado' : 'Discrepancia' }}
-              </p>
-              <p class="text-lg font-semibold" [class]="c.conciliado ? 'text-emerald-700' : 'text-amber-700'">
-                {{ c.diferencia >= 0 ? '+' : '−' }}{{ (c.diferencia < 0 ? -c.diferencia : c.diferencia) | number:'1.2-2' }} €
-              </p>
-            </div>
-          </div>
-        } @else {
-          <div class="flex items-center text-sm text-slate-400 rounded-lg bg-slate-50 px-4">
-            Carga tu saldo bancario para cotejar
-          </div>
-        }
-      </div>
-    </div>
-  }
-
-  <!-- Histórico de casos cerrados -->
-  @if (resumenHistorico(); as hist) {
-    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-      <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-200">
-        <lucide-icon [img]="HistoryIcon" class="w-4 h-4 text-slate-500" />
-        <h3 class="text-sm font-medium text-slate-700">Histórico — casos cerrados</h3>
-        <span class="ml-auto text-xs text-slate-400">{{ hist.casosCount }} {{ hist.casosCount === 1 ? 'caso' : 'casos' }}</span>
-      </div>
-      <div class="grid grid-cols-2 md:grid-cols-5 gap-0 divide-x divide-slate-100">
-        <div class="p-4">
-          <p class="text-xs text-slate-500">Ingresos</p>
-          <p class="text-base font-semibold text-emerald-600 mt-0.5">{{ hist.totalIngresosCerrados | number:'1.2-2' }} €</p>
-        </div>
-        <div class="p-4">
-          <p class="text-xs text-slate-500">Suplidos</p>
-          <p class="text-base font-semibold text-amber-600 mt-0.5">{{ hist.totalSuplidosCerrados | number:'1.2-2' }} €</p>
-        </div>
-        <div class="p-4">
-          <p class="text-xs text-slate-500">Honorarios</p>
-          <p class="text-base font-semibold text-violet-600 mt-0.5">{{ hist.totalHonorariosCerrados | number:'1.2-2' }} €</p>
-        </div>
-        <div class="p-4">
-          <p class="text-xs text-slate-500">Egresos</p>
-          <p class="text-base font-semibold text-red-500 mt-0.5">{{ hist.totalEgresosCerrados | number:'1.2-2' }} €</p>
-        </div>
-        <div class="p-4">
-          <p class="text-xs text-slate-500">Saldo neto</p>
-          <p class="text-base font-semibold mt-0.5" [class]="hist.saldoCerrados >= 0 ? 'text-emerald-600' : 'text-red-600'">
-            {{ hist.saldoCerrados | number:'1.2-2' }} €
-          </p>
-        </div>
-      </div>
-    </div>
-  }
-
-  <!-- Retiros de honorarios -->
-  @if (retiros().length > 0) {
-    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-      <div class="flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-200">
-        <div class="flex items-center gap-2">
-          <lucide-icon [img]="ArrowDownLeftIcon" class="w-4 h-4 text-slate-500" />
-          <h3 class="text-sm font-medium text-slate-700">Retiros de honorarios</h3>
-        </div>
-        <span class="text-xs text-slate-400">{{ retiros().length }} registro{{ retiros().length !== 1 ? 's' : '' }}</span>
-      </div>
-      <ul class="divide-y divide-slate-100">
-        @for (retiro of retiros(); track retiro.id) {
-          <li class="px-4 py-3 flex items-center justify-between gap-3">
-            <div class="min-w-0">
-              <p class="text-sm font-medium text-slate-800 truncate">{{ retiro.concepto }}</p>
-              <p class="text-xs text-slate-400">{{ retiro.fecha }}</p>
-            </div>
-            <p class="text-sm font-semibold text-red-500 shrink-0">−{{ retiro.importe | number:'1.2-2' }} €</p>
-          </li>
-        }
-      </ul>
-    </div>
-  }
-
-  <!-- Contabilidad por caso -->
-  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-    <div class="px-4 py-3 border-b border-slate-200">
-      <h3 class="text-sm font-medium text-slate-700">Contabilidad por caso</h3>
-    </div>
-
-    @if (loading()) {
-      <div class="p-8 text-center text-slate-400 text-sm">Cargando casos...</div>
-    } @else if (casosContables().length === 0) {
-      <div class="p-10 text-center text-slate-400 text-sm">
-        <p>Sin movimientos registrados</p>
-        <p class="text-xs mt-1">La contabilidad aparece cuando registras movimientos de gestoría en los casos</p>
-      </div>
-    } @else {
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="bg-slate-50">
-            <tr class="text-left text-slate-500 border-b border-slate-200">
-              <th class="px-4 py-2.5 font-medium">Caso</th>
-              <th class="px-4 py-2.5 font-medium text-right">Ingresos</th>
-              <th class="px-4 py-2.5 font-medium text-right">Egresos</th>
-              <th class="px-4 py-2.5 font-medium text-right">Saldo aprobado</th>
-              <th class="px-4 py-2.5 font-medium text-right">Saldo proyectado</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100">
-            @for (caso of casosContables(); track caso.id) {
-              @let r = resumenPorCaso().get(caso.id);
-              <tr class="cursor-pointer hover:bg-violet-50 transition-colors" (click)="selectedCaso.set(caso)">
-                <td class="px-4 py-3 text-slate-800 font-medium">{{ caso.titulo }}</td>
-                <td class="px-4 py-3 text-right text-emerald-600">{{ (r?.ingresos ?? 0) | number:'1.2-2' }} €</td>
-                <td class="px-4 py-3 text-right text-red-500">{{ (r?.egresos ?? 0) | number:'1.2-2' }} €</td>
-                <td class="px-4 py-3 text-right font-semibold"
-                  [class]="(r?.saldoAprobado ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-600'">
-                  {{ (r?.saldoAprobado ?? 0) | number:'1.2-2' }} €
-                </td>
-                <td class="px-4 py-3 text-right font-semibold"
-                  [class]="(r?.saldoProyectado ?? 0) >= 0 ? 'text-slate-700' : 'text-red-600'">
-                  {{ (r?.saldoProyectado ?? 0) | number:'1.2-2' }} €
-                </td>
-              </tr>
-            }
-          </tbody>
-          <tfoot class="bg-slate-50 border-t-2 border-slate-200">
-            <tr class="font-semibold text-slate-700">
-              <td class="px-4 py-3">Total</td>
-              <td class="px-4 py-3 text-right text-emerald-600">{{ balanceGeneral().totalIngresos | number:'1.2-2' }} €</td>
-              <td class="px-4 py-3 text-right text-red-500">{{ totalEgresos() | number:'1.2-2' }} €</td>
-              <td class="px-4 py-3 text-right"
-                [class]="saldoAprobado() >= 0 ? 'text-emerald-600' : 'text-red-600'">
-                {{ saldoAprobado() | number:'1.2-2' }} €
-              </td>
-              <td class="px-4 py-3 text-right"
-                [class]="proyeccionBancaria().proyeccion >= 0 ? 'text-slate-700' : 'text-red-600'">
-                {{ proyeccionBancaria().proyeccion | number:'1.2-2' }} €
-              </td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+  <!-- Tab content -->
+  @switch (activeTab()) {
+    @case ('resumen') {
+      <app-tesoreria-resumen-tab
+        [cotejos]="cotejosPorCuenta()"
+        [movimientosPorCuenta]="movimientosPorCuenta()"
+        [resumenHistorico]="resumenHistorico()"
+        [hayCuentas]="cuentas().length > 0"
+        [cotejo]="cotejo()"
+        [saldoBancarioInput]="saldoBancarioInput()"
+        [savingSaldo]="savingSaldo()"
+        [saldoBancarioFecha]="saldoBancarioFecha()"
+        [cierres]="cierres()"
+        (actualizarSaldoCuenta)="actualizarSaldoCuenta($event.cuentaId, $event.valor)"
+        (guardarSaldoBancario)="guardarSaldoBancario($event)"
+      />
     }
-  </div>
-
-  <!-- Revisión de movimientos -->
-  <app-revision-movimientos [conciliado]="todoConciliado()" />
+    @case ('movimientos') {
+      <app-revision-movimientos [conciliado]="todoConciliado()" />
+    }
+    @case ('conciliacion') {
+      <app-conciliacion-tab
+        [cuentas]="cuentas()"
+        [lineas]="lineasExtracto()"
+        [movimientos]="movimientosConciliables()"
+        [importando]="importandoExtracto()"
+        (importarCsv)="onImportarCsv($event)"
+        (autoConciliar)="onAutoConciliar($event)"
+        (casar)="onCasar($event)"
+        (desconciliar)="onDesconciliar($event)"
+        (ignorar)="onIgnorarLinea($event)"
+      />
+    }
+    @case ('reportes') {
+      <app-reportes-tab
+        [reporte]="reporte()"
+        [desde]="rangoDesde()"
+        [hasta]="rangoHasta()"
+        (desdeChange)="rangoDesde.set($event)"
+        (hastaChange)="rangoHasta.set($event)"
+        (exportar)="exportarCsv()"
+      />
+    }
+    @case ('casos') {
+      <app-tesoreria-casos-tab
+        [casosContables]="casosContables()"
+        [resumenPorCaso]="resumenPorCaso()"
+        [balanceGeneral]="balanceGeneral()"
+        [totalEgresos]="totalEgresos()"
+        [saldoAprobado]="saldoAprobado()"
+        [proyeccionBancaria]="proyeccionBancaria()"
+        [loading]="loading()"
+        (casoSeleccionado)="selectedCaso.set($event)"
+      />
+    }
+  }
 
 </div>
 
@@ -329,6 +138,11 @@
   <app-cuentas-drawer (closed)="showCuentasDrawer.set(false)" />
 }
 
-@if (showRetiroDrawer()) {
-  <app-retiro-drawer [cuentas]="cuentas()" (closed)="showRetiroDrawer.set(false)" />
+@if (showCierreModal()) {
+  <app-cierre-caja-modal
+    [cuentas]="cierrePreview()"
+    [saving]="savingCierre()"
+    (confirmed)="realizarCierre($event)"
+    (closed)="showCierreModal.set(false)"
+  />
 }

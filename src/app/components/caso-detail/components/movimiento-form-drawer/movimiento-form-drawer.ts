@@ -1,6 +1,8 @@
-import { Component, ChangeDetectionStrategy, input, output, signal, effect } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output, signal, computed, effect } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { LucideAngularModule, X } from 'lucide-angular';
-import type { CuentaBancaria, GestoriaSlot, MovimientoTipo } from '../../../../interfaces';
+import type { CuentaBancaria, GestoriaSlot, MovimientoTipo, TipoIva } from '../../../../interfaces';
+import { desglosarIva } from '../../../../interfaces';
 
 export interface MovimientoFormData {
   tipo: MovimientoTipo;
@@ -9,12 +11,19 @@ export interface MovimientoFormData {
   esEntrada: boolean;
   fecha: string;
   notas?: string;
-  cuentaId?: string;
+  cuentaId: string;
+  tipoIva: TipoIva;
+  ivaExento: boolean;
+  baseImponible: number;
+  cuotaIva: number;
 }
+
+/** Valor del selector de IVA: porcentajes o 'exento' (operación exenta/no sujeta). */
+type IvaSel = '21' | '10' | '4' | '0' | 'exento';
 
 @Component({
   selector: 'app-movimiento-form-drawer',
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, DecimalPipe],
   templateUrl: './movimiento-form-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -36,8 +45,25 @@ export class MovimientoFormDrawerComponent {
   readonly formFecha = signal('');
   readonly formNotas = signal('');
   readonly formCuentaId = signal('');
+  readonly formIva = signal<IvaSel>('21');
 
   readonly tipos: readonly MovimientoTipo[] = ['ingreso', 'suplido', 'honorario', 'gasto', 'otro'];
+  readonly ivaOpciones: readonly IvaSel[] = ['21', '10', '4', '0', 'exento'];
+
+  /** Tipo de IVA y exención derivados del selector. */
+  private readonly ivaResuelto = computed<{ tipoIva: TipoIva; exento: boolean }>(() => {
+    const sel = this.formIva();
+    if (sel === 'exento') return { tipoIva: 0, exento: true };
+    return { tipoIva: Number(sel) as TipoIva, exento: false };
+  });
+
+  /** Desglose base/cuota en vivo según el importe total tecleado. */
+  readonly desglose = computed(() => {
+    const total = parseFloat(this.formImporte());
+    const { tipoIva, exento } = this.ivaResuelto();
+    if (!total || total <= 0) return { baseImponible: 0, cuotaIva: 0 };
+    return desglosarIva(total, tipoIva, exento);
+  });
 
   /** Dirección por defecto según tipo, aplicada solo al prefill. */
   private static readonly DIRECCION_POR_TIPO: Record<MovimientoTipo, boolean> = {
@@ -48,13 +74,23 @@ export class MovimientoFormDrawerComponent {
     otro: true,
   };
 
+  /** IVA por defecto según tipo: los suplidos van exentos, el resto al general. */
+  private static readonly IVA_POR_TIPO: Record<MovimientoTipo, IvaSel> = {
+    ingreso: '21',
+    suplido: 'exento',
+    honorario: '21',
+    gasto: '21',
+    otro: '21',
+  };
+
   onTipoChange(tipo: MovimientoTipo): void {
-    this.formTipo.set(tipo);
+    this.applyTipo(tipo, this.formEsEntrada());
   }
 
   private applyTipo(tipo: MovimientoTipo, fallback: boolean): void {
     this.formTipo.set(tipo);
     this.formEsEntrada.set(MovimientoFormDrawerComponent.DIRECCION_POR_TIPO[tipo] ?? fallback);
+    this.formIva.set(MovimientoFormDrawerComponent.IVA_POR_TIPO[tipo]);
   }
 
   constructor() {
@@ -94,7 +130,9 @@ export class MovimientoFormDrawerComponent {
 
   submit(): void {
     const concepto = this.formConcepto().trim();
-    if (!concepto || !this.formImporte()) return;
+    if (!concepto || !this.formImporte() || !this.formCuentaId()) return;
+    const { tipoIva, exento } = this.ivaResuelto();
+    const { baseImponible, cuotaIva } = this.desglose();
     this.saved.emit({
       tipo: this.formTipo(),
       concepto,
@@ -102,7 +140,11 @@ export class MovimientoFormDrawerComponent {
       esEntrada: this.formEsEntrada(),
       fecha: this.formFecha(),
       notas: this.formNotas().trim() || undefined,
-      cuentaId: this.formCuentaId() || undefined,
+      cuentaId: this.formCuentaId(),
+      tipoIva,
+      ivaExento: exento,
+      baseImponible,
+      cuotaIva,
     });
   }
 }

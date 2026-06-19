@@ -14,7 +14,7 @@ interface StoreCredentialResponse {
   certExpiry: string; // ISO date
 }
 
-export const storeAeatCredential = onCall<StoreCredentialRequest, StoreCredentialResponse>(
+export const storeAeatCredential = onCall<StoreCredentialRequest, Promise<StoreCredentialResponse>>(
   { enforceAppCheck: false },
   async (request) => {
     if (!request.auth) {

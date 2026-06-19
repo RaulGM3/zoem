@@ -456,10 +456,14 @@ export class CasosService {
 
     const resumen: ResumenFinanciero = { ...RESUMEN_FINANCIERO_VACIO };
     for (const m of movimientos) {
+      // Movimientos legacy sin desglose fiscal: cuota 0 (base = importe).
+      const cuota = m.cuotaIva ?? 0;
       if (m.esEntrada) {
         resumen.totalIngresos += m.importe;
+        resumen.ivaRepercutido += cuota;
       } else {
         resumen.totalEgresos += m.importe;
+        resumen.ivaSoportado += cuota;
         if (m.tipo === 'suplido') resumen.totalSuplidos += m.importe;
         else if (m.tipo === 'honorario') resumen.totalHonorarios += m.importe;
       }

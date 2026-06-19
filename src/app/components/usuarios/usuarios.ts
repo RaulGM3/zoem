@@ -127,7 +127,7 @@ export class UsuariosComponent implements OnInit, OnDestroy {
         data.role,
         createdBy,
       );
-      const link = `${window.location.origin}/invite?token=${token}`;
+      const link = `${window.location.origin}/invite/${token}`;
       this.inviteLink.set(link);
     } finally {
       this.inviteSaving.set(false);

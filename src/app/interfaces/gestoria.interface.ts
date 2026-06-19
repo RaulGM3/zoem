@@ -1,4 +1,5 @@
 import { Timestamp } from '@angular/fire/firestore';
+import type { TipoIva } from './iva';
 
 export type MovimientoTipo = 'ingreso' | 'suplido' | 'honorario' | 'gasto' | 'otro';
 
@@ -18,4 +19,12 @@ export interface MovimientoGestoria {
   aprobadoAt?: Timestamp;
   aprobadoPor?: string;
   cuentaId?: string;
+  /**
+   * Desglose fiscal. `importe` es el total; `baseImponible + cuotaIva === importe`.
+   * Movimientos legacy sin estos campos se interpretan como base = importe, cuota = 0.
+   */
+  tipoIva?: TipoIva;
+  ivaExento?: boolean;
+  baseImponible?: number;
+  cuotaIva?: number;
 }

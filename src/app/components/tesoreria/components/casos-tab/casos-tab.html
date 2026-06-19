@@ -1,0 +1,61 @@
+<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+  <div class="px-4 py-3 border-b border-slate-200">
+    <h3 class="text-sm font-medium text-slate-700">Contabilidad por caso</h3>
+  </div>
+
+  @if (loading()) {
+    <div class="p-8 text-center text-slate-400 text-sm">Cargando casos...</div>
+  } @else if (casosContables().length === 0) {
+    <div class="p-10 text-center text-slate-400 text-sm">
+      <p>Sin movimientos registrados</p>
+      <p class="text-xs mt-1">La contabilidad aparece cuando registras movimientos de gestoría en los casos</p>
+    </div>
+  } @else {
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50">
+          <tr class="text-left text-slate-500 border-b border-slate-200">
+            <th class="px-4 py-2.5 font-medium">Caso</th>
+            <th class="px-4 py-2.5 font-medium text-right">Ingresos</th>
+            <th class="px-4 py-2.5 font-medium text-right">Egresos</th>
+            <th class="px-4 py-2.5 font-medium text-right">Saldo aprobado</th>
+            <th class="px-4 py-2.5 font-medium text-right">Saldo proyectado</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (caso of casosContables(); track caso.id) {
+            @let r = resumenPorCaso().get(caso.id);
+            <tr class="cursor-pointer hover:bg-violet-50 transition-colors" (click)="casoSeleccionado.emit(caso)">
+              <td class="px-4 py-3 text-slate-800 font-medium">{{ caso.titulo }}</td>
+              <td class="px-4 py-3 text-right text-emerald-600">{{ (r?.ingresos ?? 0) | number:'1.2-2' }} €</td>
+              <td class="px-4 py-3 text-right text-red-500">{{ (r?.egresos ?? 0) | number:'1.2-2' }} €</td>
+              <td class="px-4 py-3 text-right font-semibold"
+                [class]="(r?.saldoAprobado ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-600'">
+                {{ (r?.saldoAprobado ?? 0) | number:'1.2-2' }} €
+              </td>
+              <td class="px-4 py-3 text-right font-semibold"
+                [class]="(r?.saldoProyectado ?? 0) >= 0 ? 'text-slate-700' : 'text-red-600'">
+                {{ (r?.saldoProyectado ?? 0) | number:'1.2-2' }} €
+              </td>
+            </tr>
+          }
+        </tbody>
+        <tfoot class="bg-slate-50 border-t-2 border-slate-200">
+          <tr class="font-semibold text-slate-700">
+            <td class="px-4 py-3">Total</td>
+            <td class="px-4 py-3 text-right text-emerald-600">{{ balanceGeneral().totalIngresos | number:'1.2-2' }} €</td>
+            <td class="px-4 py-3 text-right text-red-500">{{ totalEgresos() | number:'1.2-2' }} €</td>
+            <td class="px-4 py-3 text-right"
+              [class]="saldoAprobado() >= 0 ? 'text-emerald-600' : 'text-red-600'">
+              {{ saldoAprobado() | number:'1.2-2' }} €
+            </td>
+            <td class="px-4 py-3 text-right"
+              [class]="proyeccionBancaria().proyeccion >= 0 ? 'text-slate-700' : 'text-red-600'">
+              {{ proyeccionBancaria().proyeccion | number:'1.2-2' }} €
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  }
+</div>

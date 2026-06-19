@@ -61,6 +61,8 @@
           [movimientos]="gestoriaService.movimientos()"
           [movimientosLoading]="gestoriaService.loading()"
           [resumen]="caso()!.resumenFinanciero"
+          [miembros]="miembrosMap()"
+          [cuentas]="cuentas()"
           (registerSlot)="openRegistrarSlot($event)"
           (unregisterSlot)="unregisterSlot($event)"
           (reorderSlots)="reorderSlots($event)"

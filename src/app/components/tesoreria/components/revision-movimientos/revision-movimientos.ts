@@ -4,11 +4,12 @@ import {
 import { DecimalPipe } from '@angular/common';
 import {
   LucideAngularModule,
-  ClipboardCheck, CheckCircle2, Circle, CheckCheck,
+  ClipboardCheck, CheckCircle2, Circle, CheckCheck, Pencil, X,
 } from 'lucide-angular';
 import { GestoriaService } from '../../../../core/services/gestoria.service';
 import { CasosService } from '../../../../core/services/casos.service';
 import { CuentasService } from '../../../../core/services/cuentas.service';
+import { UsersService } from '../../../../core/services/users';
 import { MovimientoGestoria, MovimientoTipo } from '../../../../interfaces';
 
 type Filtro = 'todos' | 'pendientes' | 'aprobados';
@@ -23,17 +24,24 @@ export class RevisionMovimientosComponent implements OnInit, OnDestroy {
   private readonly gestoriaService = inject(GestoriaService);
   private readonly casosService = inject(CasosService);
   private readonly cuentasService = inject(CuentasService);
+  private readonly usersService = inject(UsersService);
 
   readonly ClipboardCheckIcon = ClipboardCheck;
   readonly CheckCircle2Icon = CheckCircle2;
   readonly CircleIcon = Circle;
   readonly CheckCheckIcon = CheckCheck;
+  readonly PencilIcon = Pencil;
+  readonly XIcon = X;
 
   readonly conciliado = input<boolean>(false);
+
+  readonly cuentas = this.cuentasService.cuentas;
 
   readonly loading = this.gestoriaService.todosLoading;
   readonly aprobandoTodos = signal(false);
   readonly toggling = signal<string | null>(null);
+  readonly editandoMovId = signal<string | null>(null);
+  readonly cambiandoCuenta = signal(false);
 
   readonly filtro = signal<Filtro>('pendientes');
 
@@ -51,13 +59,19 @@ export class RevisionMovimientosComponent implements OnInit, OnDestroy {
     return mapa;
   });
 
+  private readonly miembrosMap = computed(() =>
+    new Map(this.usersService.members().map(m => [m.userId, m.nombre]))
+  );
+
   readonly movimientosEnriquecidos = computed(() => {
     const nombres = this.casoNombres();
     const cuentas = this.cuentaNombres();
+    const miembros = this.miembrosMap();
     return this.movimientos().map(m => ({
       ...m,
       casoNombre: nombres.get(m.casoId) ?? m.casoId,
       cuentaNombre: m.cuentaId ? (cuentas.get(m.cuentaId) ?? null) : null,
+      creadoPorNombre: miembros.get(m.createdBy) ?? null,
     }));
   });
 
@@ -83,6 +97,9 @@ export class RevisionMovimientosComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.gestoriaService.loadTodosMovimientos();
+    if (this.usersService.members().length === 0) {
+      this.usersService.loadMembers();
+    }
   }
 
   ngOnDestroy(): void {
@@ -95,6 +112,21 @@ export class RevisionMovimientosComponent implements OnInit, OnDestroy {
       await this.gestoriaService.aprobarMovimiento(mov.casoId, mov.id, !mov.aprobado);
     } finally {
       this.toggling.set(null);
+    }
+  }
+
+  async cambiarCuenta(mov: MovimientoGestoria, cuentaId: string): Promise<void> {
+    const nuevoId = cuentaId || null;
+    if (nuevoId === (mov.cuentaId ?? null)) {
+      this.editandoMovId.set(null);
+      return;
+    }
+    this.cambiandoCuenta.set(true);
+    try {
+      await this.gestoriaService.cambiarCuenta(mov.casoId, mov.id, nuevoId);
+    } finally {
+      this.cambiandoCuenta.set(false);
+      this.editandoMovId.set(null);
     }
   }
 

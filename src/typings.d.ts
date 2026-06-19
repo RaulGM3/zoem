@@ -13,11 +13,4 @@ declare module 'mammoth' {
   ): Promise<MammothResult>;
 }
 
-declare module 'html-to-docx' {
-  export default function htmlToDocx(
-    htmlString: string,
-    headerHtmlString?: string | null,
-    options?: Record<string, unknown>,
-    footerHtmlString?: string | null
-  ): Promise<Blob | ArrayBuffer>;
-}
+

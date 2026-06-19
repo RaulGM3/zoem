@@ -1,5 +1,5 @@
 import {
-  Component, OnInit, signal, computed,
+  Component, OnInit, OnDestroy, signal, computed,
   ChangeDetectionStrategy, inject,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -45,7 +45,7 @@ import { MovimientoFormDrawerComponent, MovimientoFormData } from './components/
   templateUrl: './caso-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class CasoDetailComponent implements OnInit {
+export class CasoDetailComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   readonly casosService = inject(CasosService);
@@ -57,6 +57,9 @@ export class CasoDetailComponent implements OnInit {
   readonly permissionService = inject(PermissionService);
   readonly cuentasService = inject(CuentasService);
   readonly cuentas = this.cuentasService.cuentas;
+  readonly miembrosMap = computed(() =>
+    new Map(this.usersService.members().map(m => [m.userId, m.nombre]))
+  );
 
   readonly caso = signal<Caso | null>(null);
   readonly loading = signal(true);
@@ -144,8 +147,13 @@ export class CasoDetailComponent implements OnInit {
   readonly gestoriaPending = computed(() => this.gestoriaService.slots().filter(s => s.status === 'pendiente').length);
   readonly docsPending = computed(() => this.casoDocService.slots().filter(s => s.status === 'pendiente').length);
 
+  ngOnDestroy(): void {
+    this.cuentasService.stopCuentas();
+  }
+
   async ngOnInit(): Promise<void> {
     const id = this.casoId;
+    this.cuentasService.loadCuentas();
     await Promise.all([
       this.contactService.loadContacts(),
       this.usersService.loadMembers(),
@@ -310,6 +318,11 @@ export class CasoDetailComponent implements OnInit {
         esEntrada: data.esEntrada,
         fecha: data.fecha,
         notas: data.notas,
+        cuentaId: data.cuentaId,
+        tipoIva: data.tipoIva,
+        ivaExento: data.ivaExento,
+        baseImponible: data.baseImponible,
+        cuotaIva: data.cuotaIva,
       };
       const slot = this.registeringSlot();
       if (slot) {

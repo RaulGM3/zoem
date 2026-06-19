@@ -121,7 +121,7 @@ function isAceptado(xml: string): boolean {
   return xml.includes('Correcto') || xml.includes('Aceptado') || !xml.includes('Rechazado');
 }
 
-export const verifactuSubmit = onCall<VerifactuSubmitRequest, VerifactuSubmitResponse>(
+export const verifactuSubmit = onCall<VerifactuSubmitRequest, Promise<VerifactuSubmitResponse>>(
   { enforceAppCheck: false, timeoutSeconds: 60 },
   async (request) => {
     if (!request.auth) {

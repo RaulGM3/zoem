@@ -68,6 +68,9 @@ export interface ResumenFinanciero {
   totalHonorarios: number;
   totalEgresos: number;
   saldo: number;
+  /** IVA repercutido (de entradas) y soportado (de salidas). Base para el modelo 303. */
+  ivaRepercutido: number;
+  ivaSoportado: number;
 }
 
 export interface Caso {
@@ -113,6 +116,8 @@ export const RESUMEN_FINANCIERO_VACIO: ResumenFinanciero = {
   totalHonorarios: 0,
   totalEgresos: 0,
   saldo: 0,
+  ivaRepercutido: 0,
+  ivaSoportado: 0,
 };
 
 export interface CreateCasoData {

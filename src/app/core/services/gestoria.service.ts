@@ -7,6 +7,7 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  deleteField,
   getDocs,
   onSnapshot,
   orderBy,
@@ -21,7 +22,7 @@ import { CasosService } from './casos.service';
 import { GestoriaSlot, MovimientoGestoria, MovimientoTipo, Retiro } from '../../interfaces';
 import { Auth } from '@angular/fire/auth';
 
-type MovimientoCreate = Pick<MovimientoGestoria, 'tipo' | 'concepto' | 'importe' | 'esEntrada' | 'fecha' | 'notas' | 'cuentaId'>;
+type MovimientoCreate = Pick<MovimientoGestoria, 'tipo' | 'concepto' | 'importe' | 'esEntrada' | 'fecha' | 'notas' | 'cuentaId' | 'tipoIva' | 'ivaExento' | 'baseImponible' | 'cuotaIva'>;
 type MovimientoOpt = Omit<MovimientoCreate, 'notas' | 'cuentaId'> & { notas?: string; cuentaId?: string };
 type RetiroCreate = Pick<Retiro, 'concepto' | 'importe' | 'fecha' | 'cuentaId' | 'notas'>;
 
@@ -238,6 +239,14 @@ export class GestoriaService {
     });
     this.todosMovimientos.update(list =>
       list.map(m => m.id === movId ? { ...m, aprobado } : m)
+    );
+  }
+
+  async cambiarCuenta(casoId: string, movId: string, cuentaId: string | null): Promise<void> {
+    const docRef = doc(this.firestore, 'companies', this.companyId, 'casos', casoId, 'gestoria', movId);
+    await updateDoc(docRef, { cuentaId: cuentaId ?? deleteField() });
+    this.todosMovimientos.update(list =>
+      list.map(m => m.id === movId ? { ...m, cuentaId: cuentaId ?? undefined } : m)
     );
   }
 
