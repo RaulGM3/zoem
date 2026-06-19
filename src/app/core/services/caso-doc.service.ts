@@ -198,6 +198,37 @@ export class CasoDocService {
     );
   }
 
+  /**
+   * Congela un documento rellenado a partir de su plantilla (docTemplate).
+   * Guarda el HTML interpolado y los valores usados — el documento queda fijo
+   * para vistas futuras hasta que se regenere a mano. No toca Storage: el
+   * snapshot vive inline en el slot (límite 1MB de Firestore; los docs legales
+   * típicos quedan muy por debajo).
+   */
+  async saveGeneratedDoc(
+    casoId: string,
+    slot: CasoDocSlot,
+    html: string,
+    values: Record<string, string>
+  ): Promise<void> {
+    await updateDoc(doc(this.slotsRef(casoId), slot.id), {
+      status: 'generado',
+      generatedHtml: html,
+      generatedValues: values,
+      generatedBy: this.auth.currentUser?.uid ?? '',
+      generatedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+
+    this.slots.update(list =>
+      list.map(s =>
+        s.id === slot.id
+          ? { ...s, status: 'generado' as const, generatedHtml: html, generatedValues: values }
+          : s
+      )
+    );
+  }
+
   async removeUpload(casoId: string, slot: CasoDocSlot): Promise<void> {
     if (slot.storagePath) {
       try {

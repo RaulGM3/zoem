@@ -80,12 +80,14 @@
           [uploadingSlotId]="uploadingSlotId()"
           [busy]="docsBusy()"
           [progress]="docsProgress()"
+          [casoContext]="casoDocContext()"
           (uploadSlot)="onUploadSlot($event)"
           (removeSlot)="onRemoveSlot($event)"
           (uploadFile)="onUploadFile($event)"
           (deleteFile)="onDeleteFile($event)"
           (createFolder)="onCreateFolder($event)"
           (deleteFolder)="onDeleteFolder($event)"
+          (generateDoc)="onGenerateDoc($event)"
         />
       }
 

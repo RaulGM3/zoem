@@ -1,0 +1,172 @@
+<!-- Backdrop -->
+@if (visible()) {
+  <div
+    class="fixed inset-0 bg-black/30 z-40"
+    (click)="close()"
+    aria-hidden="true"
+  ></div>
+}
+
+<!-- Drawer -->
+<div
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="user-edit-drawer-title"
+  [class]="'fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white shadow-xl flex flex-col transition-transform duration-300 ' + (visible() ? 'translate-x-0' : 'translate-x-full')"
+>
+  <!-- Header -->
+  <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+    <div class="flex items-center gap-3 min-w-0">
+      <div class="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center shrink-0">
+        <lucide-icon [img]="UserCogIcon" class="w-4 h-4 text-violet-600" />
+      </div>
+      <h2 id="user-edit-drawer-title" class="text-base font-semibold text-slate-800 truncate">
+        {{ title() }}
+      </h2>
+    </div>
+    <button
+      (click)="close()"
+      class="p-1.5 hover:bg-slate-100 rounded-lg"
+      aria-label="Cerrar"
+    >
+      <lucide-icon [img]="XIcon" class="w-4 h-4 text-slate-500" />
+    </button>
+  </div>
+
+  <!-- Body -->
+  <div class="flex-1 overflow-y-auto px-6 py-6">
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-5" novalidate>
+      <div class="space-y-1.5">
+        <label for="user-nombre" class="text-sm font-medium text-slate-700">
+          Nombre <span class="text-red-500" aria-hidden="true">*</span>
+        </label>
+        <input
+          id="user-nombre"
+          type="text"
+          formControlName="nombre"
+          autocomplete="name"
+          class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+        />
+        @if (form.controls.nombre.invalid && form.controls.nombre.touched) {
+          <p class="text-xs text-red-500">El nombre es obligatorio</p>
+        }
+      </div>
+
+      <div class="space-y-1.5">
+        <label for="user-apellido" class="text-sm font-medium text-slate-700">Apellido</label>
+        <input
+          id="user-apellido"
+          type="text"
+          formControlName="apellido"
+          autocomplete="family-name"
+          class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+        />
+      </div>
+
+      <div class="space-y-1.5">
+        <label for="user-telefono" class="text-sm font-medium text-slate-700">Teléfono</label>
+        <input
+          id="user-telefono"
+          type="tel"
+          formControlName="telefono"
+          autocomplete="tel"
+          class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+        />
+      </div>
+
+      <div class="space-y-1.5">
+        <label for="user-departamento" class="text-sm font-medium text-slate-700">Departamento</label>
+        <input
+          id="user-departamento"
+          type="text"
+          formControlName="departamento"
+          class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+        />
+      </div>
+
+      <div class="space-y-1.5">
+        <label for="user-role" class="text-sm font-medium text-slate-700">
+          Rol <span class="text-red-500" aria-hidden="true">*</span>
+        </label>
+        <div class="relative">
+          <lucide-icon [img]="ShieldIcon" class="absolute left-3 top-2.5 w-4 h-4 text-slate-400 pointer-events-none" />
+          <select
+            id="user-role"
+            formControlName="role"
+            class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 bg-white appearance-none"
+          >
+            @for (rol of roles; track rol) {
+              <option [value]="rol">{{ rol }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <div class="space-y-1.5">
+        <label for="user-estado" class="text-sm font-medium text-slate-700">Estado</label>
+        <select
+          id="user-estado"
+          formControlName="estado"
+          class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 bg-white appearance-none"
+        >
+          @for (e of estados; track e) {
+            <option [value]="e">{{ e }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="space-y-1.5">
+        <label for="user-tarifa" class="text-sm font-medium text-slate-700">Tarifa por hora (€)</label>
+        <input
+          id="user-tarifa"
+          type="number"
+          min="0"
+          step="0.01"
+          inputmode="decimal"
+          formControlName="tarifaHoraria"
+          placeholder="—"
+          class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+        />
+      </div>
+
+      <button
+        type="submit"
+        [disabled]="form.invalid || saving()"
+        class="w-full flex items-center justify-center gap-2 py-2.5 bg-violet-600 text-white text-sm font-medium rounded-xl hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        <lucide-icon [img]="SaveIcon" class="w-4 h-4" />
+        {{ saving() ? 'Guardando...' : 'Guardar cambios' }}
+      </button>
+    </form>
+  </div>
+
+  <!-- Footer: zona peligrosa -->
+  <div class="border-t border-slate-200 px-6 py-4">
+    @if (confirmingDelete()) {
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-slate-600 flex-1">¿Eliminar a este usuario?</span>
+        <button
+          (click)="onDelete()"
+          [disabled]="saving()"
+          class="px-3 py-1.5 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+        >
+          Sí, eliminar
+        </button>
+        <button
+          (click)="confirmingDelete.set(false)"
+          class="px-3 py-1.5 text-sm font-medium border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50"
+        >
+          Cancelar
+        </button>
+      </div>
+    } @else {
+      <button
+        (click)="confirmingDelete.set(true)"
+        class="flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-700"
+      >
+        <lucide-icon [img]="Trash2Icon" class="w-4 h-4" />
+        Eliminar usuario
+      </button>
+    }
+  </div>
+</div>

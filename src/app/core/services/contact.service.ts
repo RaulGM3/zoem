@@ -15,12 +15,14 @@ import {
   arrayRemove,
 } from '@angular/fire/firestore';
 import { CompanyService } from './company.service';
-import { Contact } from '../../interfaces';
+import { ActividadService } from './actividad.service';
+import { Contact, getContactDisplayName } from '../../interfaces';
 
 @Injectable({ providedIn: 'root' })
 export class ContactService {
   private readonly firestore = inject(Firestore);
   private readonly companyService = inject(CompanyService);
+  private readonly actividad = inject(ActividadService);
 
   readonly contacts = signal<Contact[]>([]);
   readonly isLoading = signal(false);
@@ -56,13 +58,14 @@ export class ContactService {
   async createContact(
     data: Omit<Contact, 'id' | 'companyId' | 'createdAt' | 'updatedAt'>
   ): Promise<void> {
-    await addDoc(collection(this.firestore, 'contacts'), {
+    const ref = await addDoc(collection(this.firestore, 'contacts'), {
       ...(data as Record<string, unknown>),
       companyId: this.companyId,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
     await this.loadContacts();
+    await this.actividad.log('Contactos', `Creó el contacto ${getContactDisplayName(data as Contact)}`, ref.id);
   }
 
   async updateContact(id: string, data: Record<string, unknown>): Promise<void> {
@@ -70,12 +73,18 @@ export class ContactService {
       ...data,
       updatedAt: serverTimestamp(),
     });
+    const found = this.contacts().find(c => c.id === id);
+    const nombre = found ? getContactDisplayName(found) : 'un contacto';
     await this.loadContacts();
+    await this.actividad.log('Contactos', `Editó el contacto ${nombre}`, id);
   }
 
   async deleteContact(id: string): Promise<void> {
+    const found = this.contacts().find(c => c.id === id);
+    const nombre = found ? getContactDisplayName(found) : 'un contacto';
     await deleteDoc(doc(this.firestore, 'contacts', id));
     this.contacts.update((list) => list.filter((c) => c.id !== id));
+    await this.actividad.log('Contactos', `Eliminó el contacto ${nombre}`, id);
   }
 
   async addTag(contactId: string, tag: string): Promise<void> {

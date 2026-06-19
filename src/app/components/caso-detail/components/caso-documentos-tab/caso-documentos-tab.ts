@@ -2,11 +2,12 @@ import {
   Component, ChangeDetectionStrategy, input, output, signal, computed,
 } from '@angular/core';
 import {
-  LucideAngularModule, CheckCircle2, FileText, Folder, FolderOpen, FolderPlus,
+  LucideAngularModule, CheckCircle2, FileText, FilePen, Folder, FolderOpen, FolderPlus,
   Loader, Download, Upload, Trash2, ChevronRight, Eye, Check, X,
 } from 'lucide-angular';
 import type { CasoDocSlot, CasoDocFolder, CasoDocFile } from '../../../../interfaces';
 import { CasoDocPreviewComponent, PreviewDoc } from '../caso-doc-preview/caso-doc-preview';
+import { CasoDocGeneradorComponent, GeneratedDocEvent } from '../caso-doc-generador/caso-doc-generador';
 
 export interface DocUploadEvent {
   slot: CasoDocSlot;
@@ -26,7 +27,7 @@ export interface CreateFolderEvent {
 @Component({
   selector: 'app-caso-documentos-tab',
   host: { style: 'display: block' },
-  imports: [LucideAngularModule, CasoDocPreviewComponent],
+  imports: [LucideAngularModule, CasoDocPreviewComponent, CasoDocGeneradorComponent],
   templateUrl: './caso-documentos-tab.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -38,6 +39,8 @@ export class CasoDocumentosTabComponent {
   readonly uploadingSlotId = input.required<string | null>();
   readonly busy = input.required<boolean>();
   readonly progress = input.required<{ subidos: number; total: number } | null>();
+  /** Datos del caso para pre-rellenar las variables del documento. */
+  readonly casoContext = input<Record<string, string>>({});
 
   readonly uploadSlot = output<DocUploadEvent>();
   readonly removeSlot = output<CasoDocSlot>();
@@ -45,9 +48,11 @@ export class CasoDocumentosTabComponent {
   readonly deleteFile = output<CasoDocFile>();
   readonly createFolder = output<CreateFolderEvent>();
   readonly deleteFolder = output<string>();
+  readonly generateDoc = output<GeneratedDocEvent>();
 
   readonly CheckCircle2Icon = CheckCircle2;
   readonly FileTextIcon = FileText;
+  readonly FilePenIcon = FilePen;
   readonly FolderIcon = Folder;
   readonly FolderOpenIcon = FolderOpen;
   readonly FolderPlusIcon = FolderPlus;
@@ -68,6 +73,7 @@ export class CasoDocumentosTabComponent {
   readonly confirmingDeleteFolderId = signal<string | null>(null);
   readonly confirmingDeleteFileId = signal<string | null>(null);
   readonly preview = signal<PreviewDoc | null>(null);
+  readonly generatingSlot = signal<CasoDocSlot | null>(null);
 
   // ── Vistas derivadas del nivel actual ──────────────────
   readonly currentFolders = computed(() =>
@@ -182,6 +188,20 @@ export class CasoDocumentosTabComponent {
 
   closePreview(): void {
     this.preview.set(null);
+  }
+
+  // ── Documento generado desde plantilla ─────────────────
+  openGenerador(slot: CasoDocSlot): void {
+    this.generatingSlot.set(slot);
+  }
+
+  closeGenerador(): void {
+    this.generatingSlot.set(null);
+  }
+
+  onGenerated(event: GeneratedDocEvent): void {
+    this.generateDoc.emit(event);
+    this.generatingSlot.set(null);
   }
 
   // ── Helpers ────────────────────────────────────────────

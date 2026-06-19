@@ -34,16 +34,19 @@ export const routes: Routes = [
       },
       {
         path: 'contactos',
+        canActivate: [permissionGuard('Contactos')],
         loadComponent: () =>
           import('./components/contactos/contactos').then((m) => m.ContactosComponent),
       },
       {
         path: 'contactos/:id',
+        canActivate: [permissionGuard('Contactos')],
         loadComponent: () =>
           import('./components/contacto-detail/contacto-detail').then((m) => m.ContactoDetailComponent),
       },
       {
         path: 'recepcion-ia',
+        canActivate: [permissionGuard('RecepciónIA')],
         loadComponent: () =>
           import('./components/recepcion-ia/recepcion-ia').then(
             (m) => m.RecepcionIAComponent
@@ -51,6 +54,7 @@ export const routes: Routes = [
       },
       {
         path: 'facturacion',
+        canActivate: [permissionGuard('Facturación')],
         loadComponent: () =>
           import('./components/facturacion/facturacion').then(
             (m) => m.FacturacionComponent
@@ -58,6 +62,7 @@ export const routes: Routes = [
       },
       {
         path: 'calendario',
+        canActivate: [permissionGuard('Calendario')],
         loadComponent: () =>
           import('./components/calendario/calendario').then(
             (m) => m.CalendarioComponent
@@ -70,6 +75,7 @@ export const routes: Routes = [
       },
       {
         path: 'documentos',
+        canActivate: [permissionGuard('Documentos')],
         loadComponent: () =>
           import('./components/documentos/documentos').then(
             (m) => m.DocumentosComponent
@@ -77,6 +83,7 @@ export const routes: Routes = [
       },
       {
         path: 'documentos/:id',
+        canActivate: [permissionGuard('Documentos')],
         loadComponent: () =>
           import('./components/doc-template-detail/doc-template-detail').then(
             (m) => m.DocTemplateDetailComponent
@@ -84,6 +91,7 @@ export const routes: Routes = [
       },
       {
         path: 'tesoreria',
+        canActivate: [permissionGuard('Tesorería')],
         loadComponent: () =>
           import('./components/tesoreria/tesoreria').then((m) => m.TesoreriaComponent),
       },
@@ -120,11 +128,13 @@ export const routes: Routes = [
       },
       {
         path: 'casos',
+        canActivate: [permissionGuard('Casos')],
         loadComponent: () =>
           import('./components/casos/casos').then((m) => m.CasosComponent),
       },
       {
         path: 'casos/:id',
+        canActivate: [permissionGuard('Casos')],
         loadComponent: () =>
           import('./components/caso-detail/caso-detail').then((m) => m.CasoDetailComponent),
       },

@@ -21,6 +21,7 @@ import type { Observable } from 'rxjs';
 import { Auth } from '@angular/fire/auth';
 import { CompanyService } from './company.service';
 import { PlantillasService } from './plantillas.service';
+import { ActividadService } from './actividad.service';
 import {
   Caso,
   CasoPlantilla,
@@ -61,6 +62,7 @@ export class CasosService {
   private readonly companyService = inject(CompanyService);
   private readonly plantillasService = inject(PlantillasService);
   private readonly auth = inject(Auth);
+  private readonly actividad = inject(ActividadService);
 
   readonly casos = signal<Caso[]>([]);
   readonly loading = signal(false);
@@ -153,10 +155,12 @@ export class CasosService {
     }
 
     await this.loadCasos();
+    await this.actividad.log('Casos', `Creó el caso "${data.titulo}"`, ref.id);
     return ref.id;
   }
 
   async updateCaso(id: string, data: Partial<Pick<Caso, 'titulo' | 'descripcion' | 'tipo' | 'estado' | 'prioridad' | 'contactoIds' | 'vencimiento'>>): Promise<void> {
+    const prev = this.casos().find(c => c.id === id);
     await updateDoc(doc(this.firestore, 'companies', this.companyId, 'casos', id), {
       ...stripUndefined(data),
       updatedAt: serverTimestamp(),
@@ -164,16 +168,23 @@ export class CasosService {
     this.casos.update(list =>
       list.map(c => (c.id === id ? { ...c, ...data } : c))
     );
+    const titulo = data.titulo ?? prev?.titulo ?? '';
+    const accion = data.estado && data.estado !== prev?.estado
+      ? `Cambió el estado del caso "${titulo}" a ${data.estado}`
+      : `Actualizó el caso "${titulo}"`;
+    await this.actividad.log('Casos', accion, id);
   }
 
   async deleteCaso(id: string): Promise<void> {
     const companyId = this.companyId;
+    const titulo = this.casos().find(c => c.id === id)?.titulo ?? '';
     const hitosSnap = await getDocs(query(this.hitosRef, where('casoId', '==', id)));
     const batch = writeBatch(this.firestore);
     hitosSnap.docs.forEach(d => batch.delete(d.ref));
     batch.delete(doc(this.firestore, 'companies', companyId, 'casos', id));
     await batch.commit();
     this.casos.update(list => list.filter(c => c.id !== id));
+    await this.actividad.log('Casos', `Eliminó el caso "${titulo}"`, id);
   }
 
   /** Construye el documento de un evento de actividad listo para el batch. */
@@ -401,6 +412,9 @@ export class CasosService {
         folderId: newFolderId,
         name: data['name'],
         ...(data['description'] ? { description: data['description'] } : {}),
+        // Hereda el vínculo a la plantilla de documento: este slot se rellenará
+        // y congelará en vez de subirse a mano.
+        ...(data['docTemplateId'] ? { docTemplateId: data['docTemplateId'] } : {}),
         status: 'pendiente',
         plantillaFileId: f.id,
         createdAt: serverTimestamp(),

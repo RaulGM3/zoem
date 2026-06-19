@@ -11,6 +11,7 @@ import {
 import { PIPELINE_DEALS } from '../../data/dummy-data';
 import { ContactService } from '../../core/services/contact.service';
 import { SearchService } from '../../core/services/search.service';
+import { PermissionService } from '../../core/services/permission.service';
 import {
   Contact, PersonaFisica, PersonaJuridica, ContactStatus,
   getContactDisplayName, getContactInitials,
@@ -59,6 +60,7 @@ export class ContactosComponent {
   readonly BriefcaseIcon = Briefcase;
 
   readonly contactService = inject(ContactService);
+  readonly perm = inject(PermissionService);
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);

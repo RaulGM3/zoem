@@ -1,110 +1,283 @@
-import { Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import {
-  LucideAngularModule,
-  LucideIconData,
-  Euro,
-  Users,
-  Calendar,
-  Receipt,
-  FolderKanban,
-  Wallet,
-  AlertTriangle,
-  Clock,
-  CheckCircle2,
-  ArrowRight,
-  Phone,
-  FileText,
-  Bot,
-  Sparkles,
-  ChevronRight,
-  TrendingUp,
-  Activity,
-  Bell,
+  Component, inject, signal, computed, ChangeDetectionStrategy, OnInit, OnDestroy,
+} from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { DecimalPipe } from '@angular/common';
+import { Subscription } from 'rxjs';
+import {
+  LucideAngularModule, type LucideIconData,
+  Euro, Briefcase, Bot, Wallet, Calendar, Activity, Landmark,
+  Receipt, FileText, Users,
 } from 'lucide-angular';
-import { DASHBOARD_STATS, ACTIVITY_FEED, PROJECTS, IA_CONTACTS, CALENDAR_EVENTS } from '../../data/dummy-data';
+
+import { PermissionService } from '../../core/services/permission.service';
+import { IaContactService } from '../../core/services/ia-contact.service';
+import { CasosService } from '../../core/services/casos.service';
+import { GestoriaService } from '../../core/services/gestoria.service';
+import { CuentasService } from '../../core/services/cuentas.service';
+import { EventosService } from '../../core/services/eventos.service';
+import { ActividadService } from '../../core/services/actividad.service';
+import { balancePorCuenta } from '../../core/tesoreria/saldos';
+
+import type { Caso, Evento, Hito, MovimientoTipo } from '../../interfaces';
+import { EVENTO_COLORS } from '../../interfaces/evento.interface';
+import type { Actividad } from '../../interfaces/actividad';
+import type { Modulo } from '../../core/permissions/permissions';
+
+import { StatCardComponent } from './components/stat-card/stat-card';
+import { BarChartComponent, type BarGroup } from './components/bar-chart/bar-chart';
+import { DonutChartComponent, type DonutItem } from './components/donut-chart/donut-chart';
+
+/** Estados que cuentan como "caso activo" en el dashboard. */
+const ESTADOS_ACTIVOS: ReadonlySet<Caso['estado']> = new Set(['pendiente', 'en_proceso', 'urgente']);
+
+/** Estados de un lead IA que ya NO está pendiente de atención. */
+const IA_CERRADOS: ReadonlySet<string> = new Set(['resuelto', 'descartado', 'cerrado']);
+
+const TIPO_LABEL: Record<MovimientoTipo, string> = {
+  ingreso: 'Ingresos', honorario: 'Honorarios', suplido: 'Suplidos', gasto: 'Gastos', otro: 'Otros',
+};
+const TIPO_COLOR: Record<MovimientoTipo, string> = {
+  ingreso: '#10b981', honorario: '#8b5cf6', suplido: '#3b82f6', gasto: '#ef4444', otro: '#94a3b8',
+};
+const MES_CORTO = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+const MODULO_ICON: Record<Modulo, LucideIconData> = {
+  Casos: Briefcase, Contactos: Users, Calendario: Calendar, Documentos: FileText,
+  Facturación: Receipt, Tesorería: Wallet, RecepciónIA: Bot, Informes: Activity, Configuración: Users,
+};
+
+export interface AgendaItem {
+  id: string;
+  tipo: 'evento' | 'hito';
+  titulo: string;
+  subtitulo: string;
+  fecha: string;
+  hora?: string;
+  dotClass: string;
+  link: string;
+}
+
+export interface MovimientoVista {
+  id: string;
+  fecha: string;
+  concepto: string;
+  importe: number;
+  esEntrada: boolean;
+  casoNombre: string;
+  link: string;
+}
 
 @Component({
   selector: 'app-dashboard',
-  standalone: true,
-  imports: [RouterLink, LucideAngularModule],
+  imports: [RouterLink, DecimalPipe, LucideAngularModule, StatCardComponent, BarChartComponent, DonutChartComponent],
   templateUrl: './dashboard.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnInit, OnDestroy {
+  readonly perm = inject(PermissionService);
+  private readonly iaContactService = inject(IaContactService);
+  private readonly casosService = inject(CasosService);
+  private readonly gestoriaService = inject(GestoriaService);
+  private readonly cuentasService = inject(CuentasService);
+  private readonly eventosService = inject(EventosService);
+  private readonly actividadService = inject(ActividadService);
+
+  private readonly subs = new Subscription();
+
+  // ── Iconos ────────────────────────────────────────────────────────────
   readonly EuroIcon = Euro;
-  readonly UsersIcon = Users;
-  readonly CalendarIcon = Calendar;
-  readonly ReceiptIcon = Receipt;
-  readonly FolderKanbanIcon = FolderKanban;
-  readonly WalletIcon = Wallet;
-  readonly AlertTriangleIcon = AlertTriangle;
-  readonly ClockIcon = Clock;
-  readonly CheckCircle2Icon = CheckCircle2;
-  readonly ArrowRightIcon = ArrowRight;
-  readonly PhoneIcon = Phone;
-  readonly FileTextIcon = FileText;
+  readonly BriefcaseIcon = Briefcase;
   readonly BotIcon = Bot;
-  readonly SparklesIcon = Sparkles;
-  readonly ChevronRightIcon = ChevronRight;
-  readonly TrendingUpIcon = TrendingUp;
-  readonly ActivityIcon = Activity;
-  readonly BellIcon = Bell;
+  readonly WalletIcon = Wallet;
+  readonly LandmarkIcon = Landmark;
 
-  stats = DASHBOARD_STATS;
-  activityFeed = ACTIVITY_FEED;
-  recentProjects = PROJECTS.slice(0, 4);
-  recentIA = IA_CONTACTS.slice(0, 3);
-  todayEvents = CALENDAR_EVENTS.filter((e) => e.date === '2026-05-14');
+  // ── Fuentes de datos ──────────────────────────────────────────────────
+  private readonly casos = this.casosService.casos;
+  private readonly movimientos = this.gestoriaService.todosMovimientos;
+  private readonly cuentas = this.cuentasService.cuentas;
+  private readonly iaContacts = this.iaContactService.iaContacts;
+  private readonly eventos = signal<Evento[]>([]);
+  private readonly hitos = signal<Hito[]>([]);
+  readonly actividades = signal<Actividad[]>([]);
 
-  primaryStats = [
-    { title: 'Ingresos del Mes', value: this.stats.ingresosMes, change: this.stats.ingresosChange, icon: Euro, color: 'text-green-600', bg: 'bg-green-50', positive: true, href: '/facturacion' },
-    { title: 'Contactos Activos', value: String(this.stats.contactosActivos), change: this.stats.contactosChange, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50', positive: true, href: '/contactos' },
-    { title: 'Citas Hoy', value: String(this.stats.citasHoy), change: `${this.stats.citasConfirmadas} confirmadas`, icon: Calendar, color: 'text-violet-600', bg: 'bg-violet-50', positive: null, href: '/calendario' },
-    { title: 'Facturas Pendientes', value: this.stats.facturasPendientes, change: `${this.stats.facturasPendientesCount} facturas`, icon: Receipt, color: 'text-amber-600', bg: 'bg-amber-50', positive: false, href: '/facturacion' },
-  ];
+  /** 'YYYY-MM' del mes en curso. */
+  private readonly mesActual = new Date().toISOString().slice(0, 7);
+  /** 'YYYY-MM-DD' de hoy. */
+  private readonly hoy = new Date().toISOString().slice(0, 10);
 
-  secondaryStats = [
-    { title: 'Proyectos Activos', value: String(this.stats.proyectosActivos), change: this.stats.proyectosChange, icon: FolderKanban, color: 'text-indigo-600', bg: 'bg-indigo-50', positive: true, href: '/proyectos' },
-    { title: 'Flujo de Caja', value: this.stats.flujoCaja, change: 'Saldo disponible', icon: Wallet, color: 'text-emerald-600', bg: 'bg-emerald-50', positive: true, href: '/tesoreria' },
-    { title: 'Tareas Urgentes', value: String(this.stats.tareasUrgentes), change: 'Requieren atención', icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50', positive: false, href: '/proyectos' },
-    { title: 'Horas Registradas', value: `${this.stats.horasRegistradas}h`, change: `Objetivo: ${this.stats.horasObjetivo}h`, icon: Clock, color: 'text-slate-600', bg: 'bg-slate-50', positive: null, href: '/facturacion' },
-  ];
+  private readonly casoNombres = computed(() => {
+    const map = new Map<string, string>();
+    for (const c of this.casos()) map.set(c.id, c.titulo);
+    return map;
+  });
 
-  aiAlerts = [
-    { type: 'warning', message: 'Factura #2024-086 vencida hace 26 días — Consultora Estratégica' },
-    { type: 'info', message: '3 nuevos leads captados por el asistente IA esta semana' },
-    { type: 'success', message: 'Proyecto Web Corporativa al 75% — en tiempo para entrega' },
-  ];
+  // ── (1) Recepción IA ──────────────────────────────────────────────────
+  readonly iaPendientes = computed(() =>
+    this.iaContacts()
+      .filter(c => !c.status || !IA_CERRADOS.has(c.status))
+      .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+  );
+  readonly iaPendientesCount = computed(() => this.iaPendientes().length);
+  readonly iaTop = computed(() => this.iaPendientes().slice(0, 5));
 
-  getAlertClass(type: string): string {
-    if (type === 'warning') return 'bg-amber-50 border-amber-200 text-amber-800';
-    if (type === 'success') return 'bg-emerald-50 border-emerald-200 text-emerald-800';
-    return 'bg-blue-50 border-blue-200 text-blue-800';
+  // ── (2) Ingresos del mes (honorarios) ─────────────────────────────────
+  readonly ingresosMes = computed(() =>
+    this.movimientos()
+      .filter(m => m.tipo === 'honorario' && m.fecha.slice(0, 7) === this.mesActual)
+      .reduce((acc, m) => acc + m.importe, 0)
+  );
+
+  // ── (3) Casos activos ─────────────────────────────────────────────────
+  readonly casosActivos = computed(() => this.casos().filter(c => ESTADOS_ACTIVOS.has(c.estado)));
+  readonly casosActivosCount = computed(() => this.casosActivos().length);
+
+  // ── (4) Saldos por cuenta (helper compartido con Tesorería) ───────────
+  readonly balancesPorCuenta = computed(() =>
+    balancePorCuenta(this.cuentas().filter(c => c.activa), this.movimientos())
+  );
+  /** Monto disponible total = suma de saldos confirmados (aprobados). */
+  readonly disponibleTotal = computed(() =>
+    this.balancesPorCuenta().reduce((acc, b) => acc + b.proyeccion, 0)
+  );
+
+  // ── (5) Últimos movimientos ───────────────────────────────────────────
+  readonly ultimosMovimientos = computed<MovimientoVista[]>(() => {
+    const nombres = this.casoNombres();
+    return this.movimientos().slice(0, 8).map(m => ({
+      id: m.id,
+      fecha: m.fecha,
+      concepto: m.concepto,
+      importe: m.importe,
+      esEntrada: m.esEntrada,
+      casoNombre: nombres.get(m.casoId) ?? '—',
+      link: `/casos/${m.casoId}`,
+    }));
+  });
+
+  // ── (6) Agenda próxima (eventos + hitos) ──────────────────────────────
+  readonly agendaProxima = computed<AgendaItem[]>(() => {
+    const items: AgendaItem[] = [];
+
+    for (const e of this.eventos()) {
+      if (!e.fecha || e.fecha < this.hoy || e.estado === 'cancelado') continue;
+      items.push({
+        id: `e-${e.id}`,
+        tipo: 'evento',
+        titulo: e.titulo,
+        subtitulo: e.lugar || (e.todoDia ? 'Todo el día' : 'Evento'),
+        fecha: e.fecha,
+        hora: e.todoDia ? undefined : e.horaInicio,
+        dotClass: EVENTO_COLORS[e.color]?.dot ?? 'bg-slate-400',
+        link: '/calendario',
+      });
+    }
+
+    for (const h of this.hitos()) {
+      if (!h.fechaEstimada || h.fechaEstimada < this.hoy || h.estado === 'cancelado' || h.estado === 'completado') continue;
+      items.push({
+        id: `h-${h.id}`,
+        tipo: 'hito',
+        titulo: h.titulo,
+        subtitulo: h.casoTitulo,
+        fecha: h.fechaEstimada,
+        hora: h.horaAgenda,
+        dotClass: 'bg-violet-500',
+        link: `/casos/${h.casoId}`,
+      });
+    }
+
+    return items
+      .sort((a, b) =>
+        a.fecha === b.fecha
+          ? (a.hora ?? '99:99').localeCompare(b.hora ?? '99:99')
+          : a.fecha.localeCompare(b.fecha)
+      )
+      .slice(0, 7);
+  });
+
+  // ── (7) Estadística financiera ────────────────────────────────────────
+  private readonly ultimosMeses = computed(() => {
+    const base = new Date();
+    const meses: { key: string; label: string }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(base.getFullYear(), base.getMonth() - i, 1);
+      meses.push({ key: d.toISOString().slice(0, 7), label: MES_CORTO[d.getMonth()] });
+    }
+    return meses;
+  });
+
+  readonly honorariosPorMes = computed<BarGroup[]>(() =>
+    this.ultimosMeses().map(({ key, label }) => ({
+      label,
+      bars: [{
+        value: this.movimientos()
+          .filter(m => m.tipo === 'honorario' && m.fecha.slice(0, 7) === key)
+          .reduce((acc, m) => acc + m.importe, 0),
+        color: '#8b5cf6',
+        name: 'Honorarios',
+      }],
+    }))
+  );
+
+  readonly ingresosVsEgresosPorMes = computed<BarGroup[]>(() =>
+    this.ultimosMeses().map(({ key, label }) => {
+      const delMes = this.movimientos().filter(m => m.fecha.slice(0, 7) === key);
+      return {
+        label,
+        bars: [
+          { value: delMes.filter(m => m.esEntrada).reduce((a, m) => a + m.importe, 0), color: '#10b981', name: 'Ingresos' },
+          { value: delMes.filter(m => !m.esEntrada).reduce((a, m) => a + m.importe, 0), color: '#ef4444', name: 'Egresos' },
+        ],
+      };
+    })
+  );
+
+  readonly distribucionPorTipo = computed<DonutItem[]>(() => {
+    const porTipo = new Map<MovimientoTipo, number>();
+    for (const m of this.movimientos()) {
+      porTipo.set(m.tipo, (porTipo.get(m.tipo) ?? 0) + m.importe);
+    }
+    return (Object.keys(TIPO_LABEL) as MovimientoTipo[]).map(t => ({
+      label: TIPO_LABEL[t],
+      value: porTipo.get(t) ?? 0,
+      color: TIPO_COLOR[t],
+    }));
+  });
+
+  // ── Feed de actividad ─────────────────────────────────────────────────
+  actividadIcon(modulo: Modulo): LucideIconData {
+    return MODULO_ICON[modulo] ?? Activity;
   }
 
-  getProjectStatusClass(status: string): string {
-    if (status === 'En curso') return 'bg-blue-100 text-blue-700';
-    if (status === 'Pendiente') return 'bg-amber-100 text-amber-700';
-    if (status === 'En espera') return 'bg-slate-100 text-slate-600';
-    if (status === 'Completado') return 'bg-green-100 text-green-700';
-    return 'bg-slate-100 text-slate-600';
+  /** 'YYYY-MM-DD' → '19 Jun'. */
+  formatFecha(f: string): string {
+    if (!f || f.length < 10) return f;
+    return `${f.slice(8, 10)} ${MES_CORTO[Number(f.slice(5, 7)) - 1] ?? ''}`;
   }
 
-  getPriorityClass(priority: string): string {
-    if (priority === 'alta') return 'text-red-500';
-    if (priority === 'media') return 'text-amber-500';
-    return 'text-slate-400';
+  /** Timestamp de Firestore → '19 Jun 16:40' (vacío si aún no hay valor). */
+  fechaActividad(a: Actividad): string {
+    const d = a.createdAt?.toDate?.();
+    if (!d) return '';
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${d.getDate()} ${MES_CORTO[d.getMonth()]} ${hh}:${mm}`;
   }
 
-  getHoursProgress(): number {
-    return (this.stats.horasRegistradas / this.stats.horasObjetivo) * 100;
+  async ngOnInit(): Promise<void> {
+    this.gestoriaService.loadTodosMovimientos();
+    this.cuentasService.loadCuentas();
+    void this.casosService.loadCasos();
+    void this.iaContactService.loadIaContacts();
+    this.subs.add(this.eventosService.eventosStream().subscribe(e => this.eventos.set(e)));
+    this.subs.add(this.casosService.hitosParaCalendarioStream().subscribe(h => this.hitos.set(h)));
+    this.subs.add(this.actividadService.recentStream(15).subscribe(a => this.actividades.set(a)));
   }
 
-  getActivityIcon(icon: string): LucideIconData {
-    const map: Record<string, LucideIconData> = {
-      phone: Phone, receipt: Receipt, folder: FolderKanban,
-      wallet: Wallet, file: FileText,
-    };
-    return map[icon] || Activity;
+  ngOnDestroy(): void {
+    this.gestoriaService.stopTodosMovimientos();
+    this.cuentasService.stopCuentas();
+    this.subs.unsubscribe();
   }
 }

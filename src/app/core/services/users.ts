@@ -73,7 +73,12 @@ export class UsersService {
 
   async updateMember(
     id: string,
-    patch: Partial<Pick<CompanyMember, 'role' | 'estado' | 'departamento' | 'tarifaHoraria'>>
+    patch: Partial<
+      Pick<
+        CompanyMember,
+        'role' | 'estado' | 'departamento' | 'tarifaHoraria' | 'nombre' | 'apellido' | 'telefono'
+      >
+    >
   ): Promise<void> {
     await updateDoc(doc(this.firestore, 'companyMembers', id), {
       ...patch,

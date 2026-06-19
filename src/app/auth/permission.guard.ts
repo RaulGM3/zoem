@@ -5,8 +5,9 @@ import { filter, from, switchMap, take } from 'rxjs';
 import { AuthService } from './auth.service';
 import { PermissionService } from '../core/services/permission.service';
 import { UsersService } from '../core/services/users';
+import type { Modulo } from '../core/permissions/permissions';
 
-export function permissionGuard(modulo: string): CanActivateFn {
+export function permissionGuard(modulo: Modulo): CanActivateFn {
   return () => {
     const auth = inject(AuthService);
     const permission = inject(PermissionService);

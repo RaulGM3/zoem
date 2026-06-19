@@ -8,11 +8,13 @@ import {
 } from '@angular/fire/firestore';
 import { CasosService } from '../../core/services/casos.service';
 import { CompanyService } from '../../core/services/company.service';
+import { PermissionService } from '../../core/services/permission.service';
 import { GestoriaService } from '../../core/services/gestoria.service';
 import { CuentasService } from '../../core/services/cuentas.service';
 import { CierreCajaService } from '../../core/services/cierre-caja.service';
 import { ConciliacionService } from '../../core/services/conciliacion.service';
 import { parseExtractoCsv, autoMatch } from '../../core/conciliacion/conciliacion';
+import { saldoAprobado, balancePorCuenta } from '../../core/tesoreria/saldos';
 import { Caso, CierreCuenta, TesoreriaResumen } from '../../interfaces';
 import { TesoresriaCasoDrawerComponent } from './components/tesoreria-caso-drawer/tesoreria-caso-drawer';
 import { RevisionMovimientosComponent } from './components/revision-movimientos/revision-movimientos';
@@ -47,6 +49,7 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
   private readonly cierreCajaService = inject(CierreCajaService);
   private readonly conciliacionService = inject(ConciliacionService);
   private readonly firestore = inject(Firestore);
+  readonly perm = inject(PermissionService);
 
   readonly importandoExtracto = signal(false);
 
@@ -159,9 +162,7 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
   readonly saldoBancarioFecha = computed(() => this.companyService.activeCompany()?.saldoBancarioFecha ?? null);
 
   readonly saldoAprobado = computed(() =>
-    this.gestoriaService.todosMovimientos()
-      .filter(m => m.aprobado === true)
-      .reduce((acc, m) => acc + (m.esEntrada ? m.importe : -m.importe), 0)
+    saldoAprobado(this.gestoriaService.todosMovimientos())
   );
 
   readonly totalEgresos = computed(() =>
@@ -184,33 +185,14 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
     };
   });
 
-  readonly cotejosPorCuenta = computed(() => {
-    const todos = this.gestoriaService.todosMovimientos();
-
-    return this.cuentas().map(cuenta => {
-      const movs = todos.filter(m => m.cuentaId === cuenta.id);
-      const ingresos = movs.filter(m => m.esEntrada).reduce((a, m) => a + m.importe, 0);
-      const egresos = movs.filter(m => !m.esEntrada).reduce((a, m) => a + m.importe, 0);
-      const sistema = ingresos - egresos;
-      // Balance confirmado = solo movimientos aprobados (referencia para cotejo bancario)
-      const proyeccion = movs
-        .filter(m => m.aprobado === true)
-        .reduce((a, m) => a + (m.esEntrada ? m.importe : -m.importe), 0);
-      // Preferimos el saldo real del extracto importado; el tecleado a mano es el respaldo.
-      const banco = this.saldoExtractoPorCuenta().get(cuenta.id) ?? cuenta.saldoBancario ?? null;
-      const diferencia = banco !== null ? banco - proyeccion : null;
-      return {
-        cuenta,
-        ingresos,
-        egresos,
-        sistema,
-        proyeccion,
-        banco,
-        diferencia,
-        conciliado: diferencia !== null && Math.abs(diferencia) < COTEJO_TOLERANCIA,
-      };
-    });
-  });
+  // Preferimos el saldo real del extracto importado; el tecleado a mano es el respaldo.
+  readonly cotejosPorCuenta = computed(() =>
+    balancePorCuenta(
+      this.cuentas(),
+      this.gestoriaService.todosMovimientos(),
+      this.saldoExtractoPorCuenta(),
+    )
+  );
 
   readonly movimientosPendientes = computed(() =>
     this.gestoriaService.todosMovimientos().filter(m => m.aprobado == null).length

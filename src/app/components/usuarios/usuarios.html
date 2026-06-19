@@ -66,13 +66,19 @@
                     <th class="pb-3 font-medium">Último acceso</th>
                     @if (isAdmin()) {
                       <th class="pb-3 font-medium">Tarifa/h</th>
-                      <th class="pb-3"></th>
                     }
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50">
                   @for (usr of filteredUsuarios(); track usr.id) {
-                    <tr class="hover:bg-slate-50">
+                    <tr
+                      (click)="openEditDrawer(usr)"
+                      (keydown.enter)="openEditDrawer(usr)"
+                      (keydown.space)="openEditDrawer(usr); $event.preventDefault()"
+                      tabindex="0"
+                      class="hover:bg-slate-50 cursor-pointer focus:outline-none focus:bg-violet-50"
+                      [attr.aria-label]="'Editar a ' + usr.nombre"
+                    >
                       <td class="py-3">
                         <div class="flex items-center gap-2">
                           <div class="w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center font-semibold text-violet-700 text-sm">
@@ -93,30 +99,15 @@
                       </td>
                       <td class="py-3 text-slate-400 text-xs">{{ formatLogin(usr.ultimoLogin) }}</td>
                       @if (isAdmin()) {
-                        <td class="py-3">
-                          <div class="flex items-center gap-1">
-                            <input
-                              type="number" min="0" step="0.01" inputmode="decimal"
-                              [value]="usr.tarifaHoraria ?? ''"
-                              (change)="onTarifaChange(usr.id, $event)"
-                              placeholder="—"
-                              class="w-20 px-2 py-1 text-sm border border-slate-200 rounded-lg focus:border-violet-400 focus:outline-none focus:ring-1 focus:ring-violet-200"
-                              [attr.aria-label]="'Tarifa por hora de ' + usr.nombre"
-                            />
-                            <span class="text-xs text-slate-400">€</span>
-                          </div>
-                        </td>
-                        <td class="py-3">
-                          <button class="p-1 hover:bg-slate-100 rounded" aria-label="Más opciones">
-                            <lucide-icon [img]="MoreHorizontalIcon" class="w-4 h-4 text-slate-400" />
-                          </button>
+                        <td class="py-3 text-slate-600">
+                          {{ usr.tarifaHoraria != null ? (usr.tarifaHoraria + ' €') : '—' }}
                         </td>
                       }
                     </tr>
                   }
                   @if (filteredUsuarios().length === 0 && !isLoading()) {
                     <tr>
-                      <td [attr.colspan]="isAdmin() ? 7 : 5" class="py-8 text-center text-slate-400 text-sm">No se encontraron usuarios</td>
+                      <td [attr.colspan]="isAdmin() ? 6 : 5" class="py-8 text-center text-slate-400 text-sm">No se encontraron usuarios</td>
                     </tr>
                   }
                 </tbody>
@@ -146,14 +137,30 @@
                           </p>
                         </div>
                       </div>
-                      <button
-                        (click)="cancelInvitation(inv.id!)"
-                        [disabled]="cancellingId() === inv.id"
-                        class="p-1.5 hover:bg-red-100 rounded-lg group transition-colors disabled:opacity-50"
-                        [attr.aria-label]="'Cancelar invitación a ' + inv.email"
-                      >
-                        <lucide-icon [img]="Trash2Icon" class="w-4 h-4 text-slate-400 group-hover:text-red-500" />
-                      </button>
+                      <div class="flex items-center gap-1 shrink-0">
+                        <button
+                          (click)="copyInviteLink(inv)"
+                          class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg transition-colors"
+                          [class]="copiedInviteId() === inv.id ? 'bg-emerald-100 text-emerald-700' : 'hover:bg-amber-100 text-amber-700'"
+                          [attr.aria-label]="'Copiar enlace de invitación de ' + inv.email"
+                        >
+                          @if (copiedInviteId() === inv.id) {
+                            <lucide-icon [img]="CheckIcon" class="w-3.5 h-3.5" />
+                            Copiado
+                          } @else {
+                            <lucide-icon [img]="CopyIcon" class="w-3.5 h-3.5" />
+                            Copiar enlace
+                          }
+                        </button>
+                        <button
+                          (click)="cancelInvitation(inv.id!)"
+                          [disabled]="cancellingId() === inv.id"
+                          class="p-1.5 hover:bg-red-100 rounded-lg group transition-colors disabled:opacity-50"
+                          [attr.aria-label]="'Cancelar invitación a ' + inv.email"
+                        >
+                          <lucide-icon [img]="Trash2Icon" class="w-4 h-4 text-slate-400 group-hover:text-red-500" />
+                        </button>
+                      </div>
                     </div>
                   }
                 </div>
@@ -172,7 +179,7 @@
                 <span class="text-xs text-slate-400">{{ rol.usuarios }} usuarios</span>
               </div>
               <p class="text-sm text-slate-600">{{ rol.descripcion }}</p>
-              <button class="mt-3 text-xs text-violet-600 font-medium hover:underline">Ver permisos</button>
+              <button (click)="activeTab.set('permisos')" class="mt-3 text-xs text-violet-600 font-medium hover:underline">Ver permisos</button>
             </div>
           }
         </div>
@@ -180,27 +187,33 @@
 
       @if (activeTab() === 'permisos') {
         <div class="p-4 overflow-x-auto">
+          <p class="text-xs text-slate-400 mb-3">
+            Capacidades por rol: <span class="font-medium">V</span> ver · <span class="font-medium">C</span> crear · <span class="font-medium">E</span> editar · <span class="font-medium">B</span> borrar
+          </p>
           <table class="w-full text-sm">
             <thead>
               <tr class="text-center text-slate-600 border-b border-slate-100">
                 <th class="pb-3 text-left font-medium text-slate-700">Módulo</th>
-                <th class="pb-3 font-medium">Admin</th>
-                <th class="pb-3 font-medium">Gestor</th>
-                <th class="pb-3 font-medium">Usuario</th>
-                <th class="pb-3 font-medium">Viewer</th>
+                @for (rol of rolesCols; track rol) {
+                  <th class="pb-3 font-medium">{{ rol }}</th>
+                }
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-50">
               @for (modulo of modulos; track modulo) {
                 <tr class="hover:bg-slate-50">
                   <td class="py-3 font-medium text-slate-700">{{ modulo }}</td>
-                  @for (rol of ['Admin', 'Gestor', 'Usuario', 'Viewer']; track rol) {
-                    <td class="py-3 text-center">
-                      @if (tienePermiso(modulo, rol)) {
-                        <lucide-icon [img]="CheckCircle2Icon" class="w-4 h-4 text-emerald-500 mx-auto" />
-                      } @else {
-                        <lucide-icon [img]="XCircleIcon" class="w-4 h-4 text-slate-200 mx-auto" />
-                      }
+                  @for (rol of rolesCols; track rol) {
+                    <td class="py-3">
+                      <div class="flex items-center justify-center gap-1">
+                        @for (cap of capabilities; track cap) {
+                          <span
+                            class="w-5 h-5 rounded text-[10px] font-semibold flex items-center justify-center"
+                            [class]="capsFor(modulo, rol)[cap] ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-300'"
+                            [attr.title]="cap"
+                          >{{ capInitial(cap) }}</span>
+                        }
+                      </div>
                     </td>
                   }
                 </tr>
@@ -218,17 +231,19 @@
         <h3 class="font-semibold text-slate-700 text-sm">Actividad reciente</h3>
       </div>
       <div class="divide-y divide-slate-100">
-        @for (act of actividad; track act.fecha) {
+        @for (act of actividad(); track act.id) {
           <div class="p-4 flex items-start gap-3">
             <div class="w-7 h-7 bg-violet-100 rounded-full flex items-center justify-center text-violet-700 font-semibold text-xs shrink-0">
-              {{ act.usuario.charAt(0) }}
+              {{ act.autorNombre.charAt(0) }}
             </div>
             <div class="min-w-0">
-              <p class="text-sm text-slate-700 font-medium">{{ act.usuario }}</p>
+              <p class="text-sm text-slate-700 font-medium">{{ act.autorNombre }}</p>
               <p class="text-xs text-slate-500 truncate">{{ act.accion }}</p>
-              <p class="text-xs text-slate-400 mt-0.5">{{ act.fecha }}</p>
+              <p class="text-xs text-slate-400 mt-0.5">{{ formatLogin(act.createdAt) }}</p>
             </div>
           </div>
+        } @empty {
+          <div class="p-8 text-center text-slate-400 text-sm">Aún no hay actividad reciente</div>
         }
       </div>
     </div>
@@ -242,4 +257,14 @@
   [inviteLink]="inviteLink()"
   (submitted)="onInviteSubmit($event)"
   (closed)="closeInviteDrawer()"
+/>
+
+<!-- Edit user drawer -->
+<app-user-edit-drawer
+  [member]="editingMember()"
+  [visible]="showEditDrawer()"
+  [saving]="memberSaving()"
+  (saved)="onSaveMember($event)"
+  (deleted)="onDeleteMember($event)"
+  (closed)="closeEditDrawer()"
 />

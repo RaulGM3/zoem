@@ -11,6 +11,7 @@ import {
 } from 'lucide-angular';
 import { Timestamp } from '@angular/fire/firestore';
 import { DocTemplateService } from '../../core/services/doc-template.service';
+import { PermissionService } from '../../core/services/permission.service';
 import type { DocTemplate, DocTemplateStatus } from '../../interfaces';
 import { NuevaPlantillaDrawerComponent } from './components/nueva-plantilla-drawer/nueva-plantilla-drawer';
 
@@ -23,6 +24,7 @@ import { NuevaPlantillaDrawerComponent } from './components/nueva-plantilla-draw
 export class DocumentosComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly templateService = inject(DocTemplateService);
+  readonly perm = inject(PermissionService);
 
   readonly FileTextIcon = FileText;
   readonly SearchIcon = Search;

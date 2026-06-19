@@ -16,12 +16,14 @@
       <lucide-icon [img]="LayersIcon" class="w-4 h-4" />
       Plantillas
     </a>
-    <button
-      (click)="newCasoClick.emit()"
-      class="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white text-sm rounded-lg hover:bg-violet-700"
-    >
-      <lucide-icon [img]="PlusIcon" class="w-4 h-4" />
-      Nuevo caso
-    </button>
+    @if (canCreate()) {
+      <button
+        (click)="newCasoClick.emit()"
+        class="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white text-sm rounded-lg hover:bg-violet-700"
+      >
+        <lucide-icon [img]="PlusIcon" class="w-4 h-4" />
+        Nuevo caso
+      </button>
+    }
   </div>
 </div>

@@ -19,6 +19,7 @@ import {
 } from '@angular/fire/firestore';
 import { CompanyService } from './company.service';
 import { CasosService } from './casos.service';
+import { ActividadService } from './actividad.service';
 import { GestoriaSlot, MovimientoGestoria, MovimientoTipo, Retiro } from '../../interfaces';
 import { Auth } from '@angular/fire/auth';
 
@@ -42,6 +43,7 @@ export class GestoriaService {
   private readonly companyService = inject(CompanyService);
   private readonly casosService = inject(CasosService);
   private readonly auth = inject(Auth);
+  private readonly actividad = inject(ActividadService);
 
   readonly movimientos = signal<MovimientoGestoria[]>([]);
   readonly todosMovimientos = signal<MovimientoGestoria[]>([]);
@@ -190,6 +192,7 @@ export class GestoriaService {
       createdAt: serverTimestamp(),
     });
     await this.casosService.recalcularResumen(casoId);
+    await this.actividad.log('Tesorería', `Registró el movimiento "${data.concepto}" (${data.importe} €)`, casoId);
   }
 
   async updateMovimiento(casoId: string, id: string, data: Partial<MovimientoCreate>): Promise<void> {

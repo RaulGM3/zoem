@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, output, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule, Briefcase, Plus, Layers } from 'lucide-angular';
 
@@ -10,6 +10,8 @@ import { LucideAngularModule, Briefcase, Plus, Layers } from 'lucide-angular';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CasosHeaderComponent {
+  /** Si false, oculta el botón de crear caso (permiso de rol). */
+  readonly canCreate = input<boolean>(true);
   readonly newCasoClick = output<void>();
 
   readonly BriefcaseIcon = Briefcase;

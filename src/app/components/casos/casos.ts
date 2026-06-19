@@ -4,6 +4,7 @@ import { CasosService } from '../../core/services/casos.service';
 import { PlantillasService } from '../../core/services/plantillas.service';
 import { ContactService } from '../../core/services/contact.service';
 import { SearchService } from '../../core/services/search.service';
+import { PermissionService } from '../../core/services/permission.service';
 import type { Caso, CasoEstado, CasoTipo, CasoPrioridad, CreateCasoData, Contact } from '../../interfaces';
 
 type DrawerInitialData = { titulo?: string; descripcion?: string; tipo?: CasoTipo; prioridad?: CasoPrioridad; estado?: CasoEstado };
@@ -32,6 +33,7 @@ export class CasosComponent implements OnInit {
   private readonly plantillasService = inject(PlantillasService);
   private readonly contactService = inject(ContactService);
   private readonly searchSvc = inject(SearchService);
+  readonly perm = inject(PermissionService);
 
   /** Búsqueda centralizada en el header — scopeada a "casos". */
   readonly search = this.searchSvc.termFor('casos');

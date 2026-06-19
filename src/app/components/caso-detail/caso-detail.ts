@@ -134,8 +134,30 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
   readonly docsProgress = computed(() => {
     const slots = this.casoDocService.slots();
     if (slots.length === 0) return null;
-    const subidos = slots.filter(s => s.status === 'subido').length;
+    const subidos = slots.filter(s => s.status === 'subido' || s.status === 'generado').length;
     return { subidos, total: slots.length };
+  });
+
+  // Datos del caso para pre-rellenar las variables de las plantillas de documento.
+  // Claves "token" que se buscan por coincidencia laxa contra clave/etiqueta de cada variable.
+  readonly casoDocContext = computed<Record<string, string>>(() => {
+    const c = this.caso();
+    const contactos = this.linkedContacts();
+    const cliente = (contactos[0] ? getContactDisplayName(contactos[0]) : '') ?? '';
+    const hoy = new Date().toISOString().slice(0, 10);
+    return {
+      titulo: c?.titulo ?? '',
+      asunto: c?.titulo ?? '',
+      caso: c?.titulo ?? '',
+      tipo: c?.tipo ?? '',
+      descripcion: c?.descripcion ?? '',
+      cliente,
+      contacto: cliente,
+      nombre: cliente,
+      fecha: hoy,
+      hoy,
+      vencimiento: c?.vencimiento ?? '',
+    };
   });
 
   // Gestoría
@@ -386,6 +408,12 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
     } finally {
       this.uploadingSlotId.set(null);
     }
+  }
+
+  async onGenerateDoc(event: { slot: CasoDocSlot; html: string; values: Record<string, string> }): Promise<void> {
+    const casoId = this.caso()?.id;
+    if (!casoId) return;
+    await this.casoDocService.saveGeneratedDoc(casoId, event.slot, event.html, event.values);
   }
 
   async onUploadFile(event: FreeUploadEvent): Promise<void> {

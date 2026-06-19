@@ -12,16 +12,20 @@
       </div>
     </div>
     <div class="flex items-center gap-2">
-      <button type="button" (click)="showCuentasDrawer.set(true)"
-        class="flex items-center gap-1.5 px-3 py-2 text-sm font-medium border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50">
-        <lucide-icon [img]="SettingsIcon" class="w-4 h-4" />
-        Cuentas
-      </button>
-      <button type="button" (click)="showCierreModal.set(true)"
-        class="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors">
-        <lucide-icon [img]="LockIcon" class="w-4 h-4" />
-        Cierre de caja
-      </button>
+      @if (perm.can('Tesorería', 'editar')) {
+        <button type="button" (click)="showCuentasDrawer.set(true)"
+          class="flex items-center gap-1.5 px-3 py-2 text-sm font-medium border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50">
+          <lucide-icon [img]="SettingsIcon" class="w-4 h-4" />
+          Cuentas
+        </button>
+      }
+      @if (perm.can('Tesorería', 'crear')) {
+        <button type="button" (click)="showCierreModal.set(true)"
+          class="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors">
+          <lucide-icon [img]="LockIcon" class="w-4 h-4" />
+          Cierre de caja
+        </button>
+      }
     </div>
   </div>
 

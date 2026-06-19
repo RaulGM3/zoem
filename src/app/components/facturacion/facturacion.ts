@@ -12,6 +12,7 @@ import { REGISTRO_HORAS } from '../../data/dummy-data';
 import { CasosService } from '../../core/services/casos.service';
 import { InvoiceService, InvoiceLinea } from '../../core/services/invoice.service';
 import { CompanyService } from '../../core/services/company.service';
+import { PermissionService } from '../../core/services/permission.service';
 import { Caso, gestoriaCompleta } from '../../interfaces';
 
 type FacturacionTab = 'casos' | 'archivo' | 'fiscal' | 'horas';
@@ -33,6 +34,7 @@ export class FacturacionComponent implements OnInit {
   private readonly casosService = inject(CasosService);
   private readonly invoiceService = inject(InvoiceService);
   protected readonly companyService = inject(CompanyService);
+  readonly perm = inject(PermissionService);
 
   readonly ReceiptIcon = Receipt;
   readonly SearchIcon = Search;

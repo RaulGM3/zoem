@@ -1,191 +1,220 @@
 <!-- Page Header -->
 <div class="mb-6">
   <h1 class="text-2xl font-bold text-slate-900">Dashboard</h1>
-  <p class="mt-1 text-sm text-slate-500">Buenos días. Aquí está el resumen de tu negocio.</p>
+  <p class="mt-1 text-sm text-slate-500">Aquí está el resumen de tu negocio.</p>
 </div>
 
-<!-- AI Summary Banner -->
-<div class="mb-6 rounded-xl border border-violet-200 bg-gradient-to-r from-violet-50 to-violet-100/50 p-4">
-  <div class="flex items-start gap-3">
-    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white">
-      <lucide-icon [img]="SparklesIcon" size="20"></lucide-icon>
-    </div>
-    <div class="flex-1">
-      <p class="text-sm font-semibold text-violet-900">Resumen IA del día</p>
-      <p class="mt-1 text-sm text-violet-700">
-        Hoy tienes 5 citas programadas y 2 tareas urgentes pendientes. Tu facturación del mes va un 15% por encima del objetivo.
-      </p>
-      <div class="mt-3 space-y-1.5">
-        @for (alert of aiAlerts; track alert.message) {
-          <div class="flex items-start gap-2 rounded-lg border px-3 py-2 text-xs" [class]="getAlertClass(alert.type)">
-            {{ alert.message }}
-          </div>
-        }
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Primary Stats -->
-<div class="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-  @for (stat of primaryStats; track stat.title) {
-    <a [routerLink]="stat.href"
-      class="group flex flex-col rounded-xl border border-slate-200 bg-white p-5 transition-shadow hover:shadow-md">
-      <div class="flex items-center justify-between">
-        <div class="flex h-10 w-10 items-center justify-center rounded-lg" [class]="stat.bg">
-          <lucide-icon [img]="stat.icon" size="20" [class]="stat.color"></lucide-icon>
-        </div>
-        <lucide-icon [img]="ChevronRightIcon" size="16" class="text-slate-300 group-hover:text-slate-500"></lucide-icon>
-      </div>
-      <p class="mt-3 text-sm font-medium text-slate-500">{{ stat.title }}</p>
-      <p class="mt-1 text-2xl font-bold text-slate-900">{{ stat.value }}</p>
-      <p class="mt-1 text-xs"
-        [class.text-green-600]="stat.positive === true"
-        [class.text-red-500]="stat.positive === false"
-        [class.text-slate-400]="stat.positive === null">
-        {{ stat.change }}
-      </p>
-    </a>
-  }
-</div>
-
-<!-- Secondary Stats -->
+<!-- KPIs -->
 <div class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-  @for (stat of secondaryStats; track stat.title) {
-    <a [routerLink]="stat.href"
-      class="group flex flex-col rounded-xl border border-slate-200 bg-white p-5 transition-shadow hover:shadow-md">
-      <div class="flex items-center justify-between">
-        <div class="flex h-10 w-10 items-center justify-center rounded-lg" [class]="stat.bg">
-          <lucide-icon [img]="stat.icon" size="20" [class]="stat.color"></lucide-icon>
-        </div>
-        <lucide-icon [img]="ChevronRightIcon" size="16" class="text-slate-300 group-hover:text-slate-500"></lucide-icon>
-      </div>
-      <p class="mt-3 text-sm font-medium text-slate-500">{{ stat.title }}</p>
-      <p class="mt-1 text-xl font-bold text-slate-900">{{ stat.value }}</p>
-      <p class="mt-1 text-xs"
-        [class.text-green-600]="stat.positive === true"
-        [class.text-red-500]="stat.positive === false"
-        [class.text-slate-400]="stat.positive === null">
-        {{ stat.change }}
-      </p>
-    </a>
+  @if (perm.can('Casos', 'ver')) {
+    <app-stat-card
+      [icon]="BriefcaseIcon" tone="blue" label="Casos activos"
+      [value]="(casosActivosCount() | number) ?? ''" sublabel="En pendiente, proceso o urgente"
+      href="/casos"
+    />
+  }
+  @if (perm.can('Tesorería', 'ver')) {
+    <app-stat-card
+      [icon]="EuroIcon" tone="green" label="Ingresos del mes"
+      [value]="(ingresosMes() | number: '1.0-0') + ' €'" sublabel="Honorarios del mes en curso"
+      href="/tesoreria"
+    />
+  }
+  @if (perm.can('RecepciónIA', 'ver')) {
+    <app-stat-card
+      [icon]="BotIcon" tone="violet" label="Leads IA pendientes"
+      [value]="(iaPendientesCount() | number) ?? ''" sublabel="Recepción IA por atender"
+      href="/recepcion-ia"
+    />
+  }
+  @if (perm.can('Tesorería', 'ver')) {
+    <app-stat-card
+      [icon]="WalletIcon" tone="emerald" label="Disponible total"
+      [value]="(disponibleTotal() | number: '1.0-0') + ' €'" sublabel="Saldo confirmado (aprobado)"
+      href="/tesoreria"
+    />
   }
 </div>
 
-<!-- Bottom Grid -->
 <div class="grid gap-6 lg:grid-cols-3">
 
-  <!-- Activity Feed -->
-  <div class="rounded-xl border border-slate-200 bg-white lg:col-span-1">
-    <div class="flex items-center justify-between border-b px-5 py-4">
-      <h2 class="text-sm font-semibold text-slate-900">Actividad Reciente</h2>
-      <a routerLink="/recepcion-ia"
-        class="text-xs font-medium text-violet-600 hover:text-violet-500">Ver todo</a>
-    </div>
-    <div class="divide-y divide-slate-100">
-      @for (item of activityFeed; track item.id) {
-        <a [routerLink]="item.href"
-          class="flex items-start gap-3 px-5 py-3 hover:bg-slate-50 transition-colors">
-          <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full" [class]="item.bg">
-            <lucide-icon [img]="getActivityIcon(item.icon)" size="14" [class]="item.color"></lucide-icon>
-          </div>
-          <div class="min-w-0 flex-1">
-            <p class="text-sm font-medium text-slate-800">{{ item.title }}</p>
-            <p class="truncate text-xs text-slate-500">{{ item.description }}</p>
-            <p class="mt-0.5 text-xs text-slate-400">{{ item.time }}</p>
-          </div>
-        </a>
-      }
-    </div>
-  </div>
+  <!-- Columna principal: finanzas + estadística -->
+  <div class="flex flex-col gap-6 lg:col-span-2">
 
-  <!-- Recent Projects -->
-  <div class="rounded-xl border border-slate-200 bg-white lg:col-span-1">
-    <div class="flex items-center justify-between border-b px-5 py-4">
-      <h2 class="text-sm font-semibold text-slate-900">Proyectos Activos</h2>
-      <a routerLink="/proyectos"
-        class="text-xs font-medium text-violet-600 hover:text-violet-500">Ver todos</a>
-    </div>
-    <div class="divide-y divide-slate-100">
-      @for (project of recentProjects; track project.id) {
-        <div class="px-5 py-3">
-          <div class="flex items-start justify-between gap-2">
-            <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-medium text-slate-900">{{ project.client }}</p>
-              <p class="truncate text-xs text-slate-500">{{ project.description }}</p>
+    <!-- (4) Monto disponible por cuenta -->
+    @if (perm.can('Tesorería', 'ver')) {
+      <div class="rounded-xl border border-slate-200 bg-white">
+        <div class="flex items-center justify-between border-b px-5 py-4">
+          <h2 class="text-sm font-semibold text-slate-900">Cuentas bancarias</h2>
+          <a routerLink="/tesoreria" class="text-xs font-medium text-violet-600 hover:text-violet-500">Tesorería</a>
+        </div>
+        <div class="divide-y divide-slate-100">
+          @for (b of balancesPorCuenta(); track b.cuenta.id) {
+            <div class="flex items-center gap-3 px-5 py-3">
+              <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100">
+                <lucide-icon [img]="LandmarkIcon" size="16" class="text-slate-600" />
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-medium text-slate-900">{{ b.cuenta.nombre }}</p>
+                <p class="text-xs text-slate-500">
+                  Proyectado: {{ b.sistema | number: '1.0-0' }} €
+                  @if (b.banco !== null) {
+                    · Banco: {{ b.banco | number: '1.0-0' }} €
+                  }
+                </p>
+              </div>
+              <div class="text-right">
+                <p class="text-sm font-bold text-slate-900">{{ b.proyeccion | number: '1.0-0' }} €</p>
+                <p class="text-[10px]"
+                  [class.text-emerald-600]="b.conciliado"
+                  [class.text-amber-600]="!b.conciliado && b.banco !== null"
+                  [class.text-slate-400]="b.banco === null">
+                  @if (b.banco === null) { disponible }
+                  @else if (b.conciliado) { conciliado }
+                  @else { dif. {{ b.diferencia | number: '1.0-0' }} € }
+                </p>
+              </div>
             </div>
-            <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium" [class]="getProjectStatusClass(project.status)">
-              {{ project.status }}
-            </span>
-          </div>
-          <div class="mt-2">
-            <div class="flex items-center justify-between text-xs text-slate-500 mb-1">
-              <span>{{ project.assignedTo }}</span>
-              <span class="font-medium">{{ project.progress }}%</span>
-            </div>
-            <div class="h-1.5 rounded-full bg-slate-100">
-              <div class="h-1.5 rounded-full bg-violet-500 transition-all" [style.width.%]="project.progress"></div>
-            </div>
+          } @empty {
+            <div class="px-5 py-6 text-center text-sm text-slate-400">No hay cuentas registradas</div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- (5) Últimos movimientos -->
+    @if (perm.can('Tesorería', 'ver')) {
+      <div class="rounded-xl border border-slate-200 bg-white">
+        <div class="flex items-center justify-between border-b px-5 py-4">
+          <h2 class="text-sm font-semibold text-slate-900">Últimos movimientos</h2>
+          <a routerLink="/tesoreria" class="text-xs font-medium text-violet-600 hover:text-violet-500">Ver todo</a>
+        </div>
+        <div class="divide-y divide-slate-100">
+          @for (m of ultimosMovimientos(); track m.id) {
+            <a [routerLink]="m.link" class="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-slate-50">
+              <span class="h-2 w-2 shrink-0 rounded-full"
+                [class.bg-emerald-500]="m.esEntrada" [class.bg-red-500]="!m.esEntrada"></span>
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-medium text-slate-800">{{ m.concepto }}</p>
+                <p class="truncate text-xs text-slate-500">{{ m.casoNombre }} · {{ formatFecha(m.fecha) }}</p>
+              </div>
+              <span class="shrink-0 text-sm font-semibold"
+                [class.text-emerald-600]="m.esEntrada" [class.text-red-500]="!m.esEntrada">
+                {{ m.esEntrada ? '+' : '−' }}{{ m.importe | number: '1.0-0' }} €
+              </span>
+            </a>
+          } @empty {
+            <div class="px-5 py-6 text-center text-sm text-slate-400">Sin movimientos registrados</div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- (7) Estadística financiera -->
+    @if (perm.can('Tesorería', 'ver') || perm.can('Informes', 'ver')) {
+      <div class="rounded-xl border border-slate-200 bg-white p-5">
+        <h2 class="mb-4 text-sm font-semibold text-slate-900">Honorarios (últimos 6 meses)</h2>
+        <app-bar-chart [data]="honorariosPorMes()" />
+      </div>
+
+      <div class="grid gap-6 sm:grid-cols-2">
+        <div class="rounded-xl border border-slate-200 bg-white p-5">
+          <h2 class="mb-4 text-sm font-semibold text-slate-900">Ingresos vs Egresos</h2>
+          <app-bar-chart [data]="ingresosVsEgresosPorMes()" />
+          <div class="mt-3 flex gap-4 text-xs text-slate-500">
+            <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-emerald-500"></span>Ingresos</span>
+            <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-red-500"></span>Egresos</span>
           </div>
         </div>
-      }
-    </div>
+        <div class="rounded-xl border border-slate-200 bg-white p-5">
+          <h2 class="mb-4 text-sm font-semibold text-slate-900">Distribución por tipo</h2>
+          <app-donut-chart [data]="distribucionPorTipo()" />
+        </div>
+      </div>
+    }
   </div>
 
-  <!-- Today + IA Leads -->
+  <!-- Columna lateral: IA + agenda + actividad -->
   <div class="flex flex-col gap-6">
-    <!-- Today's Events -->
-    <div class="rounded-xl border border-slate-200 bg-white">
-      <div class="flex items-center justify-between border-b px-5 py-4">
-        <h2 class="text-sm font-semibold text-slate-900">Hoy</h2>
-        <a routerLink="/calendario"
-          class="text-xs font-medium text-violet-600 hover:text-violet-500">Calendario</a>
-      </div>
-      <div class="divide-y divide-slate-100">
-        @for (event of todayEvents; track event.id) {
-          <div class="flex items-start gap-3 px-5 py-3">
-            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-50">
-              <lucide-icon [img]="CalendarIcon" size="14" class="text-violet-600"></lucide-icon>
-            </div>
-            <div>
-              <p class="text-sm font-medium text-slate-900">{{ event.title }}</p>
-              <p class="text-xs text-slate-500">{{ event.client }} · {{ event.time }}</p>
-            </div>
-          </div>
-        }
-        @if (todayEvents.length === 0) {
-          <div class="px-5 py-4 text-center text-sm text-slate-400">Sin citas hoy</div>
-        }
-      </div>
-    </div>
 
-    <!-- IA Leads -->
+    <!-- (1) Recepción IA -->
+    @if (perm.can('RecepciónIA', 'ver')) {
+      <div class="rounded-xl border border-slate-200 bg-white">
+        <div class="flex items-center justify-between border-b px-5 py-4">
+          <h2 class="text-sm font-semibold text-slate-900">Recepción IA</h2>
+          <a routerLink="/recepcion-ia" class="text-xs font-medium text-violet-600 hover:text-violet-500">Ver todos</a>
+        </div>
+        <div class="divide-y divide-slate-100">
+          @for (lead of iaTop(); track lead.id) {
+            <a routerLink="/recepcion-ia" class="flex items-start gap-3 px-5 py-3 transition-colors hover:bg-slate-50">
+              <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-50">
+                <lucide-icon [img]="BotIcon" size="14" class="text-violet-600" />
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-medium text-slate-900">{{ lead.clientName }}</p>
+                <p class="truncate text-xs text-slate-500">{{ lead.category }} · Score: {{ lead.score }}</p>
+              </div>
+              <span class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                [class.bg-red-100]="lead.urgency === 'alta'" [class.text-red-700]="lead.urgency === 'alta'"
+                [class.bg-amber-100]="lead.urgency === 'media' || lead.urgency === 'normal'"
+                [class.text-amber-700]="lead.urgency === 'media' || lead.urgency === 'normal'"
+                [class.bg-slate-100]="lead.urgency !== 'alta' && lead.urgency !== 'media' && lead.urgency !== 'normal'"
+                [class.text-slate-600]="lead.urgency !== 'alta' && lead.urgency !== 'media' && lead.urgency !== 'normal'">
+                {{ lead.urgency }}
+              </span>
+            </a>
+          } @empty {
+            <div class="px-5 py-6 text-center text-sm text-slate-400">Sin leads pendientes</div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- (6) Agenda próxima -->
+    @if (perm.can('Calendario', 'ver')) {
+      <div class="rounded-xl border border-slate-200 bg-white">
+        <div class="flex items-center justify-between border-b px-5 py-4">
+          <h2 class="text-sm font-semibold text-slate-900">Próximos eventos e hitos</h2>
+          <a routerLink="/calendario" class="text-xs font-medium text-violet-600 hover:text-violet-500">Calendario</a>
+        </div>
+        <div class="divide-y divide-slate-100">
+          @for (item of agendaProxima(); track item.id) {
+            <a [routerLink]="item.link" class="flex items-start gap-3 px-5 py-3 transition-colors hover:bg-slate-50">
+              <span class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full" [class]="item.dotClass"></span>
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-medium text-slate-900">{{ item.titulo }}</p>
+                <p class="truncate text-xs text-slate-500">{{ item.subtitulo }}</p>
+              </div>
+              <div class="shrink-0 text-right">
+                <p class="text-xs font-medium text-slate-700">{{ formatFecha(item.fecha) }}</p>
+                @if (item.hora) { <p class="text-[10px] text-slate-400">{{ item.hora }}</p> }
+              </div>
+            </a>
+          } @empty {
+            <div class="px-5 py-6 text-center text-sm text-slate-400">Nada próximo en la agenda</div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Actividad reciente -->
     <div class="rounded-xl border border-slate-200 bg-white">
       <div class="flex items-center justify-between border-b px-5 py-4">
-        <h2 class="text-sm font-semibold text-slate-900">Leads IA Pendientes</h2>
-        <a routerLink="/recepcion-ia"
-          class="text-xs font-medium text-violet-600 hover:text-violet-500">Ver todos</a>
+        <h2 class="text-sm font-semibold text-slate-900">Actividad reciente</h2>
       </div>
       <div class="divide-y divide-slate-100">
-        @for (lead of recentIA; track lead.id) {
+        @for (a of actividades(); track a.id) {
           <div class="flex items-start gap-3 px-5 py-3">
-            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-50">
-              <lucide-icon [img]="BotIcon" size="14" class="text-violet-600"></lucide-icon>
+            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100">
+              <lucide-icon [img]="actividadIcon(a.modulo)" size="14" class="text-slate-600" />
             </div>
             <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-medium text-slate-900">{{ lead.cliente.nombre }}</p>
-              <p class="text-xs text-slate-500">{{ lead.categoria }} · Score: {{ lead.puntuacion }}</p>
+              <p class="text-sm text-slate-800"><span class="font-medium">{{ a.autorNombre }}</span> {{ a.accion }}</p>
+              <p class="text-xs text-slate-400">{{ fechaActividad(a) }}</p>
             </div>
-            <span class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-              [class.bg-red-100]="lead.urgencia === 'alta'"
-              [class.text-red-700]="lead.urgencia === 'alta'"
-              [class.bg-amber-100]="lead.urgencia === 'normal'"
-              [class.text-amber-700]="lead.urgencia === 'normal'"
-              [class.bg-slate-100]="lead.urgencia === 'baja'"
-              [class.text-slate-600]="lead.urgencia === 'baja'">
-              {{ lead.urgencia }}
-            </span>
           </div>
+        } @empty {
+          <div class="px-5 py-6 text-center text-sm text-slate-400">Sin actividad reciente</div>
         }
       </div>
     </div>

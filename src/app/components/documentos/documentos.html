@@ -4,11 +4,13 @@
     <h1 class="text-2xl font-bold text-slate-900">Plantillas de documentos</h1>
     <p class="mt-1 text-sm text-slate-500">Sube un documento, la IA extrae los datos variables y genera versiones nuevas en segundos</p>
   </div>
-  <button (click)="showDrawer.set(true)"
-    class="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-500">
-    <lucide-icon [img]="PlusIcon" size="16"></lucide-icon>
-    Nueva Plantilla
-  </button>
+  @if (perm.can('Documentos', 'crear')) {
+    <button (click)="showDrawer.set(true)"
+      class="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-500">
+      <lucide-icon [img]="PlusIcon" size="16"></lucide-icon>
+      Nueva Plantilla
+    </button>
+  }
 </div>
 
 <!-- Summary -->
@@ -93,10 +95,12 @@
                     class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
                     <lucide-icon [img]="ArrowRightIcon" size="15"></lucide-icon>
                   </button>
-                  <button (click)="deletingId.set(template.id)" aria-label="Eliminar plantilla"
-                    class="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500">
-                    <lucide-icon [img]="Trash2Icon" size="15"></lucide-icon>
-                  </button>
+                  @if (perm.can('Documentos', 'eliminar')) {
+                    <button (click)="deletingId.set(template.id)" aria-label="Eliminar plantilla"
+                      class="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500">
+                      <lucide-icon [img]="Trash2Icon" size="15"></lucide-icon>
+                    </button>
+                  }
                 }
               </div>
             </td>

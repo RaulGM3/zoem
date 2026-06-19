@@ -134,10 +134,11 @@
 
       <!-- Slots requeridos (de la plantilla) en este nivel -->
       @for (slot of currentSlots(); track slot.id) {
+        @let completado = slot.status === 'subido' || slot.status === 'generado';
         <div class="flex items-center gap-3 px-4 py-3">
           <lucide-icon
-            [img]="slot.status === 'subido' ? CheckCircle2Icon : FileTextIcon"
-            [class]="'w-5 h-5 shrink-0 ' + (slot.status === 'subido' ? 'text-emerald-500' : 'text-slate-300')"
+            [img]="completado ? CheckCircle2Icon : (slot.docTemplateId ? FilePenIcon : FileTextIcon)"
+            [class]="'w-5 h-5 shrink-0 ' + (completado ? 'text-emerald-500' : (slot.docTemplateId ? 'text-violet-400' : 'text-slate-300'))"
           />
           <div class="flex-1 min-w-0">
             <p class="text-sm text-slate-700 font-medium truncate">{{ slot.name }}</p>
@@ -147,7 +148,28 @@
           </div>
 
           <div class="flex items-center gap-2 shrink-0">
-            @if (slot.status === 'subido') {
+            @if (slot.docTemplateId) {
+              <!-- Documento generable desde plantilla: rellenar y congelar -->
+              @if (slot.status === 'generado') {
+                <span class="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 font-medium">Generado</span>
+                <button
+                  (click)="openGenerador(slot)"
+                  class="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50"
+                >
+                  <lucide-icon [img]="EyeIcon" class="w-3.5 h-3.5" />
+                  Ver
+                </button>
+              } @else {
+                <span class="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-700 font-medium">Pendiente</span>
+                <button
+                  (click)="openGenerador(slot)"
+                  class="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-violet-600 text-white rounded-lg hover:bg-violet-700"
+                >
+                  <lucide-icon [img]="FilePenIcon" class="w-3.5 h-3.5" />
+                  Rellenar
+                </button>
+              }
+            } @else if (slot.status === 'subido') {
               <span class="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 font-medium">Subido</span>
               @if (slot.downloadUrl) {
                 <button
@@ -252,6 +274,17 @@
   @let pv = preview();
   @if (pv) {
     <app-caso-doc-preview [docu]="pv" (close)="closePreview()" />
+  }
+
+  <!-- Modal de relleno/visualización de documento generado -->
+  @let gen = generatingSlot();
+  @if (gen) {
+    <app-caso-doc-generador
+      [slot]="gen"
+      [casoContext]="casoContext()"
+      (save)="onGenerated($event)"
+      (close)="closeGenerador()"
+    />
   }
 
 </div>
