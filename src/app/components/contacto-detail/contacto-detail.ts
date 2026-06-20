@@ -13,6 +13,7 @@ import {
 import { INVOICES } from '../../data/dummy-data';
 import { ContactService } from '../../core/services/contact.service';
 import { ContactFolderService } from '../../core/services/contact-folder.service';
+import { ToastService } from '../../core/services/toast.service';
 import { ContactFileService } from '../../core/services/contact-file.service';
 import { CasosService } from '../../core/services/casos.service';
 import { LlamadasService } from '../../core/services/llamadas.service';
@@ -59,6 +60,7 @@ export class ContactoDetailComponent {
   private router = inject(Router);
   readonly folderService = inject(ContactFolderService);
   readonly fileService = inject(ContactFileService);
+  private readonly toast = inject(ToastService);
   private readonly contactService = inject(ContactService);
   private readonly casosService = inject(CasosService);
   private readonly llamadasService = inject(LlamadasService);
@@ -292,13 +294,20 @@ export class ContactoDetailComponent {
   async createFolder() {
     const name = this.newFolderName().trim();
     if (!name) return;
-    await this.folderService.createFolder({
-      contactId: this.id(),
-      parentId: this.currentFolderId(),
-      name,
-    });
-    this.newFolderName.set('');
-    this.isCreatingFolder.set(false);
+    await this.toast.run(
+      () => this.folderService.createFolder({
+        contactId: this.id(),
+        parentId: this.currentFolderId(),
+        name,
+      }),
+      {
+        errorTitle: 'No se pudo crear la carpeta',
+        onSuccess: () => {
+          this.newFolderName.set('');
+          this.isCreatingFolder.set(false);
+        },
+      }
+    );
   }
 
   startRename(folder: ContactFolder) {
@@ -309,13 +318,18 @@ export class ContactoDetailComponent {
   async confirmRename(folderId: string) {
     const name = this.renameValue().trim();
     if (!name) return;
-    await this.folderService.updateFolder(folderId, { name }, this.id());
-    this.renamingFolderId.set(null);
+    await this.toast.run(() => this.folderService.updateFolder(folderId, { name }, this.id()), {
+      errorTitle: 'No se pudo renombrar la carpeta',
+      onSuccess: () => this.renamingFolderId.set(null),
+    });
   }
 
   async deleteFolder(folderId: string) {
-    await this.deleteFolderRecursive(folderId);
-    this.deletingFolderId.set(null);
+    await this.toast.run(() => this.deleteFolderRecursive(folderId), {
+      successMessage: 'Carpeta eliminada',
+      errorTitle: 'No se pudo eliminar la carpeta',
+      onSuccess: () => this.deletingFolderId.set(null),
+    });
   }
 
   private async deleteFolderRecursive(folderId: string) {
@@ -336,9 +350,14 @@ export class ContactoDetailComponent {
     if (!files.length) return;
     this.isUploading.set(true);
     try {
-      for (const file of files) {
-        await this.fileService.uploadFile(this.id(), this.currentFolderId(), file);
-      }
+      await this.toast.run(
+        async () => {
+          for (const file of files) {
+            await this.fileService.uploadFile(this.id(), this.currentFolderId(), file);
+          }
+        },
+        { successMessage: 'Archivos subidos', errorTitle: 'No se pudieron subir los archivos' }
+      );
     } finally {
       this.isUploading.set(false);
       input.value = '';
@@ -346,8 +365,11 @@ export class ContactoDetailComponent {
   }
 
   async deleteFile(file: ContactFile) {
-    await this.fileService.deleteFile(file.id, file.storagePath, this.id());
-    this.deletingFileId.set(null);
+    await this.toast.run(() => this.fileService.deleteFile(file.id, file.storagePath, this.id()), {
+      successMessage: 'Archivo eliminado',
+      errorTitle: 'No se pudo eliminar el archivo',
+      onSuccess: () => this.deletingFileId.set(null),
+    });
   }
 
   getFileIcon(mimeType: string): string {

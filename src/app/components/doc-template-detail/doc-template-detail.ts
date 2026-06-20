@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-angular';
 import { DocTemplateService } from '../../core/services/doc-template.service';
+import { ToastService } from '../../core/services/toast.service';
 
 function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -31,6 +32,7 @@ import type { DocTemplate, TemplateVariable } from '../../interfaces';
 export class DocTemplateDetailComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly templateService = inject(DocTemplateService);
+  private readonly toast = inject(ToastService);
   private readonly generationService = inject(DocGenerationService);
   @ViewChild('previewContent') private readonly previewContent?: ElementRef<HTMLElement>;
 
@@ -168,8 +170,11 @@ export class DocTemplateDetailComponent implements OnInit {
   async deleteTemplate(): Promise<void> {
     const t = this.template();
     if (!t) return;
-    await this.templateService.deleteTemplate(t.id);
-    this.goBack();
+    await this.toast.run(() => this.templateService.deleteTemplate(t.id), {
+      successMessage: 'Plantilla eliminada',
+      errorTitle: 'No se pudo eliminar la plantilla',
+      onSuccess: () => this.goBack(),
+    });
   }
 
   toggleEditMode(): void {
@@ -212,9 +217,16 @@ export class DocTemplateDetailComponent implements OnInit {
 
     this.saving.set(true);
     try {
-      await this.templateService.updateTemplate(t.id, { html: newHtml, variables: newVariables });
-      this.template.update(prev => prev ? { ...prev, html: newHtml, variables: newVariables } : prev);
-      this.cancelNewVar();
+      await this.toast.run(
+        () => this.templateService.updateTemplate(t.id, { html: newHtml, variables: newVariables }),
+        {
+          errorTitle: 'No se pudo crear la variable',
+          onSuccess: () => {
+            this.template.update(prev => prev ? { ...prev, html: newHtml, variables: newVariables } : prev);
+            this.cancelNewVar();
+          },
+        }
+      );
     } finally {
       this.saving.set(false);
     }
@@ -242,9 +254,16 @@ export class DocTemplateDetailComponent implements OnInit {
 
     this.saving.set(true);
     try {
-      await this.templateService.updateTemplate(t.id, { html: newHtml, variables: newVariables });
-      this.template.update(prev => prev ? { ...prev, html: newHtml, variables: newVariables } : prev);
-      this.cancelDemote();
+      await this.toast.run(
+        () => this.templateService.updateTemplate(t.id, { html: newHtml, variables: newVariables }),
+        {
+          errorTitle: 'No se pudo convertir la variable',
+          onSuccess: () => {
+            this.template.update(prev => prev ? { ...prev, html: newHtml, variables: newVariables } : prev);
+            this.cancelDemote();
+          },
+        }
+      );
     } finally {
       this.saving.set(false);
     }
