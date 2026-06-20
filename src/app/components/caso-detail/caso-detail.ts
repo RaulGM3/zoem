@@ -6,6 +6,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { debounceTime } from 'rxjs';
 import { CasosService, ActividadInput } from '../../core/services/casos.service';
+import { ToastService } from '../../core/services/toast.service';
 import { GestoriaService } from '../../core/services/gestoria.service';
 import { ContactService } from '../../core/services/contact.service';
 import { UsersService } from '../../core/services/users';
@@ -49,6 +50,7 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   readonly casosService = inject(CasosService);
+  private readonly toast = inject(ToastService);
   readonly gestoriaService = inject(GestoriaService);
   readonly contactService = inject(ContactService);
   readonly usersService = inject(UsersService);
@@ -199,10 +201,17 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
     if (!id) return;
     this.savingInfo.set(true);
     try {
-      await this.casosService.updateCaso(id, data);
-      const updated = await this.casosService.getCaso(id);
-      this.caso.set(updated);
-      this.editingInfo.set(false);
+      await this.toast.run(
+        async () => {
+          await this.casosService.updateCaso(id, data);
+          this.caso.set(await this.casosService.getCaso(id));
+        },
+        {
+          successMessage: 'Caso actualizado',
+          errorTitle: 'No se pudo actualizar el caso',
+          onSuccess: () => this.editingInfo.set(false),
+        }
+      );
     } finally {
       this.savingInfo.set(false);
     }
@@ -215,17 +224,23 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
     console.log('[caso-detail.addContact] contactId =', contactId, '| caso.contactoIds =', c?.contactoIds);
     if (!c) return;
     const newIds = [...(c.contactoIds ?? []), contactId];
-    await this.casosService.updateCaso(c.id, { contactoIds: newIds });
-    this.caso.set({ ...c, contactoIds: newIds });
-    this.contactSearch.set('');
+    await this.toast.run(() => this.casosService.updateCaso(c.id, { contactoIds: newIds }), {
+      errorTitle: 'No se pudo añadir el contacto',
+      onSuccess: () => {
+        this.caso.set({ ...c, contactoIds: newIds });
+        this.contactSearch.set('');
+      },
+    });
   }
 
   async removeContact(contactId: string): Promise<void> {
     const c = this.caso();
     if (!c) return;
     const newIds = c.contactoIds.filter(id => id !== contactId);
-    await this.casosService.updateCaso(c.id, { contactoIds: newIds });
-    this.caso.set({ ...c, contactoIds: newIds });
+    await this.toast.run(() => this.casosService.updateCaso(c.id, { contactoIds: newIds }), {
+      errorTitle: 'No se pudo quitar el contacto',
+      onSuccess: () => this.caso.set({ ...c, contactoIds: newIds }),
+    });
   }
 
   // ── Hitos ──────────────────────────────────────────────
@@ -258,16 +273,24 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
         ...(estadoChanged ? stampEstadoChange(autorId) : {}),
       };
 
-      if (editing) {
-        const actividad: ActividadInput = estadoChanged
-          ? { hitoTitulo: data.titulo, tipo: 'estado', autorId, estadoAnterior: editing.estado, estadoNuevo: data.estado }
-          : { hitoTitulo: data.titulo, tipo: 'editado', autorId };
-        await this.casosService.updateHito(c.id, editing.id, hitoData, actividad);
-      } else {
-        // addHito ya registra el evento 'creado' internamente.
-        await this.casosService.addHito(c.id, c.titulo, { ...hitoData, orden: this.hitos().length }, autorId);
-      }
-      this.showHitoForm.set(false);
+      const actividad: ActividadInput = estadoChanged
+        ? { hitoTitulo: data.titulo, tipo: 'estado', autorId, estadoAnterior: editing?.estado, estadoNuevo: data.estado }
+        : { hitoTitulo: data.titulo, tipo: 'editado', autorId };
+      await this.toast.run(
+        async () => {
+          if (editing) {
+            await this.casosService.updateHito(c.id, editing.id, hitoData, actividad);
+          } else {
+            // addHito ya registra el evento 'creado' internamente.
+            await this.casosService.addHito(c.id, c.titulo, { ...hitoData, orden: this.hitos().length }, autorId);
+          }
+        },
+        {
+          successMessage: editing ? 'Hito actualizado' : 'Hito creado',
+          errorTitle: 'No se pudo guardar el hito',
+          onSuccess: () => this.showHitoForm.set(false),
+        }
+      );
     } finally {
       this.savingHito.set(false);
     }
@@ -281,21 +304,29 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
   async facturarHorasHito(hito: Hito): Promise<void> {
     const c = this.caso();
     if (!c) return;
-    await this.casosService.facturarHorasHito(c.id, hito, this.usersService.members());
-    await Promise.all([
-      this.gestoriaService.loadMovimientos(c.id),
-      (async () => this.caso.set(await this.casosService.getCaso(c.id)))(),
-    ]);
+    await this.toast.run(
+      async () => {
+        await this.casosService.facturarHorasHito(c.id, hito, this.usersService.members());
+        await Promise.all([
+          this.gestoriaService.loadMovimientos(c.id),
+          (async () => this.caso.set(await this.casosService.getCaso(c.id)))(),
+        ]);
+      },
+      { successMessage: 'Horas facturadas', errorTitle: 'No se pudieron facturar las horas' }
+    );
   }
 
   async deleteHito(hitoId: string): Promise<void> {
     const c = this.caso();
     if (!c) return;
     const hito = this.hitos().find(h => h.id === hitoId);
-    await this.casosService.deleteHito(c.id, hitoId, {
-      hitoTitulo: hito?.titulo ?? 'hito',
-      autorId: this.userSync.currentUser()?.id,
-    });
+    await this.toast.run(
+      () => this.casosService.deleteHito(c.id, hitoId, {
+        hitoTitulo: hito?.titulo ?? 'hito',
+        autorId: this.userSync.currentUser()?.id,
+      }),
+      { successMessage: 'Hito eliminado', errorTitle: 'No se pudo eliminar el hito' }
+    );
   }
 
   async toggleHitoEstado(hito: Hito): Promise<void> {
@@ -307,13 +338,16 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
       estado: nuevoEstado,
       ...stampEstadoChange(autorId),
     };
-    await this.casosService.updateHito(c.id, hito.id, patch, {
-      hitoTitulo: hito.titulo,
-      tipo: 'estado',
-      autorId,
-      estadoAnterior: hito.estado,
-      estadoNuevo: nuevoEstado,
-    });
+    await this.toast.run(
+      () => this.casosService.updateHito(c.id, hito.id, patch, {
+        hitoTitulo: hito.titulo,
+        tipo: 'estado',
+        autorId,
+        estadoAnterior: hito.estado,
+        estadoNuevo: nuevoEstado,
+      }),
+      { errorTitle: 'No se pudo cambiar el estado del hito' }
+    );
   }
 
   // ── Gestoría ───────────────────────────────────────────
@@ -347,15 +381,24 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
         cuotaIva: data.cuotaIva,
       };
       const slot = this.registeringSlot();
-      if (slot) {
-        await this.gestoriaService.registerSlot(c.id, slot, movData);
-        this.registeringSlot.set(null);
-      } else {
-        await this.gestoriaService.addMovimiento(c.id, movData);
-      }
-      const updated = await this.casosService.getCaso(c.id);
-      this.caso.set(updated);
-      this.showMovForm.set(false);
+      await this.toast.run(
+        async () => {
+          if (slot) {
+            await this.gestoriaService.registerSlot(c.id, slot, movData);
+          } else {
+            await this.gestoriaService.addMovimiento(c.id, movData);
+          }
+          this.caso.set(await this.casosService.getCaso(c.id));
+        },
+        {
+          successMessage: 'Movimiento registrado',
+          errorTitle: 'No se pudo registrar el movimiento',
+          onSuccess: () => {
+            this.registeringSlot.set(null);
+            this.showMovForm.set(false);
+          },
+        }
+      );
     } finally {
       this.savingMov.set(false);
     }
@@ -364,21 +407,29 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
   async deleteMovimiento(movId: string): Promise<void> {
     const c = this.caso();
     if (!c) return;
-    await this.gestoriaService.deleteMovimiento(c.id, movId);
-    const updated = await this.casosService.getCaso(c.id);
-    this.caso.set(updated);
+    await this.toast.run(
+      async () => {
+        await this.gestoriaService.deleteMovimiento(c.id, movId);
+        this.caso.set(await this.casosService.getCaso(c.id));
+      },
+      { successMessage: 'Movimiento eliminado', errorTitle: 'No se pudo eliminar el movimiento' }
+    );
   }
 
   async unregisterSlot(slot: GestoriaSlot): Promise<void> {
     const c = this.caso();
     if (!c) return;
-    await this.gestoriaService.unregisterSlot(c.id, slot);
+    await this.toast.run(() => this.gestoriaService.unregisterSlot(c.id, slot), {
+      errorTitle: 'No se pudo desregistrar el slot',
+    });
   }
 
   async reorderSlots(orderedSlots: GestoriaSlot[]): Promise<void> {
     const c = this.caso();
     if (!c) return;
-    await this.gestoriaService.reorderSlots(c.id, orderedSlots);
+    await this.toast.run(() => this.gestoriaService.reorderSlots(c.id, orderedSlots), {
+      errorTitle: 'No se pudo reordenar',
+    });
   }
 
   closeMovForm(): void {
@@ -393,7 +444,10 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
     if (!casoId) return;
     this.uploadingSlotId.set(event.slot.id);
     try {
-      await this.casoDocService.uploadSlot(casoId, event.slot, event.file);
+      await this.toast.run(() => this.casoDocService.uploadSlot(casoId, event.slot, event.file), {
+        successMessage: 'Documento subido',
+        errorTitle: 'No se pudo subir el documento',
+      });
     } finally {
       this.uploadingSlotId.set(null);
     }
@@ -404,7 +458,9 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
     if (!casoId) return;
     this.uploadingSlotId.set(slot.id);
     try {
-      await this.casoDocService.removeUpload(casoId, slot);
+      await this.toast.run(() => this.casoDocService.removeUpload(casoId, slot), {
+        errorTitle: 'No se pudo quitar el documento',
+      });
     } finally {
       this.uploadingSlotId.set(null);
     }
@@ -413,7 +469,10 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
   async onGenerateDoc(event: { slot: CasoDocSlot; html: string; values: Record<string, string> }): Promise<void> {
     const casoId = this.caso()?.id;
     if (!casoId) return;
-    await this.casoDocService.saveGeneratedDoc(casoId, event.slot, event.html, event.values);
+    await this.toast.run(
+      () => this.casoDocService.saveGeneratedDoc(casoId, event.slot, event.html, event.values),
+      { successMessage: 'Documento generado', errorTitle: 'No se pudo generar el documento' }
+    );
   }
 
   async onUploadFile(event: FreeUploadEvent): Promise<void> {
@@ -421,7 +480,10 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
     if (!casoId) return;
     this.docsBusy.set(true);
     try {
-      await this.casoDocService.uploadFile(casoId, event.folderId, event.file);
+      await this.toast.run(() => this.casoDocService.uploadFile(casoId, event.folderId, event.file), {
+        successMessage: 'Archivo subido',
+        errorTitle: 'No se pudo subir el archivo',
+      });
     } finally {
       this.docsBusy.set(false);
     }
@@ -432,7 +494,10 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
     if (!casoId) return;
     this.docsBusy.set(true);
     try {
-      await this.casoDocService.deleteFile(casoId, file);
+      await this.toast.run(() => this.casoDocService.deleteFile(casoId, file), {
+        successMessage: 'Archivo eliminado',
+        errorTitle: 'No se pudo eliminar el archivo',
+      });
     } finally {
       this.docsBusy.set(false);
     }
@@ -443,7 +508,9 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
     if (!casoId) return;
     this.docsBusy.set(true);
     try {
-      await this.casoDocService.createFolder(casoId, event.parentId, event.name);
+      await this.toast.run(() => this.casoDocService.createFolder(casoId, event.parentId, event.name), {
+        errorTitle: 'No se pudo crear la carpeta',
+      });
     } finally {
       this.docsBusy.set(false);
     }
@@ -454,7 +521,10 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
     if (!casoId) return;
     this.docsBusy.set(true);
     try {
-      await this.casoDocService.deleteFolder(casoId, folderId);
+      await this.toast.run(() => this.casoDocService.deleteFolder(casoId, folderId), {
+        successMessage: 'Carpeta eliminada',
+        errorTitle: 'No se pudo eliminar la carpeta',
+      });
     } finally {
       this.docsBusy.set(false);
     }
