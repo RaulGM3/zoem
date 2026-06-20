@@ -1,0 +1,178 @@
+<div class="space-y-6">
+  <!-- Top bar -->
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <lucide-icon [img]="BotIcon" [size]="20" class="text-violet-400" />
+      <h1 class="text-xl font-semibold">Agentes IA</h1>
+      <span class="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-400">
+        {{ mappings().length }}
+      </span>
+    </div>
+
+    <div class="flex gap-3">
+      <div class="relative">
+        <lucide-icon
+          [img]="SearchIcon"
+          [size]="15"
+          class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+        />
+        <input
+          type="text"
+          placeholder="Buscar agente, empresa..."
+          [value]="search()"
+          (input)="search.set($any($event.target).value)"
+          class="rounded-lg border border-slate-700 bg-slate-800 py-2 pl-10 pr-4 text-sm text-white placeholder-slate-500 focus:border-violet-500 focus:outline-none"
+        />
+      </div>
+      <button
+        (click)="openCreate()"
+        class="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-500"
+      >
+        <lucide-icon [img]="PlusIcon" [size]="15" />
+        Vincular agente
+      </button>
+    </div>
+  </div>
+
+  <p class="text-sm text-slate-500">
+    Cada empresa solo verá las llamadas cuyo <code class="text-slate-400">agentId</code> esté vinculado aquí.
+    Esta vinculación se gestiona exclusivamente desde superuser.
+  </p>
+
+  <!-- Table -->
+  <div class="overflow-hidden rounded-xl border border-slate-800">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-900 text-left text-xs uppercase tracking-wider text-slate-500">
+        <tr>
+          <th class="px-4 py-3">Agent ID</th>
+          <th class="px-4 py-3">Alias</th>
+          <th class="px-4 py-3">Empresa</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-800 bg-slate-900/50">
+        @for (m of filtered(); track m.agentId) {
+          <tr class="transition-colors hover:bg-slate-800/50">
+            <td class="px-4 py-3">
+              <code class="font-mono text-xs text-violet-300">{{ m.agentId }}</code>
+            </td>
+            <td class="px-4 py-3 text-slate-400">{{ m.label || '—' }}</td>
+            <td class="px-4 py-3 text-white">{{ companyName()(m.companyId) }}</td>
+            <td class="px-4 py-3">
+              <div class="flex items-center justify-end gap-2">
+                <button
+                  (click)="openEdit(m)"
+                  class="rounded p-1.5 text-slate-500 transition-colors hover:bg-slate-700 hover:text-white"
+                  aria-label="Editar vínculo"
+                >
+                  <lucide-icon [img]="EditIcon" [size]="14" />
+                </button>
+                <button
+                  (click)="delete(m.agentId)"
+                  class="rounded p-1.5 text-slate-500 transition-colors hover:bg-red-500/20 hover:text-red-400"
+                  aria-label="Eliminar vínculo"
+                >
+                  <lucide-icon [img]="Trash2Icon" [size]="14" />
+                </button>
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="4" class="px-4 py-10 text-center text-slate-500">
+              No hay agentes vinculados todavía.
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Form modal -->
+@if (showForm()) {
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="agent-form-title"
+  >
+    <div class="w-full max-w-lg rounded-xl border border-slate-700 bg-slate-900 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 px-6 py-4">
+        <h2 id="agent-form-title" class="text-lg font-semibold text-white">
+          {{ editing() ? 'Editar vínculo' : 'Vincular agente' }}
+        </h2>
+        <button
+          (click)="showForm.set(false)"
+          class="rounded p-1 text-slate-500 hover:text-white"
+          aria-label="Cerrar formulario"
+        >
+          <lucide-icon [img]="XIcon" [size]="18" />
+        </button>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="save()" class="space-y-5 p-6">
+        <div>
+          <label for="ag-id" class="mb-1 block text-xs font-medium text-slate-400">
+            Agent ID <span class="text-red-400">*</span>
+          </label>
+          <input
+            id="ag-id"
+            type="text"
+            formControlName="agentId"
+            class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-sm text-white placeholder-slate-500 focus:border-violet-500 focus:outline-none disabled:opacity-60"
+            placeholder="agent_xxx (de la plataforma de voz)"
+          />
+          @if (editing()) {
+            <p class="mt-1 text-xs text-slate-500">El Agent ID es el identificador del documento y no se renombra.</p>
+          }
+        </div>
+
+        <div>
+          <label for="ag-company" class="mb-1 block text-xs font-medium text-slate-400">
+            Empresa <span class="text-red-400">*</span>
+          </label>
+          <select
+            id="ag-company"
+            formControlName="companyId"
+            class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
+          >
+            <option value="" disabled>Selecciona empresa</option>
+            @for (c of companies(); track c.id) {
+              <option [value]="c.id">{{ c.name }}</option>
+            }
+          </select>
+        </div>
+
+        <div>
+          <label for="ag-label" class="mb-1 block text-xs font-medium text-slate-400">Alias</label>
+          <input
+            id="ag-label"
+            type="text"
+            formControlName="label"
+            class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-violet-500 focus:outline-none"
+            placeholder="Recepción principal"
+          />
+        </div>
+
+        <div class="flex justify-end gap-3 border-t border-slate-800 pt-4">
+          <button
+            type="button"
+            (click)="showForm.set(false)"
+            class="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-400 transition-colors hover:border-slate-500 hover:text-white"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            [disabled]="form.invalid || saving()"
+            class="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <lucide-icon [img]="CheckIcon" [size]="14" />
+            {{ saving() ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

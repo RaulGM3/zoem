@@ -1,0 +1,55 @@
+rules_version = '2';
+
+// ============================================================================
+// Zoem (vertey-cf1b9) — Cloud Storage Security Rules
+//
+// Todos los objetos cuelgan de `companies/{companyId}/...`:
+//   companies/{cid}/casos/{casoId}/docs/{folderId}/{file}
+//   companies/{cid}/contacts/{contactId}/{folderId}/{file}
+//   companies/{cid}/docTemplates/{id}/...
+// → el aislamiento de tenant va por el PATH.
+//
+// La membresía/roles se leen desde Firestore (members/{uid}).
+// Enforcement: aislamiento de tenant + rol grueso (Viewer = solo lectura).
+// ============================================================================
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isSuper() {
+      return isSignedIn()
+        && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isSuperUser == true;
+    }
+    function memberPath(cid) {
+      return /databases/(default)/documents/companies/$(cid)/members/$(request.auth.uid);
+    }
+    function isMember(cid) {
+      return isSignedIn() && firestore.exists(memberPath(cid));
+    }
+    function isActiveMember(cid) {
+      return isMember(cid) && firestore.get(memberPath(cid)).data.estado == 'activo';
+    }
+    function canWrite(cid) {
+      return isActiveMember(cid) && firestore.get(memberPath(cid)).data.role != 'Viewer';
+    }
+    // Límite de tamaño defensivo (50 MB) en subidas.
+    function withinSizeLimit() {
+      return request.resource == null || request.resource.size < 50 * 1024 * 1024;
+    }
+
+    // Todo el almacenamiento del tenant
+    match /companies/{cid}/{allPaths=**} {
+      allow read:  if isSuper() || isMember(cid);
+      allow write: if isSuper() || (canWrite(cid) && withinSizeLimit());
+    }
+
+    // Default fail-closed: nada fuera de companies/ es accesible.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

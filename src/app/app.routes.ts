@@ -178,6 +178,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/superuser/users/users').then((m) => m.UsersComponent),
       },
+      {
+        path: 'agents',
+        loadComponent: () =>
+          import('./components/superuser/agents/agents').then((m) => m.AgentsComponent),
+      },
     ],
   },
   {

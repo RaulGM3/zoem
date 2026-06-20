@@ -1,0 +1,319 @@
+rules_version = '2';
+
+// ============================================================================
+// Zoem (vertey-cf1b9) — Firestore Security Rules
+//
+// Modelo: multi-tenant. El tenant es `companies/{companyId}`.
+// La membresía vive en `companies/{cid}/members/{userId}` (doc id == uid),
+// lo que permite resolverla con get()/exists() SIN queries (las rules no
+// pueden hacer queries).
+//
+// Enforcement v1: AISLAMIENTO DE TENANT + ROL GRUESO.
+//   - Nadie cruza de empresa.
+//   - Viewer = solo lectura.
+//   - Admin (y Gestor donde aplica) gobierna config / finanzas / miembros.
+//   - El superusuario (users/{uid}.isSuperUser == true) pasa por encima de todo.
+// La matriz fina ver/crear/editar/eliminar por módulo sigue siendo client-side
+// (UX); acá cubrimos la superficie de ataque real.
+// ============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---- Identidad / superusuario --------------------------------------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function userData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    function isSuper() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && userData().isSuperUser == true;
+    }
+
+    // ---- Membresía / roles (deterministic path) ------------------------
+    function memberPath(cid) {
+      return /databases/$(database)/documents/companies/$(cid)/members/$(request.auth.uid);
+    }
+    function isMember(cid) {
+      return isSignedIn() && exists(memberPath(cid));
+    }
+    function memberData(cid) {
+      return get(memberPath(cid)).data;
+    }
+    function isActiveMember(cid) {
+      return isMember(cid) && memberData(cid).estado == 'activo';
+    }
+    function hasRole(cid, roles) {
+      return isActiveMember(cid) && (memberData(cid).role in roles);
+    }
+    function isCompanyAdmin(cid) {
+      return hasRole(cid, ['Admin']);
+    }
+    function isManager(cid) {
+      // Admin + Gestor: finanzas, facturación, tesorería
+      return hasRole(cid, ['Admin', 'Gestor']);
+    }
+    function canWrite(cid) {
+      // Cualquier miembro activo que NO sea Viewer
+      return isActiveMember(cid) && memberData(cid).role != 'Viewer';
+    }
+
+    // ====================================================================
+    // users/{uid}
+    // ====================================================================
+    match /users/{uid} {
+      allow get:    if isSuper() || request.auth.uid == uid;
+      allow list:   if isSuper();
+      // El superusuario crea cualquier doc; el resto solo el propio y sin autopromoción.
+      allow create: if isSuper()
+                    || (request.auth.uid == uid
+                        && request.resource.data.isSuperUser == false);
+      // El dueño edita su perfil pero NO puede tocar isSuperUser
+      allow update: if isSuper()
+                    || (request.auth.uid == uid
+                        && request.resource.data.isSuperUser == resource.data.isSuperUser);
+      allow delete: if isSuper();
+    }
+
+    // ====================================================================
+    // companies/{cid} + subcolecciones
+    // ====================================================================
+    match /companies/{cid} {
+      allow get:    if isSuper() || isMember(cid);
+      allow list:   if isSuper();
+      allow create: if isSuper();                       // alta de empresa = superusuario
+      allow update: if isSuper() || isManager(cid);     // settings + saldo bancario (tesorería)
+      allow delete: if isSuper();
+
+      // ---- members: doc id == userId ---------------------------------
+      function pendingInviteOk(cid) {
+        let inv = get(/databases/$(database)/documents/companyInvitations/$(request.resource.data.inviteId)).data;
+        return inv.status == 'pending'
+          && inv.companyId == cid
+          && inv.email == request.auth.token.email.lower()
+          && inv.role == request.resource.data.role
+          && request.time < inv.expiresAt;
+      }
+      function selfJoin(cid, memberUid) {
+        // Auto-alta SOLO contra una invitación pendiente válida para tu email
+        return memberUid == request.auth.uid
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.companyId == cid
+          && request.resource.data.estado == 'activo'
+          && pendingInviteOk(cid);
+      }
+      function onlyLoginTouched() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ultimoLogin']);
+      }
+
+      match /members/{memberUid} {
+        allow read:   if isSuper() || isMember(cid) || memberUid == request.auth.uid;
+        allow create: if isSuper() || isCompanyAdmin(cid) || selfJoin(cid, memberUid);
+        allow update: if isSuper() || isCompanyAdmin(cid)
+                      || (memberUid == request.auth.uid && onlyLoginTouched());
+        allow delete: if isSuper() || isCompanyAdmin(cid);
+      }
+
+      // ---- Finanzas / tesorería: Admin + Gestor ----------------------
+      match /cuentas/{doc=**}        { allow read, write: if isSuper() || isManager(cid); }
+      match /cierres_caja/{doc=**}   { allow read, write: if isSuper() || isManager(cid); }
+      match /retiros/{doc=**}        { allow read, write: if isSuper() || isManager(cid); }
+      match /tesoreria_meta/{doc=**} { allow read, write: if isSuper() || isManager(cid); }
+
+      // ---- Casos (operativo) -----------------------------------------
+      match /casos/{casoId} {
+        allow read:  if isSuper() || isMember(cid);
+        allow write: if isSuper() || canWrite(cid);
+
+        // gestoría = movimientos financieros del caso → Admin/Gestor
+        match /gestoria/{doc=**}       { allow read, write: if isSuper() || isManager(cid); }
+        match /gestoria_slots/{doc=**} { allow read, write: if isSuper() || isManager(cid); }
+
+        // documentos del caso → cualquier miembro activo no-Viewer
+        match /doc_folders/{doc=**} { allow read: if isSuper() || isMember(cid); allow write: if isSuper() || canWrite(cid); }
+        match /doc_slots/{doc=**}   { allow read: if isSuper() || isMember(cid); allow write: if isSuper() || canWrite(cid); }
+        match /doc_files/{doc=**}   { allow read: if isSuper() || isMember(cid); allow write: if isSuper() || canWrite(cid); }
+      }
+
+      // ---- Resto operativo -------------------------------------------
+      match /hitos/{doc=**}          { allow read: if isSuper() || isMember(cid); allow write: if isSuper() || canWrite(cid); }
+      match /hito_actividad/{doc=**} { allow read: if isSuper() || isMember(cid); allow write: if isSuper() || canWrite(cid); }
+      match /eventos/{doc=**}        { allow read: if isSuper() || isMember(cid); allow write: if isSuper() || canWrite(cid); }
+      match /docTemplates/{doc=**}   { allow read: if isSuper() || isMember(cid); allow write: if isSuper() || canWrite(cid); }
+      match /casoPlantillas/{doc=**} { allow read: if isSuper() || isMember(cid); allow write: if isSuper() || canWrite(cid); }
+
+      // Feed de actividad: cualquier miembro activo agrega; editar/borrar = Admin/Gestor
+      match /actividad/{doc=**} {
+        allow read:   if isSuper() || isMember(cid);
+        allow create: if isSuper() || isActiveMember(cid);
+        allow update, delete: if isSuper() || isManager(cid);
+      }
+    }
+
+    // ====================================================================
+    // companyInvitations/{token}  (doc id == token, un secreto bearer)
+    // ====================================================================
+    match /companyInvitations/{token} {
+      // get por token: el doc id ES el token (UUID secreto del link de invitación).
+      // El alta de un usuario NUEVO lo lee antes de autenticarse → get abierto por id.
+      // No se puede enumerar: `list` queda restringido a admins/superusuario.
+      allow get:    if true;
+      allow list:   if isSuper() || (isSignedIn() && isCompanyAdmin(resource.data.companyId));
+      allow create: if isSuper() || isCompanyAdmin(request.resource.data.companyId);
+      // El invitado puede marcar accepted; el admin gestiona todo
+      allow update: if isSuper()
+                    || isCompanyAdmin(resource.data.companyId)
+                    || (resource.data.email == request.auth.token.email.lower()
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+                        && request.resource.data.status == 'accepted');
+      allow delete: if isSuper() || isCompanyAdmin(resource.data.companyId);
+    }
+
+    // ====================================================================
+    // Top-level con campo `companyId` (tenancy en un campo)
+    // ====================================================================
+
+    // --- Operativos: lectura miembro / escritura no-Viewer --------------
+    match /contacts/{id} {
+      allow read:   if isSuper() || isMember(resource.data.companyId);
+      allow create: if isSuper() || canWrite(request.resource.data.companyId);
+      allow update: if isSuper() || (canWrite(resource.data.companyId)
+                      && request.resource.data.companyId == resource.data.companyId);
+      allow delete: if isSuper() || canWrite(resource.data.companyId);
+    }
+    match /contact_files/{id} {
+      allow read:   if isSuper() || isMember(resource.data.companyId);
+      allow create: if isSuper() || canWrite(request.resource.data.companyId);
+      allow update: if isSuper() || (canWrite(resource.data.companyId)
+                      && request.resource.data.companyId == resource.data.companyId);
+      allow delete: if isSuper() || canWrite(resource.data.companyId);
+    }
+    match /contact_folders/{id} {
+      allow read:   if isSuper() || isMember(resource.data.companyId);
+      allow create: if isSuper() || canWrite(request.resource.data.companyId);
+      allow update: if isSuper() || (canWrite(resource.data.companyId)
+                      && request.resource.data.companyId == resource.data.companyId);
+      allow delete: if isSuper() || canWrite(resource.data.companyId);
+    }
+    match /documents/{id} {
+      allow read:   if isSuper() || isMember(resource.data.companyId);
+      allow create: if isSuper() || canWrite(request.resource.data.companyId);
+      allow update: if isSuper() || (canWrite(resource.data.companyId)
+                      && request.resource.data.companyId == resource.data.companyId);
+      allow delete: if isSuper() || canWrite(resource.data.companyId);
+    }
+    match /calendarEvents/{id} {
+      allow read:   if isSuper() || isMember(resource.data.companyId);
+      allow create: if isSuper() || canWrite(request.resource.data.companyId);
+      allow update: if isSuper() || (canWrite(resource.data.companyId)
+                      && request.resource.data.companyId == resource.data.companyId);
+      allow delete: if isSuper() || canWrite(resource.data.companyId);
+    }
+    match /iaContacts/{id} {
+      allow read:   if isSuper() || isMember(resource.data.companyId);
+      allow create: if isSuper() || canWrite(request.resource.data.companyId);
+      allow update: if isSuper() || (canWrite(resource.data.companyId)
+                      && request.resource.data.companyId == resource.data.companyId);
+      allow delete: if isSuper() || canWrite(resource.data.companyId);
+    }
+    match /plantilla_files/{id} {
+      allow read:   if isSuper() || isMember(resource.data.companyId);
+      allow create: if isSuper() || canWrite(request.resource.data.companyId);
+      allow update: if isSuper() || (canWrite(resource.data.companyId)
+                      && request.resource.data.companyId == resource.data.companyId);
+      allow delete: if isSuper() || canWrite(resource.data.companyId);
+    }
+    match /plantilla_folders/{id} {
+      allow read:   if isSuper() || isMember(resource.data.companyId);
+      allow create: if isSuper() || canWrite(request.resource.data.companyId);
+      allow update: if isSuper() || (canWrite(resource.data.companyId)
+                      && request.resource.data.companyId == resource.data.companyId);
+      allow delete: if isSuper() || canWrite(resource.data.companyId);
+    }
+    match /projects/{id} {
+      allow read:   if isSuper() || isMember(resource.data.companyId);
+      allow create: if isSuper() || canWrite(request.resource.data.companyId);
+      allow update: if isSuper() || (canWrite(resource.data.companyId)
+                      && request.resource.data.companyId == resource.data.companyId);
+      allow delete: if isSuper() || canWrite(resource.data.companyId);
+    }
+
+    // --- Financiero: Admin + Gestor solamente ---------------------------
+    match /invoices/{id} {
+      allow read:   if isSuper() || isManager(resource.data.companyId);
+      allow create: if isSuper() || isManager(request.resource.data.companyId);
+      allow update: if isSuper() || (isManager(resource.data.companyId)
+                      && request.resource.data.companyId == resource.data.companyId);
+      allow delete: if isSuper() || isManager(resource.data.companyId);
+    }
+
+    // ====================================================================
+    // agentMappings/{agentId}  → mapeo agentId → company (RecepciónIA)
+    // doc id == agentId, en su propia colección (NO en companies).
+    // Escritura SOLO superusuario; lectura: super o miembros de esa company.
+    // ====================================================================
+    match /agentMappings/{agentId} {
+      allow read:  if isSuper() || isMember(resource.data.companyId);
+      allow write: if isSuper();
+    }
+
+    // ====================================================================
+    // llamadas/{id}  → aisladas por el agentId vía agentMappings.
+    // Una empresa solo ve las llamadas cuyo agentId tiene registrado.
+    // Las crea/borra un backend (webhook IA) → cliente = solo superusuario.
+    // ====================================================================
+    match /llamadas/{id} {
+      function callCompanyId() {
+        return get(/databases/$(database)/documents/agentMappings/$(resource.data.agentId)).data.companyId;
+      }
+      function callMapped() {
+        return resource.data.agentId != null
+          && exists(/databases/$(database)/documents/agentMappings/$(resource.data.agentId));
+      }
+      allow read: if isSuper() || (callMapped() && isMember(callCompanyId()));
+      // update operativo (descartar / asociar contacto) sin reasignar el agentId
+      allow update: if isSuper()
+        || (callMapped()
+            && isMember(callCompanyId())
+            && request.resource.data.agentId == resource.data.agentId);
+      allow create, delete: if isSuper();
+    }
+
+    // ====================================================================
+    // COLLECTION GROUP QUERIES
+    // Las reglas ANIDADAS (match /companies/{cid}/.../x) NO autorizan
+    // collection group queries — Firestore exige una regla a nivel raíz con
+    // wildcard recursivo `{path=**}`. Como en este scope `cid` no es una
+    // variable limpia del path, autorizamos por el CAMPO que el query filtra.
+    // ====================================================================
+
+    // collectionGroup('members') where userId == uid  → loadMyCompanies()
+    // Cada user solo ve SUS propias membresías (el query ya filtra por userId).
+    match /{path=**}/members/{memberUid} {
+      allow read: if isSuper() || resource.data.userId == request.auth.uid;
+    }
+
+    // collectionGroup('gestoria') where companyId == cid → loadTodosMovimientos()
+    // Financiero → Admin/Gestor de la empresa dueña de los movimientos.
+    match /{path=**}/gestoria/{doc} {
+      allow read: if isSuper() || isManager(resource.data.companyId);
+    }
+
+    // collectionGroup('extracto') where companyId == cid → loadLineas()
+    // Conciliación bancaria (financiero) → Admin/Gestor de esa empresa.
+    match /{path=**}/extracto/{doc} {
+      allow read: if isSuper() || isManager(resource.data.companyId);
+    }
+
+    // ====================================================================
+    // Default: TODO lo no declarado queda DENEGADO (fail-closed).
+    // Colecciones nuevas necesitan su propia regla explícita.
+    // ====================================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

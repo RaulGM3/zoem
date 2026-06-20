@@ -3,14 +3,14 @@ import {
   Firestore,
   collection,
   doc,
+  getDoc,
   getDocs,
   updateDoc,
   deleteDoc,
-  query,
-  where,
   serverTimestamp,
 } from '@angular/fire/firestore';
 import { CompanyService } from './company.service';
+import { stripUndefinedDeep } from '../firebase/sanitize';
 import {
   CompanyMember,
   FirmRole,
@@ -43,11 +43,10 @@ export class UsersService {
     if (!companyId) return;
     this.isLoading.set(true);
     try {
-      const q = query(
-        collection(this.firestore, 'companyMembers'),
-        where('companyId', '==', companyId)
+      // Subcolección por empresa: todos los docs pertenecen a este tenant.
+      const snapshot = await getDocs(
+        collection(this.firestore, 'companies', companyId, 'members')
       );
-      const snapshot = await getDocs(q);
       this.members.set(
         snapshot.docs.map(d => {
           const data = d.data();
@@ -80,27 +79,28 @@ export class UsersService {
       >
     >
   ): Promise<void> {
-    await updateDoc(doc(this.firestore, 'companyMembers', id), {
+    const companyId = this.companyService.activeCompany()?.id;
+    if (!companyId) return;
+    await updateDoc(doc(this.firestore, 'companies', companyId, 'members', id), stripUndefinedDeep({
       ...patch,
       updatedAt: serverTimestamp(),
-    });
+    }));
     this.members.update(list => list.map(m => (m.id === id ? { ...m, ...patch } : m)));
   }
 
   async removeMember(id: string): Promise<void> {
-    await deleteDoc(doc(this.firestore, 'companyMembers', id));
+    const companyId = this.companyService.activeCompany()?.id;
+    if (!companyId) return;
+    await deleteDoc(doc(this.firestore, 'companies', companyId, 'members', id));
     this.members.update(list => list.filter(m => m.id !== id));
   }
 
   async recordLogin(uid: string, companyId: string): Promise<void> {
-    const q = query(
-      collection(this.firestore, 'companyMembers'),
-      where('companyId', '==', companyId),
-      where('userId', '==', uid)
-    );
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) return;
-    await updateDoc(snapshot.docs[0].ref, { ultimoLogin: serverTimestamp() });
+    // doc id == uid → acceso directo, sin query.
+    const memberRef = doc(this.firestore, 'companies', companyId, 'members', uid);
+    const snapshot = await getDoc(memberRef);
+    if (!snapshot.exists()) return;
+    await updateDoc(memberRef, stripUndefinedDeep({ ultimoLogin: serverTimestamp() }));
   }
 
   getRoles(): FirmRoleConfig[] {

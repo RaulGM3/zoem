@@ -12,12 +12,14 @@ import {
 } from '@angular/fire/auth';
 import { UserSyncService } from '../core/services/user-sync.service';
 import { CompanyService } from '../core/services/company.service';
+import { UsersService } from '../core/services/users';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly auth = inject(Auth);
   private readonly userSync = inject(UserSyncService);
   private readonly companyService = inject(CompanyService);
+  private readonly usersService = inject(UsersService);
 
   readonly user = signal<User | null>(null);
   readonly isLoading = signal(true);
@@ -29,9 +31,14 @@ export class AuthService {
       if (user) {
         await this.userSync.syncUser(user.uid, user.email ?? '', user.displayName);
         await this.companyService.loadMyCompanies(user.uid);
+        // Cargar los miembros de la empresa activa acá garantiza que el rol del
+        // usuario esté disponible app-wide (sidebar, dashboard) sin importar por
+        // qué ruta entre. El permissionGuard ya no es el único que los carga.
+        await this.usersService.loadMembers();
       } else {
         this.userSync.currentUser.set(null);
         this.companyService.activeCompany.set(null);
+        this.usersService.members.set([]);
       }
       this.isLoading.set(false);
     });

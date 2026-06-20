@@ -2,6 +2,7 @@ import { inject, Injectable, signal } from '@angular/core';
 import {
   Firestore,
   collection,
+  collectionGroup,
   doc,
   getDoc,
   getDocs,
@@ -11,6 +12,7 @@ import {
   where,
   serverTimestamp,
 } from '@angular/fire/firestore';
+import { stripUndefinedDeep } from '../firebase/sanitize';
 
 export interface CompanyVerifactu {
   enabled: boolean;
@@ -55,8 +57,8 @@ export class CompanyService {
   readonly allCompanies = signal<Company[]>([]);
 
   async loadMyCompanies(userId: string): Promise<void> {
-    const membersRef = collection(this.firestore, 'companyMembers');
-    const q = query(membersRef, where('userId', '==', userId));
+    // Membresía vive en companies/{cid}/members/{uid} → collectionGroup para todas las empresas del user.
+    const q = query(collectionGroup(this.firestore, 'members'), where('userId', '==', userId));
     const snapshot = await getDocs(q);
     const memberships: CompanyMember[] = [];
     for (const memberDoc of snapshot.docs) {
@@ -88,29 +90,29 @@ export class CompanyService {
   }
 
   async createCompany(name: string, slug: string, plan?: string): Promise<string> {
-    const ref = await addDoc(collection(this.firestore, 'companies'), {
+    const ref = await addDoc(collection(this.firestore, 'companies'), stripUndefinedDeep({
       name,
       slug,
       plan: plan ?? null,
       isActive: true,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    });
+    }));
     return ref.id;
   }
 
   async updateCompany(id: string, data: Partial<Omit<Company, 'id' | 'createdAt' | 'updatedAt'>>): Promise<void> {
-    await updateDoc(doc(this.firestore, 'companies', id), { ...data, updatedAt: serverTimestamp() });
+    await updateDoc(doc(this.firestore, 'companies', id), stripUndefinedDeep({ ...data, updatedAt: serverTimestamp() }));
     this.activeCompany.update((c) => (c && c.id === id ? { ...c, ...data } : c));
   }
 
   /** Guarda el saldo bancario manual y refresca la company activa en memoria. */
   async updateSaldoBancario(id: string, saldoBancario: number, fecha: string): Promise<void> {
-    await updateDoc(doc(this.firestore, 'companies', id), {
+    await updateDoc(doc(this.firestore, 'companies', id), stripUndefinedDeep({
       saldoBancario,
       saldoBancarioFecha: fecha,
       updatedAt: serverTimestamp(),
-    });
+    }));
     this.activeCompany.update(c =>
       c && c.id === id ? { ...c, saldoBancario, saldoBancarioFecha: fecha } : c
     );

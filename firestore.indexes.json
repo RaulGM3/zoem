@@ -31,7 +31,23 @@
         { "fieldPath": "companyId", "order": "ASCENDING" },
         { "fieldPath": "fecha", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "llamadas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "agentId", "order": "ASCENDING" },
+        { "fieldPath": "creadoEn", "order": "DESCENDING" }
+      ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "members",
+      "fieldPath": "userId",
+      "indexes": [
+        { "queryScope": "COLLECTION_GROUP", "order": "ASCENDING" }
+      ]
+    }
+  ]
 }

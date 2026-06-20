@@ -1,13 +1,13 @@
 import { inject, Injectable } from '@angular/core';
 import {
-  addDoc,
   collection,
   collectionData,
   deleteDoc,
   doc,
-  getDocs,
+  getDoc,
   query,
   serverTimestamp,
+  setDoc,
   Timestamp,
   updateDoc,
   where,
@@ -16,6 +16,7 @@ import { Firestore } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
 import { CompanyInvitation, InvitationRole } from '../../interfaces/invitation';
 import { UserSyncService } from './user-sync.service';
+import { stripUndefinedDeep } from '../firebase/sanitize';
 
 @Injectable({ providedIn: 'root' })
 export class InvitationService {
@@ -36,7 +37,8 @@ export class InvitationService {
     const token = crypto.randomUUID();
     const sevenDays = 7 * 24 * 60 * 60 * 1000;
     const expiresAt = Timestamp.fromDate(new Date(Date.now() + sevenDays));
-    await addDoc(this.col, {
+    // El doc id ES el token: las security rules lo resuelven con get() (no se puede query en rules).
+    await setDoc(doc(this.firestore, 'companyInvitations', token), stripUndefinedDeep({
       companyId,
       companyName,
       email: email.toLowerCase().trim(),
@@ -46,7 +48,7 @@ export class InvitationService {
       status: 'pending',
       createdBy,
       createdAt: serverTimestamp(),
-    });
+    }));
     return token;
   }
 
@@ -61,11 +63,9 @@ export class InvitationService {
   }
 
   async getInvitationByToken(token: string): Promise<CompanyInvitation | null> {
-    const q = query(this.col, where('token', '==', token));
-    const snap = await getDocs(q);
-    if (snap.empty) return null;
-    const d = snap.docs[0];
-    return { id: d.id, ...d.data() } as CompanyInvitation;
+    const snap = await getDoc(doc(this.firestore, 'companyInvitations', token));
+    if (!snap.exists()) return null;
+    return { id: snap.id, ...snap.data() } as CompanyInvitation;
   }
 
   async acceptInvitation(
@@ -86,8 +86,10 @@ export class InvitationService {
     }
 
     const normalizedEmail = userEmail.toLowerCase().trim();
-    const membersCol = collection(this.firestore, 'companyMembers');
-    await addDoc(membersCol, {
+    // Membresía determinista: doc id == uid bajo companies/{cid}/members.
+    // `inviteId` deja que la regla valide la invitación con un get() directo.
+    const memberRef = doc(this.firestore, 'companies', invitation.companyId, 'members', uid);
+    await setDoc(memberRef, stripUndefinedDeep({
       companyId: invitation.companyId,
       userId: uid,
       email: normalizedEmail,
@@ -97,16 +99,17 @@ export class InvitationService {
       role: invitation.role,
       departamento: '',
       estado: 'activo',
+      inviteId: token,
       ultimoLogin: null,
       createdAt: serverTimestamp(),
-    });
+    }));
 
     const systemRole: 'admin' | 'user' = invitation.role === 'Admin' ? 'admin' : 'user';
     await this.userSync.updateUserCompany(uid, invitation.companyId, systemRole);
 
-    await updateDoc(doc(this.firestore, 'companyInvitations', invitation.id), {
+    await updateDoc(doc(this.firestore, 'companyInvitations', invitation.id), stripUndefinedDeep({
       status: 'accepted',
-    });
+    }));
   }
 
   async cancelInvitation(id: string): Promise<void> {
