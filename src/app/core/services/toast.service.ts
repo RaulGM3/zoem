@@ -36,6 +36,24 @@ interface RunOptions {
 const AUTO_DISMISS_MS = 5000;
 
 /**
+ * Tope para considerar una escritura "colgada". Firestore offline NO rechaza:
+ * deja la promesa pendiente y encola la escritura. Sin este corte, el spinner
+ * giraría para siempre. 12s da margen a redes lentas reales.
+ */
+const WRITE_TIMEOUT_MS = 12000;
+
+/**
+ * Error sintético "sin conexión". Usa code 'unavailable' para que
+ * [[firebase-error]] lo traduzca a un mensaje de conexión reintentable.
+ */
+function offlineError(): Error & { code: string } {
+  const err = new Error('client offline / write timed out') as Error & { code: string };
+  err.name = 'FirebaseError';
+  err.code = 'unavailable';
+  return err;
+}
+
+/**
  * Notificaciones centralizadas con soporte de reintento.
  *
  * Filosofía: NINGÚN error de Firebase debe romper la app en silencio. Todo
@@ -81,8 +99,18 @@ export class ToastService {
    *   await this.toast.run(() => this.svc.createX(data), { successMessage: '...' });
    */
   async run<T>(action: () => Promise<T>, opts: RunOptions = {}): Promise<T | undefined> {
+    // Offline: NO lanzamos la escritura. Firestore la encolaría sin rechazar
+    // (promesa eterna → spinner colgado) y al reintentar se duplicaría. Mejor
+    // avisar de una y dejar reintentar cuando vuelva la conexión.
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      this.fromError(offlineError(), {
+        title: opts.errorTitle,
+        retry: () => void this.run(action, opts),
+      });
+      return undefined;
+    }
     try {
-      const result = await action();
+      const result = await this.withTimeout(action());
       if (opts.successMessage) this.success(opts.successMessage);
       opts.onSuccess?.();
       return result;
@@ -93,6 +121,20 @@ export class ToastService {
       });
       return undefined;
     }
+  }
+
+  /**
+   * Corta una promesa que no se resuelve en `WRITE_TIMEOUT_MS` (típico de una
+   * red caída que no llega a tirar error). Rechaza con un error de conexión.
+   */
+  private withTimeout<T>(promise: Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => reject(offlineError()), WRITE_TIMEOUT_MS);
+      promise.then(
+        (value) => { clearTimeout(timer); resolve(value); },
+        (err) => { clearTimeout(timer); reject(err); },
+      );
+    });
   }
 
   dismiss(id: number): void {
