@@ -34,7 +34,11 @@
                   <div [class]="'w-2 h-2 rounded-full shrink-0 ' + getPriorityDot(caso.prioridad)"></div>
                   <div>
                     <p class="font-medium text-slate-800">{{ caso.titulo }}</p>
-                    <p class="text-xs text-slate-400">{{ caso.id }}</p>
+                    @if (subtitulos()[caso.id]; as subtitulo) {
+                      <p class="text-xs text-slate-400 truncate max-w-xs" [title]="subtitulo">
+                        {{ truncarSubtitulo(subtitulo) }}
+                      </p>
+                    }
                   </div>
                 </div>
               </td>

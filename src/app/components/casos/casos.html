@@ -18,6 +18,7 @@
 
   <app-casos-table
     [casos]="filteredCasos()"
+    [subtitulos]="subtitulos()"
     [loading]="loading()"
     (casoClick)="navigateTo($event)"
     (deleteCaso)="onDeleteCaso($event)"

@@ -37,6 +37,7 @@
     <button (click)="activeTab.set('contactos')" [class]="activeTab() === 'contactos' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">
       Contactos
     </button>
+    <!-- TODO: tabs con dummy data — ocultos hasta tener fuente real
     <button (click)="activeTab.set('pipeline')" [class]="activeTab() === 'pipeline' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">
       Embudo CRM
     </button>
@@ -46,6 +47,7 @@
     <button (click)="activeTab.set('herramientas')" [class]="activeTab() === 'herramientas' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">
       Herramientas IA
     </button>
+    -->
   </div>
 
   <!-- TAB: Contactos -->
@@ -178,7 +180,7 @@
     </div>
   }
 
-  <!-- TAB: Embudo CRM (Pipeline) -->
+  <!-- TAB: Embudo CRM (Pipeline) — dummy data, oculto
   @if (activeTab() === 'pipeline') {
     <div class="p-4 space-y-4">
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -231,8 +233,9 @@
       </div>
     </div>
   }
+  -->
 
-  <!-- TAB: RGPD -->
+  <!-- TAB: RGPD — dummy data, oculto
   @if (activeTab() === 'rgpd') {
     <div class="p-4 space-y-4">
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -291,8 +294,9 @@
       </div>
     </div>
   }
+  -->
 
-  <!-- TAB: Herramientas IA -->
+  <!-- TAB: Herramientas IA — dummy data, oculto
   @if (activeTab() === 'herramientas') {
     <div class="p-4 space-y-4">
       <div class="grid md:grid-cols-2 gap-4">
@@ -343,6 +347,7 @@
       </div>
     </div>
   }
+  -->
 </div>
 
 <!-- Drawer backdrop -->

@@ -7,6 +7,7 @@ import { SearchService } from '../../core/services/search.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { ToastService } from '../../core/services/toast.service';
 import type { Caso, CasoEstado, CasoTipo, CasoPrioridad, CreateCasoData, Contact } from '../../interfaces';
+import { getContactDisplayName } from '../../interfaces';
 
 type DrawerInitialData = { titulo?: string; descripcion?: string; tipo?: CasoTipo; prioridad?: CasoPrioridad; estado?: CasoEstado };
 import { CasosHeaderComponent } from './components/casos-header/casos-header';
@@ -64,6 +65,26 @@ export class CasosComponent implements OnInit {
     });
   });
 
+  /**
+   * Subtítulo de cada fila (casoId → texto). Lista todos los clientes del caso
+   * separados por coma; si el caso no tiene contactos, cae a la descripción.
+   * Devuelve el texto COMPLETO: el truncado visual lo decide la tabla.
+   * El join contra contactos vive en el contenedor: la tabla solo pinta.
+   */
+  readonly subtitulos = computed<Record<string, string>>(() => {
+    const nombrePorId = new Map(
+      this.contactService.contacts().map(c => [c.id, getContactDisplayName(c)]),
+    );
+    const map: Record<string, string> = {};
+    for (const caso of this.casosService.casos()) {
+      const clientes = (caso.contactoIds ?? [])
+        .map(id => nombrePorId.get(id))
+        .filter((n): n is string => !!n);
+      map[caso.id] = clientes.length ? clientes.join(', ') : (caso.descripcion ?? '');
+    }
+    return map;
+  });
+
   readonly total = computed(() => this.casosService.casos().length);
   readonly enProceso = computed(() => this.casosService.casos().filter(c => c.estado === 'en_proceso').length);
   readonly pendientes = computed(() => this.casosService.casos().filter(c => c.estado === 'pendiente').length);
@@ -72,13 +93,13 @@ export class CasosComponent implements OnInit {
     await Promise.all([
       this.casosService.loadCasos(),
       this.plantillasService.loadPlantillas(),
+      this.contactService.loadContacts(),
     ]);
 
     const p = this.route.snapshot.queryParamMap;
     if (p.get('newCaso') === '1') {
       const contactId = p.get('contactId');
       if (contactId) {
-        await this.contactService.loadContacts();
         const contact = this.contactService.contacts().find(c => c.id === contactId) ?? null;
         this.drawerInitialContact.set(contact);
       }

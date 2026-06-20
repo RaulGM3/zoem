@@ -13,11 +13,16 @@ import type { Caso } from '../../../../interfaces';
 export class CasosTableComponent {
   readonly casos = input.required<Caso[]>();
   readonly loading = input.required<boolean>();
+  /** Subtítulo por caso (casoId → texto): nombre del cliente o, en su defecto, descripción. */
+  readonly subtitulos = input.required<Record<string, string>>();
   readonly casoClick = output<Caso>();
   readonly deleteCaso = output<Caso>();
 
   readonly MoreHorizontalIcon = MoreHorizontal;
   readonly TrashIcon = Trash2;
+
+  /** Longitud máxima del subtítulo antes de truncar. La lista completa queda en el `title`. */
+  private readonly MAX_SUBTITULO = 60;
 
   readonly activeDropdown = signal<string | null>(null);
   readonly activeCaso = signal<Caso | null>(null);
@@ -54,6 +59,12 @@ export class CasosTableComponent {
 
   cancelDelete(): void {
     this.casoToDelete.set(null);
+  }
+
+  truncarSubtitulo(texto: string): string {
+    return texto.length > this.MAX_SUBTITULO
+      ? texto.slice(0, this.MAX_SUBTITULO).trimEnd() + '…'
+      : texto;
   }
 
   getDiasVencimiento(vencimiento?: string): number {

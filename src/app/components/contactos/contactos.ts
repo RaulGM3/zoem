@@ -8,7 +8,7 @@ import {
   Edit, Trash2, ChevronRight, ChevronLeft, UserPlus, TrendingUp,
   GitMerge, Shield, Brain, ArrowRight, X, Check, LoaderCircle, StickyNote, Briefcase,
 } from 'lucide-angular';
-import { PIPELINE_DEALS } from '../../data/dummy-data';
+// import { PIPELINE_DEALS } from '../../data/dummy-data'; // dummy data — tab oculto
 import { ContactService } from '../../core/services/contact.service';
 import { SearchService } from '../../core/services/search.service';
 import { PermissionService } from '../../core/services/permission.service';
@@ -24,13 +24,14 @@ type ContactPayload =
 
 type ContactosTab = 'contactos' | 'pipeline' | 'rgpd' | 'herramientas';
 
-const RGPD_CONSENTIMIENTOS = [
-  { id: 'CON-001', nombre: 'Innovatech Industries S.L.', marketing: true, perfilado: true, terceros: false },
-  { id: 'CON-002', nombre: 'María García López', marketing: true, perfilado: false, terceros: false },
-  { id: 'CON-003', nombre: 'Consultora Global S.L.', marketing: true, perfilado: true, terceros: true },
-  { id: 'CON-004', nombre: 'StartUp Ventures S.L.', marketing: false, perfilado: false, terceros: false },
-  { id: 'CON-005', nombre: 'Carlos Rodríguez Fernández', marketing: false, perfilado: false, terceros: false },
-];
+// Dummy data — tab RGPD oculto hasta tener fuente real
+// const RGPD_CONSENTIMIENTOS = [
+//   { id: 'CON-001', nombre: 'Innovatech Industries S.L.', marketing: true, perfilado: true, terceros: false },
+//   { id: 'CON-002', nombre: 'María García López', marketing: true, perfilado: false, terceros: false },
+//   { id: 'CON-003', nombre: 'Consultora Global S.L.', marketing: true, perfilado: true, terceros: true },
+//   { id: 'CON-004', nombre: 'StartUp Ventures S.L.', marketing: false, perfilado: false, terceros: false },
+//   { id: 'CON-005', nombre: 'Carlos Rodríguez Fernández', marketing: false, perfilado: false, terceros: false },
+// ];
 
 @Component({
   selector: 'app-contactos',
@@ -81,8 +82,9 @@ export class ContactosComponent {
   formStep = signal<1 | 2>(1);
   showErrors = signal(false);
 
-  pipelineDeals = PIPELINE_DEALS;
-  rgpdData = RGPD_CONSENTIMIENTOS;
+  // Dummy data — tabs Embudo CRM y RGPD ocultos hasta tener fuente real
+  // pipelineDeals = PIPELINE_DEALS;
+  // rgpdData = RGPD_CONSENTIMIENTOS;
 
   form = this.fb.group({
     email: ['', [Validators.email]],
@@ -140,28 +142,29 @@ export class ContactosComponent {
     });
   }
 
-  etapasPipeline: Array<{ key: string; label: string }> = [
-    { key: 'Lead', label: 'Lead' },
-    { key: 'Calificado', label: 'Calificado' },
-    { key: 'Propuesta', label: 'Propuesta' },
-    { key: 'Negociación', label: 'Negociación' },
-    { key: 'Ganado', label: 'Ganado' },
-  ];
+  // Derivados de dummy data — tabs Embudo CRM y RGPD ocultos hasta tener fuente real
+  // etapasPipeline: Array<{ key: string; label: string }> = [
+  //   { key: 'Lead', label: 'Lead' },
+  //   { key: 'Calificado', label: 'Calificado' },
+  //   { key: 'Propuesta', label: 'Propuesta' },
+  //   { key: 'Negociación', label: 'Negociación' },
+  //   { key: 'Ganado', label: 'Ganado' },
+  // ];
 
-  dealsByEtapa = computed(() => {
-    const result: Record<string, typeof this.pipelineDeals> = {};
-    for (const etapa of this.etapasPipeline) {
-      result[etapa.key] = this.pipelineDeals.filter((d) => d.etapa === etapa.key);
-    }
-    return result;
-  });
+  // dealsByEtapa = computed(() => {
+  //   const result: Record<string, typeof this.pipelineDeals> = {};
+  //   for (const etapa of this.etapasPipeline) {
+  //     result[etapa.key] = this.pipelineDeals.filter((d) => d.etapa === etapa.key);
+  //   }
+  //   return result;
+  // });
 
-  totalPipeline = computed(() => this.pipelineDeals.reduce((s, d) => s + d.importe, 0));
-  ganados = computed(() => this.pipelineDeals.filter((d) => d.etapa === 'Ganado'));
-  totalGanado = computed(() => this.ganados().reduce((s, d) => s + d.importe, 0));
+  // totalPipeline = computed(() => this.pipelineDeals.reduce((s, d) => s + d.importe, 0));
+  // ganados = computed(() => this.pipelineDeals.filter((d) => d.etapa === 'Ganado'));
+  // totalGanado = computed(() => this.ganados().reduce((s, d) => s + d.importe, 0));
 
-  conMarketing = computed(() => this.rgpdData.filter((r) => r.marketing).length);
-  conPerfilado = computed(() => this.rgpdData.filter((r) => r.perfilado).length);
+  // conMarketing = computed(() => this.rgpdData.filter((r) => r.marketing).length);
+  // conPerfilado = computed(() => this.rgpdData.filter((r) => r.perfilado).length);
 
   filtered = computed(() => {
     const q = this.search().toLowerCase();
