@@ -12,6 +12,7 @@ import { PIPELINE_DEALS } from '../../data/dummy-data';
 import { ContactService } from '../../core/services/contact.service';
 import { SearchService } from '../../core/services/search.service';
 import { PermissionService } from '../../core/services/permission.service';
+import { ToastService } from '../../core/services/toast.service';
 import {
   Contact, PersonaFisica, PersonaJuridica, ContactStatus,
   getContactDisplayName, getContactInitials,
@@ -61,6 +62,7 @@ export class ContactosComponent {
 
   readonly contactService = inject(ContactService);
   readonly perm = inject(PermissionService);
+  private readonly toast = inject(ToastService);
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -114,7 +116,7 @@ export class ContactosComponent {
   });
 
   constructor() {
-    this.contactService.loadContacts();
+    this.reloadContacts();
     const p = this.route.snapshot.queryParamMap;
     if (p.get('newContact') === '1') {
       this.formType.set('persona_fisica');
@@ -129,6 +131,13 @@ export class ContactosComponent {
       });
       this.showDrawer.set(true);
     }
+  }
+
+  /** Carga la lista mostrando un toast con reintento si la lectura falla. */
+  reloadContacts() {
+    this.toast.run(() => this.contactService.loadContacts(), {
+      errorTitle: 'No se pudieron cargar los contactos',
+    });
   }
 
   etapasPipeline: Array<{ key: string; label: string }> = [
@@ -231,15 +240,30 @@ export class ContactosComponent {
   showStep1Fields = computed(() => !!this.editingId() || this.formStep() === 1);
   showStep2Fields = computed(() => !!this.editingId() || this.formStep() === 2);
 
-  step1Valid = computed(() => {
+  /**
+   * Falta una vía de contacto: NI email NI móvil. Regla de negocio: un contacto
+   * necesita al menos UNA forma de contacto, no las dos.
+   * Método (no computed) a propósito: lee el form, que no es señal.
+   */
+  missingContactChannel(): boolean {
     const v = this.form.getRawValue();
-    const emailOk = !this.form.get('email')?.invalid;
-    const mobileOk = !!v.mobile?.trim();
+    return !v.email?.trim() && !v.mobile?.trim();
+  }
+
+  /**
+   * Valida el paso 1 ANTES de avanzar/guardar. Método (no computed): los
+   * Reactive Forms no son signals, así que un computed se quedaría stale.
+   */
+  step1Valid(): boolean {
+    const v = this.form.getRawValue();
+    const emailFormatOk = !this.form.get('email')?.invalid; // vacío = válido
+    const channelOk = !this.missingContactChannel(); // email O móvil
+    const baseOk = emailFormatOk && channelOk;
     if (this.formType() === 'persona_fisica') {
-      return emailOk && mobileOk && !!v.nombre?.trim() && !!v.apellidos?.trim();
+      return baseOk && !!v.nombre?.trim() && !!v.apellidos?.trim();
     }
-    return emailOk && mobileOk && !!v.razonSocial?.trim();
-  });
+    return baseOk && !!v.razonSocial?.trim();
+  }
 
   nextStep() {
     if (!this.step1Valid()) {
@@ -309,8 +333,9 @@ export class ContactosComponent {
   }
 
   async saveContact() {
-    if (this.form.invalid) return;
-    if (!this.editingId() && !this.step1Valid()) {
+    // Validación ANTES de tocar Firestore — aplica tanto al crear como al
+    // editar (antes el edit se saltaba el chequeo y podía vaciar campos).
+    if (!this.step1Valid()) {
       this.showErrors.set(true);
       this.formStep.set(1);
       return;
@@ -363,12 +388,19 @@ export class ContactosComponent {
       }
 
       const editId = this.editingId();
-      if (editId) {
-        await this.contactService.updateContact(editId, data as Record<string, unknown>);
-      } else {
-        await this.contactService.createContact(data);
-      }
-      this.closeDrawer();
+      await this.toast.run(
+        () =>
+          editId
+            ? this.contactService.updateContact(editId, data as Record<string, unknown>)
+            : this.contactService.createContact(data),
+        {
+          successMessage: editId ? 'Contacto actualizado' : 'Contacto creado',
+          errorTitle: 'No se pudo guardar el contacto',
+          // El drawer se cierra SOLO si la escritura terminó bien. Si falla,
+          // queda abierto con los datos para reintentar desde el toast.
+          onSuccess: () => this.closeDrawer(),
+        }
+      );
     } finally {
       this.isSaving.set(false);
     }
@@ -387,7 +419,10 @@ export class ContactosComponent {
   }
 
   async confirmDelete(id: string) {
-    await this.contactService.deleteContact(id);
-    this.deleteConfirmId.set(null);
+    await this.toast.run(() => this.contactService.deleteContact(id), {
+      successMessage: 'Contacto eliminado',
+      errorTitle: 'No se pudo eliminar el contacto',
+      onSuccess: () => this.deleteConfirmId.set(null),
+    });
   }
 }

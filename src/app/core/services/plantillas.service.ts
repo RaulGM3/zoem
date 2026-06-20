@@ -16,21 +16,10 @@ import {
   serverTimestamp,
 } from '@angular/fire/firestore';
 import { CompanyService } from './company.service';
+import { stripUndefinedDeep } from '../firebase/sanitize';
 import { CasoPlantilla, HitoPlantilla, PartidaCosto } from '../../interfaces';
 
 type PlantillaCreate = Omit<CasoPlantilla, 'id' | 'companyId' | 'createdAt' | 'updatedAt'>;
-
-function stripUndefined(obj: unknown): unknown {
-  if (Array.isArray(obj)) return obj.map(stripUndefined);
-  if (obj !== null && typeof obj === 'object') {
-    return Object.fromEntries(
-      Object.entries(obj as Record<string, unknown>)
-        .filter(([, v]) => v !== undefined)
-        .map(([k, v]) => [k, stripUndefined(v)])
-    );
-  }
-  return obj;
-}
 
 @Injectable({ providedIn: 'root' })
 export class PlantillasService {
@@ -114,8 +103,8 @@ export class PlantillasService {
     const ref = await addDoc(
       collection(this.firestore, 'companies', companyId, 'casoPlantillas'),
       {
-        ...(stripUndefined(rest) as Record<string, unknown>),
-        modeloCostos: stripUndefined({ honorariosBase: modeloCostos.honorariosBase }),
+        ...(stripUndefinedDeep(rest) as Record<string, unknown>),
+        modeloCostos: stripUndefinedDeep({ honorariosBase: modeloCostos.honorariosBase }),
         companyId,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -128,10 +117,10 @@ export class PlantillasService {
 
     for (const h of hitos) {
       const { id: _id, ...hitoData } = h;
-      batch.set(doc(hitosColRef), stripUndefined(hitoData) as object);
+      batch.set(doc(hitosColRef), stripUndefinedDeep(hitoData) as object);
     }
     for (const [i, s] of modeloCostos.suplidos.entries()) {
-      batch.set(doc(costosColRef), stripUndefined({ ...s, orden: i }) as object);
+      batch.set(doc(costosColRef), stripUndefinedDeep({ ...s, orden: i }) as object);
     }
     await batch.commit();
 
@@ -144,11 +133,11 @@ export class PlantillasService {
     const { hitos, modeloCostos, ...rest } = data;
 
     const updateData: Record<string, unknown> = {
-      ...(stripUndefined(rest) as Record<string, unknown>),
+      ...(stripUndefinedDeep(rest) as Record<string, unknown>),
       updatedAt: serverTimestamp(),
     };
     if (modeloCostos !== undefined) {
-      updateData['modeloCostos'] = stripUndefined({ honorariosBase: modeloCostos.honorariosBase });
+      updateData['modeloCostos'] = stripUndefinedDeep({ honorariosBase: modeloCostos.honorariosBase });
     }
 
     await updateDoc(
@@ -159,14 +148,14 @@ export class PlantillasService {
     if (hitos !== undefined) {
       await this.syncSubcollection(
         this.hitosRef(id),
-        hitos.map(({ id: _id, ...h }) => stripUndefined(h) as Record<string, unknown>)
+        hitos.map(({ id: _id, ...h }) => stripUndefinedDeep(h) as Record<string, unknown>)
       );
     }
 
     if (modeloCostos?.suplidos !== undefined) {
       await this.syncSubcollection(
         this.costosRef(id),
-        modeloCostos.suplidos.map((s, i) => stripUndefined({ ...s, orden: i }) as Record<string, unknown>)
+        modeloCostos.suplidos.map((s, i) => stripUndefinedDeep({ ...s, orden: i }) as Record<string, unknown>)
       );
     }
 

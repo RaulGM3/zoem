@@ -14,6 +14,7 @@ import {
 } from '@angular/fire/firestore';
 import { Auth } from '@angular/fire/auth';
 import { CompanyService } from './company.service';
+import { stripUndefinedDeep } from '../firebase/sanitize';
 import { ContactFolder } from '../../interfaces';
 
 @Injectable({ providedIn: 'root' })
@@ -43,9 +44,8 @@ export class ContactFolderService {
       );
       const snapshot = await getDocs(q);
       this.folders.set(snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as ContactFolder));
-    } catch {
-      // No active company or Firestore error
     } finally {
+      // El error se propaga al llamador (lo muestra ToastService).
       this.isLoading.set(false);
     }
   }
@@ -55,21 +55,21 @@ export class ContactFolderService {
     parentId: string | null;
     name: string;
   }): Promise<void> {
-    await addDoc(collection(this.firestore, 'contact_folders'), {
+    await addDoc(collection(this.firestore, 'contact_folders'), stripUndefinedDeep({
       ...data,
       companyId: this.companyId,
       createdBy: this.auth.currentUser?.uid ?? '',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    });
+    }));
     await this.loadFolders(data.contactId);
   }
 
   async updateFolder(id: string, data: Partial<Pick<ContactFolder, 'name'>>, contactId: string): Promise<void> {
-    await updateDoc(doc(this.firestore, 'contact_folders', id), {
+    await updateDoc(doc(this.firestore, 'contact_folders', id), stripUndefinedDeep({
       ...data,
       updatedAt: serverTimestamp(),
-    });
+    }));
     await this.loadFolders(contactId);
   }
 

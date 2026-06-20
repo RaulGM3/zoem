@@ -13,15 +13,10 @@ import {
   type Unsubscribe,
 } from '@angular/fire/firestore';
 import { CompanyService } from './company.service';
+import { stripUndefinedDeep } from '../firebase/sanitize';
 import { CuentaBancaria } from '../../interfaces';
 
 type CuentaCreate = Pick<CuentaBancaria, 'nombre' | 'tipo' | 'entidad' | 'iban'>;
-
-function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
-  return Object.fromEntries(
-    Object.entries(obj).filter(([, value]) => value !== undefined)
-  ) as Partial<T>;
-}
 
 @Injectable({ providedIn: 'root' })
 export class CuentasService {
@@ -59,19 +54,19 @@ export class CuentasService {
   }
 
   async createCuenta(data: CuentaCreate): Promise<void> {
-    await addDoc(this.cuentasRef(), {
-      ...stripUndefined(data as Record<string, unknown>),
+    await addDoc(this.cuentasRef(), stripUndefinedDeep({
+      ...(data as Record<string, unknown>),
       companyId: this.companyId,
       activa: true,
       createdAt: serverTimestamp(),
-    });
+    }));
   }
 
   async updateCuenta(id: string, data: Partial<CuentaCreate>): Promise<void> {
-    await updateDoc(doc(this.cuentasRef(), id), {
-      ...stripUndefined(data as Record<string, unknown>),
+    await updateDoc(doc(this.cuentasRef(), id), stripUndefinedDeep({
+      ...(data as Record<string, unknown>),
       updatedAt: serverTimestamp(),
-    });
+    }));
   }
 
   async deleteCuenta(id: string): Promise<void> {

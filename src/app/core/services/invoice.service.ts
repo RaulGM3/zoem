@@ -15,6 +15,7 @@ import {
 import { Functions, httpsCallable } from '@angular/fire/functions';
 import { CompanyService } from './company.service';
 import { VerifactuClientService } from './verifactu-client.service';
+import { stripUndefinedDeep } from '../firebase/sanitize';
 import { VerifactuEstado, VerifactuSubmitResponse } from '../../interfaces/verifactu.interface';
 
 export interface Invoice {
@@ -82,12 +83,12 @@ export class InvoiceService {
   }
 
   async createInvoice(data: Omit<Invoice, 'id' | 'companyId' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    const ref = await addDoc(collection(this.firestore, 'invoices'), {
+    const ref = await addDoc(collection(this.firestore, 'invoices'), stripUndefinedDeep({
       ...data,
       companyId: this.companyId,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    });
+    }));
     await this.loadInvoices();
     return ref.id;
   }
@@ -178,7 +179,7 @@ export class InvoiceService {
   }
 
   async updateInvoice(id: string, data: Partial<Omit<Invoice, 'id' | 'companyId'>>): Promise<void> {
-    await updateDoc(doc(this.firestore, 'invoices', id), { ...data, updatedAt: serverTimestamp() });
+    await updateDoc(doc(this.firestore, 'invoices', id), stripUndefinedDeep({ ...data, updatedAt: serverTimestamp() }));
     await this.loadInvoices();
   }
 

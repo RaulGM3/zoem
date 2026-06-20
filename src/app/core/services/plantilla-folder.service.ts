@@ -13,6 +13,7 @@ import {
 } from '@angular/fire/firestore';
 import { Auth } from '@angular/fire/auth';
 import { CompanyService } from './company.service';
+import { stripUndefinedDeep } from '../firebase/sanitize';
 import { PlantillaFolder } from '../../interfaces';
 
 @Injectable({ providedIn: 'root' })
@@ -44,9 +45,8 @@ export class PlantillaFolderService {
         .map((d) => ({ id: d.id, ...d.data() }) as PlantillaFolder)
         .sort((a, b) => a.name.localeCompare(b.name));
       this.folders.set(items);
-    } catch {
-      // No active company or Firestore error
     } finally {
+      // El error se propaga al llamador (lo muestra ToastService).
       this.isLoading.set(false);
     }
   }
@@ -56,21 +56,21 @@ export class PlantillaFolderService {
     parentId: string | null;
     name: string;
   }): Promise<void> {
-    await addDoc(collection(this.firestore, 'plantilla_folders'), {
+    await addDoc(collection(this.firestore, 'plantilla_folders'), stripUndefinedDeep({
       ...data,
       companyId: this.companyId,
       createdBy: this.auth.currentUser?.uid ?? '',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    });
+    }));
     await this.loadFolders(data.plantillaId);
   }
 
   async updateFolder(id: string, data: Partial<Pick<PlantillaFolder, 'name'>>, plantillaId: string): Promise<void> {
-    await updateDoc(doc(this.firestore, 'plantilla_folders', id), {
+    await updateDoc(doc(this.firestore, 'plantilla_folders', id), stripUndefinedDeep({
       ...data,
       updatedAt: serverTimestamp(),
-    });
+    }));
     await this.loadFolders(plantillaId);
   }
 

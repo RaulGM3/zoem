@@ -13,6 +13,7 @@ import {
   serverTimestamp,
 } from '@angular/fire/firestore';
 import { CompanyService } from './company.service';
+import { stripUndefinedDeep } from '../firebase/sanitize';
 
 export interface Project {
   id: string;
@@ -67,17 +68,17 @@ export class ProjectService {
   }
 
   async createProject(data: Omit<Project, 'id' | 'companyId' | 'createdAt' | 'updatedAt'>): Promise<void> {
-    await addDoc(collection(this.firestore, 'projects'), {
+    await addDoc(collection(this.firestore, 'projects'), stripUndefinedDeep({
       ...data,
       companyId: this.companyId,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    });
+    }));
     await this.loadProjects();
   }
 
   async updateProject(id: string, data: Partial<Omit<Project, 'id' | 'companyId'>>): Promise<void> {
-    await updateDoc(doc(this.firestore, 'projects', id), { ...data, updatedAt: serverTimestamp() });
+    await updateDoc(doc(this.firestore, 'projects', id), stripUndefinedDeep({ ...data, updatedAt: serverTimestamp() }));
     await this.loadProjects();
   }
 

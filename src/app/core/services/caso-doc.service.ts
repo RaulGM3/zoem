@@ -18,6 +18,7 @@ import {
 } from '@angular/fire/storage';
 import { Auth } from '@angular/fire/auth';
 import { CompanyService } from './company.service';
+import { stripUndefinedDeep } from '../firebase/sanitize';
 import { CasoDocFolder, CasoDocSlot, CasoDocFile } from '../../interfaces';
 
 @Injectable({ providedIn: 'root' })
@@ -76,9 +77,8 @@ export class CasoDocService {
           .map(d => ({ id: d.id, ...d.data() }) as CasoDocFile)
           .sort((a, b) => a.name.localeCompare(b.name))
       );
-    } catch {
-      // No active company or Firestore error
     } finally {
+      // El error se propaga al llamador (lo muestra ToastService).
       this.isLoading.set(false);
     }
   }
@@ -86,11 +86,11 @@ export class CasoDocService {
   // ── Carpetas ───────────────────────────────────────────
 
   async createFolder(casoId: string, parentId: string | null, name: string): Promise<void> {
-    const ref = await addDoc(this.foldersRef(casoId), {
+    const ref = await addDoc(this.foldersRef(casoId), stripUndefinedDeep({
       parentId,
       name,
       createdAt: serverTimestamp(),
-    });
+    }));
     this.folders.update(list =>
       [...list, { id: ref.id, parentId, name } as CasoDocFolder]
         .sort((a, b) => a.name.localeCompare(b.name))
@@ -132,7 +132,7 @@ export class CasoDocService {
     await uploadBytes(storageRef, file);
     const downloadUrl = await getDownloadURL(storageRef);
 
-    const docRef = await addDoc(this.filesRef(casoId), {
+    const docRef = await addDoc(this.filesRef(casoId), stripUndefinedDeep({
       folderId,
       name: file.name,
       storagePath,
@@ -142,7 +142,7 @@ export class CasoDocService {
       uploadedBy: this.auth.currentUser?.uid ?? '',
       uploadedAt: serverTimestamp(),
       createdAt: serverTimestamp(),
-    });
+    }));
 
     this.files.update(list =>
       [...list, {
@@ -178,7 +178,7 @@ export class CasoDocService {
     await uploadBytes(storageRef, file);
     const downloadUrl = await getDownloadURL(storageRef);
 
-    await updateDoc(doc(this.slotsRef(casoId), slot.id), {
+    await updateDoc(doc(this.slotsRef(casoId), slot.id), stripUndefinedDeep({
       status: 'subido',
       storagePath,
       downloadUrl,
@@ -187,7 +187,7 @@ export class CasoDocService {
       uploadedBy: this.auth.currentUser?.uid ?? '',
       uploadedAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    });
+    }));
 
     this.slots.update(list =>
       list.map(s =>
@@ -211,14 +211,14 @@ export class CasoDocService {
     html: string,
     values: Record<string, string>
   ): Promise<void> {
-    await updateDoc(doc(this.slotsRef(casoId), slot.id), {
+    await updateDoc(doc(this.slotsRef(casoId), slot.id), stripUndefinedDeep({
       status: 'generado',
       generatedHtml: html,
       generatedValues: values,
       generatedBy: this.auth.currentUser?.uid ?? '',
       generatedAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    });
+    }));
 
     this.slots.update(list =>
       list.map(s =>

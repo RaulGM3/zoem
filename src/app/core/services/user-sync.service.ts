@@ -1,6 +1,7 @@
 import { computed, Injectable, signal } from '@angular/core';
 import { inject } from '@angular/core';
 import { Firestore, doc, getDoc, setDoc, updateDoc, serverTimestamp } from '@angular/fire/firestore';
+import { stripUndefinedDeep } from '../firebase/sanitize';
 import { SystemRole, VerteyUser, VerteyUserDespacho, VerteyUserProfesional } from '../../interfaces/user';
 
 @Injectable({ providedIn: 'root' })
@@ -14,15 +15,15 @@ export class UserSyncService {
     const userRef = doc(this.firestore, 'users', uid);
     const snapshot = await getDoc(userRef);
     if (!snapshot.exists()) {
-      await setDoc(userRef, {
+      await setDoc(userRef, stripUndefinedDeep({
         email,
         displayName,
         isSuperUser: false,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      });
+      }));
     } else {
-      await setDoc(userRef, { displayName, updatedAt: serverTimestamp() }, { merge: true });
+      await setDoc(userRef, stripUndefinedDeep({ displayName, updatedAt: serverTimestamp() }), { merge: true });
     }
     await this.loadCurrentUser(uid);
   }
@@ -53,13 +54,13 @@ export class UserSyncService {
       profesional,
       updatedAt: serverTimestamp(),
     };
-    await setDoc(userRef, data, { merge: true });
+    await setDoc(userRef, stripUndefinedDeep(data), { merge: true });
     this.currentUser.update((u) => u ? { ...u, ...data } : u);
   }
 
   async updateUserCompany(uid: string, companyId: string, role: SystemRole): Promise<void> {
     const userRef = doc(this.firestore, 'users', uid);
-    await updateDoc(userRef, { companyId, role, updatedAt: serverTimestamp() });
+    await updateDoc(userRef, stripUndefinedDeep({ companyId, role, updatedAt: serverTimestamp() }));
     this.currentUser.update((u) => u ? { ...u, companyId, role } : u);
   }
 }

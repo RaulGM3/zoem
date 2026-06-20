@@ -20,22 +20,13 @@ import {
 import { CompanyService } from './company.service';
 import { CasosService } from './casos.service';
 import { ActividadService } from './actividad.service';
+import { stripUndefinedDeep } from '../firebase/sanitize';
 import { GestoriaSlot, MovimientoGestoria, MovimientoTipo, Retiro } from '../../interfaces';
 import { Auth } from '@angular/fire/auth';
 
 type MovimientoCreate = Pick<MovimientoGestoria, 'tipo' | 'concepto' | 'importe' | 'esEntrada' | 'fecha' | 'notas' | 'cuentaId' | 'tipoIva' | 'ivaExento' | 'baseImponible' | 'cuotaIva'>;
 type MovimientoOpt = Omit<MovimientoCreate, 'notas' | 'cuentaId'> & { notas?: string; cuentaId?: string };
 type RetiroCreate = Pick<Retiro, 'concepto' | 'importe' | 'fecha' | 'cuentaId' | 'notas'>;
-
-/**
- * Firestore rechaza valores `undefined`. Elimina las claves con `undefined`
- * antes de escribir (p. ej. `notas` cuando el form viene vacío).
- */
-function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
-  return Object.fromEntries(
-    Object.entries(obj).filter(([, value]) => value !== undefined)
-  ) as Partial<T>;
-}
 
 @Injectable({ providedIn: 'root' })
 export class GestoriaService {
@@ -75,16 +66,13 @@ export class GestoriaService {
   }
 
   async loadSlots(casoId: string): Promise<void> {
-    try {
-      const snapshot = await getDocs(this.slotsRef(casoId));
-      this.slots.set(
-        snapshot.docs
-          .map(d => ({ id: d.id, ...d.data() }) as GestoriaSlot)
-          .sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999) || a.nombre.localeCompare(b.nombre))
-      );
-    } catch {
-      // No active company or Firestore error
-    }
+    // El error se propaga al llamador (lo muestra ToastService); antes se tragaba.
+    const snapshot = await getDocs(this.slotsRef(casoId));
+    this.slots.set(
+      snapshot.docs
+        .map(d => ({ id: d.id, ...d.data() }) as GestoriaSlot)
+        .sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999) || a.nombre.localeCompare(b.nombre))
+    );
   }
 
   /**
@@ -112,7 +100,7 @@ export class GestoriaService {
   async registerSlot(casoId: string, slot: GestoriaSlot, movData: MovimientoOpt): Promise<void> {
     const companyId = this.companyId;
     const movRef = await addDoc(this.gestoriaRef(casoId), {
-      ...stripUndefined(movData),
+      ...stripUndefinedDeep(movData),
       casoId,
       companyId,
       createdBy: this.auth.currentUser?.uid ?? '',
@@ -185,7 +173,7 @@ export class GestoriaService {
   async addMovimiento(casoId: string, data: MovimientoCreate): Promise<void> {
     const companyId = this.companyId;
     await addDoc(this.gestoriaRef(casoId), {
-      ...stripUndefined(data),
+      ...stripUndefinedDeep(data),
       casoId,
       companyId,
       createdBy: this.auth.currentUser?.uid ?? '',
@@ -198,7 +186,7 @@ export class GestoriaService {
   async updateMovimiento(casoId: string, id: string, data: Partial<MovimientoCreate>): Promise<void> {
     await updateDoc(
       doc(this.firestore, 'companies', this.companyId, 'casos', casoId, 'gestoria', id),
-      stripUndefined(data)
+      stripUndefinedDeep(data)
     );
     await this.casosService.recalcularResumen(casoId);
   }
@@ -283,7 +271,7 @@ export class GestoriaService {
 
   async addRetiro(data: RetiroCreate): Promise<void> {
     await addDoc(this.retirosRef(), {
-      ...stripUndefined(data as Record<string, unknown>),
+      ...stripUndefinedDeep(data as Record<string, unknown>),
       companyId: this.companyId,
       createdBy: this.auth.currentUser?.uid ?? '',
       createdAt: serverTimestamp(),

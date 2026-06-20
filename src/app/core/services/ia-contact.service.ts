@@ -13,6 +13,7 @@ import {
   serverTimestamp,
 } from '@angular/fire/firestore';
 import { CompanyService } from './company.service';
+import { stripUndefinedDeep } from '../firebase/sanitize';
 
 export interface IaContact {
   id: string;
@@ -69,19 +70,19 @@ export class IaContactService {
   }
 
   async createIaContact(data: Omit<IaContact, 'id' | 'companyId' | 'createdAt' | 'updatedAt'>): Promise<void> {
-    await addDoc(collection(this.firestore, 'iaContacts'), {
+    await addDoc(collection(this.firestore, 'iaContacts'), stripUndefinedDeep({
       ...data,
       companyId: this.companyId,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    });
+    }));
     await this.loadIaContacts();
   }
 
   async updateStatus(id: string, status: string, assignedToId?: string): Promise<void> {
     const data: Record<string, unknown> = { status, updatedAt: serverTimestamp() };
     if (assignedToId !== undefined) data['assignedToId'] = assignedToId;
-    await updateDoc(doc(this.firestore, 'iaContacts', id), data);
+    await updateDoc(doc(this.firestore, 'iaContacts', id), stripUndefinedDeep(data));
     this.iaContacts.update((list) => list.map((c) => (c.id === id ? { ...c, status } : c)));
   }
 

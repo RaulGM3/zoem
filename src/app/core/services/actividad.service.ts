@@ -13,6 +13,7 @@ import { Observable, of } from 'rxjs';
 import { CompanyService } from './company.service';
 import { PermissionService } from './permission.service';
 import { UserSyncService } from './user-sync.service';
+import { stripUndefinedDeep } from '../firebase/sanitize';
 import type { Actividad } from '../../interfaces/actividad';
 import type { Modulo } from '../permissions/permissions';
 
@@ -39,7 +40,7 @@ export class ActividadService {
     const autorId = member?.userId ?? user?.id ?? '';
     const autorNombre = member?.nombre ?? user?.displayName ?? user?.email ?? 'Alguien';
     try {
-      await addDoc(this.actividadRef(companyId), {
+      await addDoc(this.actividadRef(companyId), stripUndefinedDeep({
         companyId,
         autorId,
         autorNombre,
@@ -47,7 +48,7 @@ export class ActividadService {
         modulo,
         ...(entidadId ? { entidadId } : {}),
         createdAt: serverTimestamp(),
-      });
+      }));
     } catch {
       // Silencioso a propósito: la actividad es secundaria a la acción del usuario.
     }

@@ -22,6 +22,7 @@ import { Auth } from '@angular/fire/auth';
 import { CompanyService } from './company.service';
 import { PlantillasService } from './plantillas.service';
 import { ActividadService } from './actividad.service';
+import { stripUndefinedDeep } from '../firebase/sanitize';
 import {
   Caso,
   CasoPlantilla,
@@ -49,12 +50,6 @@ export type ActividadInput = {
   estadoAnterior?: HitoEstado;
   estadoNuevo?: HitoEstado;
 };
-
-function stripUndefined<T extends object>(obj: T): Partial<T> {
-  return Object.fromEntries(
-    Object.entries(obj).filter(([, v]) => v !== undefined)
-  ) as Partial<T>;
-}
 
 @Injectable({ providedIn: 'root' })
 export class CasosService {
@@ -132,7 +127,7 @@ export class CasosService {
     }
 
     const ref = await addDoc(collection(this.firestore, 'companies', companyId, 'casos'), {
-      ...stripUndefined(data),
+      ...stripUndefinedDeep(data),
       companyId,
       resumenFinanciero: { ...RESUMEN_FINANCIERO_VACIO },
       createdAt: serverTimestamp(),
@@ -162,7 +157,7 @@ export class CasosService {
   async updateCaso(id: string, data: Partial<Pick<Caso, 'titulo' | 'descripcion' | 'tipo' | 'estado' | 'prioridad' | 'contactoIds' | 'vencimiento'>>): Promise<void> {
     const prev = this.casos().find(c => c.id === id);
     await updateDoc(doc(this.firestore, 'companies', this.companyId, 'casos', id), {
-      ...stripUndefined(data),
+      ...stripUndefinedDeep(data),
       updatedAt: serverTimestamp(),
     });
     this.casos.update(list =>
@@ -189,7 +184,7 @@ export class CasosService {
 
   /** Construye el documento de un evento de actividad listo para el batch. */
   private buildActividad(casoId: string, hitoId: string, input: ActividadInput): object {
-    return stripUndefined({
+    return stripUndefinedDeep({
       casoId,
       hitoId,
       hitoTitulo: input.hitoTitulo,
@@ -205,7 +200,7 @@ export class CasosService {
     const hito: Omit<Hito, 'id'> = { casoId, casoTitulo, ...data };
     const batch = writeBatch(this.firestore);
     const hitoRef = doc(this.hitosRef);
-    batch.set(hitoRef, stripUndefined(hito) as object);
+    batch.set(hitoRef, stripUndefinedDeep(hito) as object);
     batch.set(doc(this.actividadRef), this.buildActividad(casoId, hitoRef.id, {
       hitoTitulo: data.titulo,
       tipo: 'creado',
@@ -222,7 +217,7 @@ export class CasosService {
    */
   async updateHito(casoId: string, hitoId: string, data: Partial<Omit<Hito, 'id'>>, actividad?: ActividadInput): Promise<void> {
     const batch = writeBatch(this.firestore);
-    batch.update(doc(this.hitosRef, hitoId), stripUndefined(data) as object);
+    batch.update(doc(this.hitosRef, hitoId), stripUndefinedDeep(data) as object);
     if (actividad) {
       batch.set(doc(this.actividadRef), this.buildActividad(casoId, hitoId, actividad));
     }
@@ -522,7 +517,7 @@ export class CasosService {
   async confirmarCierre(casoId: string, opts: { saldoBancario?: number }): Promise<void> {
     const companyId = this.companyId;
     const cierreConfirmadoAt = new Date().toISOString();
-    const patch = stripUndefined({
+    const patch = stripUndefinedDeep({
       estado: 'cerrado' as const,
       cierreConfirmadoAt,
       cierreSaldoBancario: opts.saldoBancario,

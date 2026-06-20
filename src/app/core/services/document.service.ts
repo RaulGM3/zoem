@@ -12,6 +12,7 @@ import {
   serverTimestamp,
 } from '@angular/fire/firestore';
 import { CompanyService } from './company.service';
+import { stripUndefinedDeep } from '../firebase/sanitize';
 
 export interface Document {
   id: string;
@@ -55,17 +56,17 @@ export class DocumentService {
   }
 
   async createDocument(data: Omit<Document, 'id' | 'companyId' | 'createdAt' | 'updatedAt'>): Promise<void> {
-    await addDoc(collection(this.firestore, 'documents'), {
+    await addDoc(collection(this.firestore, 'documents'), stripUndefinedDeep({
       ...data,
       companyId: this.companyId,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    });
+    }));
     await this.loadDocuments();
   }
 
   async updateDocument(id: string, data: Partial<Omit<Document, 'id' | 'companyId'>>): Promise<void> {
-    await updateDoc(doc(this.firestore, 'documents', id), { ...data, updatedAt: serverTimestamp() });
+    await updateDoc(doc(this.firestore, 'documents', id), stripUndefinedDeep({ ...data, updatedAt: serverTimestamp() }));
     await this.loadDocuments();
   }
 

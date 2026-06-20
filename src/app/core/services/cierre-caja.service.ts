@@ -12,6 +12,7 @@ import {
 } from '@angular/fire/firestore';
 import { Auth } from '@angular/fire/auth';
 import { CompanyService } from './company.service';
+import { stripUndefinedDeep } from '../firebase/sanitize';
 import type { CierreCaja, CierreCuenta } from '../../interfaces';
 
 @Injectable({ providedIn: 'root' })
@@ -66,6 +67,6 @@ export class CierreCajaService {
       ...(notas?.trim() ? { notas: notas.trim() } : {}),
     };
 
-    await addDoc(this.cierresRef(), data);
+    await addDoc(this.cierresRef(), stripUndefinedDeep(data));
   }
 }

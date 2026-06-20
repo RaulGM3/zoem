@@ -16,6 +16,7 @@ import {
 } from '@angular/fire/firestore';
 import { CompanyService } from './company.service';
 import { ActividadService } from './actividad.service';
+import { stripUndefinedDeep } from '../firebase/sanitize';
 import { Contact, getContactDisplayName } from '../../interfaces';
 
 @Injectable({ providedIn: 'root' })
@@ -43,9 +44,9 @@ export class ContactService {
       );
       const snapshot = await getDocs(q);
       this.contacts.set(snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Contact));
-    } catch (err) {
-      console.error('[ContactService.loadContacts] ERROR (esto se estaba tragando el catch):', err);
     } finally {
+      // El error se propaga al llamador para que lo muestre vía ToastService.
+      // (Antes se tragaba en silencio y la lista quedaba vacía sin avisar.)
       this.isLoading.set(false);
     }
   }
@@ -58,21 +59,21 @@ export class ContactService {
   async createContact(
     data: Omit<Contact, 'id' | 'companyId' | 'createdAt' | 'updatedAt'>
   ): Promise<void> {
-    const ref = await addDoc(collection(this.firestore, 'contacts'), {
+    const ref = await addDoc(collection(this.firestore, 'contacts'), stripUndefinedDeep({
       ...(data as Record<string, unknown>),
       companyId: this.companyId,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    });
+    }));
     await this.loadContacts();
     await this.actividad.log('Contactos', `Creó el contacto ${getContactDisplayName(data as Contact)}`, ref.id);
   }
 
   async updateContact(id: string, data: Record<string, unknown>): Promise<void> {
-    await updateDoc(doc(this.firestore, 'contacts', id), {
+    await updateDoc(doc(this.firestore, 'contacts', id), stripUndefinedDeep({
       ...data,
       updatedAt: serverTimestamp(),
-    });
+    }));
     const found = this.contacts().find(c => c.id === id);
     const nombre = found ? getContactDisplayName(found) : 'un contacto';
     await this.loadContacts();

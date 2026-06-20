@@ -562,22 +562,20 @@
             <label for="email" class="block text-xs font-medium text-slate-500 mb-1">Email</label>
             <input id="email" formControlName="email" type="email"
               class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
-              [class]="(showErrors() || form.get('email')?.touched) && form.get('email')?.invalid ? 'border-red-300' : 'border-slate-200'" />
-            @if ((showErrors() || form.get('email')?.touched) && form.get('email')?.invalid) {
-              <p class="mt-0.5 text-[11px] text-red-500">
-                {{ !form.get('email')?.value ? 'Campo obligatorio' : 'Email no válido' }}
-              </p>
+              [class]="((showErrors() || form.get('email')?.touched) && form.get('email')?.invalid) || (showErrors() && missingContactChannel()) ? 'border-red-300' : 'border-slate-200'" />
+            @if ((showErrors() || form.get('email')?.touched) && form.get('email')?.invalid && form.get('email')?.value) {
+              <p class="mt-0.5 text-[11px] text-red-500">Email no válido</p>
             }
           </div>
           <div>
-            <label for="mobile" class="block text-xs font-medium text-slate-500 mb-1">Móvil *</label>
+            <label for="mobile" class="block text-xs font-medium text-slate-500 mb-1">Móvil</label>
             <input id="mobile" formControlName="mobile" type="tel"
               class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
-              [class]="showErrors() && !form.get('mobile')?.value?.trim() ? 'border-red-300' : 'border-slate-200'" />
-            @if (showErrors() && !form.get('mobile')?.value?.trim()) {
-              <p class="mt-0.5 text-[11px] text-red-500">Campo obligatorio</p>
-            }
+              [class]="showErrors() && missingContactChannel() ? 'border-red-300' : 'border-slate-200'" />
           </div>
+          @if (showErrors() && missingContactChannel()) {
+            <p class="text-[11px] text-red-500">Indica al menos un email o un móvil.</p>
+          }
         </div>
       </div>
     }

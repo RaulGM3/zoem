@@ -20,6 +20,7 @@ import {
 } from '@angular/fire/storage';
 import { Auth } from '@angular/fire/auth';
 import { CompanyService } from './company.service';
+import { stripUndefinedDeep } from '../firebase/sanitize';
 import { ContactFile } from '../../interfaces';
 
 @Injectable({ providedIn: 'root' })
@@ -50,9 +51,8 @@ export class ContactFileService {
       );
       const snapshot = await getDocs(q);
       this.files.set(snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as ContactFile));
-    } catch {
-      // No active company or Firestore error
     } finally {
+      // El error se propaga al llamador (lo muestra ToastService).
       this.isLoading.set(false);
     }
   }
@@ -65,7 +65,7 @@ export class ContactFileService {
     await uploadBytes(storageRef, file);
     const downloadUrl = await getDownloadURL(storageRef);
 
-    await addDoc(collection(this.firestore, 'contact_files'), {
+    await addDoc(collection(this.firestore, 'contact_files'), stripUndefinedDeep({
       contactId,
       companyId: this.companyId,
       folderId,
@@ -78,7 +78,7 @@ export class ContactFileService {
       uploadedBy: this.auth.currentUser?.uid ?? '',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    });
+    }));
 
     await this.loadFiles(contactId);
   }

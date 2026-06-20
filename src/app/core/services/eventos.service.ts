@@ -16,6 +16,7 @@ import {
 import type { Observable } from 'rxjs';
 import { CompanyService } from './company.service';
 import { UserSyncService } from './user-sync.service';
+import { stripUndefinedDeep } from '../firebase/sanitize';
 import type { Evento, CreateEventoData } from '../../interfaces';
 
 @Injectable({ providedIn: 'root' })
@@ -64,13 +65,13 @@ export class EventosService {
   }
 
   async createEvento(data: CreateEventoData): Promise<Evento> {
-    const ref = await addDoc(this.eventosRef, {
+    const ref = await addDoc(this.eventosRef, stripUndefinedDeep({
       ...data,
       companyId: this.companyId,
       creadoPor: this.currentUserId,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    });
+    }));
     const nuevo: Evento = {
       id: ref.id,
       companyId: this.companyId,
@@ -84,7 +85,7 @@ export class EventosService {
   }
 
   async updateEvento(id: string, data: Partial<CreateEventoData>): Promise<void> {
-    await updateDoc(doc(this.eventosRef, id), { ...data, updatedAt: serverTimestamp() });
+    await updateDoc(doc(this.eventosRef, id), stripUndefinedDeep({ ...data, updatedAt: serverTimestamp() }));
     this.eventos.update(list => list.map(e => (e.id === id ? { ...e, ...data } : e)));
   }
 

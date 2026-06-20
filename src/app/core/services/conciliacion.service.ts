@@ -14,6 +14,7 @@ import {
 } from '@angular/fire/firestore';
 import { Auth } from '@angular/fire/auth';
 import { CompanyService } from './company.service';
+import { stripUndefinedDeep } from '../firebase/sanitize';
 import { LineaExtracto, LineaExtractoParseada } from '../../interfaces';
 import type { Match } from '../conciliacion/conciliacion';
 
@@ -66,7 +67,7 @@ export class ConciliacionService {
     const batch = writeBatch(this.firestore);
     for (const l of lineas) {
       const docRef = doc(ref);
-      batch.set(docRef, {
+      batch.set(docRef, stripUndefinedDeep({
         cuentaId,
         companyId,
         fecha: l.fecha,
@@ -76,7 +77,7 @@ export class ConciliacionService {
         estado: 'pendiente',
         importadoPor: uid,
         importadoAt: serverTimestamp(),
-      });
+      }));
     }
     await batch.commit();
   }

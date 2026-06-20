@@ -22,6 +22,7 @@ import {
 } from '@angular/fire/storage';
 import { Auth } from '@angular/fire/auth';
 import { CompanyService } from './company.service';
+import { stripUndefinedDeep } from '../firebase/sanitize';
 import { DocTemplate, TemplateVariable } from '../../interfaces';
 
 export interface DocTemplateCreate {
@@ -34,18 +35,6 @@ export interface DocTemplateCreate {
 
 /** Margen bajo el límite de 1MB por documento de Firestore */
 const MAX_INLINE_HTML_BYTES = 900_000;
-
-function stripUndefined(obj: unknown): unknown {
-  if (Array.isArray(obj)) return obj.map(stripUndefined);
-  if (obj !== null && typeof obj === 'object') {
-    return Object.fromEntries(
-      Object.entries(obj as Record<string, unknown>)
-        .filter(([, v]) => v !== undefined)
-        .map(([k, v]) => [k, stripUndefined(v)])
-    );
-  }
-  return obj;
-}
 
 @Injectable({ providedIn: 'root' })
 export class DocTemplateService {
@@ -72,9 +61,8 @@ export class DocTemplateService {
     try {
       const snapshot = await getDocs(query(this.templatesRef, orderBy('name')));
       this.templates.set(snapshot.docs.map(d => ({ id: d.id, ...d.data() }) as DocTemplate));
-    } catch {
-      // No active company or Firestore error
     } finally {
+      // El error se propaga al llamador (lo muestra ToastService).
       this.loading.set(false);
     }
   }
@@ -105,7 +93,7 @@ export class DocTemplateService {
 
     const { html, htmlStoragePath } = await this.maybeOffloadHtml(docRef.id, input.html);
 
-    await setDoc(docRef, stripUndefined({
+    await setDoc(docRef, stripUndefinedDeep({
       companyId,
       name: input.name,
       description: input.description,
@@ -120,7 +108,7 @@ export class DocTemplateService {
       createdBy: this.auth.currentUser?.uid ?? '',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    }) as object);
+    }));
 
     await this.loadTemplates();
     return docRef.id;
@@ -135,10 +123,10 @@ export class DocTemplateService {
       const { html, htmlStoragePath } = await this.maybeOffloadHtml(id, data.html);
       updateData = { ...updateData, html, htmlStoragePath: htmlStoragePath ?? null };
     }
-    await updateDoc(doc(this.templatesRef, id), {
-      ...(stripUndefined(updateData) as Record<string, unknown>),
+    await updateDoc(doc(this.templatesRef, id), stripUndefinedDeep({
+      ...updateData,
       updatedAt: serverTimestamp(),
-    });
+    }));
     this.templates.update(list => list.map(t => (t.id === id ? { ...t, ...data } : t)));
   }
 

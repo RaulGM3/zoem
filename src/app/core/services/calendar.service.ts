@@ -12,6 +12,7 @@ import {
   serverTimestamp,
 } from '@angular/fire/firestore';
 import { CompanyService } from './company.service';
+import { stripUndefinedDeep } from '../firebase/sanitize';
 
 export interface CalendarEvent {
   id: string;
@@ -67,17 +68,17 @@ export class CalendarService {
   }
 
   async createEvent(data: Omit<CalendarEvent, 'id' | 'companyId' | 'createdAt' | 'updatedAt'>): Promise<void> {
-    await addDoc(collection(this.firestore, 'calendarEvents'), {
+    await addDoc(collection(this.firestore, 'calendarEvents'), stripUndefinedDeep({
       ...data,
       companyId: this.companyId,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    });
+    }));
     await this.loadEvents();
   }
 
   async updateEvent(id: string, data: Partial<Omit<CalendarEvent, 'id' | 'companyId'>>): Promise<void> {
-    await updateDoc(doc(this.firestore, 'calendarEvents', id), { ...data, updatedAt: serverTimestamp() });
+    await updateDoc(doc(this.firestore, 'calendarEvents', id), stripUndefinedDeep({ ...data, updatedAt: serverTimestamp() }));
     await this.loadEvents();
   }
 
