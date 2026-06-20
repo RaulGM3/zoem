@@ -7,6 +7,7 @@ import {
   FolderPlus, FilePlus, Folder, FolderOpen, Check, Pencil, File, ArrowLeft,
 } from 'lucide-angular';
 import { PlantillasService } from '../../../../core/services/plantillas.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { PlantillaFolderService } from '../../../../core/services/plantilla-folder.service';
 import { PlantillaFileService } from '../../../../core/services/plantilla-file.service';
 import {
@@ -22,6 +23,7 @@ import {
 })
 export class PlantillaDrawerComponent {
   private readonly plantillasService = inject(PlantillasService);
+  private readonly toast = inject(ToastService);
   readonly folderService = inject(PlantillaFolderService);
   readonly fileService = inject(PlantillaFileService);
 
@@ -125,12 +127,20 @@ export class PlantillaDrawerComponent {
         },
       };
       const id = this.pendingPlantillaId() ?? this.plantilla()?.id;
-      if (id) {
-        await this.plantillasService.updatePlantilla(id, data);
-      } else {
-        await this.plantillasService.createPlantilla(data);
-      }
-      this.saved.emit();
+      await this.toast.run(
+        async () => {
+          if (id) {
+            await this.plantillasService.updatePlantilla(id, data);
+          } else {
+            await this.plantillasService.createPlantilla(data);
+          }
+        },
+        {
+          successMessage: id ? 'Plantilla actualizada' : 'Plantilla creada',
+          errorTitle: 'No se pudo guardar la plantilla',
+          onSuccess: () => this.saved.emit(),
+        }
+      );
     } finally {
       this.saving.set(false);
     }
@@ -150,7 +160,10 @@ export class PlantillaDrawerComponent {
         suplidos: this.formSuplidos(),
       },
     };
-    const newId = await this.plantillasService.createPlantilla(data);
+    const newId = await this.toast.run(() => this.plantillasService.createPlantilla(data), {
+      errorTitle: 'No se pudo crear la plantilla',
+    });
+    if (newId === undefined) return null;
     this.pendingPlantillaId.set(newId);
     this.folderService.loadFolders(newId);
     this.fileService.loadFiles(newId);
@@ -275,9 +288,16 @@ export class PlantillaDrawerComponent {
     if (!name) return;
     const plantillaId = await this.ensurePlantillaId();
     if (!plantillaId) return;
-    await this.folderService.createFolder({ plantillaId, parentId: this.docCurrentFolderId(), name });
-    this.newFolderName.set('');
-    this.isCreatingFolder.set(false);
+    await this.toast.run(
+      () => this.folderService.createFolder({ plantillaId, parentId: this.docCurrentFolderId(), name }),
+      {
+        errorTitle: 'No se pudo crear la carpeta',
+        onSuccess: () => {
+          this.newFolderName.set('');
+          this.isCreatingFolder.set(false);
+        },
+      }
+    );
   }
 
   async addFile(): Promise<void> {
@@ -285,9 +305,13 @@ export class PlantillaDrawerComponent {
     if (!name) return;
     const plantillaId = await this.ensurePlantillaId();
     if (!plantillaId) return;
-    await this.fileService.addFile(plantillaId, this.docCurrentFolderId(), name);
-    this.newFileName.set('');
-    this.isAddingFile.set(false);
+    await this.toast.run(() => this.fileService.addFile(plantillaId, this.docCurrentFolderId(), name), {
+      errorTitle: 'No se pudo crear el archivo',
+      onSuccess: () => {
+        this.newFileName.set('');
+        this.isAddingFile.set(false);
+      },
+    });
   }
 
   startRename(folder: PlantillaFolder): void {
@@ -299,13 +323,18 @@ export class PlantillaDrawerComponent {
     const name = this.renameValue().trim();
     const plantillaId = this.effectivePlantillaId();
     if (!name || !plantillaId) return;
-    await this.folderService.updateFolder(folderId, { name }, plantillaId);
-    this.renamingFolderId.set(null);
+    await this.toast.run(() => this.folderService.updateFolder(folderId, { name }, plantillaId), {
+      errorTitle: 'No se pudo renombrar la carpeta',
+      onSuccess: () => this.renamingFolderId.set(null),
+    });
   }
 
   async deleteFolder(folderId: string): Promise<void> {
-    await this.deleteFolderRecursive(folderId);
-    this.deletingFolderId.set(null);
+    await this.toast.run(() => this.deleteFolderRecursive(folderId), {
+      successMessage: 'Carpeta eliminada',
+      errorTitle: 'No se pudo eliminar la carpeta',
+      onSuccess: () => this.deletingFolderId.set(null),
+    });
   }
 
   private async deleteFolderRecursive(folderId: string): Promise<void> {
@@ -320,7 +349,10 @@ export class PlantillaDrawerComponent {
   }
 
   async deleteFile(file: PlantillaFile): Promise<void> {
-    await this.fileService.deleteFile(file.id, this.effectivePlantillaId() ?? '');
-    this.deletingFileId.set(null);
+    await this.toast.run(() => this.fileService.deleteFile(file.id, this.effectivePlantillaId() ?? ''), {
+      successMessage: 'Archivo eliminado',
+      errorTitle: 'No se pudo eliminar el archivo',
+      onSuccess: () => this.deletingFileId.set(null),
+    });
   }
 }

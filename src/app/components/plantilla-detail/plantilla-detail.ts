@@ -10,6 +10,7 @@ import {
   Link2, Search,
 } from 'lucide-angular';
 import { PlantillasService } from '../../core/services/plantillas.service';
+import { ToastService } from '../../core/services/toast.service';
 import { PlantillaFolderService } from '../../core/services/plantilla-folder.service';
 import { PlantillaFileService } from '../../core/services/plantilla-file.service';
 import { DocTemplateService } from '../../core/services/doc-template.service';
@@ -43,6 +44,7 @@ export class PlantillaDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly plantillasService = inject(PlantillasService);
+  private readonly toast = inject(ToastService);
   readonly folderService = inject(PlantillaFolderService);
   readonly fileService = inject(PlantillaFileService);
   readonly docTemplateService = inject(DocTemplateService);
@@ -182,12 +184,18 @@ export class PlantillaDetailComponent implements OnInit {
     if (!this.formNombre().trim()) return;
     this.savingDatos.set(true);
     try {
-      await this.plantillasService.updatePlantilla(this.plantillaId, {
-        nombre: this.formNombre().trim(),
-        descripcion: this.formDescripcion().trim() || undefined,
-        tipo: (this.formTipo() as CasoTipo) || undefined,
-      });
-      this.plantilla.update(p => p ? { ...p, nombre: this.formNombre().trim() } : p);
+      await this.toast.run(
+        () => this.plantillasService.updatePlantilla(this.plantillaId, {
+          nombre: this.formNombre().trim(),
+          descripcion: this.formDescripcion().trim() || undefined,
+          tipo: (this.formTipo() as CasoTipo) || undefined,
+        }),
+        {
+          successMessage: 'Datos guardados',
+          errorTitle: 'No se pudieron guardar los datos',
+          onSuccess: () => this.plantilla.update(p => p ? { ...p, nombre: this.formNombre().trim() } : p),
+        }
+      );
     } finally {
       this.savingDatos.set(false);
     }
@@ -197,9 +205,10 @@ export class PlantillaDetailComponent implements OnInit {
   async saveHitos(): Promise<void> {
     this.savingHitos.set(true);
     try {
-      await this.plantillasService.updatePlantilla(this.plantillaId, {
-        hitos: this.formHitos(),
-      });
+      await this.toast.run(
+        () => this.plantillasService.updatePlantilla(this.plantillaId, { hitos: this.formHitos() }),
+        { successMessage: 'Hitos guardados', errorTitle: 'No se pudieron guardar los hitos' }
+      );
     } finally {
       this.savingHitos.set(false);
     }
@@ -310,12 +319,15 @@ export class PlantillaDetailComponent implements OnInit {
   async saveCostos(): Promise<void> {
     this.savingCostos.set(true);
     try {
-      await this.plantillasService.updatePlantilla(this.plantillaId, {
-        modeloCostos: {
-          honorariosBase: this.formHonorarios() ? parseFloat(this.formHonorarios()) : undefined,
-          suplidos: this.formSuplidos(),
-        },
-      });
+      await this.toast.run(
+        () => this.plantillasService.updatePlantilla(this.plantillaId, {
+          modeloCostos: {
+            honorariosBase: this.formHonorarios() ? parseFloat(this.formHonorarios()) : undefined,
+            suplidos: this.formSuplidos(),
+          },
+        }),
+        { successMessage: 'Costos guardados', errorTitle: 'No se pudieron guardar los costos' }
+      );
     } finally {
       this.savingCostos.set(false);
     }
@@ -436,17 +448,31 @@ export class PlantillaDetailComponent implements OnInit {
   async createFolder(): Promise<void> {
     const name = this.newFolderName().trim();
     if (!name) return;
-    await this.folderService.createFolder({ plantillaId: this.plantillaId, parentId: this.docCurrentFolderId(), name });
-    this.newFolderName.set('');
-    this.isCreatingFolder.set(false);
+    await this.toast.run(
+      () => this.folderService.createFolder({ plantillaId: this.plantillaId, parentId: this.docCurrentFolderId(), name }),
+      {
+        errorTitle: 'No se pudo crear la carpeta',
+        onSuccess: () => {
+          this.newFolderName.set('');
+          this.isCreatingFolder.set(false);
+        },
+      }
+    );
   }
 
   async addFile(): Promise<void> {
     const name = this.newFileName().trim();
     if (!name) return;
-    await this.fileService.addFile(this.plantillaId, this.docCurrentFolderId(), name);
-    this.newFileName.set('');
-    this.isAddingFile.set(false);
+    await this.toast.run(
+      () => this.fileService.addFile(this.plantillaId, this.docCurrentFolderId(), name),
+      {
+        errorTitle: 'No se pudo crear el archivo',
+        onSuccess: () => {
+          this.newFileName.set('');
+          this.isAddingFile.set(false);
+        },
+      }
+    );
   }
 
   startRename(folder: PlantillaFolder): void {
@@ -457,13 +483,18 @@ export class PlantillaDetailComponent implements OnInit {
   async confirmRename(folderId: string): Promise<void> {
     const name = this.renameValue().trim();
     if (!name) return;
-    await this.folderService.updateFolder(folderId, { name }, this.plantillaId);
-    this.renamingFolderId.set(null);
+    await this.toast.run(() => this.folderService.updateFolder(folderId, { name }, this.plantillaId), {
+      errorTitle: 'No se pudo renombrar la carpeta',
+      onSuccess: () => this.renamingFolderId.set(null),
+    });
   }
 
   async deleteFolder(folderId: string): Promise<void> {
-    await this.deleteFolderRecursive(folderId);
-    this.deletingFolderId.set(null);
+    await this.toast.run(() => this.deleteFolderRecursive(folderId), {
+      successMessage: 'Carpeta eliminada',
+      errorTitle: 'No se pudo eliminar la carpeta',
+      onSuccess: () => this.deletingFolderId.set(null),
+    });
   }
 
   private async deleteFolderRecursive(folderId: string): Promise<void> {
@@ -477,8 +508,11 @@ export class PlantillaDetailComponent implements OnInit {
   }
 
   async deleteFile(file: PlantillaFile): Promise<void> {
-    await this.fileService.deleteFile(file.id, this.plantillaId);
-    this.deletingFileId.set(null);
+    await this.toast.run(() => this.fileService.deleteFile(file.id, this.plantillaId), {
+      successMessage: 'Archivo eliminado',
+      errorTitle: 'No se pudo eliminar el archivo',
+      onSuccess: () => this.deletingFileId.set(null),
+    });
   }
 
   getDocTemplateName(docTemplateId: string): string {
@@ -493,11 +527,16 @@ export class PlantillaDetailComponent implements OnInit {
   async linkTemplate(docTemplateId: string): Promise<void> {
     const fileId = this.linkingFileId();
     if (!fileId) return;
-    await this.fileService.linkTemplate(fileId, docTemplateId);
-    this.linkingFileId.set(null);
+    await this.toast.run(() => this.fileService.linkTemplate(fileId, docTemplateId), {
+      successMessage: 'Plantilla vinculada',
+      errorTitle: 'No se pudo vincular la plantilla',
+      onSuccess: () => this.linkingFileId.set(null),
+    });
   }
 
   async unlinkTemplate(file: PlantillaFile): Promise<void> {
-    await this.fileService.linkTemplate(file.id, null);
+    await this.toast.run(() => this.fileService.linkTemplate(file.id, null), {
+      errorTitle: 'No se pudo desvincular la plantilla',
+    });
   }
 }

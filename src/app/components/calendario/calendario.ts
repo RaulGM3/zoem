@@ -8,6 +8,7 @@ import { LucideAngularModule, Plus } from 'lucide-angular';
 import { CasosService } from '../../core/services/casos.service';
 import { CompanyService } from '../../core/services/company.service';
 import { EventosService } from '../../core/services/eventos.service';
+import { ToastService } from '../../core/services/toast.service';
 import { UserSyncService } from '../../core/services/user-sync.service';
 import { UsersService } from '../../core/services/users';
 import { HITO_ESTADO_CALENDAR_STATUS, stampEstadoChange } from '../../core/hitos/hito-estado';
@@ -79,6 +80,7 @@ function mondayOf(d: Date): string {
 })
 export class CalendarioComponent {
   private readonly casosService = inject(CasosService);
+  private readonly toast = inject(ToastService);
   private readonly companyService = inject(CompanyService);
   private readonly eventosService = inject(EventosService);
   private readonly userSync = inject(UserSyncService);
@@ -251,49 +253,62 @@ export class CalendarioComponent {
 
   async updateHitoEstado(event: { id: string; casoId: string; estado: HitoEstado }): Promise<void> {
     // Solo persiste: el stream real-time refleja el cambio en el read model.
-    await this.casosService.updateHito(event.casoId, event.id, {
-      estado: event.estado,
-      ...stampEstadoChange(this.userSync.currentUser()?.id),
-    });
+    await this.toast.run(
+      () => this.casosService.updateHito(event.casoId, event.id, {
+        estado: event.estado,
+        ...stampEstadoChange(this.userSync.currentUser()?.id),
+      }),
+      { errorTitle: 'No se pudo cambiar el estado del hito' }
+    );
   }
 
   async updateEventoEstado(event: { id: string; estado: EventoEstado }): Promise<void> {
-    await this.eventosService.updateEvento(event.id, { estado: event.estado });
+    await this.toast.run(() => this.eventosService.updateEvento(event.id, { estado: event.estado }), {
+      errorTitle: 'No se pudo cambiar el estado del evento',
+    });
   }
 
   async updateItemTime(event: ItemTimeChange): Promise<void> {
-    if (event.horaInicio === null) {
-      // Desagendar
-      if (event.itemType === 'hito') {
-        await this.casosService.clearHitoSchedule(event.id);
-      } else {
-        await this.eventosService.clearEventoTime(event.id);
-      }
-    } else {
-      // Programar / actualizar (con posible cambio de día)
-      if (event.itemType === 'hito') {
-        await this.casosService.updateHito(event.casoId ?? '', event.id, {
-          horaAgenda: event.horaInicio!,
-          duracionAgenda: event.duracionMinutos!,
-          ...(event.date ? { fechaEstimada: event.date } : {}),
-        });
-      } else {
-        const endMins = timeToMinutes(event.horaInicio!) + event.duracionMinutos!;
-        await this.eventosService.updateEvento(event.id, {
-          horaInicio: event.horaInicio!,
-          horaFin: minutesToTime(endMins),
-          todoDia: false,
-          ...(event.date ? { fecha: event.date } : {}),
-        });
-      }
-    }
+    await this.toast.run(
+      async () => {
+        if (event.horaInicio === null) {
+          // Desagendar
+          if (event.itemType === 'hito') {
+            await this.casosService.clearHitoSchedule(event.id);
+          } else {
+            await this.eventosService.clearEventoTime(event.id);
+          }
+        } else {
+          // Programar / actualizar (con posible cambio de día)
+          if (event.itemType === 'hito') {
+            await this.casosService.updateHito(event.casoId ?? '', event.id, {
+              horaAgenda: event.horaInicio!,
+              duracionAgenda: event.duracionMinutos!,
+              ...(event.date ? { fechaEstimada: event.date } : {}),
+            });
+          } else {
+            const endMins = timeToMinutes(event.horaInicio!) + event.duracionMinutos!;
+            await this.eventosService.updateEvento(event.id, {
+              horaInicio: event.horaInicio!,
+              horaFin: minutesToTime(endMins),
+              todoDia: false,
+              ...(event.date ? { fecha: event.date } : {}),
+            });
+          }
+        }
+      },
+      { errorTitle: 'No se pudo actualizar la agenda' }
+    );
   }
 
   async onSaveEvento(data: CreateEventoData): Promise<void> {
     this.saving.set(true);
     try {
-      await this.eventosService.createEvento(data);
-      this.showDrawer.set(false);
+      await this.toast.run(() => this.eventosService.createEvento(data), {
+        successMessage: 'Evento creado',
+        errorTitle: 'No se pudo crear el evento',
+        onSuccess: () => this.showDrawer.set(false),
+      });
     } finally {
       this.saving.set(false);
     }
@@ -302,11 +317,12 @@ export class CalendarioComponent {
   async updateItemColor({ id, color }: { id: string; color: ItemColor | null }): Promise<void> {
     const item = this.allItems().find(i => i.id === id);
     if (!item) return;
-    if (item.hitoEstado !== undefined && item.casoId) {
-      await this.casosService.updateHito(item.casoId, id, { calendarColor: color });
-    } else {
-      await this.eventosService.updateEvento(id, { calendarColor: color });
-    }
+    await this.toast.run(
+      () => (item.hitoEstado !== undefined && item.casoId)
+        ? this.casosService.updateHito(item.casoId, id, { calendarColor: color })
+        : this.eventosService.updateEvento(id, { calendarColor: color }),
+      { errorTitle: 'No se pudo cambiar el color' }
+    );
   }
 
   private eventoToItem(e: Evento): CalendarItem {
@@ -366,7 +382,9 @@ export class CalendarioComponent {
 
   /** Persiste los registros de horas declarados desde el editor del calendario. */
   async updateRegistrosHoras(event: { hitoId: string; registros: RegistroHoraHito[] }): Promise<void> {
-    await this.casosService.setRegistrosHoras(event.hitoId, event.registros);
+    await this.toast.run(() => this.casosService.setRegistrosHoras(event.hitoId, event.registros), {
+      errorTitle: 'No se pudieron guardar las horas',
+    });
   }
 
   private formatDateLabel(dateStr: string): string {
