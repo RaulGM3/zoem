@@ -13,6 +13,7 @@ import { CasosService } from '../../core/services/casos.service';
 import { InvoiceService, InvoiceLinea } from '../../core/services/invoice.service';
 import { CompanyService } from '../../core/services/company.service';
 import { PermissionService } from '../../core/services/permission.service';
+import { ToastService } from '../../core/services/toast.service';
 import { Caso, gestoriaCompleta } from '../../interfaces';
 
 type FacturacionTab = 'casos' | 'archivo' | 'fiscal' | 'horas';
@@ -35,6 +36,7 @@ export class FacturacionComponent implements OnInit {
   private readonly invoiceService = inject(InvoiceService);
   protected readonly companyService = inject(CompanyService);
   readonly perm = inject(PermissionService);
+  private readonly toast = inject(ToastService);
 
   readonly ReceiptIcon = Receipt;
   readonly SearchIcon = Search;
@@ -142,13 +144,20 @@ export class FacturacionComponent implements OnInit {
     if (!caso || this.saving()) return;
     this.saving.set(true);
     try {
-      const facturaId = await this.invoiceService.createInvoiceForCaso(
-        caso.id,
-        this.lineas().filter(l => l.base !== 0),
-        this.ivaRate() / 100
+      const facturaId = await this.toast.run(
+        () => this.invoiceService.createInvoiceForCaso(
+          caso.id,
+          this.lineas().filter(l => l.base !== 0),
+          this.ivaRate() / 100
+        ),
+        { errorTitle: 'No se pudo generar la factura' }
       );
-      await this.casosService.marcarFacturado(caso.id, facturaId);
-      this.cerrarFacturaDrawer();
+      if (facturaId === undefined) return; // falló: el toast ya avisó
+      await this.toast.run(() => this.casosService.marcarFacturado(caso.id, facturaId), {
+        successMessage: 'Factura generada',
+        errorTitle: 'La factura se creó pero no se pudo marcar el caso como facturado',
+        onSuccess: () => this.cerrarFacturaDrawer(),
+      });
     } finally {
       this.saving.set(false);
     }
@@ -181,8 +190,14 @@ export class FacturacionComponent implements OnInit {
     if (!caso || !this.puedeCerrar() || this.saving()) return;
     this.saving.set(true);
     try {
-      await this.casosService.confirmarCierre(caso.id, { saldoBancario: this.saldoBancario() });
-      this.cerrarCierreModal();
+      await this.toast.run(
+        () => this.casosService.confirmarCierre(caso.id, { saldoBancario: this.saldoBancario() }),
+        {
+          successMessage: 'Caso cerrado',
+          errorTitle: 'No se pudo cerrar el caso',
+          onSuccess: () => this.cerrarCierreModal(),
+        }
+      );
     } finally {
       this.saving.set(false);
     }

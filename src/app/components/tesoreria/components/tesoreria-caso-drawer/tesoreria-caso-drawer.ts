@@ -7,6 +7,7 @@ import { RESUMEN_FINANCIERO_VACIO } from '../../../../interfaces';
 import { CasoGestoriaTabComponent } from '../../../caso-detail/components/caso-gestoria-tab/caso-gestoria-tab';
 import { MovimientoFormDrawerComponent, type MovimientoFormData } from '../../../caso-detail/components/movimiento-form-drawer/movimiento-form-drawer';
 import { GestoriaService } from '../../../../core/services/gestoria.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { CasosService } from '../../../../core/services/casos.service';
 import { CuentasService } from '../../../../core/services/cuentas.service';
 
@@ -19,6 +20,7 @@ import { CuentasService } from '../../../../core/services/cuentas.service';
 export class TesoresriaCasoDrawerComponent {
   private readonly gestoriaService = inject(GestoriaService);
   private readonly casosService = inject(CasosService);
+  private readonly toast = inject(ToastService);
   private readonly cuentasService = inject(CuentasService);
 
   readonly cuentas = this.cuentasService.cuentas;
@@ -63,11 +65,18 @@ export class TesoresriaCasoDrawerComponent {
     this.showMovForm.set(true);
   }
 
+  private syncResumen(casoId: string): void {
+    this.resumen.set(this.casosService.casos().find(x => x.id === casoId)?.resumenFinanciero ?? RESUMEN_FINANCIERO_VACIO);
+  }
+
   async onUnregisterSlot(slot: GestoriaSlot): Promise<void> {
     const c = this.caso();
     if (!c) return;
-    await this.gestoriaService.unregisterSlot(c.id, slot);
-    this.resumen.set(this.casosService.casos().find(x => x.id === c.id)?.resumenFinanciero ?? RESUMEN_FINANCIERO_VACIO);
+    await this.toast.run(() => this.gestoriaService.unregisterSlot(c.id, slot), {
+      successMessage: 'Slot desregistrado',
+      errorTitle: 'No se pudo desregistrar el slot',
+      onSuccess: () => this.syncResumen(c.id),
+    });
   }
 
   async onSaveMov(data: MovimientoFormData): Promise<void> {
@@ -76,13 +85,17 @@ export class TesoresriaCasoDrawerComponent {
     this.savingMov.set(true);
     try {
       const slot = this.prefillSlot();
-      if (slot) {
-        await this.gestoriaService.registerSlot(c.id, slot, data);
-      } else {
-        await this.gestoriaService.addMovimiento(c.id, data);
-      }
-      this.resumen.set(this.casosService.casos().find(x => x.id === c.id)?.resumenFinanciero ?? RESUMEN_FINANCIERO_VACIO);
-      this.showMovForm.set(false);
+      await this.toast.run(
+        () => slot ? this.gestoriaService.registerSlot(c.id, slot, data) : this.gestoriaService.addMovimiento(c.id, data),
+        {
+          successMessage: 'Movimiento registrado',
+          errorTitle: 'No se pudo registrar el movimiento',
+          onSuccess: () => {
+            this.syncResumen(c.id);
+            this.showMovForm.set(false);
+          },
+        }
+      );
     } finally {
       this.savingMov.set(false);
     }
@@ -91,13 +104,18 @@ export class TesoresriaCasoDrawerComponent {
   async onDeleteMov(movId: string): Promise<void> {
     const c = this.caso();
     if (!c) return;
-    await this.gestoriaService.deleteMovimiento(c.id, movId);
-    this.resumen.set(this.casosService.casos().find(x => x.id === c.id)?.resumenFinanciero ?? RESUMEN_FINANCIERO_VACIO);
+    await this.toast.run(() => this.gestoriaService.deleteMovimiento(c.id, movId), {
+      successMessage: 'Movimiento eliminado',
+      errorTitle: 'No se pudo eliminar el movimiento',
+      onSuccess: () => this.syncResumen(c.id),
+    });
   }
 
   onReorderSlots(orderedSlots: GestoriaSlot[]): void {
     const c = this.caso();
     if (!c) return;
-    this.gestoriaService.reorderSlots(c.id, orderedSlots);
+    this.toast.run(() => this.gestoriaService.reorderSlots(c.id, orderedSlots), {
+      errorTitle: 'No se pudo reordenar',
+    });
   }
 }

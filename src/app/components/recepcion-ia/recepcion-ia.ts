@@ -22,6 +22,7 @@ import {
   Link2,
 } from 'lucide-angular';
 import { LlamadasService } from '../../core/services/llamadas.service';
+import { ToastService } from '../../core/services/toast.service';
 import { ContactService } from '../../core/services/contact.service';
 import type { LlamadaResumen } from '../../interfaces/llamada.interface';
 import type { CasoTipo, CasoPrioridad } from '../../interfaces';
@@ -42,6 +43,7 @@ import { relativeTime } from '../../core/format/relative-time';
 export class RecepcionIAComponent implements OnInit {
   private readonly llamadasSvc = inject(LlamadasService);
   private readonly contactSvc = inject(ContactService);
+  private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
 
   readonly PhoneIcon = Phone;
@@ -166,8 +168,11 @@ export class RecepcionIAComponent implements OnInit {
   async asociarAContacto(contact: Contact): Promise<void> {
     const ll = this.associatingLlamada();
     if (!ll) return;
-    await this.llamadasSvc.asociarContacto(ll.conversationId, contact.id);
-    this.closeAssociate();
+    await this.toast.run(() => this.llamadasSvc.asociarContacto(ll.conversationId, contact.id), {
+      successMessage: 'Llamada asociada al contacto',
+      errorTitle: 'No se pudo asociar la llamada',
+      onSuccess: () => this.closeAssociate(),
+    });
   }
 
   openTranscript(llamada: LlamadaResumen): void {
@@ -223,7 +228,10 @@ export class RecepcionIAComponent implements OnInit {
   }
 
   async descartarLlamada(ll: LlamadaResumen): Promise<void> {
-    await this.llamadasSvc.descartarLlamada(ll.conversationId);
+    await this.toast.run(() => this.llamadasSvc.descartarLlamada(ll.conversationId), {
+      successMessage: 'Llamada descartada',
+      errorTitle: 'No se pudo descartar la llamada',
+    });
   }
 
   formatDate(ts: Timestamp): string {

@@ -3,6 +3,7 @@ import {
 } from '@angular/core';
 import { PlantillasService } from '../../core/services/plantillas.service';
 import { UsersService } from '../../core/services/users';
+import { ToastService } from '../../core/services/toast.service';
 import { CasoTipo, TipoCosto } from '../../interfaces';
 import { PlantillasHeaderComponent } from './components/plantillas-header/plantillas-header';
 import { PlantillasListComponent } from './components/plantillas-list/plantillas-list';
@@ -17,6 +18,7 @@ import { PlantillaDrawerComponent } from './components/plantilla-drawer/plantill
 export class PlantillasComponent implements OnInit {
   protected readonly plantillasService = inject(PlantillasService);
   protected readonly usersService = inject(UsersService);
+  private readonly toast = inject(ToastService);
 
   showForm = signal(false);
 
@@ -44,7 +46,10 @@ export class PlantillasComponent implements OnInit {
   }
 
   async deletePlantilla(id: string): Promise<void> {
-    await this.plantillasService.deletePlantilla(id);
+    await this.toast.run(() => this.plantillasService.deletePlantilla(id), {
+      successMessage: 'Plantilla eliminada',
+      errorTitle: 'No se pudo eliminar la plantilla',
+    });
   }
 
   onDrawerClosed(): void {

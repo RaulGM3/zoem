@@ -8,6 +8,7 @@ import { Subscription } from 'rxjs';
 import { UsersService } from '../../core/services/users';
 import { PermissionService } from '../../core/services/permission.service';
 import { InvitationService } from '../../core/services/invitation.service';
+import { ToastService } from '../../core/services/toast.service';
 import { CompanyService } from '../../core/services/company.service';
 import { SearchService } from '../../core/services/search.service';
 import { ActividadService } from '../../core/services/actividad.service';
@@ -38,6 +39,7 @@ export class UsuariosComponent implements OnInit, OnDestroy {
   private readonly usersService = inject(UsersService);
   private readonly permissionService = inject(PermissionService);
   private readonly invitationService = inject(InvitationService);
+  private readonly toast = inject(ToastService);
   private readonly companyService = inject(CompanyService);
   private readonly searchSvc = inject(SearchService);
   private readonly actividadService = inject(ActividadService);
@@ -133,15 +135,12 @@ export class UsuariosComponent implements OnInit, OnDestroy {
     if (!company) return;
     this.inviteSaving.set(true);
     try {
-      const token = await this.invitationService.createInvitation(
-        company.id,
-        company.name,
-        data.email,
-        data.role,
-        createdBy,
+      const token = await this.toast.run(
+        () => this.invitationService.createInvitation(company.id, company.name, data.email, data.role, createdBy),
+        { errorTitle: 'No se pudo crear la invitación' }
       );
-      const link = `${window.location.origin}/invite/${token}`;
-      this.inviteLink.set(link);
+      if (token === undefined) return;
+      this.inviteLink.set(`${window.location.origin}/invite/${token}`);
     } finally {
       this.inviteSaving.set(false);
     }
@@ -150,7 +149,10 @@ export class UsuariosComponent implements OnInit, OnDestroy {
   async cancelInvitation(id: string): Promise<void> {
     this.cancellingId.set(id);
     try {
-      await this.invitationService.cancelInvitation(id);
+      await this.toast.run(() => this.invitationService.cancelInvitation(id), {
+        successMessage: 'Invitación cancelada',
+        errorTitle: 'No se pudo cancelar la invitación',
+      });
     } finally {
       this.cancellingId.set(null);
     }
@@ -180,8 +182,11 @@ export class UsuariosComponent implements OnInit, OnDestroy {
     if (!member) return;
     this.memberSaving.set(true);
     try {
-      await this.usersService.updateMember(member.id, patch);
-      this.closeEditDrawer();
+      await this.toast.run(() => this.usersService.updateMember(member.id, patch), {
+        successMessage: 'Usuario actualizado',
+        errorTitle: 'No se pudo actualizar el usuario',
+        onSuccess: () => this.closeEditDrawer(),
+      });
     } finally {
       this.memberSaving.set(false);
     }
@@ -190,8 +195,11 @@ export class UsuariosComponent implements OnInit, OnDestroy {
   async onDeleteMember(id: string): Promise<void> {
     this.memberSaving.set(true);
     try {
-      await this.usersService.removeMember(id);
-      this.closeEditDrawer();
+      await this.toast.run(() => this.usersService.removeMember(id), {
+        successMessage: 'Usuario eliminado',
+        errorTitle: 'No se pudo eliminar el usuario',
+        onSuccess: () => this.closeEditDrawer(),
+      });
     } finally {
       this.memberSaving.set(false);
     }

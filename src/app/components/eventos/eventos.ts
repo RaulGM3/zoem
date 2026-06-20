@@ -4,6 +4,7 @@ import {
 } from '@angular/core';
 import { LucideAngularModule, Plus } from 'lucide-angular';
 import { EventosService } from '../../core/services/eventos.service';
+import { ToastService } from '../../core/services/toast.service';
 import { CalendarNavComponent } from '../calendario/components/calendar-nav/calendar-nav';
 import { NuevoEventoDrawerComponent } from './components/nuevo-evento-drawer/nuevo-evento-drawer';
 import type { CreateEventoData, Evento, EventoColor, EventoPrioridad } from '../../interfaces';
@@ -35,6 +36,7 @@ function mondayOf(d: Date): string {
 })
 export class EventosComponent implements OnInit {
   private readonly eventosService = inject(EventosService);
+  private readonly toast = inject(ToastService);
   private readonly nav = viewChild(CalendarNavComponent);
 
   readonly PlusIcon = Plus;
@@ -181,15 +183,21 @@ export class EventosComponent implements OnInit {
   async onSaveEvento(data: CreateEventoData): Promise<void> {
     this.saving.set(true);
     try {
-      await this.eventosService.createEvento(data);
-      this.showDrawer.set(false);
+      await this.toast.run(() => this.eventosService.createEvento(data), {
+        successMessage: 'Evento creado',
+        errorTitle: 'No se pudo crear el evento',
+        onSuccess: () => this.showDrawer.set(false),
+      });
     } finally {
       this.saving.set(false);
     }
   }
 
   async deleteEvento(id: string): Promise<void> {
-    await this.eventosService.deleteEvento(id);
+    await this.toast.run(() => this.eventosService.deleteEvento(id), {
+      successMessage: 'Evento eliminado',
+      errorTitle: 'No se pudo eliminar el evento',
+    });
   }
 
   getColorConfig(color: EventoColor) {

@@ -4,6 +4,7 @@ import {
 import { LucideAngularModule, X } from 'lucide-angular';
 import { FormsModule } from '@angular/forms';
 import { GestoriaService } from '../../../../core/services/gestoria.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { CuentaBancaria } from '../../../../interfaces';
 
 interface RetiroForm {
@@ -22,6 +23,7 @@ interface RetiroForm {
 })
 export class RetiroDrawerComponent {
   private readonly gestoriaService = inject(GestoriaService);
+  private readonly toast = inject(ToastService);
 
   readonly cuentas = input<CuentaBancaria[]>([]);
   readonly closed = output<void>();
@@ -43,14 +45,20 @@ export class RetiroDrawerComponent {
     if (!f.concepto.trim() || isNaN(importe) || importe <= 0) return;
     this.saving.set(true);
     try {
-      await this.gestoriaService.addRetiro({
-        concepto: f.concepto.trim(),
-        importe,
-        fecha: f.fecha,
-        cuentaId: f.cuentaId || undefined,
-        notas: f.notas.trim() || undefined,
-      });
-      this.closed.emit();
+      await this.toast.run(
+        () => this.gestoriaService.addRetiro({
+          concepto: f.concepto.trim(),
+          importe,
+          fecha: f.fecha,
+          cuentaId: f.cuentaId || undefined,
+          notas: f.notas.trim() || undefined,
+        }),
+        {
+          successMessage: 'Retiro registrado',
+          errorTitle: 'No se pudo registrar el retiro',
+          onSuccess: () => this.closed.emit(),
+        }
+      );
     } finally {
       this.saving.set(false);
     }

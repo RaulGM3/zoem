@@ -4,6 +4,7 @@ import {
 import { LucideAngularModule, X, Plus, Trash2, Building2, Wallet } from 'lucide-angular';
 import { FormsModule } from '@angular/forms';
 import { CuentasService } from '../../../../core/services/cuentas.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { CuentaBancaria, CuentaTipo } from '../../../../interfaces';
 
 interface CuentaForm {
@@ -23,6 +24,7 @@ const EMPTY_FORM: CuentaForm = { nombre: '', tipo: 'banco', entidad: '', iban: '
 })
 export class CuentasDrawerComponent {
   private readonly cuentasService = inject(CuentasService);
+  private readonly toast = inject(ToastService);
 
   readonly closed = output<void>();
 
@@ -82,13 +84,17 @@ export class CuentasDrawerComponent {
         iban: f.tipo === 'banco' && f.iban.trim() ? f.iban.trim() : undefined,
       };
       const id = this.editingId();
-      if (id) {
-        await this.cuentasService.updateCuenta(id, data);
-      } else {
-        await this.cuentasService.createCuenta(data);
-      }
-      this.showForm.set(false);
-      this.editingId.set(null);
+      await this.toast.run(
+        () => id ? this.cuentasService.updateCuenta(id, data) : this.cuentasService.createCuenta(data),
+        {
+          successMessage: id ? 'Cuenta actualizada' : 'Cuenta creada',
+          errorTitle: 'No se pudo guardar la cuenta',
+          onSuccess: () => {
+            this.showForm.set(false);
+            this.editingId.set(null);
+          },
+        }
+      );
     } finally {
       this.saving.set(false);
     }
@@ -97,7 +103,10 @@ export class CuentasDrawerComponent {
   async delete(id: string): Promise<void> {
     this.deletingId.set(id);
     try {
-      await this.cuentasService.deleteCuenta(id);
+      await this.toast.run(() => this.cuentasService.deleteCuenta(id), {
+        successMessage: 'Cuenta eliminada',
+        errorTitle: 'No se pudo eliminar la cuenta',
+      });
     } finally {
       this.deletingId.set(null);
     }

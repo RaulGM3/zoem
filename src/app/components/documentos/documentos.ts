@@ -12,6 +12,7 @@ import {
 import { Timestamp } from '@angular/fire/firestore';
 import { DocTemplateService } from '../../core/services/doc-template.service';
 import { PermissionService } from '../../core/services/permission.service';
+import { ToastService } from '../../core/services/toast.service';
 import type { DocTemplate, DocTemplateStatus } from '../../interfaces';
 import { NuevaPlantillaDrawerComponent } from './components/nueva-plantilla-drawer/nueva-plantilla-drawer';
 
@@ -25,6 +26,7 @@ export class DocumentosComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly templateService = inject(DocTemplateService);
   readonly perm = inject(PermissionService);
+  private readonly toast = inject(ToastService);
 
   readonly FileTextIcon = FileText;
   readonly SearchIcon = Search;
@@ -67,8 +69,11 @@ export class DocumentosComponent implements OnInit {
   }
 
   async confirmDelete(template: DocTemplate): Promise<void> {
-    await this.templateService.deleteTemplate(template.id);
-    this.deletingId.set(null);
+    await this.toast.run(() => this.templateService.deleteTemplate(template.id), {
+      successMessage: 'Plantilla eliminada',
+      errorTitle: 'No se pudo eliminar la plantilla',
+      onSuccess: () => this.deletingId.set(null),
+    });
   }
 
   getStatusLabel(status: DocTemplateStatus): string {

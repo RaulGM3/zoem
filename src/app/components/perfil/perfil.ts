@@ -3,6 +3,7 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { LucideAngularModule, User, Building2, Briefcase, Save, CheckCircle2, Loader } from 'lucide-angular';
 import { AuthService } from '../../auth/auth.service';
 import { UserSyncService } from '../../core/services/user-sync.service';
+import { ToastService } from '../../core/services/toast.service';
 
 type PerfilTab = 'personal' | 'despacho' | 'profesional';
 
@@ -23,6 +24,7 @@ export class PerfilComponent {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
   private readonly userSync = inject(UserSyncService);
+  private readonly toast = inject(ToastService);
 
   activeTab = signal<PerfilTab>('personal');
   guardado = signal(false);
@@ -128,32 +130,38 @@ export class PerfilComponent {
       const d = this.despachoForm.getRawValue();
       const prof = this.profesionalForm.getRawValue();
 
-      await this.userSync.updateUserProfile(
-        uid,
+      await this.toast.run(
+        () => this.userSync.updateUserProfile(
+          uid,
+          {
+            displayName: p.nombre ?? '',
+            telefono: p.telefono ?? '',
+            linkedin: p.linkedin ?? '',
+            biografia: p.biografia ?? '',
+          },
+          {
+            nombre: d.nombre ?? '',
+            website: d.website ?? '',
+            direccion: d.direccion ?? '',
+            ciudad: d.ciudad ?? '',
+            cp: d.cp ?? '',
+            pais: d.pais ?? '',
+          },
+          {
+            colegio: prof.colegio ?? '',
+            numeroColegiado: prof.numeroColegiado ?? '',
+            especialidad: prof.especialidad ?? '',
+            anos: prof.anos ?? 0,
+          },
+        ),
         {
-          displayName: p.nombre ?? '',
-          telefono: p.telefono ?? '',
-          linkedin: p.linkedin ?? '',
-          biografia: p.biografia ?? '',
-        },
-        {
-          nombre: d.nombre ?? '',
-          website: d.website ?? '',
-          direccion: d.direccion ?? '',
-          ciudad: d.ciudad ?? '',
-          cp: d.cp ?? '',
-          pais: d.pais ?? '',
-        },
-        {
-          colegio: prof.colegio ?? '',
-          numeroColegiado: prof.numeroColegiado ?? '',
-          especialidad: prof.especialidad ?? '',
-          anos: prof.anos ?? 0,
-        },
+          errorTitle: 'No se pudo guardar el perfil',
+          onSuccess: () => {
+            this.guardado.set(true);
+            setTimeout(() => this.guardado.set(false), 3000);
+          },
+        }
       );
-
-      this.guardado.set(true);
-      setTimeout(() => this.guardado.set(false), 3000);
     } finally {
       this.guardando.set(false);
     }

@@ -13,6 +13,7 @@ import { GestoriaService } from '../../core/services/gestoria.service';
 import { CuentasService } from '../../core/services/cuentas.service';
 import { CierreCajaService } from '../../core/services/cierre-caja.service';
 import { ConciliacionService } from '../../core/services/conciliacion.service';
+import { ToastService } from '../../core/services/toast.service';
 import { parseExtractoCsv, autoMatch } from '../../core/conciliacion/conciliacion';
 import { saldoAprobado, balancePorCuenta } from '../../core/tesoreria/saldos';
 import { Caso, CierreCuenta, TesoreriaResumen } from '../../interfaces';
@@ -48,6 +49,7 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
   private readonly cuentasService = inject(CuentasService);
   private readonly cierreCajaService = inject(CierreCajaService);
   private readonly conciliacionService = inject(ConciliacionService);
+  private readonly toast = inject(ToastService);
   private readonly firestore = inject(Firestore);
   readonly perm = inject(PermissionService);
 
@@ -354,10 +356,10 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
     }
     this.importandoExtracto.set(true);
     try {
-      await this.conciliacionService.importarExtracto(payload.cuentaId, lineas);
-      if (errores.length > 0) {
-        alert(`Importadas ${lineas.length} líneas. ${errores.length} fila(s) se omitieron por datos inválidos.`);
-      }
+      await this.toast.run(() => this.conciliacionService.importarExtracto(payload.cuentaId, lineas), {
+        successMessage: `Importadas ${lineas.length} líneas${errores.length > 0 ? ` (${errores.length} omitidas por datos inválidos)` : ''}`,
+        errorTitle: 'No se pudo importar el extracto',
+      });
     } finally {
       this.importandoExtracto.set(false);
     }
@@ -377,27 +379,39 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
       movimientos,
     );
     if (matches.length === 0) return;
-    await this.conciliacionService.aplicarMatches(cuentaId, lineasPendientes.map(l => l.id), matches);
+    await this.toast.run(
+      () => this.conciliacionService.aplicarMatches(cuentaId, lineasPendientes.map(l => l.id), matches),
+      { successMessage: `${matches.length} línea(s) conciliada(s)`, errorTitle: 'No se pudo autoconciliar' }
+    );
   }
 
   async onCasar(e: { cuentaId: string; lineaId: string; movimientoId: string }): Promise<void> {
     if (!e.movimientoId) return;
-    await this.conciliacionService.casarLinea(e.cuentaId, e.lineaId, e.movimientoId);
+    await this.toast.run(() => this.conciliacionService.casarLinea(e.cuentaId, e.lineaId, e.movimientoId), {
+      errorTitle: 'No se pudo conciliar la línea',
+    });
   }
 
   async onDesconciliar(e: { cuentaId: string; lineaId: string }): Promise<void> {
-    await this.conciliacionService.desconciliar(e.cuentaId, e.lineaId);
+    await this.toast.run(() => this.conciliacionService.desconciliar(e.cuentaId, e.lineaId), {
+      errorTitle: 'No se pudo desconciliar',
+    });
   }
 
   async onIgnorarLinea(e: { cuentaId: string; lineaId: string }): Promise<void> {
-    await this.conciliacionService.ignorarLinea(e.cuentaId, e.lineaId);
+    await this.toast.run(() => this.conciliacionService.ignorarLinea(e.cuentaId, e.lineaId), {
+      errorTitle: 'No se pudo ignorar la línea',
+    });
   }
 
   async realizarCierre(notas: string): Promise<void> {
     this.savingCierre.set(true);
     try {
-      await this.cierreCajaService.crearCierre(this.cierrePreview(), notas);
-      this.showCierreModal.set(false);
+      await this.toast.run(() => this.cierreCajaService.crearCierre(this.cierrePreview(), notas), {
+        successMessage: 'Cierre de caja registrado',
+        errorTitle: 'No se pudo registrar el cierre',
+        onSuccess: () => this.showCierreModal.set(false),
+      });
     } finally {
       this.savingCierre.set(false);
     }
@@ -415,7 +429,9 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
   async actualizarSaldoCuenta(cuentaId: string, valor: string): Promise<void> {
     const saldo = parseFloat(valor.replace(',', '.'));
     if (Number.isNaN(saldo)) return;
-    await this.cuentasService.actualizarSaldo(cuentaId, saldo);
+    await this.toast.run(() => this.cuentasService.actualizarSaldo(cuentaId, saldo), {
+      errorTitle: 'No se pudo actualizar el saldo',
+    });
   }
 
   async guardarSaldoBancario(valor: string): Promise<void> {
@@ -428,7 +444,10 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
     this.savingSaldo.set(true);
     try {
       const hoy = new Date().toISOString().slice(0, 10);
-      await this.companyService.updateSaldoBancario(company.id, saldo, hoy);
+      await this.toast.run(() => this.companyService.updateSaldoBancario(company.id, saldo, hoy), {
+        successMessage: 'Saldo bancario guardado',
+        errorTitle: 'No se pudo guardar el saldo bancario',
+      });
     } finally {
       this.savingSaldo.set(false);
     }

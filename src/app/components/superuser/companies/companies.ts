@@ -19,6 +19,7 @@ import {
 } from 'lucide-angular';
 import { CA_LABELS, Company, CompanyPlan, RUBRO_LABELS } from '../../../interfaces/company';
 import { SuperuserService } from '../../../services/superuser';
+import { ToastService } from '../../../core/services/toast.service';
 
 @Component({
   selector: 'app-companies',
@@ -41,6 +42,7 @@ export class CompaniesComponent {
 
   private fb = inject(FormBuilder);
   private svc = inject(SuperuserService);
+  private readonly toast = inject(ToastService);
 
   companies = toSignal(this.svc.getCompanies(), { initialValue: [] });
   search = signal('');
@@ -130,14 +132,21 @@ export class CompaniesComponent {
       next: () => {
         this.saving.set(false);
         this.showForm.set(false);
+        this.toast.success(id ? 'Empresa actualizada' : 'Empresa creada');
       },
-      error: () => this.saving.set(false),
+      error: (err) => {
+        this.saving.set(false);
+        this.toast.fromError(err, { title: 'No se pudo guardar la empresa', retry: () => this.save() });
+      },
     });
   }
 
   delete(id: string | undefined): void {
     if (!id) return;
-    this.svc.deleteCompany(id).subscribe();
+    this.svc.deleteCompany(id).subscribe({
+      next: () => this.toast.success('Empresa eliminada'),
+      error: (err) => this.toast.fromError(err, { title: 'No se pudo eliminar la empresa', retry: () => this.delete(id) }),
+    });
   }
 
   getPlanClass(plan: CompanyPlan): string {

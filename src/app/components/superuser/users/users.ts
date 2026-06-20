@@ -25,6 +25,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { collectionData, collection, Firestore } from '@angular/fire/firestore';
 import { map } from 'rxjs';
 import { InvitationService } from '../../../core/services/invitation.service';
+import { ToastService } from '../../../core/services/toast.service';
 import { SuperuserService } from '../../../services/superuser';
 import { UserSyncService } from '../../../core/services/user-sync.service';
 import { CompanyInvitation } from '../../../interfaces/invitation';
@@ -54,6 +55,7 @@ export class UsersComponent implements OnInit {
   private readonly firestore = inject(Firestore);
   private readonly invitationService = inject(InvitationService);
   private readonly superuserService = inject(SuperuserService);
+  private readonly toast = inject(ToastService);
   private readonly userSync = inject(UserSyncService);
 
   activeTab = signal<'users' | 'invitations'>('users');
@@ -164,7 +166,10 @@ export class UsersComponent implements OnInit {
   }
 
   async cancelInvitation(id: string): Promise<void> {
-    await this.invitationService.cancelInvitation(id);
+    await this.toast.run(() => this.invitationService.cancelInvitation(id), {
+      successMessage: 'Invitación cancelada',
+      errorTitle: 'No se pudo cancelar la invitación',
+    });
   }
 
   closeInviteForm(): void {

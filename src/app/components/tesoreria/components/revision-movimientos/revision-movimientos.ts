@@ -7,6 +7,7 @@ import {
   ClipboardCheck, CheckCircle2, Circle, CheckCheck, Pencil, X,
 } from 'lucide-angular';
 import { GestoriaService } from '../../../../core/services/gestoria.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { CasosService } from '../../../../core/services/casos.service';
 import { CuentasService } from '../../../../core/services/cuentas.service';
 import { UsersService } from '../../../../core/services/users';
@@ -23,6 +24,7 @@ type Filtro = 'todos' | 'pendientes' | 'aprobados';
 export class RevisionMovimientosComponent implements OnInit, OnDestroy {
   private readonly gestoriaService = inject(GestoriaService);
   private readonly casosService = inject(CasosService);
+  private readonly toast = inject(ToastService);
   private readonly cuentasService = inject(CuentasService);
   private readonly usersService = inject(UsersService);
 
@@ -109,7 +111,9 @@ export class RevisionMovimientosComponent implements OnInit, OnDestroy {
   async toggleAprobado(mov: MovimientoGestoria): Promise<void> {
     this.toggling.set(mov.id);
     try {
-      await this.gestoriaService.aprobarMovimiento(mov.casoId, mov.id, !mov.aprobado);
+      await this.toast.run(() => this.gestoriaService.aprobarMovimiento(mov.casoId, mov.id, !mov.aprobado), {
+        errorTitle: 'No se pudo cambiar la aprobación',
+      });
     } finally {
       this.toggling.set(null);
     }
@@ -123,7 +127,9 @@ export class RevisionMovimientosComponent implements OnInit, OnDestroy {
     }
     this.cambiandoCuenta.set(true);
     try {
-      await this.gestoriaService.cambiarCuenta(mov.casoId, mov.id, nuevoId);
+      await this.toast.run(() => this.gestoriaService.cambiarCuenta(mov.casoId, mov.id, nuevoId), {
+        errorTitle: 'No se pudo cambiar la cuenta',
+      });
     } finally {
       this.cambiandoCuenta.set(false);
       this.editandoMovId.set(null);
@@ -133,7 +139,10 @@ export class RevisionMovimientosComponent implements OnInit, OnDestroy {
   async aprobarTodos(): Promise<void> {
     this.aprobandoTodos.set(true);
     try {
-      await this.gestoriaService.aprobarTodos(this.pendientes());
+      await this.toast.run(() => this.gestoriaService.aprobarTodos(this.pendientes()), {
+        successMessage: 'Movimientos aprobados',
+        errorTitle: 'No se pudieron aprobar los movimientos',
+      });
     } finally {
       this.aprobandoTodos.set(false);
     }

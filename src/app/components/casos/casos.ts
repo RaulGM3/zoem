@@ -5,6 +5,7 @@ import { PlantillasService } from '../../core/services/plantillas.service';
 import { ContactService } from '../../core/services/contact.service';
 import { SearchService } from '../../core/services/search.service';
 import { PermissionService } from '../../core/services/permission.service';
+import { ToastService } from '../../core/services/toast.service';
 import type { Caso, CasoEstado, CasoTipo, CasoPrioridad, CreateCasoData, Contact } from '../../interfaces';
 
 type DrawerInitialData = { titulo?: string; descripcion?: string; tipo?: CasoTipo; prioridad?: CasoPrioridad; estado?: CasoEstado };
@@ -34,6 +35,7 @@ export class CasosComponent implements OnInit {
   private readonly contactService = inject(ContactService);
   private readonly searchSvc = inject(SearchService);
   readonly perm = inject(PermissionService);
+  private readonly toast = inject(ToastService);
 
   /** Búsqueda centralizada en el header — scopeada a "casos". */
   readonly search = this.searchSvc.termFor('casos');
@@ -91,7 +93,10 @@ export class CasosComponent implements OnInit {
   async saveNuevoCaso(data: CreateCasoData): Promise<void> {
     this.saving.set(true);
     try {
-      const id = await this.casosService.createCaso(data);
+      const id = await this.toast.run(() => this.casosService.createCaso(data), {
+        errorTitle: 'No se pudo crear el caso',
+      });
+      if (id === undefined) return; // falló: el toast ya avisó, el drawer queda abierto
       this.showDrawer.set(false);
       this.drawerInitialContact.set(null);
       this.drawerInitialData.set(null);
@@ -100,7 +105,7 @@ export class CasosComponent implements OnInit {
       if (contactId) {
         const contact = this.contactService.contacts().find(c => c.id === contactId);
         if (contact?.status === 'potencial') {
-          await this.contactService.updateContact(contactId, { status: 'activo' });
+          await this.toast.run(() => this.contactService.updateContact(contactId, { status: 'activo' }));
         }
       }
 
@@ -120,6 +125,9 @@ export class CasosComponent implements OnInit {
   }
 
   async onDeleteCaso(caso: Caso): Promise<void> {
-    await this.casosService.deleteCaso(caso.id);
+    await this.toast.run(() => this.casosService.deleteCaso(caso.id), {
+      successMessage: 'Caso eliminado',
+      errorTitle: 'No se pudo eliminar el caso',
+    });
   }
 }
