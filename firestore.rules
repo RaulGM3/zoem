@@ -274,10 +274,11 @@ service cloud.firestore {
           && exists(/databases/$(database)/documents/agentMappings/$(resource.data.agentId));
       }
       allow read: if isSuper() || (callMapped() && isMember(callCompanyId()));
-      // update operativo (descartar / asociar contacto) sin reasignar el agentId
+      // update operativo (descartar / asociar contacto) sin reasignar el agentId.
+      // canWrite (no isMember) → un Viewer NO puede modificar llamadas.
       allow update: if isSuper()
         || (callMapped()
-            && isMember(callCompanyId())
+            && canWrite(callCompanyId())
             && request.resource.data.agentId == resource.data.agentId);
       allow create, delete: if isSuper();
     }

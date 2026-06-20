@@ -1,6 +1,7 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as forge from 'node-forge';
 import { certSecretName, storeSecret } from './secretManager';
+import { assertCompanyAccess } from '../lib/assertCompanyAccess';
 
 interface StoreCredentialRequest {
   companyId: string;
@@ -26,6 +27,10 @@ export const storeAeatCredential = onCall<StoreCredentialRequest, Promise<StoreC
     if (!companyId || !pfxBase64 || !password) {
       throw new HttpsError('invalid-argument', 'Faltan parámetros requeridos');
     }
+
+    // Autorización de tenant: solo Admin/Gestor (o superusuario) de ESTA empresa
+    // puede almacenar su certificado fiscal. Las rules NO aplican acá.
+    await assertCompanyAccess(request.auth.uid, companyId);
 
     let p12Asn1: forge.asn1.Asn1;
     try {

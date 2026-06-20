@@ -51,7 +51,6 @@ export interface NavCategory {
 
 @Component({
   selector: 'app-demo-layout',
-  standalone: true,
   imports: [RouterOutlet, RouterLink, RouterLinkActive, LucideAngularModule],
   templateUrl: './demo-layout.html',
 })

@@ -3,6 +3,7 @@ import { defineString } from 'firebase-functions/params';
 import * as forge from 'node-forge';
 import * as https from 'https';
 import { certSecretName, getSecret } from './secretManager';
+import { assertCompanyAccess } from '../lib/assertCompanyAccess';
 
 const verifactuEnv = defineString('VERIFACTU_ENV', { default: 'sandbox' });
 
@@ -20,6 +21,17 @@ interface VerifactuSubmitResponse {
   csv: string;
   estado: 'aceptado' | 'rechazado';
   rawResponse?: string;
+}
+
+// Escapa los 5 caracteres especiales de XML para evitar romper el envelope
+// o inyectar nodos cuando un campo trae <, >, &, " o '.
+function escapeXml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
 }
 
 function buildSoapEnvelope(registro: Record<string, unknown>): string {
@@ -56,18 +68,18 @@ function buildSoapEnvelope(registro: Record<string, unknown>): string {
       <sfe:RegistroFactura>
         <sfe:RegistroAlta>
           <sfe:IDFactura>
-            <sfe:IDEmisorFactura>${IDFactura.NIF}</sfe:IDEmisorFactura>
-            <sfe:NumSerieFactura>${IDFactura.NumSerieFactura}</sfe:NumSerieFactura>
-            <sfe:FechaExpedicionFactura>${IDFactura.FechaExpedicionFactura}</sfe:FechaExpedicionFactura>
+            <sfe:IDEmisorFactura>${escapeXml(IDFactura.NIF)}</sfe:IDEmisorFactura>
+            <sfe:NumSerieFactura>${escapeXml(IDFactura.NumSerieFactura)}</sfe:NumSerieFactura>
+            <sfe:FechaExpedicionFactura>${escapeXml(IDFactura.FechaExpedicionFactura)}</sfe:FechaExpedicionFactura>
           </sfe:IDFactura>
-          <sfe:NombreRazonEmisor>${NombreRazonEmisor}</sfe:NombreRazonEmisor>
-          <sfe:TipoFactura>${TipoFactura}</sfe:TipoFactura>
-          <sfe:DescripcionOperacion>${DescripcionOperacion}</sfe:DescripcionOperacion>
+          <sfe:NombreRazonEmisor>${escapeXml(NombreRazonEmisor)}</sfe:NombreRazonEmisor>
+          <sfe:TipoFactura>${escapeXml(TipoFactura)}</sfe:TipoFactura>
+          <sfe:DescripcionOperacion>${escapeXml(DescripcionOperacion)}</sfe:DescripcionOperacion>
           <sfe:Desglose>${desgloseXml}</sfe:Desglose>
           <sfe:CuotaTotal>${CuotaTotal.toFixed(2)}</sfe:CuotaTotal>
           <sfe:ImporteTotal>${ImporteTotal.toFixed(2)}</sfe:ImporteTotal>
-          <sfe:Huella>${HuellaAnterior}</sfe:Huella>
-          <sfe:FechaHoraHusoGenRegistro>${FechaHoraHusoGenRegistro}</sfe:FechaHoraHusoGenRegistro>
+          <sfe:Huella>${escapeXml(HuellaAnterior)}</sfe:Huella>
+          <sfe:FechaHoraHusoGenRegistro>${escapeXml(FechaHoraHusoGenRegistro)}</sfe:FechaHoraHusoGenRegistro>
         </sfe:RegistroAlta>
       </sfe:RegistroFactura>
     </sfe:RegFactuSistemaFacturacion>
@@ -117,8 +129,14 @@ function extractCsvFromResponse(xml: string): string | null {
   return match?.[1] ?? null;
 }
 
+// AEAT devuelve el resultado en <EstadoRegistro> (Correcto / AceptadoConErrores /
+// Incorrecto). Parseamos ESE campo y, ante cualquier respuesta no reconocida,
+// devolvemos rechazado (fail-safe: nunca asumimos aceptación por defecto).
 function isAceptado(xml: string): boolean {
-  return xml.includes('Correcto') || xml.includes('Aceptado') || !xml.includes('Rechazado');
+  const estado = xml
+    .match(/<[^>]*EstadoRegistro[^>]*>([^<]+)<\/[^>]*EstadoRegistro[^>]*>/i)?.[1]
+    ?.trim();
+  return estado === 'Correcto' || estado === 'AceptadoConErrores';
 }
 
 export const verifactuSubmit = onCall<VerifactuSubmitRequest, Promise<VerifactuSubmitResponse>>(
@@ -132,6 +150,10 @@ export const verifactuSubmit = onCall<VerifactuSubmitRequest, Promise<VerifactuS
     if (!companyId || !registro) {
       throw new HttpsError('invalid-argument', 'Faltan parámetros requeridos');
     }
+
+    // Autorización de tenant: solo Admin/Gestor (o superusuario) de ESTA empresa
+    // puede emitir facturas a AEAT con su certificado. Las rules NO aplican acá.
+    await assertCompanyAccess(request.auth.uid, companyId);
 
     const secretName = certSecretName(companyId);
 

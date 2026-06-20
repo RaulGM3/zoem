@@ -104,15 +104,11 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
   );
   readonly contactSearchResults = computed(() => {
     const q = this.debouncedSearch().toLowerCase().trim();
-    const total = this.contactService.contacts().length;
-    console.log('[caso-detail.contactSearchResults] q =', JSON.stringify(q), '| contactos en memoria =', total, '| contactoIds del caso =', this.caso()?.contactoIds);
     if (!q || q.length < 2) return [];
     const linked = this.caso()?.contactoIds ?? [];
-    const results = this.contactService.contacts()
+    return this.contactService.contacts()
       .filter(c => !linked.includes(c.id) && getContactDisplayName(c).toLowerCase().includes(q))
       .slice(0, 5);
-    console.log('[caso-detail.contactSearchResults] resultados =', results.length);
-    return results;
   });
   // Hay búsqueda activa (>=2 chars, ya debounceada) pero ningún contacto matcheó.
   readonly noContactResults = computed(() =>
@@ -221,7 +217,6 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
 
   async addContact(contactId: string): Promise<void> {
     const c = this.caso();
-    console.log('[caso-detail.addContact] contactId =', contactId, '| caso.contactoIds =', c?.contactoIds);
     if (!c) return;
     const newIds = [...(c.contactoIds ?? []), contactId];
     await this.toast.run(() => this.casosService.updateCaso(c.id, { contactoIds: newIds }), {

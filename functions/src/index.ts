@@ -1,4 +1,5 @@
 import * as admin from 'firebase-admin';
+import { setGlobalOptions } from 'firebase-functions/v2';
 import { onRequest } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
 import * as logger from 'firebase-functions/logger';
@@ -16,6 +17,10 @@ import type {
 } from './llamada.types';
 
 admin.initializeApp();
+
+// Región europea para todas las functions (RGPD / residencia de datos fiscales ES).
+// Aplica a las definidas acá y a las re-exportadas (AEAT, generateDocx).
+setGlobalOptions({ region: 'europe-west1' });
 
 const elevenLabsSecret = defineSecret('ELEVENLABS_WEBHOOK_SECRET');
 
@@ -83,6 +88,10 @@ function verifySignature(
   const v0 = parts['v0'];
   if (!timestamp || !v0) return false;
 
+  // Replay protection: el timestamp firmado no puede tener más de 5 min.
+  const ageSeconds = Math.abs(Date.now() / 1000 - Number(timestamp));
+  if (!Number.isFinite(ageSeconds) || ageSeconds > 300) return false;
+
   const expected = crypto
     .createHmac('sha256', secret)
     .update(`${timestamp}.${body}`, 'utf8')
@@ -114,7 +123,14 @@ export const elevenLabsWebhook = onRequest(
     const signature = req.headers['elevenlabs-signature'] as string | undefined;
     const secret = elevenLabsSecret.value();
 
-    if (secret && !verifySignature(rawBody, signature, secret)) {
+    // Fail-CLOSED: si el secret no está configurado, NO procesamos. Nunca
+    // aceptamos un webhook sin verificar firma (el endpoint es público).
+    if (!secret) {
+      logger.error('ELEVENLABS_WEBHOOK_SECRET no configurado — webhook rechazado');
+      res.status(500).json({ error: 'Webhook secret not configured' });
+      return;
+    }
+    if (!verifySignature(rawBody, signature, secret)) {
       res.status(403).json({ error: 'Invalid signature' });
       return;
     }

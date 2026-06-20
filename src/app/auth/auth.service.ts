@@ -28,19 +28,27 @@ export class AuthService {
   constructor() {
     onAuthStateChanged(this.auth, async (user) => {
       this.user.set(user);
-      if (user) {
-        await this.userSync.syncUser(user.uid, user.email ?? '', user.displayName);
-        await this.companyService.loadMyCompanies(user.uid);
-        // Cargar los miembros de la empresa activa acá garantiza que el rol del
-        // usuario esté disponible app-wide (sidebar, dashboard) sin importar por
-        // qué ruta entre. El permissionGuard ya no es el único que los carga.
-        await this.usersService.loadMembers();
-      } else {
-        this.userSync.currentUser.set(null);
-        this.companyService.activeCompany.set(null);
-        this.usersService.members.set([]);
+      try {
+        if (user) {
+          await this.userSync.syncUser(user.uid, user.email ?? '', user.displayName);
+          await this.companyService.loadMyCompanies(user.uid);
+          // Cargar los miembros de la empresa activa acá garantiza que el rol del
+          // usuario esté disponible app-wide (sidebar, dashboard) sin importar por
+          // qué ruta entre. El permissionGuard ya no es el único que los carga.
+          await this.usersService.loadMembers();
+        } else {
+          this.userSync.currentUser.set(null);
+          this.companyService.activeCompany.set(null);
+          this.usersService.members.set([]);
+        }
+      } catch (err) {
+        // Un fallo de sincronización (red, permisos, Firestore offline) NO debe
+        // dejar la app colgada en el spinner. Logueamos y liberamos isLoading
+        // en el finally para que el usuario llegue al login / a un estado usable.
+        console.error('[auth] error sincronizando sesión:', err);
+      } finally {
+        this.isLoading.set(false);
       }
-      this.isLoading.set(false);
     });
   }
 

@@ -22,7 +22,6 @@ import type { Project } from '../../interfaces';
 
 @Component({
   selector: 'app-proyectos',
-  standalone: true,
   imports: [RouterLink, LucideAngularModule, DecimalPipe],
   templateUrl: './proyectos.html',
 })

@@ -1,0 +1,13 @@
+# Dependencies & build output
+node_modules/
+lib/
+
+# Secrets y entornos locales — NUNCA commitear
+.env
+.env.*
+*.local
+
+# Logs
+*.log
+firebase-debug.log
+firebase-debug.*.log

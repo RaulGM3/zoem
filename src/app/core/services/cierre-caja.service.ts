@@ -8,6 +8,7 @@ import {
   query,
   limit,
   serverTimestamp,
+  type Timestamp,
   type Unsubscribe,
 } from '@angular/fire/firestore';
 import { Auth } from '@angular/fire/auth';
@@ -56,12 +57,13 @@ export class CierreCajaService {
       aprobadoTotal: cuentas.reduce((a, c) => a + c.aprobado, 0),
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const data: Omit<CierreCaja, 'id'> = {
       fecha,
       companyId: this.companyId,
       creadoPor: this.auth.currentUser?.uid ?? '',
-      creadoAt: serverTimestamp() as any,
+      // serverTimestamp() devuelve un FieldValue centinela que Firestore resuelve
+      // a Timestamp en el server; el cast vía unknown preserva el tipo de lectura.
+      creadoAt: serverTimestamp() as unknown as Timestamp,
       cuentas,
       totales,
       ...(notas?.trim() ? { notas: notas.trim() } : {}),
