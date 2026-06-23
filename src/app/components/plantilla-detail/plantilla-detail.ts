@@ -203,6 +203,7 @@ export class PlantillaDetailComponent implements OnInit {
 
   // ── Hitos ─────────────────────────────────────────
   async saveHitos(): Promise<void> {
+    if (this.savingHitos()) return;
     this.savingHitos.set(true);
     try {
       await this.toast.run(

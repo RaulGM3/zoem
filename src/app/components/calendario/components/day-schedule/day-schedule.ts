@@ -241,6 +241,10 @@ export class DayScheduleComponent {
   readonly groupedEvents = input.required<EventGroup[]>();
   readonly hasSelectedDates = input.required<boolean>();
   readonly members = input<CompanyMember[]>([]);
+  /** Primer día del rango visible (YYYY-MM-DD). Usado para acotar "Sin programar". */
+  readonly visibleRangeStart = input<string>('');
+  /** Cantidad de días del rango visible. */
+  readonly visibleRangeCount = input<number>(21);
 
   readonly itemTimeChanged = output<ItemTimeChange>();
   readonly hitoStatusChanged = output<{ id: string; casoId: string; estado: HitoEstado }>();
@@ -292,11 +296,24 @@ export class DayScheduleComponent {
 
   // Un hito está "sin programar" si no tiene segmentos de horas; un evento, si no
   // tiene hora. Los hitos se representan por sus segmentos, no por horaAgenda.
-  readonly unscheduledItems = computed<CalendarItem[]>(() =>
-    this.groupedEvents().flatMap(g => g.items.filter(i =>
-      i.hitoEstado === undefined ? !i.horaInicio : (i.registrosHoras?.length ?? 0) === 0
-    ))
-  );
+  // Solo se muestran items cuya fecha cae dentro del rango visible para evitar
+  // que hitos de semanas pasadas (todavía en selectedDates) saturen esta sección.
+  readonly unscheduledItems = computed<CalendarItem[]>(() => {
+    const rangeStart = this.visibleRangeStart();
+    const rangeCount = this.visibleRangeCount();
+    let rangeEnd = '';
+    if (rangeStart) {
+      const end = new Date(rangeStart + 'T00:00:00');
+      end.setDate(end.getDate() + rangeCount - 1);
+      rangeEnd = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
+    }
+    return this.groupedEvents().flatMap(g => g.items.filter(i => {
+      const isUnscheduled = i.hitoEstado === undefined ? !i.horaInicio : (i.registrosHoras?.length ?? 0) === 0;
+      if (!isUnscheduled) return false;
+      if (!rangeStart || !rangeEnd) return true;
+      return i.date >= rangeStart && i.date <= rangeEnd;
+    }));
+  });
 
   /**
    * Layout de columnas para colocar bloques superpuestos side-by-side. Incluye

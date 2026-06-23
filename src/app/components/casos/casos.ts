@@ -112,6 +112,7 @@ export class CasosComponent implements OnInit {
   }
 
   async saveNuevoCaso(data: CreateCasoData): Promise<void> {
+    if (this.saving()) return;
     this.saving.set(true);
     try {
       const id = await this.toast.run(() => this.casosService.createCaso(data), {

@@ -65,7 +65,10 @@ export interface HitoActividad {
 export interface ResumenFinanciero {
   totalIngresos: number;
   totalSuplidos: number;
+  /** Honorarios cobrados al cliente (esEntrada: true). Alimentan la línea de factura. */
   totalHonorarios: number;
+  /** Honorarios retirados de la cuenta del caso a la cuenta propia del bufete (esEntrada: false). */
+  totalHonorariosSalida: number;
   totalEgresos: number;
   saldo: number;
   /** IVA repercutido (de entradas) y soportado (de salidas). Base para el modelo 303. */
@@ -114,6 +117,7 @@ export const RESUMEN_FINANCIERO_VACIO: ResumenFinanciero = {
   totalIngresos: 0,
   totalSuplidos: 0,
   totalHonorarios: 0,
+  totalHonorariosSalida: 0,
   totalEgresos: 0,
   saldo: 0,
   ivaRepercutido: 0,

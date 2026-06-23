@@ -231,6 +231,7 @@ export class CalendarioComponent {
       this.currentWeekStart.set(newStart);
       this.visibleMonthDate.set(newStart);
       this.stripDayCount.set(21);
+      this.selectedDates.set(new Set());
       this.nav()?.scrollToStart();
     }
   }
@@ -247,6 +248,7 @@ export class CalendarioComponent {
       this.currentWeekStart.set(newStart);
       this.visibleMonthDate.set(newStart);
       this.stripDayCount.set(21);
+      this.selectedDates.set(new Set());
       this.nav()?.scrollToStart();
     }
   }
@@ -305,13 +307,31 @@ export class CalendarioComponent {
     this.saving.set(true);
     try {
       await this.toast.run(() => this.eventosService.createEvento(data), {
-        successMessage: 'Evento creado',
+        successMessage: this.eventSuccessMessage(data.fecha),
         errorTitle: 'No se pudo crear el evento',
-        onSuccess: () => this.showDrawer.set(false),
+        onSuccess: () => {
+          this.showDrawer.set(false);
+          this.navigateToDate(data.fecha);
+        },
       });
     } finally {
       this.saving.set(false);
     }
+  }
+
+  private navigateToDate(date: string): void {
+    const monday = mondayOf(new Date(date + 'T00:00:00'));
+    this.currentWeekStart.set(monday);
+    this.visibleMonthDate.set(monday);
+    this.stripDayCount.set(21);
+    this.selectedDates.set(new Set([date]));
+    this.nav()?.scrollToStart();
+  }
+
+  private eventSuccessMessage(date: string): string {
+    const d = new Date(date + 'T00:00:00');
+    const label = d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+    return `Evento creado · ${label.charAt(0).toUpperCase() + label.slice(1)}`;
   }
 
   async updateItemColor({ id, color }: { id: string; color: ItemColor | null }): Promise<void> {

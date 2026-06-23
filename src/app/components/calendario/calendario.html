@@ -31,6 +31,8 @@
       [groupedEvents]="groupedEvents()"
       [hasSelectedDates]="selectedDates().size > 0"
       [members]="members()"
+      [visibleRangeStart]="currentWeekStart()"
+      [visibleRangeCount]="stripDayCount()"
       (hitoStatusChanged)="updateHitoEstado($event)"
       (eventoStatusChanged)="updateEventoEstado($event)"
       (itemTimeChanged)="updateItemTime($event)"

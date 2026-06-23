@@ -468,16 +468,22 @@ export class CasosService {
       // Movimientos legacy sin desglose fiscal: cuota 0 (base = importe).
       const cuota = m.cuotaIva ?? 0;
       if (m.esEntrada) {
-        resumen.totalIngresos += m.importe;
+        // Honorarios cobrados al cliente van a totalHonorarios, no a totalIngresos,
+        // para que la línea de factura sea unívoca y no se duplique el importe.
+        if (m.tipo === 'honorario') {
+          resumen.totalHonorarios += m.importe;
+        } else {
+          resumen.totalIngresos += m.importe;
+        }
         resumen.ivaRepercutido += cuota;
       } else {
         resumen.totalEgresos += m.importe;
         resumen.ivaSoportado += cuota;
         if (m.tipo === 'suplido') resumen.totalSuplidos += m.importe;
-        else if (m.tipo === 'honorario') resumen.totalHonorarios += m.importe;
+        else if (m.tipo === 'honorario') resumen.totalHonorariosSalida += m.importe;
       }
     }
-    resumen.saldo = resumen.totalIngresos - resumen.totalEgresos;
+    resumen.saldo = resumen.totalIngresos + resumen.totalHonorarios - resumen.totalEgresos;
 
     // Denormalizamos el conteo de slots para que facturación evalúe "ejecutado"
     // leyendo sólo el doc del caso, sin abrir la subcolección por cada render.

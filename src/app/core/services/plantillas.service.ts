@@ -185,9 +185,9 @@ export class PlantillasService {
     const existing = await getDocs(colRef);
     const batch = writeBatch(this.firestore);
     existing.docs.forEach(d => batch.delete(d.ref));
-    for (const item of items) {
-      batch.set(doc(colRef), item);
-    }
+    items.forEach((item, i) => {
+      batch.set(doc(colRef, String(i)), item);
+    });
     await batch.commit();
   }
 }
