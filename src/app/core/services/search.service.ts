@@ -50,6 +50,18 @@ export class SearchService {
     return computed(() => (this.category() === key ? this.term() : ''));
   }
 
+  /**
+   * Sincroniza la categoría activa según la URL sin navegar.
+   * Llamado por el layout en cada NavigationEnd para que la búsqueda
+   * filtre en la página actual sin requerir selección manual de categoría.
+   */
+  syncToRoute(url: string): void {
+    if (url.startsWith('/contactos')) { this.category.set('contactos'); return; }
+    if (url.startsWith('/casos')) { this.category.set('casos'); return; }
+    if (url.startsWith('/usuarios')) { this.category.set('personal'); return; }
+    this.clear();
+  }
+
   clear(): void {
     this.category.set(null);
     this.term.set('');

@@ -1,5 +1,7 @@
-import { Component, signal, computed, inject, viewChild, type ElementRef } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { Component, signal, computed, inject, viewChild, type ElementRef, DestroyRef } from '@angular/core';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { filter } from 'rxjs';
 import { SearchService, type SearchCategory } from '../../core/services/search.service';
 import { AuthService } from '../../auth/auth.service';
 import { PermissionService } from '../../core/services/permission.service';
@@ -69,8 +71,22 @@ export class DemoLayoutComponent {
   readonly searchSvc = inject(SearchService);
   private readonly authSvc = inject(AuthService);
   private readonly perm = inject(PermissionService);
+  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
   readonly searchMenuOpen = signal(false);
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
+
+  constructor() {
+    // Sync active search category to current route on every navigation.
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(e => {
+      this.searchSvc.syncToRoute(e.urlAfterRedirects);
+    });
+    // Sync on initial load.
+    this.searchSvc.syncToRoute(this.router.url);
+  }
 
   /** Íconos por categoría — el adapter lucide vive acá, no en el servicio. */
   readonly categoryIcons: Record<SearchCategory, LucideIconData> = {
@@ -82,8 +98,12 @@ export class DemoLayoutComponent {
   selectSearchCategory(key: SearchCategory): void {
     this.searchSvc.selectCategory(key);
     this.searchMenuOpen.set(false);
-    // Mantener el foco en el input para tipear de inmediato tras elegir categoría.
-    // El header no se destruye al navegar (es el layout), así que el input persiste.
+    this.searchInput()?.nativeElement.focus();
+  }
+
+  clearSearch(): void {
+    this.searchSvc.setTerm('');
+    this.searchMenuOpen.set(false);
     this.searchInput()?.nativeElement.focus();
   }
 

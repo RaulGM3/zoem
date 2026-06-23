@@ -6,8 +6,7 @@ import { Router } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import {
   LucideAngularModule, ArrowLeft, Edit, Phone, Mail, MapPin,
-  Building2, Calendar, FileText, Receipt, MessageSquare, Tag,
-  ChevronRight, User, FolderPlus, Upload, Folder, FolderOpen,
+  Building2, Calendar, Tag, FolderPlus, Upload, Folder, FolderOpen,
   Check, X, Pencil, Download, Trash2,
 } from 'lucide-angular';
 import { INVOICES } from '../../data/dummy-data';
@@ -16,14 +15,10 @@ import { ContactFolderService } from '../../core/services/contact-folder.service
 import { ToastService } from '../../core/services/toast.service';
 import { ContactFileService } from '../../core/services/contact-file.service';
 import { CasosService } from '../../core/services/casos.service';
-import { LlamadasService } from '../../core/services/llamadas.service';
 import {
   Contact, ContactFolder, ContactFile, Caso,
   getContactDisplayName, getContactInitials,
 } from '../../interfaces';
-import type { LlamadaResumen } from '../../interfaces/llamada.interface';
-
-type ContactoTab = 'general' | 'casos' | 'facturas' | 'comunicaciones' | 'documentos';
 
 @Component({
   selector: 'app-contacto-detail',
@@ -39,12 +34,7 @@ export class ContactoDetailComponent {
   readonly MapPinIcon = MapPin;
   readonly Building2Icon = Building2;
   readonly CalendarIcon = Calendar;
-  readonly FileTextIcon = FileText;
-  readonly ReceiptIcon = Receipt;
-  readonly MessageSquareIcon = MessageSquare;
   readonly TagIcon = Tag;
-  readonly ChevronRightIcon = ChevronRight;
-  readonly UserIcon = User;
   readonly FolderPlusIcon = FolderPlus;
   readonly UploadIcon = Upload;
   readonly FolderIcon = Folder;
@@ -63,9 +53,6 @@ export class ContactoDetailComponent {
   private readonly toast = inject(ToastService);
   private readonly contactService = inject(ContactService);
   private readonly casosService = inject(CasosService);
-  private readonly llamadasService = inject(LlamadasService);
-
-  activeTab = signal<ContactoTab>('general');
 
   // Document browser state
   currentFolderId = signal<string | null>(null);
@@ -88,7 +75,6 @@ export class ContactoDetailComponent {
       this.folderService.loadFolders(contactId);
       this.fileService.loadFiles(contactId);
       this.casosService.loadCasos();
-      this.llamadasService.loadLlamadas();
       // Reset browser state when contact changes
       this.currentFolderId.set(null);
       this.folderPath.set([]);
@@ -109,26 +95,6 @@ export class ContactoDetailComponent {
     INVOICES.filter((f) => f.client === this.name())
   );
 
-  /**
-   * Comunicaciones de recepción IA vinculadas al contacto: por `contactId`
-   * manual o por match automático de teléfono.
-   */
-  comunicaciones = computed<LlamadaResumen[]>(() => {
-    const c = this.contacto();
-    if (!c) return [];
-    const id = this.id();
-    const phones = new Set(
-      [c.phone, c.mobile]
-        .filter((p): p is string => !!p)
-        .map((p) => p.replace(/\D/g, ''))
-    );
-    return this.llamadasService.llamadas().filter((ll) => {
-      if (ll.contactId === id) return true;
-      const tel = ll.datosCapturados?.telefono;
-      return !!tel && phones.has(tel.replace(/\D/g, ''));
-    });
-  });
-
   totalDocumentos = computed(() => this.fileService.files().length);
 
   currentFolders = computed(() =>
@@ -138,16 +104,6 @@ export class ContactoDetailComponent {
   currentFiles = computed(() =>
     this.fileService.files().filter((f) => f.folderId === this.currentFolderId())
   );
-
-  historialFacturacion = [
-    { mes: 'Ene', valor: 4200 },
-    { mes: 'Feb', valor: 6800 },
-    { mes: 'Mar', valor: 5100 },
-    { mes: 'Abr', valor: 9200 },
-    { mes: 'May', valor: 8400 },
-  ];
-
-  maxFactura = Math.max(...[4200, 6800, 5100, 9200, 8400]);
 
   // --- Contact display helpers ---
 
@@ -249,28 +205,6 @@ export class ContactoDetailComponent {
       borrador: 'bg-slate-100 text-slate-500',
     };
     return map[status] ?? 'bg-slate-100 text-slate-600';
-  }
-
-  llamadaTitulo(ll: LlamadaResumen): string {
-    return ll.tituloResumen?.trim() || ll.resumen || 'Llamada';
-  }
-
-  llamadaFecha(ll: LlamadaResumen): string {
-    if (!ll.creadoEn) return '—';
-    return ll.creadoEn.toDate().toLocaleString('es-ES', {
-      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
-    });
-  }
-
-  formatDuracion(seconds: number): string {
-    if (seconds < 60) return `${seconds}s`;
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return s > 0 ? `${m}m ${s}s` : `${m}m`;
-  }
-
-  barHeight(valor: number): string {
-    return Math.round((valor / this.maxFactura) * 100) + '%';
   }
 
   // --- Document browser ---

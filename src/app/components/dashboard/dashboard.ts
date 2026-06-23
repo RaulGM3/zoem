@@ -124,7 +124,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // ── (2) Ingresos del mes (honorarios) ─────────────────────────────────
   readonly ingresosMes = computed(() =>
     this.movimientos()
-      .filter(m => m.tipo === 'honorario' && m.fecha.slice(0, 7) === this.mesActual)
+      .filter(m => m.esEntrada && m.fecha.slice(0, 7) === this.mesActual)
       .reduce((acc, m) => acc + m.importe, 0)
   );
 

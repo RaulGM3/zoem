@@ -190,6 +190,7 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
 
   startEditInfo(): void {
     this.editingInfo.set(true);
+    this.setTab('info');
   }
 
   async onSaveInfo(data: CasoInfoFormData): Promise<void> {

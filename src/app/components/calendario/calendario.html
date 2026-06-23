@@ -25,17 +25,19 @@
     (moreDaysRequested)="stripDayCount.update(n => n + 7)"
   />
 
-  <app-day-schedule
-    class="block min-h-0 flex-1"
-    [groupedEvents]="groupedEvents()"
-    [hasSelectedDates]="selectedDates().size > 0"
-    [members]="members()"
-    (hitoStatusChanged)="updateHitoEstado($event)"
-    (eventoStatusChanged)="updateEventoEstado($event)"
-    (itemTimeChanged)="updateItemTime($event)"
-    (itemColorChanged)="updateItemColor($event)"
-    (registrosChanged)="updateRegistrosHoras($event)"
-  />
+  @if (viewMode() !== 'month') {
+    <app-day-schedule
+      class="block min-h-0 flex-1"
+      [groupedEvents]="groupedEvents()"
+      [hasSelectedDates]="selectedDates().size > 0"
+      [members]="members()"
+      (hitoStatusChanged)="updateHitoEstado($event)"
+      (eventoStatusChanged)="updateEventoEstado($event)"
+      (itemTimeChanged)="updateItemTime($event)"
+      (itemColorChanged)="updateItemColor($event)"
+      (registrosChanged)="updateRegistrosHoras($event)"
+    />
+  }
 </div>
 
 <app-nuevo-evento-drawer

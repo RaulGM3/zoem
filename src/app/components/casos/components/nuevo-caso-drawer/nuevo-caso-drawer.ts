@@ -58,6 +58,7 @@ export class NuevoCasoDrawerComponent {
     }).slice(0, 8);
   });
 
+  readonly showErrors = signal(false);
   readonly canSubmit = computed(() => !!this.formTitulo().trim() && !!this.clienteSeleccionado());
 
   constructor() {
@@ -93,6 +94,7 @@ export class NuevoCasoDrawerComponent {
     this.clienteSeleccionado.set(null);
     this.buscadorQuery.set('');
     this.showDropdown.set(false);
+    this.showErrors.set(false);
   }
 
   onPlantillaChange(id: string): void {
@@ -128,7 +130,10 @@ export class NuevoCasoDrawerComponent {
   submit(): void {
     const titulo = this.formTitulo().trim();
     const cliente = this.clienteSeleccionado();
-    if (!titulo || !cliente) return;
+    if (!titulo || !cliente) {
+      this.showErrors.set(true);
+      return;
+    }
     this.saved.emit({
       titulo,
       descripcion: this.formDescripcion().trim() || undefined,

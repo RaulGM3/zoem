@@ -16,7 +16,7 @@
   @if (perm.can('Tesorería', 'ver')) {
     <app-stat-card
       [icon]="EuroIcon" tone="green" label="Ingresos del mes"
-      [value]="(ingresosMes() | number: '1.0-0') + ' €'" sublabel="Honorarios del mes en curso"
+      [value]="(ingresosMes() | number: '1.0-0') + ' €'" sublabel="Entradas del mes en curso"
       href="/tesoreria"
     />
   }

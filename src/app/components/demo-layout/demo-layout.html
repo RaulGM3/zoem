@@ -108,7 +108,16 @@
             (click)="searchMenuOpen.set(true)"
             class="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-10 pr-24 text-sm text-slate-700 placeholder-slate-400 focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-100"
           />
-          @if (searchSvc.activeMeta(); as meta) {
+          @if (searchSvc.term()) {
+            <button
+              type="button"
+              aria-label="Limpiar búsqueda"
+              (click)="clearSearch()"
+              class="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-slate-400 hover:text-slate-600"
+            >
+              <lucide-icon [img]="XIcon" size="14"></lucide-icon>
+            </button>
+          } @else if (searchSvc.activeMeta(); as meta) {
             <span class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded-md bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-600">
               {{ meta.label }}
             </span>

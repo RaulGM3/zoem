@@ -113,6 +113,9 @@
             Crear nuevo cliente
           </button>
         }
+        @if (showErrors() && !clienteSeleccionado()) {
+          <p class="text-xs text-red-500 mt-1">Selecciona un cliente para continuar</p>
+        }
       </div>
 
       <!-- Título -->
@@ -124,8 +127,11 @@
           [value]="formTitulo()"
           (input)="formTitulo.set($any($event.target).value)"
           placeholder="Ej. Divorcio García Rodríguez"
-          class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+          [class]="'w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 ' + (showErrors() && !formTitulo().trim() ? 'border-red-400' : 'border-slate-200')"
         />
+        @if (showErrors() && !formTitulo().trim()) {
+          <p class="text-xs text-red-500">El título es obligatorio</p>
+        }
       </div>
 
       <!-- Plantilla -->
@@ -219,7 +225,7 @@
       </button>
       <button
         (click)="submit()"
-        [disabled]="saving() || !canSubmit()"
+        [disabled]="saving()"
         class="px-4 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {{ saving() ? 'Guardando...' : 'Crear caso' }}
