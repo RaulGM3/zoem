@@ -183,6 +183,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/superuser/agents/agents').then((m) => m.AgentsComponent),
       },
+      {
+        path: 'errors',
+        loadComponent: () =>
+          import('./components/superuser/errors/errors').then((m) => m.ErrorsComponent),
+      },
     ],
   },
   {

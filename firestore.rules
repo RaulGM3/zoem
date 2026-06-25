@@ -310,6 +310,15 @@ service cloud.firestore {
     }
 
     // ====================================================================
+    // app_errors: cualquier usuario autenticado puede crear su propio log;
+    // solo el superuser puede leer la colección completa.
+    // ====================================================================
+    match /app_errors/{errorId} {
+      allow create: if isSignedIn();
+      allow read: if isSuper();
+    }
+
+    // ====================================================================
     // Default: TODO lo no declarado queda DENEGADO (fail-closed).
     // Colecciones nuevas necesitan su propia regla explícita.
     // ====================================================================

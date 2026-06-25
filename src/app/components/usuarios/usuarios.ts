@@ -67,6 +67,9 @@ export class UsuariosComponent implements OnInit, OnDestroy {
   readonly showEditDrawer = signal(false);
   readonly editingMember = signal<CompanyMember | null>(null);
   readonly memberSaving = signal(false);
+  readonly isEditingOwnProfile = computed(() =>
+    this.editingMember()?.id === this.permissionService.currentMember()?.id
+  );
 
   // Re-copiar link de invitación
   readonly copiedInviteId = signal<string | null>(null);
@@ -133,6 +136,21 @@ export class UsuariosComponent implements OnInit, OnDestroy {
     const company = this.companyService.activeCompany();
     const createdBy = this.permissionService.currentMember()?.email ?? '';
     if (!company) return;
+
+    // BUG #1: usuario activo con el mismo email
+    const emailNorm = data.email.toLowerCase().trim();
+    const existingMember = this.usersService.members().some(m => m.email.toLowerCase() === emailNorm);
+    if (existingMember) {
+      this.toast.fromError(new Error('Ya existe un miembro con este correo'), { title: 'Invitación no enviada' });
+      return;
+    }
+    // BUG #2: invitación pendiente duplicada
+    const pendingDup = this.pendingInvitations().some(i => i.email === emailNorm);
+    if (pendingDup) {
+      this.toast.fromError(new Error('Ya existe una invitación pendiente para este correo'), { title: 'Invitación no enviada' });
+      return;
+    }
+
     this.inviteSaving.set(true);
     try {
       const token = await this.toast.run(
@@ -141,6 +159,8 @@ export class UsuariosComponent implements OnInit, OnDestroy {
       );
       if (token === undefined) return;
       this.inviteLink.set(`${window.location.origin}/invite/${token}`);
+      // BUG #9: auditoría
+      void this.actividadService.log('Configuración', `Invitó a: ${data.email}`);
     } finally {
       this.inviteSaving.set(false);
     }
@@ -185,7 +205,11 @@ export class UsuariosComponent implements OnInit, OnDestroy {
       await this.toast.run(() => this.usersService.updateMember(member.id, patch), {
         successMessage: 'Usuario actualizado',
         errorTitle: 'No se pudo actualizar el usuario',
-        onSuccess: () => this.closeEditDrawer(),
+        onSuccess: () => {
+          this.closeEditDrawer();
+          // BUG #9: auditoría
+          void this.actividadService.log('Configuración', `Actualizó usuario: ${member.nombre}`, member.id);
+        },
       });
     } finally {
       this.memberSaving.set(false);
@@ -193,12 +217,22 @@ export class UsuariosComponent implements OnInit, OnDestroy {
   }
 
   async onDeleteMember(id: string): Promise<void> {
+    // BUG #11: prevenir auto-eliminación
+    if (id === this.permissionService.currentMember()?.id) {
+      this.toast.fromError(new Error('No puedes eliminar tu propia cuenta'), { title: 'Acción no permitida' });
+      return;
+    }
+    const member = this.usersService.members().find(m => m.id === id);
     this.memberSaving.set(true);
     try {
       await this.toast.run(() => this.usersService.removeMember(id), {
         successMessage: 'Usuario eliminado',
         errorTitle: 'No se pudo eliminar el usuario',
-        onSuccess: () => this.closeEditDrawer(),
+        onSuccess: () => {
+          this.closeEditDrawer();
+          // BUG #9: auditoría
+          if (member) void this.actividadService.log('Configuración', `Eliminó usuario: ${member.nombre}`, id);
+        },
       });
     } finally {
       this.memberSaving.set(false);

@@ -35,6 +35,7 @@
           <input
             id="ev-titulo"
             type="text"
+            required
             [value]="titulo()"
             (input)="titulo.set($any($event.target).value)"
             placeholder="Nombre del evento"
@@ -69,6 +70,7 @@
               <input
                 id="ev-fecha"
                 type="date"
+                required
                 [value]="fecha()"
                 (change)="fecha.set($any($event.target).value)"
                 class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
@@ -100,18 +102,79 @@
         </div>
 
         <!-- Recurrencia -->
-        <div class="space-y-1.5">
-          <label for="ev-recurrencia" class="text-sm font-medium text-slate-700">Repetición</label>
-          <select
-            id="ev-recurrencia"
-            [value]="recurrencia()"
-            (change)="recurrencia.set($any($event.target).value)"
-            class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100 bg-white"
-          >
-            @for (r of recurrencias; track r) {
-              <option [value]="r">{{ recurrenciaLabel[r] }}</option>
-            }
-          </select>
+        <div class="space-y-3">
+          <div class="space-y-1.5">
+            <label for="ev-recurrencia" class="text-sm font-medium text-slate-700">Repetición</label>
+            <select
+              id="ev-recurrencia"
+              [value]="recurrencia()"
+              (change)="recurrencia.set($any($event.target).value)"
+              class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100 bg-white"
+            >
+              @for (r of recurrencias; track r) {
+                <option [value]="r">{{ recurrenciaLabel[r] }}</option>
+              }
+            </select>
+          </div>
+
+          @if (recurrencia() !== 'ninguna') {
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
+              <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Termina</p>
+
+              <!-- Tipo de fin -->
+              <div class="flex gap-3">
+                <button
+                  type="button"
+                  (click)="recurrenciaFinTipo.set('fecha')"
+                  [class]="recurrenciaFinTipo() === 'fecha'
+                    ? 'flex-1 py-2 rounded-lg text-sm font-medium bg-violet-600 text-white'
+                    : 'flex-1 py-2 rounded-lg text-sm font-medium border border-slate-200 text-slate-600 hover:border-slate-300 bg-white'"
+                >
+                  En fecha
+                </button>
+                <button
+                  type="button"
+                  (click)="recurrenciaFinTipo.set('ocurrencias')"
+                  [class]="recurrenciaFinTipo() === 'ocurrencias'
+                    ? 'flex-1 py-2 rounded-lg text-sm font-medium bg-violet-600 text-white'
+                    : 'flex-1 py-2 rounded-lg text-sm font-medium border border-slate-200 text-slate-600 hover:border-slate-300 bg-white'"
+                >
+                  Después de N veces
+                </button>
+              </div>
+
+              @if (recurrenciaFinTipo() === 'fecha') {
+                <div class="space-y-1">
+                  <label for="ev-recurrencia-fin" class="text-xs font-medium text-slate-500">Fecha de fin</label>
+                  <input
+                    id="ev-recurrencia-fin"
+                    type="date"
+                    [value]="recurrenciaFin()"
+                    [min]="fecha()"
+                    (change)="recurrenciaFin.set($any($event.target).value)"
+                    class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100 bg-white"
+                  />
+                </div>
+              } @else {
+                <div class="space-y-1">
+                  <label for="ev-recurrencia-ocurrencias" class="text-xs font-medium text-slate-500">Número de ocurrencias</label>
+                  <div class="flex items-center gap-2">
+                    <input
+                      id="ev-recurrencia-ocurrencias"
+                      type="number"
+                      min="1"
+                      max="365"
+                      [value]="recurrenciaOcurrencias() ?? ''"
+                      (input)="recurrenciaOcurrencias.set(+$any($event.target).value || null)"
+                      placeholder="ej. 10"
+                      class="w-28 rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100 bg-white"
+                    />
+                    <span class="text-sm text-slate-500">veces</span>
+                  </div>
+                </div>
+              }
+            </div>
+          }
         </div>
 
         <!-- Lugar + Link -->

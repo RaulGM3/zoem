@@ -11,6 +11,7 @@ import {
 } from '@angular/fire/firestore';
 import { Observable, of } from 'rxjs';
 import { CompanyService } from './company.service';
+import { ErrorService } from './error.service';
 import { PermissionService } from './permission.service';
 import { UserSyncService } from './user-sync.service';
 import { stripUndefinedDeep } from '../firebase/sanitize';
@@ -21,6 +22,7 @@ import type { Modulo } from '../permissions/permissions';
 export class ActividadService {
   private readonly firestore = inject(Firestore);
   private readonly companyService = inject(CompanyService);
+  private readonly errorService = inject(ErrorService);
   private readonly permissionService = inject(PermissionService);
   private readonly userSync = inject(UserSyncService);
 
@@ -49,8 +51,8 @@ export class ActividadService {
         ...(entidadId ? { entidadId } : {}),
         createdAt: serverTimestamp(),
       }));
-    } catch {
-      // Silencioso a propósito: la actividad es secundaria a la acción del usuario.
+    } catch (err) {
+      void this.errorService.log(err, { serviceName: 'ActividadService', methodName: 'log' });
     }
   }
 

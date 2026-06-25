@@ -51,6 +51,7 @@ export class InviteDrawerComponent {
   readonly isValid = computed(() => this.form.valid);
 
   onSubmit(): void {
+    this.form.markAllAsTouched();
     if (this.form.invalid) return;
     const { email, role } = this.form.getRawValue();
     this.submitted.emit({ email, role });

@@ -1,5 +1,7 @@
-import { Injectable, signal } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import { translateFirebaseError } from '../firebase/firebase-error';
+import type { ErrorContext } from '../../interfaces/app-error.interface';
+import { ErrorService } from './error.service';
 
 export type ToastType = 'error' | 'success' | 'info';
 
@@ -31,6 +33,8 @@ interface RunOptions {
    * exitoso). Útil para cerrar drawers/modales únicamente si la escritura pasó.
    */
   onSuccess?: () => void;
+  /** Contexto opcional para el log de errores (servicio, método, parámetros). */
+  context?: ErrorContext;
 }
 
 const AUTO_DISMISS_MS = 5000;
@@ -64,6 +68,7 @@ function offlineError(): Error & { code: string } {
 export class ToastService {
   readonly toasts = signal<Toast[]>([]);
   private nextId = 0;
+  private readonly errorService = inject(ErrorService);
 
   success(message: string, title = 'Hecho'): void {
     this.push({ type: 'success', title, message });
@@ -103,7 +108,9 @@ export class ToastService {
     // (promesa eterna → spinner colgado) y al reintentar se duplicaría. Mejor
     // avisar de una y dejar reintentar cuando vuelva la conexión.
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-      this.fromError(offlineError(), {
+      const offErr = offlineError();
+      void this.errorService.log(offErr, opts.context);
+      this.fromError(offErr, {
         title: opts.errorTitle,
         retry: () => void this.run(action, opts),
       });
@@ -115,6 +122,7 @@ export class ToastService {
       opts.onSuccess?.();
       return result;
     } catch (err) {
+      void this.errorService.log(err, opts.context);
       this.fromError(err, {
         title: opts.errorTitle,
         retry: () => void this.run(action, opts),

@@ -30,6 +30,8 @@ import {
 } from 'lucide-angular';
 import { InvitationService } from '../../core/services/invitation.service';
 import { AuthService } from '../../auth/auth.service';
+import { CompanyService } from '../../core/services/company.service';
+import { UsersService } from '../../core/services/users';
 import { CompanyInvitation } from '../../interfaces/invitation';
 
 type PageState = 'loading' | 'valid' | 'invalid' | 'expired' | 'accepting' | 'accepted' | 'error';
@@ -73,6 +75,8 @@ export class InviteComponent implements OnInit {
 
   private readonly invitationService = inject(InvitationService);
   readonly auth = inject(AuthService);
+  private readonly companyService = inject(CompanyService);
+  private readonly usersService = inject(UsersService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
 
@@ -172,6 +176,8 @@ export class InviteComponent implements OnInit {
         apellido: apellido.trim(),
         telefono: telefono.trim(),
       });
+      await this.companyService.loadMyCompanies(uid);
+      await this.usersService.loadMembers();
       this.state.set('accepted');
       setTimeout(() => this.router.navigate(['/']), 2000);
     } catch (e: unknown) {
@@ -188,6 +194,8 @@ export class InviteComponent implements OnInit {
     this.state.set('accepting');
     try {
       await this.invitationService.acceptInvitation(this.token(), userEmail, uid);
+      await this.companyService.loadMyCompanies(uid);
+      await this.usersService.loadMembers();
       this.state.set('accepted');
       setTimeout(() => this.router.navigate(['/']), 2000);
     } catch (e: unknown) {

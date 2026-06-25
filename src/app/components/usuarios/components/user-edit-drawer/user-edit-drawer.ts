@@ -39,6 +39,7 @@ export class UserEditDrawerComponent {
   readonly member = input<CompanyMember | null>(null);
   readonly visible = input.required<boolean>();
   readonly saving = input.required<boolean>();
+  readonly canDelete = input<boolean>(true);
 
   readonly saved = output<UserEditPatch>();
   readonly deleted = output<string>();
@@ -57,7 +58,7 @@ export class UserEditDrawerComponent {
   readonly form = this.fb.nonNullable.group({
     nombre: ['', Validators.required],
     apellido: [''],
-    telefono: [''],
+    telefono: ['', Validators.pattern(/^\+?[\d\s\-().]{6,20}$/)],
     departamento: [''],
     role: ['Usuario' as FirmRole, Validators.required],
     estado: ['activo' as MemberEstado, Validators.required],

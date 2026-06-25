@@ -353,7 +353,7 @@ export class CalendarioComponent {
     return {
       id: e.id,
       title: e.titulo,
-      client: e.todoDia || !e.horaInicio ? 'Todo el día' : e.horaInicio,
+      client: e.horaInicio ?? 'Todo el día',
       type: 'reunion',
       date: e.fecha,
       status: EVENTO_ESTADO_TO_STATUS[estado],

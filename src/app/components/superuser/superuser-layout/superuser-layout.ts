@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import {
+  AlertTriangle,
   ArrowLeft,
   Bot,
   Building2,
@@ -22,6 +23,7 @@ export class SuperuserLayoutComponent implements OnInit {
   readonly UsersIcon = Users;
   readonly BotIcon = Bot;
   readonly ArrowLeftIcon = ArrowLeft;
+  readonly AlertTriangleIcon = AlertTriangle;
 
   private readonly companyService = inject(CompanyService);
 

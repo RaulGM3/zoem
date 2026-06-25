@@ -4,7 +4,7 @@ import {
 } from '@angular/core';
 import { LucideAngularModule, X } from 'lucide-angular';
 import { UsersService } from '../../../../core/services/users';
-import type { CreateEventoData, EventoColor, EventoPrioridad, EventoRecurrencia } from '../../../../interfaces';
+import type { CreateEventoData, EventoColor, EventoPrioridad, EventoRecurrencia, RecurrenciaFinTipo } from '../../../../interfaces';
 import { EVENTO_COLORS, PRIORIDAD_CONFIG, RECURRENCIA_LABELS } from '../../../../interfaces';
 import type { CompanyMember } from '../../../../interfaces/member';
 
@@ -39,6 +39,9 @@ export class NuevoEventoDrawerComponent {
   readonly horaFin = signal('10:00');
   readonly todoDia = signal(false);
   readonly recurrencia = signal<EventoRecurrencia>('ninguna');
+  readonly recurrenciaFinTipo = signal<RecurrenciaFinTipo>('fecha');
+  readonly recurrenciaFin = signal('');
+  readonly recurrenciaOcurrencias = signal<number | null>(null);
   readonly prioridad = signal<EventoPrioridad>('ninguna');
   readonly color = signal<EventoColor>('azul');
   readonly todaLaCompania = signal(false);
@@ -78,6 +81,9 @@ export class NuevoEventoDrawerComponent {
     this.horaFin.set('10:00');
     this.todoDia.set(false);
     this.recurrencia.set('ninguna');
+    this.recurrenciaFinTipo.set('fecha');
+    this.recurrenciaFin.set('');
+    this.recurrenciaOcurrencias.set(null);
     this.prioridad.set('ninguna');
     this.color.set('azul');
     this.todaLaCompania.set(false);
@@ -125,6 +131,13 @@ export class NuevoEventoDrawerComponent {
     if (!this.todoDia()) {
       data.horaInicio = this.horaInicio();
       data.horaFin = this.horaFin();
+    }
+    if (this.recurrencia() !== 'ninguna') {
+      if (this.recurrenciaFinTipo() === 'fecha' && this.recurrenciaFin()) {
+        data.recurrenciaFin = this.recurrenciaFin();
+      } else if (this.recurrenciaFinTipo() === 'ocurrencias' && this.recurrenciaOcurrencias()) {
+        data.recurrenciaOcurrencias = this.recurrenciaOcurrencias()!;
+      }
     }
 
     this.saved.emit(data);

@@ -1,0 +1,148 @@
+<div class="space-y-4">
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <lucide-icon [img]="AlertTriangleIcon" [size]="20" class="text-red-400" />
+      <div>
+        <h2 class="text-lg font-semibold text-white">Log de errores</h2>
+        @if (!isLoading()) {
+          <p class="text-xs text-slate-500">{{ total() }} errores registrados (últimos 200)</p>
+        }
+      </div>
+    </div>
+    <button
+      (click)="load()"
+      [disabled]="isLoading()"
+      class="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-300 transition-colors hover:border-slate-600 hover:text-white disabled:opacity-50"
+      aria-label="Recargar errores"
+    >
+      <lucide-icon [img]="RefreshIcon" [size]="14" [class]="isLoading() ? 'animate-spin' : ''" />
+      Recargar
+    </button>
+  </div>
+
+  <!-- Loading -->
+  @if (isLoading()) {
+    <div class="flex items-center justify-center py-16 text-slate-500">
+      <lucide-icon [img]="RefreshIcon" [size]="20" class="animate-spin" />
+      <span class="ml-2 text-sm">Cargando errores...</span>
+    </div>
+  }
+
+  <!-- Empty -->
+  @if (!isLoading() && total() === 0) {
+    <div class="flex flex-col items-center justify-center py-16 text-slate-500">
+      <lucide-icon [img]="AlertTriangleIcon" [size]="32" class="mb-3 opacity-40" />
+      <p class="text-sm">No hay errores registrados</p>
+    </div>
+  }
+
+  <!-- Table -->
+  @if (!isLoading() && total() > 0) {
+    <div class="overflow-hidden rounded-xl border border-slate-800">
+      <table class="w-full text-sm">
+        <thead class="border-b border-slate-800 bg-slate-900">
+          <tr>
+            <th class="w-6 px-4 py-3"></th>
+            <th class="px-4 py-3 text-left font-medium text-slate-400">Fecha</th>
+            <th class="px-4 py-3 text-left font-medium text-slate-400">Usuario</th>
+            <th class="px-4 py-3 text-left font-medium text-slate-400">Empresa</th>
+            <th class="px-4 py-3 text-left font-medium text-slate-400">Mensaje</th>
+            <th class="px-4 py-3 text-left font-medium text-slate-400">Código</th>
+            <th class="px-4 py-3 text-left font-medium text-slate-400">Servicio / Método</th>
+            <th class="px-4 py-3 text-left font-medium text-slate-400">URL</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (error of errors(); track error.id) {
+            <tr
+              class="cursor-pointer border-b border-slate-800/60 bg-slate-900 transition-colors hover:bg-slate-800/60"
+              (click)="toggleExpand(error.id)"
+            >
+              <td class="px-4 py-3 text-slate-500">
+                @if (expandedId() === error.id) {
+                  <lucide-icon [img]="ChevronDownIcon" [size]="14" />
+                } @else {
+                  <lucide-icon [img]="ChevronRightIcon" [size]="14" />
+                }
+              </td>
+              <td class="whitespace-nowrap px-4 py-3 text-xs text-slate-400">
+                {{ formatDate(error.createdAt) }}
+              </td>
+              <td class="px-4 py-3">
+                <div class="text-xs text-white">{{ error.userId }}</div>
+                @if (error.userEmail) {
+                  <div class="text-xs text-slate-500">{{ error.userEmail }}</div>
+                }
+              </td>
+              <td class="px-4 py-3 text-xs text-slate-300">
+                {{ error.companyName ?? error.companyId ?? '—' }}
+              </td>
+              <td class="max-w-xs px-4 py-3">
+                <p class="truncate text-xs text-red-300">{{ error.message }}</p>
+              </td>
+              <td class="px-4 py-3">
+                @if (error.errorCode) {
+                  <span class="rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-medium text-red-300">
+                    {{ error.errorCode }}
+                  </span>
+                } @else {
+                  <span class="text-xs text-slate-600">—</span>
+                }
+              </td>
+              <td class="px-4 py-3 text-xs text-slate-400">
+                @if (error.serviceName || error.methodName) {
+                  <span class="font-mono">{{ error.serviceName ?? '' }}{{ error.methodName ? '.' + error.methodName + '()' : '' }}</span>
+                } @else {
+                  <span class="text-slate-600">—</span>
+                }
+              </td>
+              <td class="px-4 py-3 text-xs text-slate-500 font-mono">
+                {{ error.url ?? '—' }}
+              </td>
+            </tr>
+
+            <!-- Expanded detail row -->
+            @if (expandedId() === error.id) {
+              <tr class="border-b border-slate-800/60 bg-slate-950">
+                <td colspan="8" class="px-6 py-4">
+                  <div class="space-y-4">
+
+                    @if (error.technicalDetail) {
+                      <div>
+                        <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-slate-500">Detalle técnico</p>
+                        <p class="font-mono text-xs text-amber-300">{{ error.technicalDetail }}</p>
+                      </div>
+                    }
+
+                    @if (error.params) {
+                      <div>
+                        <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-slate-500">Parámetros</p>
+                        <pre class="overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-300">{{ error.params }}</pre>
+                      </div>
+                    }
+
+                    @if (error.userAgent) {
+                      <div>
+                        <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-slate-500">User Agent</p>
+                        <p class="font-mono text-xs text-slate-500">{{ error.userAgent }}</p>
+                      </div>
+                    }
+
+                    @if (error.stack) {
+                      <div>
+                        <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-slate-500">Stack trace</p>
+                        <pre class="overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs leading-relaxed text-slate-400">{{ error.stack }}</pre>
+                      </div>
+                    }
+
+                  </div>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

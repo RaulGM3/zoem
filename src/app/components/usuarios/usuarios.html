@@ -264,6 +264,7 @@
   [member]="editingMember()"
   [visible]="showEditDrawer()"
   [saving]="memberSaving()"
+  [canDelete]="!isEditingOwnProfile()"
   (saved)="onSaveMember($event)"
   (deleted)="onDeleteMember($event)"
   (closed)="closeEditDrawer()"

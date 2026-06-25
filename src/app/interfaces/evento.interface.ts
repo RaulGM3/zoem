@@ -51,6 +51,8 @@ export const RECURRENCIA_LABELS: Record<EventoRecurrencia, string> = {
   anual:   'Cada año',
 };
 
+export type RecurrenciaFinTipo = 'fecha' | 'ocurrencias';
+
 export interface Evento {
   id: string;
   companyId: string;
@@ -64,6 +66,8 @@ export interface Evento {
   todoDia: boolean;
   estado?: EventoEstado;
   recurrencia: EventoRecurrencia;
+  recurrenciaFin?: string;         // YYYY-MM-DD — fecha de fin de la recurrencia
+  recurrenciaOcurrencias?: number; // número máximo de ocurrencias
   prioridad: EventoPrioridad;
   color: EventoColor;
   calendarColor?: string | null;

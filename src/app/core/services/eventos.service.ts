@@ -96,13 +96,11 @@ export class EventosService {
 
   async clearEventoTime(id: string): Promise<void> {
     await updateDoc(doc(this.eventosRef, id), {
-      horaInicio: deleteField(),
-      horaFin: deleteField(),
       todoDia: true,
       updatedAt: serverTimestamp(),
     });
     this.eventos.update(list =>
-      list.map(e => e.id === id ? { ...e, horaInicio: undefined, horaFin: undefined, todoDia: true } : e)
+      list.map(e => e.id === id ? { ...e, todoDia: true } : e)
     );
   }
 }
