@@ -27,7 +27,7 @@
       class="p-1.5 hover:bg-slate-100 rounded-lg"
       aria-label="Cerrar"
     >
-      <lucide-icon [img]="XIcon" class="w-4 h-4 text-slate-500" />
+      <lucide-icon [img]="XIcon" class="w-4 h-4 text-slate-700" />
     </button>
   </div>
 
@@ -41,13 +41,13 @@
             <lucide-icon [img]="SendIcon" class="w-7 h-7 text-emerald-600" />
           </div>
           <h3 class="text-lg font-semibold text-slate-800">Invitación generada</h3>
-          <p class="text-sm text-slate-500 max-w-xs">
+          <p class="text-sm text-slate-700 font-medium max-w-xs">
             Comparte este enlace con el usuario. Expira en 7 días.
           </p>
         </div>
 
         <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
-          <p class="text-xs text-slate-500 font-medium uppercase tracking-wide">Enlace de invitación</p>
+          <p class="text-xs text-slate-700 font-medium uppercase tracking-wide">Enlace de invitación</p>
           <p class="text-xs text-slate-700 break-all font-mono">{{ inviteLink() }}</p>
           <button
             (click)="copyLink()"
@@ -78,7 +78,7 @@
             Correo electrónico <span class="text-red-500" aria-hidden="true">*</span>
           </label>
           <div class="relative">
-            <lucide-icon [img]="MailIcon" class="absolute left-3 top-2.5 w-4 h-4 text-slate-400 pointer-events-none" />
+            <lucide-icon [img]="MailIcon" class="absolute left-3 top-2.5 w-4 h-4 text-slate-600 pointer-events-none" />
             <input
               id="invite-email"
               type="email"
@@ -98,7 +98,7 @@
             Rol <span class="text-red-500" aria-hidden="true">*</span>
           </label>
           <div class="relative">
-            <lucide-icon [img]="ShieldIcon" class="absolute left-3 top-2.5 w-4 h-4 text-slate-400 pointer-events-none" />
+            <lucide-icon [img]="ShieldIcon" class="absolute left-3 top-2.5 w-4 h-4 text-slate-600 pointer-events-none" />
             <select
               id="invite-role"
               formControlName="role"

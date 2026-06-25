@@ -1,87 +1,103 @@
 <!-- Tabla compacta por banco (o cotejo legacy si no hay cuentas) -->
 @if (hayCuentas()) {
-  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-    <div class="flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-200">
+  <div class="rounded-xl overflow-hidden" style="background:var(--surface);border:1px solid var(--border)">
+    <div class="flex items-center justify-between gap-2 px-4 py-3" style="border-bottom:1px solid var(--border)">
       <div class="flex items-center gap-2">
-        <lucide-icon [img]="ScaleIcon" class="w-4 h-4 text-slate-500" />
-        <h3 class="text-sm font-medium text-slate-700">Resumen por cuenta</h3>
+        <lucide-icon [img]="ScaleIcon" class="w-4 h-4" style="color:var(--text-muted)" />
+        <h3 class="text-sm font-semibold" style="color:var(--text-strong)">Resumen por cuenta</h3>
         @if (cuentaSeleccionada()) {
           <button type="button" (click)="cuentaSeleccionada.set(null)"
-            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors">
+            class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold transition-colors duration-150"
+            style="background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand)"
+            (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 20%,transparent)'"
+            (mouseleave)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 12%,transparent)'">
             <lucide-icon [img]="XIcon" class="w-3 h-3" />
             Ver todas
           </button>
         }
       </div>
-      @if (cuentaSeleccionada()) {
-        <span class="text-xs text-slate-400">Click en la fila para deseleccionar</span>
-      } @else {
-        <span class="text-xs text-slate-400">Click en una cuenta para filtrar</span>
-      }
+      <span class="text-xs" style="color:var(--text-faint)">
+        {{ cuentaSeleccionada() ? 'Click en la fila para deseleccionar' : 'Click en una cuenta para filtrar' }}
+      </span>
     </div>
     <div class="overflow-x-auto">
       <table class="min-w-full text-sm">
-        <thead class="bg-slate-50">
-          <tr class="text-left text-slate-500 border-b border-slate-200">
-            <th class="px-4 py-2.5 font-medium">Cuenta</th>
-            <th class="px-4 py-2.5 font-medium text-right">Ingresos</th>
-            <th class="px-4 py-2.5 font-medium text-right">Egresos</th>
-            <th class="px-4 py-2.5 font-medium text-right">Sistema</th>
-            <th class="px-4 py-2.5 font-medium text-right">Aprobado</th>
-            <th class="px-4 py-2.5 font-medium text-right">Saldo real</th>
-            <th class="px-4 py-2.5 font-medium text-center">Estado</th>
+        <thead style="background:var(--surface-2)">
+          <tr style="border-bottom:1px solid var(--border)">
+            <th class="px-4 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wider"
+              style="color:var(--text-muted);font-family:var(--font-mono)">Cuenta</th>
+            <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
+              style="color:var(--text-muted);font-family:var(--font-mono)">Ingresos</th>
+            <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
+              style="color:var(--text-muted);font-family:var(--font-mono)">Egresos</th>
+            <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
+              style="color:var(--text-muted);font-family:var(--font-mono)">Sistema</th>
+            <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
+              style="color:var(--text-muted);font-family:var(--font-mono)">Aprobado</th>
+            <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
+              style="color:var(--text-muted);font-family:var(--font-mono)">Saldo real</th>
+            <th class="px-4 py-2.5 text-center text-[10.5px] font-semibold uppercase tracking-wider"
+              style="color:var(--text-muted);font-family:var(--font-mono)">Estado</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-100">
+        <tbody>
           @for (c of cotejos(); track c.cuenta.id) {
-            <tr (click)="toggleCuenta(c.cuenta.id)" class="cursor-pointer transition-colors"
-              [class]="cuentaSeleccionada() === c.cuenta.id ? 'bg-violet-50 hover:bg-violet-100' : 'hover:bg-slate-50'">
+            <tr (click)="toggleCuenta(c.cuenta.id)" class="cursor-pointer transition-colors duration-150"
+              style="border-bottom:1px solid var(--border)"
+              [style.background]="cuentaSeleccionada() === c.cuenta.id ? 'color-mix(in srgb,var(--brand) 5%,transparent)' : ''"
+              (mouseenter)="$any($event.currentTarget).style.background=cuentaSeleccionada()===c.cuenta.id?'color-mix(in srgb,var(--brand) 8%,transparent)':'var(--surface-2)'"
+              (mouseleave)="$any($event.currentTarget).style.background=cuentaSeleccionada()===c.cuenta.id?'color-mix(in srgb,var(--brand) 5%,transparent)':''">
               <td class="px-4 py-3">
                 <div class="flex items-center gap-2.5">
                   <span class="flex items-center justify-center size-7 rounded-lg shrink-0"
-                    [class]="c.cuenta.tipo === 'banco' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'">
+                    [style.background]="c.cuenta.tipo === 'banco' ? 'color-mix(in srgb,var(--brand) 12%,transparent)' : 'color-mix(in srgb,var(--warning) 12%,transparent)'"
+                    [style.color]="c.cuenta.tipo === 'banco' ? 'var(--brand)' : 'var(--warning)'">
                     <lucide-icon [img]="c.cuenta.tipo === 'banco' ? LandmarkIcon : WalletIcon" class="w-3.5 h-3.5" />
                   </span>
                   <div>
-                    <p class="font-medium text-slate-800">{{ c.cuenta.nombre }}</p>
+                    <p class="font-medium" style="color:var(--text-strong)">{{ c.cuenta.nombre }}</p>
                     @if (c.cuenta.entidad) {
-                      <p class="text-xs text-slate-400">{{ c.cuenta.entidad }}</p>
+                      <p class="text-xs" style="color:var(--text-faint)">{{ c.cuenta.entidad }}</p>
                     }
                   </div>
                 </div>
               </td>
-              <td class="px-4 py-3 text-right text-emerald-600 font-medium">
+              <td class="px-4 py-3 text-right font-medium tabular-nums" style="color:var(--success);font-family:var(--font-mono)">
                 {{ c.ingresos | number:'1.2-2' }} €
               </td>
-              <td class="px-4 py-3 text-right text-red-500 font-medium">
+              <td class="px-4 py-3 text-right font-medium tabular-nums" style="color:var(--danger);font-family:var(--font-mono)">
                 {{ c.egresos | number:'1.2-2' }} €
               </td>
-              <td class="px-4 py-3 text-right font-semibold"
-                [class]="c.sistema >= 0 ? 'text-slate-700' : 'text-red-600'">
+              <td class="px-4 py-3 text-right font-semibold tabular-nums"
+                [style.color]="c.sistema >= 0 ? 'var(--text-body)' : 'var(--danger)'"
+                style="font-family:var(--font-mono)">
                 {{ c.sistema | number:'1.2-2' }} €
               </td>
-              <td class="px-4 py-3 text-right font-medium"
-                [class]="c.proyeccion >= 0 ? 'text-slate-500' : 'text-amber-600'">
+              <td class="px-4 py-3 text-right font-medium tabular-nums"
+                [style.color]="c.proyeccion >= 0 ? 'var(--text-muted)' : 'var(--warning)'"
+                style="font-family:var(--font-mono)">
                 {{ c.proyeccion | number:'1.2-2' }} €
               </td>
               <td class="px-4 py-3 text-right">
                 <div class="flex items-center justify-end gap-1">
                   <input type="number" step="0.01" [value]="c.banco ?? ''"
+                    (click)="$event.stopPropagation()"
                     (change)="actualizarSaldoCuenta.emit({ cuentaId: c.cuenta.id, valor: $any($event.target).value })"
                     placeholder="0.00"
-                    class="w-24 border border-slate-200 rounded-lg px-2 py-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-violet-400" />
-                  <span class="text-xs text-slate-400">€</span>
+                    class="form-input text-right tabular-nums" style="width:7rem;padding:0.25rem 0.5rem;font-family:var(--font-mono)" />
+                  <span class="text-xs" style="color:var(--text-faint)">€</span>
                 </div>
               </td>
               <td class="px-4 py-3 text-center">
                 @if (c.diferencia !== null) {
-                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
-                    [class]="c.conciliado ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'">
+                  <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold"
+                    [style.background]="c.conciliado ? 'color-mix(in srgb,var(--success) 12%,transparent)' : 'color-mix(in srgb,var(--warning) 12%,transparent)'"
+                    [style.color]="c.conciliado ? 'var(--success)' : 'var(--warning)'">
                     <lucide-icon [img]="c.conciliado ? CheckCircle2Icon : AlertTriangleIcon" class="w-3 h-3" />
                     {{ c.conciliado ? 'Conciliado' : 'Discrepancia' }}
                   </span>
                 } @else {
-                  <span class="text-xs text-slate-400">Sin saldo real</span>
+                  <span class="text-xs" style="color:var(--text-faint)">Sin saldo real</span>
                 }
               </td>
             </tr>
@@ -96,87 +112,92 @@
     @let totalMovs = movimientosPorCuenta().get(c.cuenta.id) ?? [];
     @let movsCuenta = movimientosFiltradosPorCuenta().get(c.cuenta.id) ?? [];
     @if (totalMovs.length > 0) {
-      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <div class="flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-200 flex-wrap">
+      <div class="rounded-xl overflow-hidden" style="background:var(--surface);border:1px solid var(--border)">
+        <div class="flex items-center justify-between gap-2 px-4 py-3 flex-wrap" style="border-bottom:1px solid var(--border)">
           <div class="flex items-center gap-2">
             <span class="flex items-center justify-center size-7 rounded-lg shrink-0"
-              [class]="c.cuenta.tipo === 'banco' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'">
+              [style.background]="c.cuenta.tipo === 'banco' ? 'color-mix(in srgb,var(--brand) 12%,transparent)' : 'color-mix(in srgb,var(--warning) 12%,transparent)'"
+              [style.color]="c.cuenta.tipo === 'banco' ? 'var(--brand)' : 'var(--warning)'">
               <lucide-icon [img]="c.cuenta.tipo === 'banco' ? LandmarkIcon : WalletIcon" class="w-3.5 h-3.5" />
             </span>
-            <h3 class="text-sm font-medium text-slate-700">{{ c.cuenta.nombre }}</h3>
+            <h3 class="text-sm font-semibold" style="color:var(--text-strong)">{{ c.cuenta.nombre }}</h3>
             @if (c.cuenta.entidad) {
-              <span class="text-xs text-slate-400">· {{ c.cuenta.entidad }}</span>
+              <span class="text-xs" style="color:var(--text-faint)">· {{ c.cuenta.entidad }}</span>
             }
           </div>
           <div class="flex items-center gap-3">
-            <span class="text-xs text-slate-400">
+            <span class="text-xs" style="color:var(--text-faint)">
               {{ movsCuenta.length }} de {{ totalMovs.length }} movimiento{{ totalMovs.length !== 1 ? 's' : '' }}
             </span>
-            <div class="flex rounded-lg border border-slate-200 overflow-hidden text-xs font-medium">
-              <button type="button"
-                (click)="setFiltro(c.cuenta.id, 'pendientes')"
-                [class]="getFiltro(c.cuenta.id) === 'pendientes'
-                  ? 'px-3 py-1.5 bg-amber-50 text-amber-700 border-r border-slate-200'
-                  : 'px-3 py-1.5 text-slate-500 hover:bg-slate-50 border-r border-slate-200 transition-colors'">
-                Pendientes
-              </button>
-              <button type="button"
-                (click)="setFiltro(c.cuenta.id, 'aprobados')"
-                [class]="getFiltro(c.cuenta.id) === 'aprobados'
-                  ? 'px-3 py-1.5 bg-emerald-50 text-emerald-700 border-r border-slate-200'
-                  : 'px-3 py-1.5 text-slate-500 hover:bg-slate-50 border-r border-slate-200 transition-colors'">
-                Aprobados
-              </button>
-              <button type="button"
-                (click)="setFiltro(c.cuenta.id, 'todos')"
-                [class]="getFiltro(c.cuenta.id) === 'todos'
-                  ? 'px-3 py-1.5 bg-violet-50 text-violet-700'
-                  : 'px-3 py-1.5 text-slate-500 hover:bg-slate-50 transition-colors'">
-                Todos
-              </button>
+            <div class="flex rounded-lg overflow-hidden text-xs font-semibold" style="border:1px solid var(--border)">
+              @for (f of [['pendientes','Pendientes'],['aprobados','Aprobados'],['todos','Todos']]; track f[0]) {
+                <button type="button" (click)="setFiltro(c.cuenta.id, $any(f[0]))"
+                  class="px-3 py-1.5 transition-colors duration-150"
+                  [style.background]="getFiltro(c.cuenta.id) === f[0]
+                    ? (f[0] === 'pendientes' ? 'color-mix(in srgb,var(--warning) 10%,transparent)'
+                       : f[0] === 'aprobados' ? 'color-mix(in srgb,var(--success) 10%,transparent)'
+                       : 'color-mix(in srgb,var(--brand) 8%,transparent)')
+                    : 'transparent'"
+                  [style.color]="getFiltro(c.cuenta.id) === f[0]
+                    ? (f[0] === 'pendientes' ? 'var(--warning)'
+                       : f[0] === 'aprobados' ? 'var(--success)'
+                       : 'var(--brand)')
+                    : 'var(--text-muted)'"
+                  [style.border-right]="f[0] !== 'todos' ? '1px solid var(--border)' : 'none'">
+                  {{ f[1] }}
+                </button>
+              }
             </div>
           </div>
         </div>
         @if (movsCuenta.length === 0) {
-          <p class="px-4 py-6 text-sm text-slate-400 text-center">
+          <p class="px-4 py-6 text-sm text-center" style="color:var(--text-faint)">
             No hay movimientos {{ getFiltro(c.cuenta.id) === 'pendientes' ? 'pendientes' : 'aprobados' }} en esta cuenta.
           </p>
         } @else {
           <div class="overflow-x-auto">
             <table class="min-w-full text-sm">
-              <thead class="bg-slate-50">
-                <tr class="text-left text-slate-500 border-b border-slate-200">
-                  <th class="px-4 py-2.5 font-medium">Concepto</th>
-                  <th class="px-4 py-2.5 font-medium">Caso</th>
-                  <th class="px-4 py-2.5 font-medium">Fecha</th>
-                  <th class="px-4 py-2.5 font-medium">Estado</th>
-                  <th class="px-4 py-2.5 font-medium text-right">Importe</th>
+              <thead style="background:var(--surface-2)">
+                <tr style="border-bottom:1px solid var(--border)">
+                  <th class="px-4 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wider"
+                    style="color:var(--text-muted);font-family:var(--font-mono)">Concepto</th>
+                  <th class="px-4 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wider"
+                    style="color:var(--text-muted);font-family:var(--font-mono)">Caso</th>
+                  <th class="px-4 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wider"
+                    style="color:var(--text-muted);font-family:var(--font-mono)">Fecha</th>
+                  <th class="px-4 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wider"
+                    style="color:var(--text-muted);font-family:var(--font-mono)">Estado</th>
+                  <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
+                    style="color:var(--text-muted);font-family:var(--font-mono)">Importe</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-slate-100">
+              <tbody>
                 @for (mov of movsCuenta; track mov.id) {
-                  <tr>
+                  <tr style="border-bottom:1px solid var(--border)">
                     <td class="px-4 py-3">
-                      <p class="text-slate-800">{{ mov.concepto }}</p>
+                      <p style="color:var(--text-strong)">{{ mov.concepto }}</p>
                       @if (mov.notas) {
-                        <p class="text-xs text-slate-400">{{ mov.notas }}</p>
+                        <p class="text-xs" style="color:var(--text-faint)">{{ mov.notas }}</p>
                       }
                     </td>
-                    <td class="px-4 py-3 text-xs text-slate-500">{{ mov.casoNombre }}</td>
-                    <td class="px-4 py-3 text-slate-500">{{ mov.fecha }}</td>
+                    <td class="px-4 py-3 text-xs" style="color:var(--text-muted)">{{ mov.casoNombre }}</td>
+                    <td class="px-4 py-3" style="color:var(--text-muted);font-family:var(--font-mono)">{{ mov.fecha }}</td>
                     <td class="px-4 py-3">
                       @if (mov.aprobado === true) {
-                        <span class="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 font-medium flex items-center gap-1 w-fit">
+                        <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold"
+                          style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">
                           <lucide-icon [img]="CheckCircle2Icon" class="w-3 h-3" /> Aprobado
                         </span>
                       } @else {
-                        <span class="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-700 font-medium w-fit block">
+                        <span class="rounded-full px-2 py-0.5 text-xs font-bold"
+                          style="background:color-mix(in srgb,var(--warning) 12%,transparent);color:var(--warning)">
                           Pendiente
                         </span>
                       }
                     </td>
-                    <td class="px-4 py-3 text-right font-medium"
-                      [class]="mov.esEntrada ? 'text-emerald-600' : 'text-red-600'">
+                    <td class="px-4 py-3 text-right font-bold tabular-nums"
+                      [style.color]="mov.esEntrada ? 'var(--success)' : 'var(--danger)'"
+                      style="font-family:var(--font-mono)">
                       {{ mov.esEntrada ? '+' : '−' }}{{ mov.importe | number:'1.2-2' }} €
                     </td>
                   </tr>
@@ -190,55 +211,62 @@
   }
 } @else {
   <!-- Cotejo legacy (sin cuentas configuradas) -->
-  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-    <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-200">
-      <lucide-icon [img]="ScaleIcon" class="w-4 h-4 text-slate-500" />
-      <h3 class="text-sm font-medium text-slate-700">Cotejo bancario</h3>
+  <div class="rounded-xl overflow-hidden" style="background:var(--surface);border:1px solid var(--border)">
+    <div class="flex items-center gap-2 px-4 py-3" style="border-bottom:1px solid var(--border)">
+      <lucide-icon [img]="ScaleIcon" class="w-4 h-4" style="color:var(--text-muted)" />
+      <h3 class="text-sm font-semibold" style="color:var(--text-strong)">Cotejo bancario</h3>
     </div>
     <div class="p-4 grid gap-4 md:grid-cols-3">
       <div>
-        <label class="block text-xs font-medium text-slate-500 mb-1.5">Saldo bancario real</label>
-        <div class="flex gap-2">
+        <label class="form-label">Saldo bancario real</label>
+        <div class="flex gap-2 mt-1">
           <div class="relative flex-1">
             <input type="number" inputmode="decimal" step="0.01"
               [value]="localSaldoInput()"
               (input)="localSaldoInput.set($any($event.target).value)"
               placeholder="0.00"
-              class="w-full pl-3 pr-8 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400" />
-            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">€</span>
+              class="form-input text-right pr-7" style="font-family:var(--font-mono)" />
+            <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs" style="color:var(--text-faint)">€</span>
           </div>
           <button type="button" (click)="guardarSaldoBancario.emit(localSaldoInput())" [disabled]="savingSaldo()"
-            class="flex items-center gap-1.5 px-3 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50">
+            class="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-white disabled:opacity-50 transition-all duration-150"
+            style="background:var(--brand)"
+            (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+            (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
             <lucide-icon [img]="SaveIcon" class="w-3.5 h-3.5" />
             Guardar
           </button>
         </div>
         @if (saldoBancarioFecha()) {
-          <p class="text-xs text-slate-400 mt-1.5">Actualizado el {{ saldoBancarioFecha() }}</p>
+          <p class="text-xs mt-1.5" style="color:var(--text-faint)">Actualizado el {{ saldoBancarioFecha() }}</p>
         }
       </div>
       @let c = cotejo();
       @if (c) {
-        <div class="flex items-center gap-2 rounded-lg bg-slate-50 px-4">
+        <div class="flex items-center gap-2 rounded-xl px-4" style="background:var(--surface-2)">
           <div>
-            <p class="text-xs text-slate-500">Saldo aprobado</p>
-            <p class="text-lg font-semibold text-slate-700">{{ c.sistema | number:'1.2-2' }} €</p>
+            <p class="text-xs" style="color:var(--text-muted)">Saldo aprobado</p>
+            <p class="text-lg font-semibold tabular-nums" style="color:var(--text-body);font-family:var(--font-display)">{{ c.sistema | number:'1.2-2' }} €</p>
           </div>
         </div>
-        <div class="flex items-center gap-3 rounded-lg px-4" [class]="c.conciliado ? 'bg-emerald-50' : 'bg-amber-50'">
+        <div class="flex items-center gap-3 rounded-xl px-4"
+          [style.background]="c.conciliado ? 'color-mix(in srgb,var(--success) 8%,transparent)' : 'color-mix(in srgb,var(--warning) 8%,transparent)'">
           <lucide-icon [img]="c.conciliado ? CheckCircle2Icon : AlertTriangleIcon"
-            [class]="'w-5 h-5 shrink-0 ' + (c.conciliado ? 'text-emerald-500' : 'text-amber-500')" />
+            class="w-5 h-5 shrink-0"
+            [style.color]="c.conciliado ? 'var(--success)' : 'var(--warning)'" />
           <div>
-            <p class="text-xs" [class]="c.conciliado ? 'text-emerald-700' : 'text-amber-700'">
+            <p class="text-xs" [style.color]="c.conciliado ? 'var(--success)' : 'var(--warning)'">
               {{ c.conciliado ? 'Conciliado' : 'Discrepancia' }}
             </p>
-            <p class="text-lg font-semibold" [class]="c.conciliado ? 'text-emerald-700' : 'text-amber-700'">
+            <p class="text-lg font-semibold tabular-nums" style="font-family:var(--font-display)"
+              [style.color]="c.conciliado ? 'var(--success)' : 'var(--warning)'">
               {{ c.diferencia >= 0 ? '+' : '−' }}{{ (c.diferencia < 0 ? -c.diferencia : c.diferencia) | number:'1.2-2' }} €
             </p>
           </div>
         </div>
       } @else {
-        <div class="flex items-center text-sm text-slate-400 rounded-lg bg-slate-50 px-4 md:col-span-2">
+        <div class="flex items-center text-sm rounded-xl px-4 md:col-span-2"
+          style="background:var(--surface-2);color:var(--text-faint)">
           Carga tu saldo bancario para cotejar
         </div>
       }
@@ -248,45 +276,53 @@
 
 <!-- Cierres de caja -->
 @if (cierres().length > 0) {
-  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-    <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-200">
-      <lucide-icon [img]="LockIcon" class="w-4 h-4 text-slate-500" aria-hidden="true" />
-      <h3 class="text-sm font-medium text-slate-700">Cierres de caja</h3>
-      <span class="ml-auto text-xs text-slate-400">{{ cierres().length }} {{ cierres().length === 1 ? 'cierre' : 'cierres' }}</span>
+  <div class="rounded-xl overflow-hidden" style="background:var(--surface);border:1px solid var(--border)">
+    <div class="flex items-center gap-2 px-4 py-3" style="border-bottom:1px solid var(--border)">
+      <lucide-icon [img]="LockIcon" class="w-4 h-4" style="color:var(--text-muted)" aria-hidden="true" />
+      <h3 class="text-sm font-semibold" style="color:var(--text-strong)">Cierres de caja</h3>
+      <span class="ml-auto text-xs" style="color:var(--text-faint)">{{ cierres().length }} {{ cierres().length === 1 ? 'cierre' : 'cierres' }}</span>
     </div>
-    <div class="divide-y divide-slate-100">
+    <div>
       @for (cierre of cierres(); track cierre.id) {
         <div>
           <button type="button" (click)="toggleCierre(cierre.id)"
-            class="w-full flex items-center gap-4 px-4 py-3 hover:bg-slate-50 transition-colors text-left"
+            class="w-full flex items-center gap-4 px-4 py-3 transition-colors duration-150 text-left"
+            style="border-bottom:1px solid var(--border)"
+            (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+            (mouseleave)="$any($event.currentTarget).style.background=''"
             [attr.aria-expanded]="cierreExpandido() === cierre.id">
             <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium text-slate-700">{{ cierre.fecha }}</p>
+              <p class="text-sm font-medium" style="color:var(--text-strong)">{{ cierre.fecha }}</p>
               @if (cierre.notas) {
-                <p class="text-xs text-slate-400 mt-0.5 truncate">{{ cierre.notas }}</p>
+                <p class="text-xs mt-0.5 truncate" style="color:var(--text-faint)">{{ cierre.notas }}</p>
               }
             </div>
-            <div class="hidden sm:flex items-center gap-4 text-xs">
-              <span class="text-emerald-600 font-medium">+{{ cierre.totales.ingresos | number:'1.2-2' }} €</span>
-              <span class="text-red-500 font-medium">−{{ cierre.totales.egresos | number:'1.2-2' }} €</span>
-              <span class="font-semibold text-slate-700">= {{ cierre.totales.sistemaTotal | number:'1.2-2' }} €</span>
+            <div class="hidden sm:flex items-center gap-4 text-xs" style="font-family:var(--font-mono)">
+              <span style="color:var(--success)">+{{ cierre.totales.ingresos | number:'1.2-2' }} €</span>
+              <span style="color:var(--danger)">−{{ cierre.totales.egresos | number:'1.2-2' }} €</span>
+              <span class="font-semibold" style="color:var(--text-body)">= {{ cierre.totales.sistemaTotal | number:'1.2-2' }} €</span>
             </div>
-            <lucide-icon [img]="ChevronDownIcon" class="w-4 h-4 text-slate-400 transition-transform shrink-0"
+            <lucide-icon [img]="ChevronDownIcon" class="w-4 h-4 shrink-0 transition-transform"
+              style="color:var(--text-faint)"
               [class]="cierreExpandido() === cierre.id ? 'rotate-180' : ''" aria-hidden="true" />
           </button>
           @if (cierreExpandido() === cierre.id) {
             <div class="px-4 pb-3 space-y-1.5">
               @for (cc of cierre.cuentas; track cc.cuentaId) {
-                <div class="flex items-center gap-3 text-xs text-slate-600 bg-slate-50 rounded-lg px-3 py-2">
+                <div class="flex items-center gap-3 text-xs rounded-lg px-3 py-2" style="background:var(--surface-2)">
                   <lucide-icon [img]="cc.tipo === 'banco' ? LandmarkIcon : WalletIcon"
                     class="w-3.5 h-3.5 shrink-0"
-                    [class]="cc.tipo === 'banco' ? 'text-blue-500' : 'text-amber-500'"
+                    [style.color]="cc.tipo === 'banco' ? 'var(--brand)' : 'var(--warning)'"
                     aria-hidden="true" />
-                  <span class="font-medium text-slate-700 w-32 truncate">{{ cc.nombre }}</span>
-                  <span>Sistema: <strong>{{ cc.sistema | number:'1.2-2' }} €</strong></span>
+                  <span class="font-medium w-32 truncate" style="color:var(--text-body)">{{ cc.nombre }}</span>
+                  <span style="color:var(--text-muted);font-family:var(--font-mono)">
+                    Sistema: <strong style="color:var(--text-body)">{{ cc.sistema | number:'1.2-2' }} €</strong>
+                  </span>
                   @if (cc.saldoReal !== null) {
-                    <span>Real: <strong>{{ cc.saldoReal | number:'1.2-2' }} €</strong></span>
-                    <span [class]="cc.conciliado ? 'text-emerald-600 font-medium' : 'text-amber-600 font-medium'">
+                    <span style="color:var(--text-muted);font-family:var(--font-mono)">
+                      Real: <strong style="color:var(--text-body)">{{ cc.saldoReal | number:'1.2-2' }} €</strong>
+                    </span>
+                    <span class="font-semibold" [style.color]="cc.conciliado ? 'var(--success)' : 'var(--warning)'">
                       {{ cc.conciliado ? '✓ OK' : '⚠ Discrepancia' }}
                     </span>
                   }
@@ -302,32 +338,41 @@
 
 <!-- Histórico de casos cerrados -->
 @if (resumenHistorico(); as hist) {
-  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-    <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-200">
-      <lucide-icon [img]="HistoryIcon" class="w-4 h-4 text-slate-500" />
-      <h3 class="text-sm font-medium text-slate-700">Histórico — casos cerrados</h3>
-      <span class="ml-auto text-xs text-slate-400">{{ hist.casosCount }} {{ hist.casosCount === 1 ? 'caso' : 'casos' }}</span>
+  <div class="rounded-xl overflow-hidden" style="background:var(--surface);border:1px solid var(--border)">
+    <div class="flex items-center gap-2 px-4 py-3" style="border-bottom:1px solid var(--border)">
+      <lucide-icon [img]="HistoryIcon" class="w-4 h-4" style="color:var(--text-muted)" />
+      <h3 class="text-sm font-semibold" style="color:var(--text-strong)">Histórico — casos cerrados</h3>
+      <span class="ml-auto text-xs" style="color:var(--text-faint)">{{ hist.casosCount }} {{ hist.casosCount === 1 ? 'caso' : 'casos' }}</span>
     </div>
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-0 divide-x divide-slate-100">
-      <div class="p-4">
-        <p class="text-xs text-slate-500">Ingresos</p>
-        <p class="text-base font-semibold text-emerald-600 mt-0.5">{{ hist.totalIngresosCerrados | number:'1.2-2' }} €</p>
+    <div class="grid grid-cols-2 md:grid-cols-5">
+      <div class="p-4" style="border-right:1px solid var(--border)">
+        <p class="text-xs" style="color:var(--text-muted)">Ingresos</p>
+        <p class="text-base font-semibold tabular-nums mt-0.5" style="color:var(--success);font-family:var(--font-display)">
+          {{ hist.totalIngresosCerrados | number:'1.2-2' }} €
+        </p>
+      </div>
+      <div class="p-4" style="border-right:1px solid var(--border)">
+        <p class="text-xs" style="color:var(--text-muted)">Suplidos</p>
+        <p class="text-base font-semibold tabular-nums mt-0.5" style="color:var(--warning);font-family:var(--font-display)">
+          {{ hist.totalSuplidosCerrados | number:'1.2-2' }} €
+        </p>
+      </div>
+      <div class="p-4" style="border-right:1px solid var(--border)">
+        <p class="text-xs" style="color:var(--text-muted)">Honorarios</p>
+        <p class="text-base font-semibold tabular-nums mt-0.5" style="color:var(--brand);font-family:var(--font-display)">
+          {{ hist.totalHonorariosCerrados | number:'1.2-2' }} €
+        </p>
+      </div>
+      <div class="p-4" style="border-right:1px solid var(--border)">
+        <p class="text-xs" style="color:var(--text-muted)">Egresos</p>
+        <p class="text-base font-semibold tabular-nums mt-0.5" style="color:var(--danger);font-family:var(--font-display)">
+          {{ hist.totalEgresosCerrados | number:'1.2-2' }} €
+        </p>
       </div>
       <div class="p-4">
-        <p class="text-xs text-slate-500">Suplidos</p>
-        <p class="text-base font-semibold text-amber-600 mt-0.5">{{ hist.totalSuplidosCerrados | number:'1.2-2' }} €</p>
-      </div>
-      <div class="p-4">
-        <p class="text-xs text-slate-500">Honorarios</p>
-        <p class="text-base font-semibold text-violet-600 mt-0.5">{{ hist.totalHonorariosCerrados | number:'1.2-2' }} €</p>
-      </div>
-      <div class="p-4">
-        <p class="text-xs text-slate-500">Egresos</p>
-        <p class="text-base font-semibold text-red-500 mt-0.5">{{ hist.totalEgresosCerrados | number:'1.2-2' }} €</p>
-      </div>
-      <div class="p-4">
-        <p class="text-xs text-slate-500">Saldo neto</p>
-        <p class="text-base font-semibold mt-0.5" [class]="hist.saldoCerrados >= 0 ? 'text-emerald-600' : 'text-red-600'">
+        <p class="text-xs" style="color:var(--text-muted)">Saldo neto</p>
+        <p class="text-base font-semibold tabular-nums mt-0.5" style="font-family:var(--font-display)"
+          [style.color]="hist.saldoCerrados >= 0 ? 'var(--success)' : 'var(--danger)'">
           {{ hist.saldoCerrados | number:'1.2-2' }} €
         </p>
       </div>

@@ -87,26 +87,28 @@ const TYPE_COLOR: Record<string, ItemColor> = {
   recordatorio: 'amber',
 };
 
+// Clases dark-mode-aware definidas en styles.css (var(--algo) / color-mix), no
+// utilidades Tailwind de color fijo — esas se ven blancas en modo oscuro.
 const COLOR_ITEM: Record<ItemColor, string> = {
-  violet: 'bg-violet-50 border-l-violet-500 text-violet-900',
-  indigo: 'bg-indigo-50 border-l-indigo-500 text-indigo-900',
-  blue:   'bg-blue-50 border-l-blue-500 text-blue-900',
-  green:  'bg-green-50 border-l-green-500 text-green-900',
-  amber:  'bg-amber-50 border-l-amber-500 text-amber-900',
-  red:    'bg-red-50 border-l-red-500 text-red-900',
-  pink:   'bg-pink-50 border-l-pink-500 text-pink-900',
-  slate:  'bg-slate-50 border-l-slate-400 text-slate-900',
+  violet: 'evt-violet',
+  indigo: 'evt-indigo',
+  blue:   'evt-blue',
+  green:  'evt-green',
+  amber:  'evt-amber',
+  red:    'evt-red',
+  pink:   'evt-pink',
+  slate:  'evt-slate',
 };
 
 const COLOR_DRAG: Record<ItemColor, string> = {
-  violet: 'border-violet-400 bg-violet-100/60 text-violet-800',
-  indigo: 'border-indigo-400 bg-indigo-100/60 text-indigo-800',
-  blue:   'border-blue-400 bg-blue-100/60 text-blue-800',
-  green:  'border-green-400 bg-green-100/60 text-green-800',
-  amber:  'border-amber-400 bg-amber-100/60 text-amber-800',
-  red:    'border-red-400 bg-red-100/60 text-red-800',
-  pink:   'border-pink-400 bg-pink-100/60 text-pink-800',
-  slate:  'border-slate-400 bg-slate-100/60 text-slate-700',
+  violet: 'evt-violet-drag',
+  indigo: 'evt-indigo-drag',
+  blue:   'evt-blue-drag',
+  green:  'evt-green-drag',
+  amber:  'evt-amber-drag',
+  red:    'evt-red-drag',
+  pink:   'evt-pink-drag',
+  slate:  'evt-slate-drag',
 };
 
 const COLOR_DOT: Record<ItemColor, string> = {
@@ -253,6 +255,7 @@ export class DayScheduleComponent {
   readonly annotationDeleted = output<{ itemId: string; casoId?: string; anotacionId: string }>();
   readonly itemColorChanged = output<{ id: string; color: ItemColor | null }>();
   readonly registrosChanged = output<{ hitoId: string; casoId?: string; registros: RegistroHoraHito[] }>();
+  readonly eventoDeleted = output<{ id: string }>();
 
   readonly XIcon = X;
   readonly ClockIcon = Clock;
@@ -282,6 +285,7 @@ export class DayScheduleComponent {
   readonly resizingReg = signal<RegistroResizeState | null>(null);
   readonly selectedItem = signal<CalendarItem | null>(null);
   readonly newAnnotationText = signal('');
+  readonly confirmingDelete = signal(false);
 
   /** Copia de trabajo de los registros de horas mientras el editor está abierto (null = cerrado). */
   readonly horasEditor = signal<RegistroHoraHito[] | null>(null);
@@ -375,11 +379,13 @@ export class DayScheduleComponent {
   /** Segmentos de hito (registrosHoras) que caen en una fecha concreta. */
   gridRegistrosForDate(date: string): GridRegistro[] {
     const result: GridRegistro[] = [];
+    const seen = new Set<string>();
     for (const g of this.groupedEvents()) {
       for (const item of g.items) {
         if (item.hitoEstado === undefined) continue; // solo hitos
         for (const r of item.registrosHoras ?? []) {
-          if (r.fecha === date) {
+          if (r.fecha === date && !seen.has(r.id)) {
+            seen.add(r.id);
             result.push({ reg: r, hitoId: item.id, casoId: item.casoId, title: item.title, color: this.effectiveColor(item), item });
           }
         }
@@ -655,6 +661,11 @@ export class DayScheduleComponent {
     return `pointer-events-none absolute rounded-lg border-2 border-dashed z-10 ${drag}`;
   }
 
+  getRegDragPreviewClass(hitoId: string): string {
+    const item = this.findItemById(hitoId);
+    return item ? this.getDragPreviewClass(item) : 'pointer-events-none absolute rounded-lg border-2 border-dashed z-10';
+  }
+
   // ── estado (badge en el bloque) ──────────────────────────────────────
   // Fuente de verdad única: hito-estado.ts y evento.interface.ts. No reinventar
   // mapas locales — antes esto mostraba 'Pte.'/'✓' divergentes del resto de la app.
@@ -916,6 +927,22 @@ export class DayScheduleComponent {
     this.selectedItem.set(null);
     this.newAnnotationText.set('');
     this.horasEditor.set(null);
+    this.confirmingDelete.set(false);
+  }
+
+  requestDeleteEvento(): void {
+    this.confirmingDelete.set(true);
+  }
+
+  cancelDelete(): void {
+    this.confirmingDelete.set(false);
+  }
+
+  confirmDeleteEvento(): void {
+    const item = this.selectedItem();
+    if (!item) return;
+    this.eventoDeleted.emit({ id: item.id });
+    this.closeModal();
   }
 
   // ── editor de horas (cobro por horas) ────────────────────────────────
@@ -1028,12 +1055,12 @@ export class DayScheduleComponent {
   }
 
   getHitoEstadoBtnClass(estado: HitoEstado, isActive: boolean): string {
-    if (!isActive) return 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50';
+    if (!isActive) return '';
     return `${HITO_ESTADO_BADGE_CLASS[estado]} ring-2 ring-offset-1 ring-current/30`;
   }
 
   getEventoEstadoBtnClass(estado: EventoEstado, isActive: boolean): string {
-    if (!isActive) return 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50';
+    if (!isActive) return '';
     return `${EVENTO_ESTADO_BADGE_CLASS[estado]} ring-2 ring-offset-1 ring-current/30`;
   }
 

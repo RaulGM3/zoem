@@ -32,6 +32,7 @@ export interface WeekDay {
   dayName: string;
   dayNum: number;
   hasEvents: boolean;
+  hasUnscheduledHitos: boolean;
   isToday: boolean;
   isSelected: boolean;
   isCurrentMonth?: boolean;

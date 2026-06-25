@@ -1,13 +1,16 @@
-<div class="flex items-center gap-6 px-1 py-1 text-sm text-slate-500">
+<div class="flex items-center gap-5 px-1 py-1 text-sm" style="color:var(--text-muted)">
   <span>
-    <span class="font-semibold text-slate-800">{{ total() }}</span> total
+    <span class="font-semibold tabular-nums" style="color:var(--text-strong);font-family:var(--font-display)">{{ total() }}</span>
+    &nbsp;total
   </span>
-  <span class="w-px h-3.5 bg-slate-200"></span>
+  <span class="w-px h-3.5" style="background:var(--border)"></span>
   <span>
-    <span class="font-semibold text-blue-600">{{ enProceso() }}</span> en proceso
+    <span class="font-semibold tabular-nums" style="color:var(--brand);font-family:var(--font-display)">{{ enProceso() }}</span>
+    &nbsp;en proceso
   </span>
-  <span class="w-px h-3.5 bg-slate-200"></span>
+  <span class="w-px h-3.5" style="background:var(--border)"></span>
   <span>
-    <span class="font-semibold text-amber-600">{{ pendientes() }}</span> pendientes
+    <span class="font-semibold tabular-nums" style="color:var(--warning);font-family:var(--font-display)">{{ pendientes() }}</span>
+    &nbsp;pendientes
   </span>
 </div>

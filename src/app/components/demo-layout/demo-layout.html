@@ -1,58 +1,63 @@
-<div class="flex h-screen overflow-hidden bg-slate-50">
+<div class="flex h-screen overflow-hidden" style="background:var(--bg)">
 
   <!-- Desktop Sidebar -->
-  <aside [class]="sidebarClass()">
-    <!-- Logo -->
-    @if (sidebarCollapsed()) {
-      <div class="flex h-16 items-center justify-center border-b">
-        <button
-          class="flex items-center justify-center rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
-          aria-label="Expandir menú"
-          (click)="toggleSidebar()">
-          <lucide-icon [img]="ChevronsRightIcon" size="16"></lucide-icon>
-        </button>
-      </div>
-    } @else {
-      <div class="flex h-16 items-center gap-2.5 border-b px-4 overflow-hidden">
-        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-50">
-          <lucide-icon [img]="LayersIcon" size="20" class="text-violet-600"></lucide-icon>
-        </div>
-        <span class="flex-1 text-xl font-bold tracking-tight whitespace-nowrap">Vertey</span>
-        <button
-          class="ml-auto shrink-0 flex items-center justify-center rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
-          aria-label="Colapsar menú"
-          (click)="toggleSidebar()">
-          <lucide-icon [img]="ChevronsLeftIcon" size="16"></lucide-icon>
-        </button>
-      </div>
-    }
+  <aside [class]="sidebarClass()" style="background:var(--sidebar);border-right:1px solid var(--border)">
 
     <!-- Navigation -->
     <nav class="flex-1 overflow-y-auto overflow-x-hidden px-2 py-4 space-y-5">
+
+      <!-- Logo / Collapse toggle -->
+      @if (sidebarCollapsed()) {
+        <div class="flex h-16 items-center justify-center" style="border-bottom:1px solid var(--border)">
+          <button
+            class="flex items-center justify-center rounded-xl p-2 transition-colors duration-150"
+            style="color:var(--text-muted)"
+            aria-label="Expandir menú"
+            (click)="toggleSidebar()">
+            <span class="material-symbols-outlined">keyboard_double_arrow_right</span>
+          </button>
+        </div>
+      } @else {
+        <div class="flex h-16 items-center justify-between px-4 overflow-hidden" style="border-bottom:1px solid var(--border)">
+          <img src="vertey transparent png.png" alt="Vertey" class="h-7 max-w-37 object-contain object-left" />
+          <button
+            class="shrink-0 flex items-center justify-center rounded-xl p-2 transition-colors duration-150"
+            style="color:var(--text-muted)"
+            aria-label="Colapsar menú"
+            (click)="toggleSidebar()">
+            <span class="material-symbols-outlined">keyboard_double_arrow_left</span>
+          </button>
+        </div>
+      }
+
       @for (cat of visibleCategories(); track cat.category) {
         <div>
           @if (!sidebarCollapsed()) {
-            <p class="mb-2 px-3 text-[11px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">
+            <p class="mb-2 px-3 text-[10.5px] font-semibold uppercase tracking-[.06em] whitespace-nowrap"
+               style="color:var(--text-muted);font-family:var(--font-mono)">
               {{ cat.category }}
             </p>
           } @else {
-            <div class="mb-2 mx-auto h-px w-8 bg-slate-200"></div>
+            <div class="mb-2 mx-auto h-px w-8" style="background:var(--border)"></div>
           }
           <div class="space-y-0.5">
             @for (item of cat.items; track item.name) {
               <a
                 [routerLink]="item.href"
-                routerLinkActive="bg-violet-50 text-violet-600"
+                routerLinkActive="nav-item-active"
                 [routerLinkActiveOptions]="{exact: item.href === '/'}"
-                class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                class="relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150"
+                style="color:var(--text-body)"
                 [class.justify-center]="sidebarCollapsed()"
                 [title]="sidebarCollapsed() ? item.name : ''"
+                (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                (mouseleave)="$any($event.currentTarget).style.background=''"
               >
                 <lucide-icon [img]="item.icon" size="18" class="shrink-0"></lucide-icon>
                 @if (!sidebarCollapsed()) {
                   <span class="whitespace-nowrap">{{ item.name }}</span>
                   @if (item.badge) {
-                    <span class="ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-medium" [class]="getBadgeClass(item.badge)">
+                    <span class="ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-bold" [class]="getBadgeClass(item.badge)">
                       {{ item.badge }}
                     </span>
                   }
@@ -65,13 +70,14 @@
     </nav>
 
     <!-- Bottom -->
-    <div class="border-t p-2 space-y-1">
+    <div class="p-2 space-y-1" style="border-top:1px solid var(--border)">
       <button type="button"
-        class="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+        class="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors duration-150"
+        style="color:var(--danger)"
         [class.justify-center]="sidebarCollapsed()"
         [title]="sidebarCollapsed() ? 'Cerrar Sesión' : ''"
         (click)="logoutDialogOpen.set(true)">
-        <lucide-icon [img]="LogOutIcon" size="18" class="shrink-0"></lucide-icon>
+        <span class="material-symbols-outlined" style="font-size:18px">logout</span>
         @if (!sidebarCollapsed()) {
           <span class="whitespace-nowrap">Cerrar Sesión</span>
         }
@@ -83,19 +89,22 @@
   <div class="flex flex-1 flex-col min-w-0 overflow-hidden">
 
     <!-- Top Header -->
-    <header class="flex h-16 items-center justify-between border-b bg-white/80 backdrop-blur-sm px-4 lg:px-6 sticky top-0 z-40">
+    <header class="flex h-16 items-center justify-between px-4 lg:px-6 sticky top-0 z-40"
+      style="background:var(--surface);border-bottom:1px solid var(--border)">
 
       <!-- Mobile menu toggle -->
-      <button class="inline-flex items-center justify-center rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden"
+      <button class="inline-flex items-center justify-center rounded-xl p-2 lg:hidden transition-colors duration-150"
+        style="color:var(--text-muted)"
         aria-label="Abrir menú"
         (click)="sidebarOpen.set(true)">
-        <lucide-icon [img]="MenuIcon" size="20"></lucide-icon>
+        <span class="material-symbols-outlined">menu</span>
       </button>
 
       <!-- Search -->
       <div class="relative hidden flex-1 md:block md:max-w-md">
         <div class="relative">
-          <lucide-icon [img]="SearchIcon" size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></lucide-icon>
+          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+            style="font-size:16px;color:var(--text-muted)">search</span>
           <input
             #searchInput
             type="text"
@@ -108,41 +117,42 @@
             (click)="searchMenuOpen.set(true)"
             (keydown.enter)="submitSearch()"
             (keydown.escape)="closeSearch()"
-            class="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-10 pr-24 text-sm text-slate-700 placeholder-slate-400 focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-100"
+            class="w-full rounded-xl py-2 pl-10 pr-24 text-sm placeholder:text-[length:inherit] transition-all duration-150 focus:outline-none focus:ring-2"
+            style="background:var(--surface-2);border:1px solid var(--border);color:var(--text);font-family:var(--font-ui);--tw-ring-color:color-mix(in srgb,var(--brand) 20%,transparent)"
           />
           @if (searchSvc.term()) {
             <button
               type="button"
               aria-label="Limpiar búsqueda"
               (click)="clearSearch()"
-              class="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-slate-400 hover:text-slate-600"
+              class="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-0.5 transition-colors duration-150"
+              style="color:var(--text-muted)"
             >
-              <lucide-icon [img]="XIcon" size="14"></lucide-icon>
+              <span class="material-symbols-outlined" style="font-size:16px">close</span>
             </button>
           } @else if (searchSvc.activeMeta(); as meta) {
-            <span class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded-md bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-600">
+            <span class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-0.5 text-[11px] font-bold"
+              style="background:color-mix(in srgb,var(--brand) 10%,transparent);color:var(--brand)">
               {{ meta.label }}
             </span>
           }
         </div>
 
         @if (searchMenuOpen()) {
-          <!-- Backdrop para cerrar al hacer click fuera -->
           <div class="fixed inset-0 z-40" (click)="searchMenuOpen.set(false)"></div>
-
-          <!-- Panel de categorías -->
-          <div class="absolute left-0 right-0 top-full z-50 mt-2 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
-            <p class="px-2 py-1 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+          <div class="absolute left-0 right-0 top-full z-50 mt-2 rounded-2xl p-2 shadow-lg"
+            style="border:1px solid var(--border);background:var(--surface)">
+            <p class="px-2 py-1 text-[10.5px] font-semibold uppercase tracking-[.06em]"
+               style="color:var(--text-muted);font-family:var(--font-mono)">
               ¿Qué quieres buscar?
             </p>
             @for (cat of searchSvc.categories; track cat.key) {
               <button
                 type="button"
                 (click)="selectSearchCategory(cat.key)"
-                class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-violet-50 hover:text-violet-600"
-                [class.bg-violet-50]="searchSvc.category() === cat.key"
-                [class.text-violet-600]="searchSvc.category() === cat.key"
-                [class.text-slate-600]="searchSvc.category() !== cat.key"
+                class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors duration-150"
+                [style.background]="searchSvc.category() === cat.key ? 'color-mix(in srgb,var(--brand) 10%,transparent)' : ''"
+                [style.color]="searchSvc.category() === cat.key ? 'var(--brand)' : 'var(--text-body)'"
               >
                 <lucide-icon [img]="categoryIcons[cat.key]" size="18"></lucide-icon>
                 {{ cat.label }}
@@ -152,10 +162,21 @@
         }
       </div>
 
-      <!-- Right -->
-      <div class="flex items-center gap-2">
-        <button class="inline-flex items-center justify-center rounded-lg p-2 text-slate-500 hover:bg-slate-100">
-          <lucide-icon [img]="BellIcon" size="20"></lucide-icon>
+      <!-- Right actions -->
+      <div class="flex items-center gap-1">
+        <!-- Theme toggle -->
+        <button
+          class="inline-flex items-center justify-center rounded-xl p-2 transition-colors duration-150"
+          style="color:var(--text-muted)"
+          [title]="themeSvc.isDark() ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
+          (click)="themeSvc.toggle()">
+          <span class="material-symbols-outlined">{{ themeSvc.isDark() ? 'light_mode' : 'dark_mode' }}</span>
+        </button>
+        <!-- Notifications -->
+        <button class="inline-flex items-center justify-center rounded-xl p-2 transition-colors duration-150"
+          style="color:var(--text-muted)"
+          aria-label="Notificaciones">
+          <span class="material-symbols-outlined">notifications</span>
         </button>
       </div>
     </header>
@@ -169,29 +190,31 @@
   <!-- Mobile Sidebar Overlay -->
   @if (sidebarOpen()) {
     <div class="fixed inset-0 z-50 lg:hidden">
-      <div class="absolute inset-0 bg-slate-900/50" (click)="sidebarOpen.set(false)"></div>
-      <div class="absolute left-0 top-0 h-full w-64 flex flex-col bg-white shadow-xl">
-        <div class="flex h-16 items-center justify-between border-b px-4">
-          <div class="flex items-center gap-2">
-            <lucide-icon [img]="LayersIcon" size="20" class="text-violet-600"></lucide-icon>
-            <span class="font-bold">Vertey</span>
-          </div>
-          <button class="rounded-lg p-1 text-slate-500 hover:bg-slate-100" (click)="sidebarOpen.set(false)">
-            <lucide-icon [img]="XIcon" size="20"></lucide-icon>
+      <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" (click)="sidebarOpen.set(false)"></div>
+      <div class="absolute left-0 top-0 h-full w-64 flex flex-col shadow-xl"
+        style="background:var(--surface-sidebar)">
+        <div class="flex h-16 items-center justify-between px-4" style="border-bottom:1px solid var(--border)">
+          <img src="vertey transparent png.png" alt="Vertey" class="h-7 w-auto" />
+          <button class="rounded-xl p-1.5 transition-colors duration-150"
+            style="color:var(--text-muted)"
+            (click)="sidebarOpen.set(false)">
+            <span class="material-symbols-outlined">close</span>
           </button>
         </div>
-        <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+        <nav class="flex-1 overflow-y-auto px-2 py-4 space-y-5">
           @for (cat of visibleCategories(); track cat.category) {
             <div>
-              <p class="mb-2 px-3 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+              <p class="mb-2 px-3 text-[10.5px] font-semibold uppercase tracking-[.06em]"
+                 style="color:var(--text-muted);font-family:var(--font-mono)">
                 {{ cat.category }}
               </p>
               <div class="space-y-0.5">
                 @for (item of cat.items; track item.name) {
                   <a
                     [routerLink]="item.href"
-                    routerLinkActive="bg-violet-50 text-violet-600"
-                    class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-500 hover:bg-slate-50"
+                    routerLinkActive="nav-item-active"
+                    class="relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors duration-150"
+                    style="color:var(--text-body)"
                     (click)="sidebarOpen.set(false)"
                   >
                     <lucide-icon [img]="item.icon" size="18"></lucide-icon>
@@ -211,27 +234,34 @@
 <!-- Logout confirmation dialog -->
 @if (logoutDialogOpen()) {
   <div
-    class="fixed inset-0 z-100 flex items-center justify-center"
+    class="fixed inset-0 z-[100] flex items-center justify-center"
     role="dialog"
     aria-modal="true"
     aria-labelledby="logout-dialog-title">
     <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" (click)="logoutDialogOpen.set(false)"></div>
-    <div class="relative z-10 w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-      <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50">
-        <lucide-icon [img]="LogOutIcon" size="22" class="text-red-500"></lucide-icon>
+    <div class="relative z-10 w-full max-w-sm rounded-2xl p-6 shadow-xl"
+      style="background:var(--surface);border:1px solid var(--border)">
+      <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-full"
+        style="background:color-mix(in srgb,var(--danger) 10%,transparent)">
+        <span class="material-symbols-outlined" style="font-size:22px;color:var(--danger)">logout</span>
       </div>
-      <h2 id="logout-dialog-title" class="mb-1 text-base font-semibold text-slate-800">¿Cerrar sesión?</h2>
-      <p class="mb-6 text-sm text-slate-500">Se cerrará tu sesión actual y tendrás que volver a iniciarla.</p>
+      <h2 id="logout-dialog-title" class="mb-1 text-base font-semibold"
+        style="color:var(--text-strong);font-family:var(--font-display)">¿Cerrar sesión?</h2>
+      <p class="mb-6 text-sm" style="color:var(--text-muted)">
+        Se cerrará tu sesión actual y tendrás que volver a iniciarla.
+      </p>
       <div class="flex gap-3">
         <button
           type="button"
-          class="flex-1 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+          class="flex-1 rounded-xl px-4 py-2 text-sm font-medium transition-colors duration-150"
+          style="border:1px solid var(--border);color:var(--text-body);background:var(--surface-2)"
           (click)="logoutDialogOpen.set(false)">
           Cancelar
         </button>
         <button
           type="button"
-          class="flex-1 rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-600"
+          class="flex-1 rounded-xl px-4 py-2 text-sm font-medium text-white transition-colors duration-150"
+          style="background:var(--danger)"
           (click)="confirmLogout()">
           Cerrar sesión
         </button>

@@ -35,25 +35,27 @@ export class CasoDetailHeaderComponent {
     ['documentos', 'Documentos'],
   ];
 
-  getEstadoClass(estado: string): string {
-    const map: Record<string, string> = {
-      pendiente: 'bg-amber-100 text-amber-700',
-      en_proceso: 'bg-blue-100 text-blue-700',
-      cerrado: 'bg-slate-100 text-slate-500',
-      urgente: 'bg-red-100 text-red-700',
-      archivado: 'bg-slate-100 text-slate-400',
+  getEstadoStyle(estado: string): { background: string; color: string } {
+    const mix = (v: string) => `color-mix(in srgb,${v} 12%,transparent)`;
+    const map: Record<string, { background: string; color: string }> = {
+      pendiente:  { background: mix('var(--warning)'), color: 'var(--warning)' },
+      en_proceso: { background: mix('var(--brand)'),   color: 'var(--brand)' },
+      cerrado:    { background: 'var(--surface-2)',     color: 'var(--text-muted)' },
+      urgente:    { background: mix('var(--danger)'),   color: 'var(--danger)' },
+      archivado:  { background: 'var(--surface-2)',     color: 'var(--text-faint)' },
     };
-    return map[estado] ?? 'bg-slate-100 text-slate-600';
+    return map[estado] ?? { background: 'var(--surface-2)', color: 'var(--text-muted)' };
   }
 
-  getTipoClass(tipo: string): string {
-    const map: Record<string, string> = {
-      Legal: 'bg-violet-100 text-violet-700',
-      Fiscal: 'bg-blue-100 text-blue-700',
-      Laboral: 'bg-amber-100 text-amber-700',
-      Mercantil: 'bg-emerald-100 text-emerald-700',
-      Civil: 'bg-slate-100 text-slate-600',
+  getTipoStyle(tipo: string): { background: string; color: string } {
+    const mix = (v: string) => `color-mix(in srgb,${v} 12%,transparent)`;
+    const map: Record<string, { background: string; color: string }> = {
+      Legal:     { background: mix('var(--accent-ia)'), color: 'var(--accent-ia)' },
+      Fiscal:    { background: mix('var(--brand)'),     color: 'var(--brand)' },
+      Laboral:   { background: mix('var(--warning)'),   color: 'var(--warning)' },
+      Mercantil: { background: mix('var(--success)'),   color: 'var(--success)' },
+      Civil:     { background: 'var(--surface-2)',       color: 'var(--text-muted)' },
     };
-    return map[tipo] ?? 'bg-slate-100 text-slate-600';
+    return map[tipo] ?? { background: 'var(--surface-2)', color: 'var(--text-muted)' };
   }
 }

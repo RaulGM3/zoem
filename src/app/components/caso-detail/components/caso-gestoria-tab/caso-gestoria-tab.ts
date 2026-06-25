@@ -113,13 +113,14 @@ export class CasoGestoriaTabComponent {
     this.dragOver.set(null);
   }
 
-  getMovTipoClass(tipo: MovimientoTipo): string {
-    const map: Record<MovimientoTipo, string> = {
-      ingreso: 'bg-emerald-100 text-emerald-700',
-      suplido: 'bg-amber-100 text-amber-700',
-      honorario: 'bg-violet-100 text-violet-700',
-      gasto: 'bg-red-100 text-red-700',
-      otro: 'bg-slate-100 text-slate-600',
+  getMovTipoStyle(tipo: MovimientoTipo): { background: string; color: string } {
+    const mix = (v: string) => `color-mix(in srgb,${v} 12%,transparent)`;
+    const map: Record<MovimientoTipo, { background: string; color: string }> = {
+      ingreso:   { background: mix('var(--success)'), color: 'var(--success)' },
+      suplido:   { background: mix('var(--warning)'), color: 'var(--warning)' },
+      honorario: { background: mix('var(--accent-ia)'), color: 'var(--accent-ia)' },
+      gasto:     { background: mix('var(--danger)'),  color: 'var(--danger)' },
+      otro:      { background: 'var(--surface-2)',     color: 'var(--text-muted)' },
     };
     return map[tipo];
   }

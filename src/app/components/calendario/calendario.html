@@ -1,9 +1,12 @@
 <div class="flex h-full flex-col gap-3">
   <div class="flex shrink-0 items-center justify-between">
-    <h1 class="text-2xl font-bold text-slate-900">Calendario</h1>
+    <h1 class="text-[22px] font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Calendario</h1>
     <button
       (click)="showDrawer.set(true)"
-      class="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-violet-700"
+      class="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors duration-150"
+      style="background:var(--brand)"
+      (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+      (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'"
     >
       <lucide-icon [img]="PlusIcon" size="16"></lucide-icon>
       Nuevo evento
@@ -25,7 +28,7 @@
     (moreDaysRequested)="stripDayCount.update(n => n + 7)"
   />
 
-  @if (viewMode() !== 'month') {
+  @if (viewMode() !== 'month' || selectedDates().size > 0) {
     <app-day-schedule
       class="block min-h-0 flex-1"
       [groupedEvents]="groupedEvents()"
@@ -38,6 +41,7 @@
       (itemTimeChanged)="updateItemTime($event)"
       (itemColorChanged)="updateItemColor($event)"
       (registrosChanged)="updateRegistrosHoras($event)"
+      (eventoDeleted)="onDeleteEvento($event)"
     />
   }
 </div>

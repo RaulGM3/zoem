@@ -69,6 +69,7 @@ export class EventosComponent implements OnInit {
         dayName: DAY_NAMES[i % 7],
         dayNum: d.getDate(),
         hasEvents: items.some(e => e.fecha === date),
+        hasUnscheduledHitos: false,
         isToday: date === this.today,
         isSelected: selected.has(date),
       };
@@ -95,6 +96,7 @@ export class EventosComponent implements OnInit {
         dayName: DAY_NAMES[i % 7],
         dayNum: d.getDate(),
         hasEvents: items.some(e => e.fecha === date),
+        hasUnscheduledHitos: false,
         isToday: date === this.today,
         isSelected: selected.has(date),
         isCurrentMonth: d.getMonth() === currentMonth,

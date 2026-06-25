@@ -18,12 +18,13 @@ export const EVENTO_ESTADO_LABEL: Record<EventoEstado, string> = {
   cancelado: 'Cancelado',
 };
 
+/** Dark-mode-aware: clases definidas en styles.css (color-mix sobre tokens semánticos). */
 export const EVENTO_ESTADO_BADGE_CLASS: Record<EventoEstado, string> = {
-  confirmado: 'bg-emerald-100 text-emerald-700',
-  tentativo: 'bg-amber-100 text-amber-700',
-  en_progreso: 'bg-blue-100 text-blue-700',
-  completado: 'bg-green-100 text-green-700',
-  cancelado: 'bg-slate-100 text-slate-500',
+  confirmado: 'badge-success',
+  tentativo: 'badge-warning',
+  en_progreso: 'badge-brand',
+  completado: 'badge-success',
+  cancelado: 'badge-muted',
 };
 
 export const EVENTO_COLORS: Record<EventoColor, { label: string; bg: string; text: string; dot: string; border: string }> = {

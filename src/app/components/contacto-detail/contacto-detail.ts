@@ -148,14 +148,15 @@ export class ContactoDetailComponent {
     return c.lastContact.toDate().toLocaleDateString('es-ES');
   }
 
-  getStatusClass(status: string): string {
-    const map: Record<string, string> = {
-      activo: 'bg-green-100 text-green-700',
-      potencial: 'bg-blue-100 text-blue-700',
-      inactivo: 'bg-slate-100 text-slate-500',
-      archivado: 'bg-amber-100 text-amber-700',
+  getStatusStyle(status: string): { background: string; color: string } {
+    const mix = (v: string) => `color-mix(in srgb,${v} 12%,transparent)`;
+    const map: Record<string, { background: string; color: string }> = {
+      activo:    { background: mix('var(--success)'),   color: 'var(--success)' },
+      potencial: { background: mix('var(--accent-ia)'), color: 'var(--accent-ia)' },
+      inactivo:  { background: 'var(--surface-2)',       color: 'var(--text-muted)' },
+      archivado: { background: mix('var(--warning)'),   color: 'var(--warning)' },
     };
-    return map[status] ?? 'bg-slate-100 text-slate-600';
+    return map[status] ?? { background: 'var(--surface-2)', color: 'var(--text-muted)' };
   }
 
   getStatusLabel(status: string): string {
@@ -165,15 +166,22 @@ export class ContactoDetailComponent {
     return map[status] ?? status;
   }
 
-  getCasoEstadoClass(estado: string): string {
-    const map: Record<string, string> = {
-      pendiente: 'bg-amber-100 text-amber-700',
-      en_proceso: 'bg-blue-100 text-blue-700',
-      cerrado: 'bg-green-100 text-green-700',
-      urgente: 'bg-red-100 text-red-700',
-      archivado: 'bg-slate-100 text-slate-500',
+  getAvatarStyle(type: string): { background: string; color: string } {
+    return type === 'persona_fisica'
+      ? { background: 'color-mix(in srgb,var(--accent-ia) 15%,transparent)', color: 'var(--accent-ia)' }
+      : { background: 'color-mix(in srgb,var(--brand) 15%,transparent)',      color: 'var(--brand)' };
+  }
+
+  getCasoEstadoStyle(estado: string): { background: string; color: string } {
+    const mix = (v: string) => `color-mix(in srgb,${v} 12%,transparent)`;
+    const map: Record<string, { background: string; color: string }> = {
+      pendiente:  { background: mix('var(--warning)'), color: 'var(--warning)' },
+      en_proceso: { background: mix('var(--brand)'),   color: 'var(--brand)' },
+      cerrado:    { background: 'var(--surface-2)',     color: 'var(--text-muted)' },
+      urgente:    { background: mix('var(--danger)'),  color: 'var(--danger)' },
+      archivado:  { background: 'var(--surface-2)',     color: 'var(--text-faint)' },
     };
-    return map[estado] ?? 'bg-slate-100 text-slate-600';
+    return map[estado] ?? { background: 'var(--surface-2)', color: 'var(--text-muted)' };
   }
 
   getCasoEstadoLabel(estado: string): string {
@@ -184,27 +192,29 @@ export class ContactoDetailComponent {
     return map[estado] ?? estado;
   }
 
-  getCasoPrioridadClass(prioridad: string): string {
-    const map: Record<string, string> = {
-      alta: 'bg-red-100 text-red-700',
-      media: 'bg-amber-100 text-amber-700',
-      baja: 'bg-slate-100 text-slate-500',
+  getCasoPrioridadStyle(prioridad: string): { background: string; color: string } {
+    const mix = (v: string) => `color-mix(in srgb,${v} 12%,transparent)`;
+    const map: Record<string, { background: string; color: string }> = {
+      alta:  { background: mix('var(--danger)'),  color: 'var(--danger)' },
+      media: { background: mix('var(--warning)'), color: 'var(--warning)' },
+      baja:  { background: 'var(--surface-2)',     color: 'var(--text-muted)' },
     };
-    return map[prioridad] ?? 'bg-slate-100 text-slate-600';
+    return map[prioridad] ?? { background: 'var(--surface-2)', color: 'var(--text-muted)' };
   }
 
   verCaso(caso: Caso): void {
     this.router.navigate(['/casos', caso.id]);
   }
 
-  getInvoiceStatusClass(status: string): string {
-    const map: Record<string, string> = {
-      pagada: 'bg-green-100 text-green-700',
-      pendiente: 'bg-amber-100 text-amber-700',
-      vencida: 'bg-red-100 text-red-700',
-      borrador: 'bg-slate-100 text-slate-500',
+  getInvoiceStatusStyle(status: string): { background: string; color: string } {
+    const mix = (v: string) => `color-mix(in srgb,${v} 12%,transparent)`;
+    const map: Record<string, { background: string; color: string }> = {
+      pagada:    { background: mix('var(--success)'), color: 'var(--success)' },
+      pendiente: { background: mix('var(--warning)'), color: 'var(--warning)' },
+      vencida:   { background: mix('var(--danger)'),  color: 'var(--danger)' },
+      borrador:  { background: 'var(--surface-2)',     color: 'var(--text-muted)' },
     };
-    return map[status] ?? 'bg-slate-100 text-slate-600';
+    return map[status] ?? { background: 'var(--surface-2)', color: 'var(--text-muted)' };
   }
 
   // --- Document browser ---

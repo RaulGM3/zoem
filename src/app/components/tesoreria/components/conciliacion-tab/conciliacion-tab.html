@@ -1,18 +1,19 @@
 <div class="space-y-4">
 
   @if (cuentas().length === 0) {
-    <div class="bg-white rounded-xl border border-slate-200 p-10 text-center text-slate-400 text-sm">
+    <div class="rounded-xl p-10 text-center text-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text-faint)">
       <p>No hay cuentas configuradas.</p>
       <p class="text-xs mt-1">Crea una cuenta bancaria para importar y conciliar su extracto.</p>
     </div>
   } @else {
 
     <!-- Selección de cuenta + importación -->
-    <div class="bg-white rounded-xl border border-slate-200 p-4 flex flex-wrap items-end gap-4">
+    <div class="rounded-xl p-4 flex flex-wrap items-end gap-4" style="background:var(--surface);border:1px solid var(--border)">
       <div class="space-y-1">
-        <label class="text-xs font-medium text-slate-500 uppercase tracking-wide">Cuenta</label>
+        <label class="form-label">Cuenta</label>
         <select [value]="cuentaSeleccionada()" (change)="cuentaSeleccionada.set($any($event.target).value)"
-          class="block w-56 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
+          class="form-select" style="width:auto;min-width:220px"
+          aria-label="Seleccionar cuenta">
           <option value="" disabled>Selecciona una cuenta</option>
           @for (c of cuentas(); track c.id) {
             <option [value]="c.id">{{ c.nombre }}{{ c.entidad ? ' · ' + c.entidad : '' }}</option>
@@ -21,7 +22,10 @@
       </div>
 
       @if (cuentaSeleccionada()) {
-        <label class="flex items-center gap-2 px-3 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700 cursor-pointer">
+        <label class="inline-flex items-center gap-2 cursor-pointer rounded-xl px-3 py-2 text-sm font-semibold text-white"
+          style="background:var(--brand)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+          (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
           <lucide-icon [img]="UploadIcon" class="w-4 h-4" />
           {{ importando() ? 'Importando...' : 'Importar extracto (CSV)' }}
           <input type="file" accept=".csv,text/csv" class="hidden" (change)="onFile($event)" [disabled]="importando()" />
@@ -29,17 +33,20 @@
 
         @if (pendientes() > 0) {
           <button type="button" (click)="autoConciliar.emit(cuentaSeleccionada())"
-            class="flex items-center gap-2 px-3 py-2 text-sm border border-violet-200 text-violet-700 rounded-lg hover:bg-violet-50">
+            class="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors duration-150"
+            style="border:1px solid var(--border);color:var(--brand);background:color-mix(in srgb,var(--brand) 6%,transparent)"
+            (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 10%,transparent)'"
+            (mouseleave)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 6%,transparent)'">
             <lucide-icon [img]="Wand2Icon" class="w-4 h-4" />
             Conciliar automáticamente
           </button>
         }
 
         <div class="ml-auto text-right">
-          <p class="text-xs text-slate-500 uppercase tracking-wide">Saldo según extracto</p>
-          <p class="text-lg font-bold text-slate-800">
+          <p class="text-[10.5px] uppercase tracking-wider font-semibold" style="color:var(--text-muted);font-family:var(--font-mono)">Saldo según extracto</p>
+          <p class="text-lg font-bold tabular-nums mt-0.5" style="color:var(--text-strong);font-family:var(--font-display)">
             @if (saldoExtracto() !== null) { {{ saldoExtracto() | number:'1.2-2' }} € }
-            @else { <span class="text-slate-300 text-sm font-normal">— sin saldo importado</span> }
+            @else { <span class="text-sm font-normal" style="color:var(--text-faint)">— sin saldo importado</span> }
           </p>
         </div>
       }
@@ -47,49 +54,59 @@
 
     @if (cuentaSeleccionada()) {
       <!-- Líneas del extracto -->
-      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <div class="flex items-center justify-between px-4 py-3 border-b border-slate-200">
-          <h3 class="text-sm font-medium text-slate-700">Líneas del extracto</h3>
-          <span class="text-xs text-slate-500">{{ pendientes() }} pendientes de casar</span>
+      <div class="rounded-xl overflow-hidden" style="background:var(--surface);border:1px solid var(--border)">
+        <div class="flex items-center justify-between px-4 py-3" style="border-bottom:1px solid var(--border)">
+          <h3 class="text-sm font-semibold" style="color:var(--text-strong)">Líneas del extracto</h3>
+          <span class="text-xs" style="color:var(--text-muted)">{{ pendientes() }} pendientes de casar</span>
         </div>
 
         @if (lineasCuenta().length === 0) {
-          <div class="p-10 text-center text-slate-400 text-sm">
+          <div class="p-10 text-center text-sm" style="color:var(--text-faint)">
             <p>Sin líneas importadas para esta cuenta.</p>
             <p class="text-xs mt-1">Importa el CSV del banco para empezar a conciliar.</p>
           </div>
         } @else {
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
-              <thead class="bg-slate-50">
-                <tr class="text-left text-slate-500 border-b border-slate-200">
-                  <th class="px-4 py-2.5 font-medium">Fecha</th>
-                  <th class="px-4 py-2.5 font-medium">Concepto</th>
-                  <th class="px-4 py-2.5 font-medium text-right">Importe</th>
-                  <th class="px-4 py-2.5 font-medium">Estado</th>
-                  <th class="px-4 py-2.5 font-medium">Acción</th>
+              <thead style="background:var(--surface-2)">
+                <tr style="border-bottom:1px solid var(--border)">
+                  <th class="px-4 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wider"
+                    style="color:var(--text-muted);font-family:var(--font-mono)">Fecha</th>
+                  <th class="px-4 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wider"
+                    style="color:var(--text-muted);font-family:var(--font-mono)">Concepto</th>
+                  <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
+                    style="color:var(--text-muted);font-family:var(--font-mono)">Importe</th>
+                  <th class="px-4 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wider"
+                    style="color:var(--text-muted);font-family:var(--font-mono)">Estado</th>
+                  <th class="px-4 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wider"
+                    style="color:var(--text-muted);font-family:var(--font-mono)">Acción</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-slate-100">
+              <tbody>
                 @for (l of lineasCuenta(); track l.id) {
-                  <tr>
-                    <td class="px-4 py-3 text-slate-500 whitespace-nowrap">{{ l.fecha }}</td>
-                    <td class="px-4 py-3 text-slate-700">{{ l.concepto }}</td>
-                    <td class="px-4 py-3 text-right font-medium" [class]="l.importe >= 0 ? 'text-emerald-600' : 'text-red-600'">
+                  <tr style="border-bottom:1px solid var(--border)">
+                    <td class="px-4 py-3 whitespace-nowrap" style="color:var(--text-muted);font-family:var(--font-mono)">{{ l.fecha }}</td>
+                    <td class="px-4 py-3" style="color:var(--text-body)">{{ l.concepto }}</td>
+                    <td class="px-4 py-3 text-right font-medium tabular-nums"
+                      [style.color]="l.importe >= 0 ? 'var(--success)' : 'var(--danger)'"
+                      style="font-family:var(--font-mono)">
                       {{ l.importe >= 0 ? '+' : '' }}{{ l.importe | number:'1.2-2' }} €
                     </td>
                     <td class="px-4 py-3">
                       @switch (l.estado) {
                         @case ('casado') {
-                          <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 font-medium">
+                          <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold"
+                            style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">
                             <lucide-icon [img]="CheckCircle2Icon" class="w-3 h-3" /> Casado
                           </span>
                         }
                         @case ('ignorado') {
-                          <span class="px-2 py-0.5 text-xs rounded-full bg-slate-100 text-slate-500 font-medium">Ignorado</span>
+                          <span class="rounded-full px-2 py-0.5 text-xs font-bold"
+                            style="background:var(--surface-2);color:var(--text-muted)">Ignorado</span>
                         }
                         @default {
-                          <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-700 font-medium">
+                          <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold"
+                            style="background:color-mix(in srgb,var(--warning) 12%,transparent);color:var(--warning)">
                             <lucide-icon [img]="AlertTriangleIcon" class="w-3 h-3" /> Pendiente
                           </span>
                         }
@@ -98,9 +115,8 @@
                     <td class="px-4 py-3">
                       @if (l.estado === 'pendiente') {
                         <div class="flex items-center gap-2">
-                          <select
-                            (change)="casar.emit({ cuentaId: l.cuentaId, lineaId: l.id, movimientoId: $any($event.target).value }); $any($event.target).value = ''"
-                            class="border border-slate-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-violet-300">
+                          <select class="form-select text-xs" style="width:auto;min-width:160px;padding:0.25rem 0.5rem;border-radius:0.5rem"
+                            (change)="casar.emit({ cuentaId: l.cuentaId, lineaId: l.id, movimientoId: $any($event.target).value }); $any($event.target).value = ''">
                             <option value="" selected>Casar con…</option>
                             @for (m of movimientosDisponibles(); track m.id) {
                               <option [value]="m.id">
@@ -109,13 +125,20 @@
                             }
                           </select>
                           <button type="button" (click)="ignorar.emit({ cuentaId: l.cuentaId, lineaId: l.id })"
-                            class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600" title="Ignorar línea" aria-label="Ignorar línea">
+                            class="rounded-lg p-1.5 transition-colors duration-150"
+                            style="color:var(--text-faint)"
+                            (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-body)'"
+                            (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+                            title="Ignorar línea" aria-label="Ignorar línea">
                             <lucide-icon [img]="EyeOffIcon" class="w-3.5 h-3.5" />
                           </button>
                         </div>
                       } @else {
                         <button type="button" (click)="desconciliar.emit({ cuentaId: l.cuentaId, lineaId: l.id })"
-                          class="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600">
+                          class="inline-flex items-center gap-1 text-xs transition-colors duration-150"
+                          style="color:var(--text-faint)"
+                          (mouseenter)="$any($event.currentTarget).style.color='var(--text-body)'"
+                          (mouseleave)="$any($event.currentTarget).style.color='var(--text-faint)'">
                           <lucide-icon [img]="UnlinkIcon" class="w-3.5 h-3.5" /> Deshacer
                         </button>
                       }

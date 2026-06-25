@@ -1,70 +1,107 @@
-<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+<div class="rounded-xl overflow-hidden" style="background:var(--surface);border:1px solid var(--border)">
   @if (loading()) {
-    <div class="p-10 text-center text-slate-400 text-sm">Cargando casos...</div>
+    <div class="p-10 text-center text-sm" style="color:var(--text-faint)">Cargando casos...</div>
   } @else {
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
-        <thead class="bg-slate-50">
-          <tr class="text-left text-slate-500 border-b border-slate-200">
-            <th class="px-4 py-3 font-medium">Título</th>
-            <th class="px-4 py-3 font-medium">Tipo</th>
-            <th class="px-4 py-3 font-medium text-center">Estado</th>
-            <th class="px-4 py-3 font-medium">Vencimiento</th>
-            <th class="px-4 py-3 font-medium text-center">Hitos</th>
-            <th class="px-4 py-3 font-medium text-right">Saldo</th>
+
+        <!-- Header con fondo surface-2 y etiquetas mono uppercase -->
+        <thead style="background:var(--surface-2)">
+          <tr style="border-bottom:1px solid var(--border)">
+            <th class="px-4 py-3 text-left text-[10.5px] font-semibold uppercase tracking-wider"
+              style="color:var(--text-muted);font-family:var(--font-mono)">Título</th>
+            <th class="px-4 py-3 text-left text-[10.5px] font-semibold uppercase tracking-wider"
+              style="color:var(--text-muted);font-family:var(--font-mono)">Tipo</th>
+            <th class="px-4 py-3 text-center text-[10.5px] font-semibold uppercase tracking-wider"
+              style="color:var(--text-muted);font-family:var(--font-mono)">Estado</th>
+            <th class="px-4 py-3 text-left text-[10.5px] font-semibold uppercase tracking-wider"
+              style="color:var(--text-muted);font-family:var(--font-mono)">Vencimiento</th>
+            <th class="px-4 py-3 text-center text-[10.5px] font-semibold uppercase tracking-wider"
+              style="color:var(--text-muted);font-family:var(--font-mono)">Hitos</th>
+            <th class="px-4 py-3 text-right text-[10.5px] font-semibold uppercase tracking-wider"
+              style="color:var(--text-muted);font-family:var(--font-mono)">Saldo</th>
             <th class="px-4 py-3"></th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-100">
+
+        <tbody>
           @if (casos().length === 0) {
             <tr>
-              <td colspan="7" class="px-4 py-10 text-center text-slate-400">No se encontraron casos</td>
+              <td colspan="7" class="px-4 py-10 text-center text-sm" style="color:var(--text-faint)">
+                No se encontraron casos
+              </td>
             </tr>
           }
+
           @for (caso of casos(); track caso.id) {
             <tr
-              class="hover:bg-slate-50 cursor-pointer"
+              class="cursor-pointer transition-colors duration-150"
+              style="border-bottom:1px solid var(--border)"
               (click)="casoClick.emit(caso)"
               (keydown.enter)="casoClick.emit(caso)"
+              (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+              (mouseleave)="$any($event.currentTarget).style.background=''"
               tabindex="0"
               [attr.aria-label]="'Ver caso: ' + caso.titulo"
             >
+              <!-- Título + subtítulo -->
               <td class="px-4 py-3">
-                <div class="flex items-center gap-2">
-                  <div [class]="'w-2 h-2 rounded-full shrink-0 ' + getPriorityDot(caso.prioridad)"></div>
+                <div class="flex items-center gap-2.5">
+                  <div class="w-2 h-2 rounded-full shrink-0"
+                    [style.background]="getPriorityColor(caso.prioridad)"></div>
                   <div>
-                    <p class="font-medium text-slate-800">{{ caso.titulo }}</p>
+                    <p class="font-bold text-[14px]" style="color:var(--text-strong)">{{ caso.titulo }}</p>
                     @if (subtitulos()[caso.id]; as subtitulo) {
-                      <p class="text-xs text-slate-400 truncate max-w-xs" [title]="subtitulo">
+                      <p class="text-[12.5px] truncate max-w-xs" style="color:var(--text-muted)"
+                        [title]="subtitulo">
                         {{ truncarSubtitulo(subtitulo) }}
                       </p>
                     }
                   </div>
                 </div>
               </td>
+
+              <!-- Chip tipo -->
               <td class="px-4 py-3">
-                <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getTipoClass(caso.tipo)">{{ caso.tipo }}</span>
+                <span class="px-2 py-0.5 text-[11px] rounded-full font-bold"
+                  [style]="getTipoStyle(caso.tipo)">{{ caso.tipo }}</span>
               </td>
+
+              <!-- Chip estado -->
               <td class="px-4 py-3 text-center">
-                <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getEstadoClass(caso.estado)">{{ caso.estado }}</span>
+                <span class="px-2 py-0.5 text-[11px] rounded-full font-bold"
+                  [style]="getEstadoStyle(caso.estado)">{{ caso.estado }}</span>
               </td>
-              <td [class]="'px-4 py-3 ' + getVencimientoClass(getDiasVencimiento(caso.vencimiento))">
+
+              <!-- Vencimiento -->
+              <td class="px-4 py-3 text-[13px]" [style]="getVencimientoStyle(getDiasVencimiento(caso.vencimiento))">
                 {{ caso.vencimiento ?? '—' }}
               </td>
-              <td class="px-4 py-3 text-center text-slate-500">{{ getHitosProgress(caso) }}</td>
-              <td
-                class="px-4 py-3 text-right font-medium"
-                [class]="caso.resumenFinanciero.saldo >= 0 ? 'text-emerald-600' : 'text-red-600'"
-              >
+
+              <!-- Hitos -->
+              <td class="px-4 py-3 text-center text-[13px] tabular-nums"
+                style="color:var(--text-muted);font-family:var(--font-mono)">
+                {{ getHitosProgress(caso) }}
+              </td>
+
+              <!-- Saldo -->
+              <td class="px-4 py-3 text-right text-[13px] font-bold tabular-nums"
+                [style.color]="caso.resumenFinanciero.saldo >= 0 ? 'var(--success)' : 'var(--danger)'"
+                style="font-family:var(--font-mono)">
                 {{ caso.resumenFinanciero.saldo | number:'1.2-2' }} €
               </td>
+
+              <!-- Más acciones -->
               <td class="px-4 py-3">
                 <button
-                  class="p-1 hover:bg-slate-100 rounded"
+                  class="p-1.5 rounded-lg transition-colors duration-150"
+                  style="color:var(--text-faint)"
                   aria-label="Más acciones"
                   (click)="toggleDropdown(caso, $event)"
+                  (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                  (mouseleave)="$any($event.currentTarget).style.background=''"
                 >
-                  <lucide-icon [img]="MoreHorizontalIcon" class="w-4 h-4 text-slate-400" />
+                  <lucide-icon [img]="MoreHorizontalIcon" class="w-4 h-4" />
                 </button>
               </td>
             </tr>
@@ -75,16 +112,21 @@
   }
 </div>
 
+<!-- Dropdown contextual -->
 @if (activeDropdown() && dropdownPos()) {
   <div class="fixed inset-0 z-5" (click)="activeDropdown.set(null); activeCaso.set(null); dropdownPos.set(null)"></div>
   <div
-    class="fixed z-10 bg-white border border-slate-200 rounded-lg shadow-lg w-36 py-1"
+    class="fixed z-10 rounded-xl py-1 shadow-lg"
+    style="background:var(--surface);border:1px solid var(--border);width:9rem"
     [style.top.px]="dropdownPos()!.top"
     [style.right.px]="dropdownPos()!.right"
   >
     <button
-      class="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+      class="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium transition-colors duration-150"
+      style="color:var(--danger)"
       (click)="openDeleteDialog($event)"
+      (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 8%,transparent)'"
+      (mouseleave)="$any($event.currentTarget).style.background=''"
       aria-label="Eliminar caso"
     >
       <lucide-icon [img]="TrashIcon" class="w-4 h-4" />
@@ -93,6 +135,7 @@
   </div>
 }
 
+<!-- Dialog confirmación eliminar -->
 @if (casoToDelete()) {
   <div
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
@@ -100,27 +143,35 @@
     role="presentation"
   >
     <div
-      class="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4"
+      class="relative w-full max-w-sm mx-4 rounded-2xl p-6 shadow-xl"
+      style="background:var(--surface);border:1px solid var(--border)"
       (click)="$event.stopPropagation()"
       role="dialog"
       aria-modal="true"
       aria-labelledby="dialog-title"
     >
-      <h3 id="dialog-title" class="text-base font-semibold text-slate-800">Eliminar caso</h3>
-      <p class="mt-2 text-sm text-slate-500">
+      <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-full"
+        style="background:color-mix(in srgb,var(--danger) 10%,transparent)">
+        <lucide-icon [img]="TrashIcon" class="w-5 h-5" style="color:var(--danger)" />
+      </div>
+      <h3 id="dialog-title" class="text-base font-semibold"
+        style="color:var(--text-strong);font-family:var(--font-display)">Eliminar caso</h3>
+      <p class="mt-2 text-sm" style="color:var(--text-muted)">
         ¿Seguro que quieres eliminar
-        <span class="font-medium text-slate-700">{{ casoToDelete()!.titulo }}</span>?
+        <span class="font-semibold" style="color:var(--text)">{{ casoToDelete()!.titulo }}</span>?
         Esta acción no se puede deshacer.
       </p>
       <div class="mt-5 flex gap-3 justify-end">
         <button
-          class="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg"
+          class="px-4 py-2 text-sm font-medium rounded-xl transition-colors duration-150"
+          style="background:var(--surface-2);color:var(--text-body);border:1px solid var(--border)"
           (click)="cancelDelete()"
         >
           Cancelar
         </button>
         <button
-          class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg"
+          class="px-4 py-2 text-sm font-semibold text-white rounded-xl transition-all duration-150"
+          style="background:var(--danger)"
           (click)="confirmDelete()"
         >
           Eliminar

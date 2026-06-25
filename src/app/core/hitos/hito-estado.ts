@@ -36,12 +36,12 @@ export const HITO_ESTADO_ICON_COLOR: Record<HitoEstado, string> = {
   cancelado: 'text-slate-400',
 };
 
-/** Clases del badge de estado (calendario). */
+/** Clases del badge de estado (calendario). Dark-mode-aware: definidas en styles.css. */
 export const HITO_ESTADO_BADGE_CLASS: Record<HitoEstado, string> = {
-  pendiente: 'bg-amber-100 text-amber-700',
-  en_progreso: 'bg-blue-100 text-blue-700',
-  completado: 'bg-emerald-100 text-emerald-700',
-  cancelado: 'bg-slate-100 text-slate-500',
+  pendiente: 'badge-warning',
+  en_progreso: 'badge-brand',
+  completado: 'badge-success',
+  cancelado: 'badge-muted',
 };
 
 /** Estado del hito → status genérico del CalendarItem. */
@@ -54,7 +54,7 @@ export const HITO_ESTADO_CALENDAR_STATUS: Record<HitoEstado, 'confirmada' | 'pen
 
 /** Presentación del estado "Vencido" (derivado, no es un HitoEstado real). */
 export const HITO_OVERDUE_LABEL = 'Vencido';
-export const HITO_OVERDUE_BADGE_CLASS = 'bg-red-100 text-red-700';
+export const HITO_OVERDUE_BADGE_CLASS = 'badge-danger';
 
 /**
  * Ciclo de un solo botón (caso-hitos-tab): un click avanza al siguiente estado

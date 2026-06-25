@@ -15,11 +15,11 @@
         </div>
         <div class="flex items-center gap-1">
           <span [class]="'w-2 h-2 rounded-full ' + getModoIndicator(modo())"></span>
-          <span class="text-xs text-slate-500">Modo {{ modo() }}</span>
+          <span class="text-xs text-slate-700">Modo {{ modo() }}</span>
         </div>
       </div>
     </div>
-    <button (click)="limpiar()" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500">
+    <button (click)="limpiar()" class="p-2 hover:bg-slate-100 rounded-lg text-slate-700">
       <lucide-icon [img]="RotateCcwIcon" class="w-4 h-4" />
     </button>
   </div>
@@ -43,7 +43,7 @@
         </div>
         <div>
           <h2 class="text-lg font-semibold text-slate-800">¿En qué puedo ayudarte?</h2>
-          <p class="text-sm text-slate-500 mt-1">Elige una sugerencia o escribe tu pregunta</p>
+          <p class="text-sm text-slate-700 mt-1 font-medium">Elige una sugerencia o escribe tu pregunta</p>
         </div>
         <div class="flex flex-col gap-2 w-full max-w-md">
           @for (sug of sugerencias(); track sug) {
@@ -67,7 +67,7 @@
             </div>
             <div class="bg-white border border-slate-200 rounded-2xl rounded-tl-none px-4 py-3 shadow-sm">
               <p class="text-sm text-slate-700 whitespace-pre-line">{{ msg.texto }}</p>
-              <p class="text-xs text-slate-400 mt-2">{{ msg.hora }}</p>
+              <p class="text-xs text-slate-600 mt-2 font-medium">{{ msg.hora }}</p>
             </div>
           </div>
         } @else {

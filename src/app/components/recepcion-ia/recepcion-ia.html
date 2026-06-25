@@ -1,108 +1,123 @@
 <!-- Header -->
 <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
   <div>
-    <div class="flex items-center gap-2">
-      <h1 class="text-2xl font-bold text-slate-900">Recepción IA</h1>
-      <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">● Online 24/7</span>
+    <div class="flex items-center gap-2.5">
+      <h1 class="text-[19px] font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Recepción IA</h1>
+      <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-bold"
+        style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">
+        <span class="inline-block h-1.5 w-1.5 rounded-full" style="background:var(--success);animation:vpulse 1.6s ease-in-out infinite"></span>
+        Online 24/7
+      </span>
     </div>
-    <p class="mt-1 text-sm text-slate-500">Tu asistente IA atiende y cualifica llamadas automáticamente</p>
+    <p class="mt-1 text-sm" style="color:var(--text-body)">Tu asistente IA atiende y cualifica llamadas automáticamente</p>
   </div>
 </div>
 
 <!-- IA Status Banner -->
-<div class="mb-6 rounded-xl border border-violet-200 bg-gradient-to-r from-violet-50 to-slate-50 p-5">
+<div class="mb-6 rounded-[18px] p-5 transition-shadow duration-150"
+  style="background:var(--surface);border:1px solid var(--border)">
   <div class="flex items-center gap-4">
-    <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-600 text-white">
-      <lucide-icon [img]="BotIcon" size="28"></lucide-icon>
+    <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl"
+      style="background:color-mix(in srgb,var(--accent-ia) 14%,transparent)">
+      <lucide-icon [img]="BotIcon" size="26" style="color:var(--accent-ia)"></lucide-icon>
     </div>
-    <div class="flex-1">
-      <p class="font-semibold text-slate-900">Agente IA activo</p>
+    <div class="flex-1 min-w-0">
+      <p class="font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Agente IA activo</p>
       @if (ultimaInteraccion(); as ts) {
-        <p class="text-sm text-slate-500">Atendiendo llamadas. Última llamada {{ formatRelative(ts) }}.</p>
+        <p class="text-sm" style="color:var(--text-body)">Atendiendo llamadas. Última llamada {{ formatRelative(ts) }}.</p>
       } @else {
-        <p class="text-sm text-slate-500">Atendiendo llamadas entrantes.</p>
+        <p class="text-sm" style="color:var(--text-body)">Atendiendo llamadas entrantes.</p>
       }
     </div>
     <div class="hidden md:flex items-center gap-6 text-center">
       <div>
-        <p class="text-2xl font-bold text-violet-600">{{ stats().total }}</p>
-        <p class="text-xs text-slate-400">Total llamadas</p>
+        <p class="text-[29px] font-semibold leading-none" style="color:var(--accent-ia);font-family:var(--font-display)">{{ stats().total }}</p>
+        <p class="mt-1 text-xs" style="color:var(--text-muted)">Total llamadas</p>
       </div>
+      <div class="w-px h-8" style="background:var(--border)"></div>
       <div>
-        <p class="text-2xl font-bold text-red-600">{{ stats().urgentes }}</p>
-        <p class="text-xs text-slate-400">Urgentes</p>
+        <p class="text-[29px] font-semibold leading-none" style="color:var(--danger);font-family:var(--font-display)">{{ stats().urgentes }}</p>
+        <p class="mt-1 text-xs" style="color:var(--text-muted)">Urgentes</p>
       </div>
+      <div class="w-px h-8" style="background:var(--border)"></div>
       <div>
-        <p class="text-2xl font-bold text-amber-600">{{ formatDuracion(stats().avgDuracion) }}</p>
-        <p class="text-xs text-slate-400">Duración media</p>
+        <p class="text-[29px] font-semibold leading-none" style="color:var(--brand);font-family:var(--font-display)">{{ formatDuracion(stats().avgDuracion) }}</p>
+        <p class="mt-1 text-xs" style="color:var(--text-muted)">Duración media</p>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Channel Stats -->
+<!-- KPI Cards -->
 <div class="mb-6 grid gap-4 sm:grid-cols-4">
-  <div class="rounded-xl border border-slate-200 bg-white p-4">
-    <div class="flex items-center gap-3">
-      <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-green-100">
-        <lucide-icon [img]="PhoneIcon" size="18" class="text-green-600"></lucide-icon>
-      </div>
-      <div>
-        <p class="text-xl font-bold text-slate-900">{{ stats().total }}</p>
-        <p class="text-xs text-slate-400">Llamadas</p>
+  <!-- Total llamadas -->
+  <div class="group rounded-[18px] p-[18px] transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_16px_30px_-20px_rgba(30,45,80,.22)]"
+    style="background:var(--surface);border:1px solid var(--border)">
+    <div class="flex items-start justify-between">
+      <div class="flex h-10 w-10 items-center justify-center rounded-[12px]"
+        style="background:color-mix(in srgb,var(--success) 12%,transparent)">
+        <lucide-icon [img]="PhoneIcon" size="18" style="color:var(--success)"></lucide-icon>
       </div>
     </div>
+    <p class="mt-4 text-[29px] font-semibold leading-none" style="color:var(--text-strong);font-family:var(--font-display)">{{ stats().total }}</p>
+    <p class="mt-2 text-[13px]" style="color:var(--text-muted)">Llamadas</p>
   </div>
-  <div class="rounded-xl border border-slate-200 bg-white p-4">
-    <div class="flex items-center gap-3">
-      <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-100">
-        <lucide-icon [img]="CheckCircle2Icon" size="18" class="text-violet-600"></lucide-icon>
-      </div>
-      <div>
-        <p class="text-xl font-bold text-slate-900">{{ stats().exitosas }}</p>
-        <p class="text-xs text-slate-400">Exitosas</p>
+  <!-- Exitosas -->
+  <div class="group rounded-[18px] p-[18px] transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_16px_30px_-20px_rgba(30,45,80,.22)]"
+    style="background:var(--surface);border:1px solid var(--border)">
+    <div class="flex items-start justify-between">
+      <div class="flex h-10 w-10 items-center justify-center rounded-[12px]"
+        style="background:color-mix(in srgb,var(--accent-ia) 12%,transparent)">
+        <lucide-icon [img]="CheckCircle2Icon" size="18" style="color:var(--accent-ia)"></lucide-icon>
       </div>
     </div>
+    <p class="mt-4 text-[29px] font-semibold leading-none" style="color:var(--text-strong);font-family:var(--font-display)">{{ stats().exitosas }}</p>
+    <p class="mt-2 text-[13px]" style="color:var(--text-muted)">Exitosas</p>
   </div>
-  <div class="rounded-xl border border-slate-200 bg-white p-4">
-    <div class="flex items-center gap-3">
-      <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100">
-        <lucide-icon [img]="TimerIcon" size="18" class="text-blue-600"></lucide-icon>
-      </div>
-      <div>
-        <p class="text-xl font-bold text-slate-900">{{ formatDuracion(stats().avgDuracion) }}</p>
-        <p class="text-xs text-slate-400">Duración media</p>
+  <!-- Duración media -->
+  <div class="group rounded-[18px] p-[18px] transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_16px_30px_-20px_rgba(30,45,80,.22)]"
+    style="background:var(--surface);border:1px solid var(--border)">
+    <div class="flex items-start justify-between">
+      <div class="flex h-10 w-10 items-center justify-center rounded-[12px]"
+        style="background:color-mix(in srgb,var(--brand) 12%,transparent)">
+        <lucide-icon [img]="TimerIcon" size="18" style="color:var(--brand)"></lucide-icon>
       </div>
     </div>
+    <p class="mt-4 text-[29px] font-semibold leading-none" style="color:var(--text-strong);font-family:var(--font-display)">{{ formatDuracion(stats().avgDuracion) }}</p>
+    <p class="mt-2 text-[13px]" style="color:var(--text-muted)">Duración media</p>
   </div>
-  <div class="rounded-xl border border-slate-200 bg-white p-4">
-    <div class="flex items-center gap-3">
-      <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-red-100">
-        <lucide-icon [img]="CircleAlertIcon" size="18" class="text-red-600"></lucide-icon>
-      </div>
-      <div>
-        <p class="text-xl font-bold text-slate-900">{{ stats().urgentes }}</p>
-        <p class="text-xs text-slate-400">Urgentes</p>
+  <!-- Urgentes -->
+  <div class="group rounded-[18px] p-[18px] transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_16px_30px_-20px_rgba(30,45,80,.22)]"
+    style="background:var(--surface);border:1px solid var(--border)">
+    <div class="flex items-start justify-between">
+      <div class="flex h-10 w-10 items-center justify-center rounded-[12px]"
+        style="background:color-mix(in srgb,var(--danger) 12%,transparent)">
+        <lucide-icon [img]="CircleAlertIcon" size="18" style="color:var(--danger)"></lucide-icon>
       </div>
     </div>
+    <p class="mt-4 text-[29px] font-semibold leading-none" style="color:var(--text-strong);font-family:var(--font-display)">{{ stats().urgentes }}</p>
+    <p class="mt-2 text-[13px]" style="color:var(--text-muted)">Urgentes</p>
   </div>
 </div>
 
 <!-- Filters -->
 <div class="mb-4 flex flex-col gap-3 sm:flex-row">
   <div class="relative flex-1">
-    <lucide-icon [img]="SearchIcon" size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></lucide-icon>
+    <lucide-icon [img]="SearchIcon" size="15" class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style="color:var(--text-muted)"></lucide-icon>
     <input
       type="text"
       placeholder="Buscar por nombre, descripción o resumen..."
       [value]="search()"
       (input)="search.set($any($event.target).value)"
-      class="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm placeholder-slate-400 focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-100"
+      class="w-full rounded-[12px] py-2.5 pl-9 pr-4 text-sm outline-none ring-0 transition-[border-color,box-shadow] duration-150 focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--brand)_14%,transparent)]"
+      style="background:var(--surface-2);border:1px solid var(--border);color:var(--text);font-family:var(--font-ui)"
+      aria-label="Buscar llamadas"
     />
   </div>
   <select
     (change)="filterEstado.set($any($event.target).value)"
-    class="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-violet-300 focus:outline-none"
+    class="rounded-[12px] px-3 py-2.5 text-sm outline-none transition-[border-color] duration-150"
+    style="background:var(--surface-2);border:1px solid var(--border);color:var(--text-body);font-family:var(--font-ui)"
   >
     <option value="">Todos los estados</option>
     <option value="completada">Completada</option>
@@ -113,56 +128,63 @@
 
 <!-- Loading state -->
 @if (loading()) {
-  <div class="py-16 text-center text-sm text-slate-400">Cargando llamadas...</div>
+  <div class="rounded-[18px] py-16 text-center text-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text-muted)">
+    Cargando llamadas...
+  </div>
 } @else {
   <!-- Calls List -->
   <div class="space-y-3">
     @for (ll of filtered(); track ll.conversationId) {
-      <div class="rounded-xl border border-slate-200 bg-white p-5 transition-shadow hover:shadow-sm">
+      <div class="rounded-[18px] p-5 transition-all duration-150 hover:shadow-[0_8px_24px_-12px_rgba(30,45,80,.18)]"
+        style="background:var(--surface);border:1px solid var(--border)">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <!-- Left: info -->
+          <!-- Left: avatar + info -->
           <div class="flex items-start gap-4">
-            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700">
+            <!-- Avatar chip -->
+            <div class="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full text-sm font-bold"
+              style="background:color-mix(in srgb,var(--success) 14%,transparent);color:var(--success)">
               <lucide-icon [img]="PhoneIcon" size="18"></lucide-icon>
             </div>
             <div>
               <div class="flex flex-wrap items-center gap-2">
-                <p class="font-semibold text-slate-900">
+                <p class="text-[14.5px] font-bold" style="color:var(--text-strong);font-family:var(--font-ui)">
                   {{ ll.datosCapturados.nombreCliente || 'Desconocido' }}
                 </p>
                 @if (ll.datosCapturados.especialidadJuridica) {
-                  <span class="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700">
+                  <span class="rounded-full px-2.5 py-0.5 text-[11px] font-bold"
+                    style="background:#f0ecff;color:var(--accent-ia)">
                     {{ getEspecialidadLabel(ll.datosCapturados.especialidadJuridica) }}
                   </span>
                 }
-                <!-- Contact status badge -->
                 @if (isKnownContact(ll)) {
-                  <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                  <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold"
+                    style="background:#e9f5ef;color:var(--success)">
                     <lucide-icon [img]="UserCheckIcon" size="10"></lucide-icon>
                     Contacto registrado
                   </span>
                 } @else {
-                  <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                  <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold"
+                    style="background:#fff5e6;color:var(--warning)">
                     <lucide-icon [img]="UserPlusIcon" size="10"></lucide-icon>
                     Nuevo contacto
                   </span>
                 }
               </div>
               @if (ll.datosCapturados.descripcionCaso) {
-                <p class="mt-1 text-sm text-slate-500">{{ ll.datosCapturados.descripcionCaso }}</p>
+                <p class="mt-1 text-[13px] leading-relaxed" style="color:var(--text-body)">{{ ll.datosCapturados.descripcionCaso }}</p>
               }
-              <div class="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-400">
+              <div class="mt-2 flex flex-wrap items-center gap-3 text-[12.5px]" style="color:var(--text-muted);font-family:var(--font-mono)">
                 <span class="flex items-center gap-1">
-                  <lucide-icon [img]="ClockIcon" size="12"></lucide-icon>
+                  <lucide-icon [img]="ClockIcon" size="11"></lucide-icon>
                   {{ formatDate(ll.creadoEn) }} · {{ formatTime(ll.creadoEn) }}
                 </span>
                 <span class="flex items-center gap-1">
-                  <lucide-icon [img]="TimerIcon" size="12"></lucide-icon>
+                  <lucide-icon [img]="TimerIcon" size="11"></lucide-icon>
                   {{ formatDuracion(ll.duracionSegundos) }}
                 </span>
                 @if (ll.datosCapturados.telefono) {
                   <span class="flex items-center gap-1">
-                    <lucide-icon [img]="PhoneIcon" size="12"></lucide-icon>
+                    <lucide-icon [img]="PhoneIcon" size="11"></lucide-icon>
                     {{ ll.datosCapturados.telefono }}
                   </span>
                 }
@@ -170,39 +192,39 @@
             </div>
           </div>
 
-          <!-- Right: badges -->
+          <!-- Right: status badges -->
           <div class="flex flex-wrap items-center gap-2 sm:flex-col sm:items-end">
             <div class="flex items-center gap-2">
               @if (ll.datosCapturados.nivelUrgencia) {
-                <span class="rounded-full px-2.5 py-1 text-xs font-medium" [class]="getUrgencyClass(ll.datosCapturados.nivelUrgencia)">
+                <span class="rounded-full px-2.5 py-1 text-[11.5px] font-bold" [style]="getUrgencyStyle(ll.datosCapturados.nivelUrgencia)">
                   {{ getUrgencyLabel(ll.datosCapturados.nivelUrgencia) }}
                 </span>
               }
-              <span class="rounded-full px-2.5 py-1 text-xs font-medium" [class]="getEstadoClass(ll.estado)">
+              <span class="rounded-full px-2.5 py-1 text-[11.5px] font-bold" [style]="getEstadoStyle(ll.estado)">
                 {{ getEstadoLabel(ll.estado) }}
               </span>
             </div>
             @if (ll.exitosa) {
-              <div class="flex items-center gap-1 text-green-600">
-                <lucide-icon [img]="CheckCircle2Icon" size="14"></lucide-icon>
-                <span class="text-xs font-medium">Exitosa</span>
+              <div class="flex items-center gap-1" style="color:var(--success)">
+                <lucide-icon [img]="CheckCircle2Icon" size="13"></lucide-icon>
+                <span class="text-[12px] font-semibold">Exitosa</span>
               </div>
             } @else {
-              <div class="flex items-center gap-1 text-red-500">
-                <lucide-icon [img]="XCircleIcon" size="14"></lucide-icon>
-                <span class="text-xs font-medium">No exitosa</span>
+              <div class="flex items-center gap-1" style="color:var(--danger)">
+                <lucide-icon [img]="XCircleIcon" size="13"></lucide-icon>
+                <span class="text-[12px] font-semibold">No exitosa</span>
               </div>
             }
           </div>
         </div>
 
         <!-- Actions -->
-        <div class="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+        <div class="mt-4 flex flex-wrap gap-2 pt-3" style="border-top:1px solid var(--border)">
           @if (isKnownContact(ll)) {
-            <!-- Contacto registrado: abrir caso, devolver llamada, transcripción, descartar -->
             <button
               (click)="abrirCaso(ll)"
-              class="inline-flex items-center gap-1.5 rounded-lg bg-violet-50 px-3 py-1.5 text-xs font-medium text-violet-700 hover:bg-violet-100"
+              class="inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-[12px] font-semibold transition-colors duration-150"
+              style="background:color-mix(in srgb,var(--accent-ia) 10%,transparent);color:var(--accent-ia)"
             >
               <lucide-icon [img]="FolderOpenIcon" size="12"></lucide-icon>
               Abrir caso
@@ -210,7 +232,8 @@
             @if (ll.datosCapturados.telefono) {
               <a
                 [href]="'tel:' + ll.datosCapturados.telefono"
-                class="inline-flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100"
+                class="inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-[12px] font-semibold transition-colors duration-150"
+                style="background:color-mix(in srgb,var(--success) 10%,transparent);color:var(--success)"
               >
                 <lucide-icon [img]="PhoneOutgoingIcon" size="12"></lucide-icon>
                 Devolver llamada
@@ -218,7 +241,8 @@
             }
             <button
               (click)="openTranscript(ll)"
-              class="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
+              class="inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-[12px] font-semibold transition-colors duration-150"
+              style="background:var(--surface-2);color:var(--text-body)"
             >
               <lucide-icon [img]="FileTextIcon" size="12"></lucide-icon>
               Ver transcripción
@@ -226,30 +250,33 @@
             <button
               (click)="descartarLlamada(ll)"
               aria-label="Descartar llamada"
-              class="inline-flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100"
+              class="inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-[12px] font-semibold transition-colors duration-150"
+              style="background:color-mix(in srgb,var(--danger) 10%,transparent);color:var(--danger)"
             >
               <lucide-icon [img]="ArchiveIcon" size="12"></lucide-icon>
               Descartar
             </button>
           } @else {
-            <!-- Contacto nuevo: agregar contacto, transcripción, devolver llamada -->
             <button
               (click)="agregarContacto(ll)"
-              class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
+              class="inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-[12px] font-semibold transition-colors duration-150"
+              style="background:color-mix(in srgb,var(--success) 10%,transparent);color:var(--success)"
             >
               <lucide-icon [img]="UserPlusIcon" size="12"></lucide-icon>
               Agregar contacto
             </button>
             <button
               (click)="openAssociate(ll)"
-              class="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100"
+              class="inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-[12px] font-semibold transition-colors duration-150"
+              style="background:color-mix(in srgb,var(--brand) 10%,transparent);color:var(--brand)"
             >
               <lucide-icon [img]="Link2Icon" size="12"></lucide-icon>
-              Asociar a contacto existente
+              Asociar a contacto
             </button>
             <button
               (click)="openTranscript(ll)"
-              class="inline-flex items-center gap-1.5 rounded-lg bg-violet-50 px-3 py-1.5 text-xs font-medium text-violet-700 hover:bg-violet-100"
+              class="inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-[12px] font-semibold transition-colors duration-150"
+              style="background:color-mix(in srgb,var(--accent-ia) 10%,transparent);color:var(--accent-ia)"
             >
               <lucide-icon [img]="FileTextIcon" size="12"></lucide-icon>
               Ver transcripción
@@ -257,7 +284,8 @@
             @if (ll.datosCapturados.telefono) {
               <a
                 [href]="'tel:' + ll.datosCapturados.telefono"
-                class="inline-flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100"
+                class="inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-[12px] font-semibold transition-colors duration-150"
+                style="background:color-mix(in srgb,var(--success) 10%,transparent);color:var(--success)"
               >
                 <lucide-icon [img]="PhoneOutgoingIcon" size="12"></lucide-icon>
                 Devolver llamada
@@ -267,8 +295,9 @@
         </div>
       </div>
     }
+
     @if (filtered().length === 0) {
-      <div class="rounded-xl border border-slate-200 bg-white py-16 text-center text-sm text-slate-400">
+      <div class="rounded-[18px] py-16 text-center text-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text-muted)">
         No se encontraron llamadas
       </div>
     }
@@ -278,50 +307,66 @@
 <!-- Transcript Dialog -->
 @if (selectedLlamada(); as ll) {
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4"
+    style="background:rgba(7,11,22,.55);backdrop-filter:blur(4px)"
     (click)="closeTranscript()"
     role="dialog"
     aria-modal="true"
     aria-label="Transcripción de llamada"
   >
     <div
-      class="relative flex h-full max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-2xl"
+      class="relative flex h-full max-h-[90vh] w-full max-w-2xl flex-col rounded-[20px] shadow-[0_24px_60px_-30px_rgba(20,32,60,.4)]"
+      style="background:var(--surface)"
       (click)="$event.stopPropagation()"
     >
       <!-- Dialog header -->
-      <div class="flex items-start justify-between border-b border-slate-100 p-5">
+      <div class="flex items-start justify-between px-5 py-4" style="border-bottom:1px solid var(--border)">
         <div>
-          <h2 class="font-semibold text-slate-900">Transcripción de llamada</h2>
+          <h2 class="font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Transcripción de llamada</h2>
           @if (ll.tituloResumen) {
-            <p class="mt-0.5 text-sm text-slate-600">{{ ll.tituloResumen }}</p>
+            <p class="mt-0.5 text-sm" style="color:var(--text-body)">{{ ll.tituloResumen }}</p>
           }
-          <p class="mt-0.5 text-xs text-slate-400">{{ ll.conversationId }}</p>
+          <p class="mt-0.5 text-[11px]" style="color:var(--text-faint);font-family:var(--font-mono)">{{ ll.conversationId }}</p>
         </div>
         <button
           (click)="closeTranscript()"
-          class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+          class="flex h-8 w-8 items-center justify-center rounded-[10px] transition-colors duration-150"
+          style="color:var(--text-muted)"
           aria-label="Cerrar"
         >
-          <lucide-icon [img]="XIcon" size="18"></lucide-icon>
+          <lucide-icon [img]="XIcon" size="16"></lucide-icon>
         </button>
       </div>
 
       <!-- Resumen IA -->
-      <div class="border-b border-slate-100 bg-violet-50 px-5 py-3">
-        <p class="text-xs font-semibold text-violet-700">Resumen IA</p>
-        <p class="mt-1 text-sm text-slate-700">{{ ll.resumen }}</p>
-        <div class="mt-2 flex flex-wrap gap-3 text-xs text-slate-500">
+      <div class="px-5 py-3" style="border-bottom:1px solid var(--border);background:color-mix(in srgb,var(--accent-ia) 6%,transparent)">
+        <p class="text-[10.5px] font-semibold tracking-[.06em] uppercase"
+          style="color:var(--accent-ia);font-family:var(--font-mono)">Resumen IA</p>
+        <p class="mt-1.5 text-sm leading-relaxed" style="color:var(--text-body)">{{ ll.resumen }}</p>
+        <div class="mt-2.5 flex flex-wrap gap-x-4 gap-y-1.5 text-[12.5px]" style="color:var(--text-body)">
           @if (ll.datosCapturados.nombreCliente) {
-            <span>👤 {{ ll.datosCapturados.nombreCliente }}</span>
+            <span class="flex items-center gap-1">
+              <lucide-icon [img]="UserCheckIcon" size="12" style="color:var(--text-muted)"></lucide-icon>
+              {{ ll.datosCapturados.nombreCliente }}
+            </span>
           }
           @if (ll.datosCapturados.telefono) {
-            <span>📞 {{ ll.datosCapturados.telefono }}</span>
+            <span class="flex items-center gap-1" style="font-family:var(--font-mono)">
+              <lucide-icon [img]="PhoneIcon" size="12" style="color:var(--text-muted)"></lucide-icon>
+              {{ ll.datosCapturados.telefono }}
+            </span>
           }
           @if (ll.datosCapturados.especialidadJuridica) {
-            <span>⚖️ {{ getEspecialidadLabel(ll.datosCapturados.especialidadJuridica) }}</span>
+            <span class="flex items-center gap-1">
+              <lucide-icon [img]="FileTextIcon" size="12" style="color:var(--text-muted)"></lucide-icon>
+              {{ getEspecialidadLabel(ll.datosCapturados.especialidadJuridica) }}
+            </span>
           }
           @if (ll.datosCapturados.nivelUrgencia) {
-            <span>🚨 {{ getUrgencyLabel(ll.datosCapturados.nivelUrgencia) }}</span>
+            <span class="flex items-center gap-1">
+              <lucide-icon [img]="ZapIcon" size="12" style="color:var(--warning)"></lucide-icon>
+              {{ getUrgencyLabel(ll.datosCapturados.nivelUrgencia) }}
+            </span>
           }
         </div>
       </div>
@@ -332,9 +377,11 @@
           <div class="flex" [class]="turno.rol === 'agente' ? 'justify-start' : 'justify-end'">
             <div
               class="max-w-[80%] rounded-2xl px-4 py-2.5 text-sm"
-              [class]="turno.rol === 'agente' ? 'rounded-tl-none bg-slate-100 text-slate-800' : 'rounded-tr-none bg-violet-600 text-white'"
+              [style]="turno.rol === 'agente'
+                ? 'background:var(--surface-2);color:var(--text);border-radius:4px 18px 18px 18px'
+                : 'background:var(--accent-ia);color:#fff;border-radius:18px 4px 18px 18px'"
             >
-              <p class="mb-1 text-xs font-semibold opacity-60">
+              <p class="mb-1 text-[11px] font-semibold opacity-60">
                 {{ turno.rol === 'agente' ? 'Lexi (IA)' : 'Cliente' }}
               </p>
               {{ turno.mensaje }}
@@ -344,14 +391,15 @@
       </div>
 
       <!-- Dialog footer -->
-      <div class="flex items-center gap-4 border-t border-slate-100 px-5 py-3 text-xs text-slate-400">
+      <div class="flex flex-wrap items-center gap-4 px-5 py-3 text-[12px]"
+        style="border-top:1px solid var(--border);color:var(--text-muted);font-family:var(--font-mono)">
         <span>{{ ll.transcripcion.length }} turnos</span>
-        <span>Duración: {{ formatDuracion(ll.duracionSegundos) }}</span>
+        <span>{{ formatDuracion(ll.duracionSegundos) }}</span>
         <span>{{ formatDate(ll.creadoEn) }} · {{ formatTime(ll.creadoEn) }}</span>
         @if (ll.exitosa) {
-          <span class="text-green-600 font-medium">✓ Exitosa</span>
+          <span class="font-semibold" style="color:var(--success)">✓ Exitosa</span>
         } @else {
-          <span class="text-red-500 font-medium">✗ No exitosa</span>
+          <span class="font-semibold" style="color:var(--danger)">✗ No exitosa</span>
         }
       </div>
     </div>
@@ -361,43 +409,48 @@
 <!-- Associate-to-contact Dialog -->
 @if (associatingLlamada(); as ll) {
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4"
+    style="background:rgba(7,11,22,.55);backdrop-filter:blur(4px)"
     (click)="closeAssociate()"
     role="dialog"
     aria-modal="true"
     aria-label="Asociar llamada a contacto existente"
   >
     <div
-      class="relative flex h-full max-h-[80vh] w-full max-w-md flex-col rounded-2xl bg-white shadow-2xl"
+      class="relative flex h-full max-h-[80vh] w-full max-w-md flex-col rounded-[20px] shadow-[0_24px_60px_-30px_rgba(20,32,60,.4)]"
+      style="background:var(--surface)"
       (click)="$event.stopPropagation()"
     >
       <!-- Header -->
-      <div class="flex items-start justify-between border-b border-slate-100 p-5">
+      <div class="flex items-start justify-between px-5 py-4" style="border-bottom:1px solid var(--border)">
         <div>
-          <h2 class="font-semibold text-slate-900">Asociar a contacto existente</h2>
-          <p class="mt-0.5 text-sm text-slate-500">
-            Vincula esta llamada de {{ ll.datosCapturados.nombreCliente || 'desconocido' }} a un contacto.
+          <h2 class="font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Asociar a contacto</h2>
+          <p class="mt-0.5 text-sm" style="color:var(--text-body)">
+            Vincula la llamada de <span class="font-medium" style="color:var(--text-strong)">{{ ll.datosCapturados.nombreCliente || 'desconocido' }}</span> a un contacto.
           </p>
         </div>
         <button
           (click)="closeAssociate()"
-          class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+          class="flex h-8 w-8 items-center justify-center rounded-[10px] transition-colors duration-150"
+          style="color:var(--text-muted)"
           aria-label="Cerrar"
         >
-          <lucide-icon [img]="XIcon" size="18"></lucide-icon>
+          <lucide-icon [img]="XIcon" size="16"></lucide-icon>
         </button>
       </div>
 
       <!-- Search -->
-      <div class="border-b border-slate-100 p-4">
-        <div class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2">
-          <lucide-icon [img]="SearchIcon" size="16" class="text-slate-400 shrink-0"></lucide-icon>
+      <div class="p-4" style="border-bottom:1px solid var(--border)">
+        <div class="flex items-center gap-2 rounded-[12px] px-3 py-2.5 transition-[box-shadow] duration-150"
+          style="background:var(--surface-2);border:1px solid var(--border)">
+          <lucide-icon [img]="SearchIcon" size="15" class="shrink-0" style="color:var(--text-muted)"></lucide-icon>
           <input
             type="text"
             placeholder="Buscar por nombre, email o teléfono..."
             [value]="contactQuery()"
             (input)="contactQuery.set($any($event.target).value)"
-            class="flex-1 min-w-0 bg-transparent text-sm text-slate-700 outline-none placeholder-slate-400"
+            class="flex-1 min-w-0 bg-transparent text-sm outline-none"
+            style="color:var(--text);font-family:var(--font-ui)"
             autofocus
             aria-label="Buscar contacto"
           />
@@ -409,18 +462,20 @@
         @for (c of contactResults(); track c.id) {
           <button
             (click)="asociarAContacto(c)"
-            class="flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-slate-50"
+            class="flex w-full items-center gap-3 rounded-[12px] p-3 text-left transition-colors duration-150"
+            style="color:var(--text)"
           >
-            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700">
+            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-bold"
+              style="background:color-mix(in srgb,var(--accent-ia) 14%,transparent);color:var(--accent-ia)">
               {{ contactInitials(c) }}
             </div>
             <div class="min-w-0">
-              <p class="truncate text-sm font-medium text-slate-800">{{ contactName(c) }}</p>
-              <p class="truncate text-xs text-slate-400">{{ c.email }}@if (c.mobile) { · {{ c.mobile }} }</p>
+              <p class="truncate text-[14px] font-semibold" style="color:var(--text-strong)">{{ contactName(c) }}</p>
+              <p class="truncate text-[12.5px]" style="color:var(--text-muted)">{{ c.email }}@if (c.mobile) { · {{ c.mobile }} }</p>
             </div>
           </button>
         } @empty {
-          <p class="py-10 text-center text-sm text-slate-400">No se encontraron contactos</p>
+          <p class="py-10 text-center text-sm" style="color:var(--text-muted)">No se encontraron contactos</p>
         }
       </div>
     </div>

@@ -1,17 +1,18 @@
-<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+<div class="rounded-xl overflow-hidden" style="background:var(--surface);border:1px solid var(--border)">
 
   <!-- Header -->
-  <div class="flex items-center justify-between px-4 py-3 border-b border-slate-200">
+  <div class="flex items-center justify-between px-4 py-3" style="border-bottom:1px solid var(--border)">
     <div class="flex items-center gap-2">
-      <lucide-icon [img]="ClipboardCheckIcon" class="w-4 h-4 text-slate-500" />
-      <h3 class="text-sm font-medium text-slate-700">Revisión de movimientos</h3>
+      <lucide-icon [img]="ClipboardCheckIcon" class="w-4 h-4" style="color:var(--text-muted)" />
+      <h3 class="text-sm font-semibold" style="color:var(--text-strong)">Revisión de movimientos</h3>
       @if (progreso().total > 0) {
-        <span
-          class="text-xs font-medium px-2 py-0.5 rounded-full"
-          [class]="progreso().aprobados === progreso().total
-            ? 'bg-emerald-100 text-emerald-700'
-            : 'bg-slate-100 text-slate-600'"
-        >
+        <span class="text-xs font-bold px-2 py-0.5 rounded-full"
+          [style.background]="progreso().aprobados === progreso().total
+            ? 'color-mix(in srgb,var(--success) 12%,transparent)'
+            : 'var(--surface-2)'"
+          [style.color]="progreso().aprobados === progreso().total
+            ? 'var(--success)'
+            : 'var(--text-muted)'">
           {{ progreso().aprobados }}/{{ progreso().total }} aprobados
         </span>
       }
@@ -19,16 +20,12 @@
   </div>
 
   <!-- Filtros -->
-  <div class="flex gap-1 px-4 py-2.5 border-b border-slate-100 bg-slate-50">
+  <div class="flex gap-1 px-4 py-2.5" style="border-bottom:1px solid var(--border);background:var(--surface-2)">
     @for (f of [['pendientes','Pendientes'],['aprobados','Aprobados'],['todos','Todos']]; track f[0]) {
-      <button
-        type="button"
-        (click)="filtro.set($any(f[0]))"
-        class="px-3 py-1 text-xs font-medium rounded-full transition-colors"
-        [class]="filtro() === f[0]
-          ? 'bg-violet-600 text-white'
-          : 'text-slate-500 hover:bg-slate-200'"
-      >
+      <button type="button" (click)="filtro.set($any(f[0]))"
+        class="px-3 py-1 text-xs font-semibold rounded-full transition-all duration-150"
+        [style.background]="filtro() === f[0] ? 'var(--brand)' : 'transparent'"
+        [style.color]="filtro() === f[0] ? 'white' : 'var(--text-muted)'">
         {{ f[1] }}
       </button>
     }
@@ -36,96 +33,87 @@
 
   <!-- Lista -->
   @if (loading()) {
-    <div class="p-8 text-center text-slate-400 text-sm">Cargando movimientos...</div>
+    <div class="p-8 text-center text-sm" style="color:var(--text-faint)">Cargando movimientos...</div>
   } @else if (movimientosEnriquecidos().length === 0) {
-    <div class="p-10 text-center text-slate-400 text-sm">
+    <div class="p-10 text-center text-sm" style="color:var(--text-faint)">
       <p>Sin movimientos registrados</p>
       <p class="text-xs mt-1">Los movimientos de gestoría aparecerán aquí para su revisión</p>
     </div>
   } @else if (movimientosFiltrados().length === 0) {
-    <div class="p-8 text-center text-slate-400 text-sm">
+    <div class="p-8 text-center text-sm" style="color:var(--text-faint)">
       No hay movimientos en este filtro
     </div>
   } @else {
-    <ul class="divide-y divide-slate-100">
+    <ul>
       @for (mov of movimientosFiltrados(); track mov.id) {
-        <li class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors">
+        <li class="flex items-center gap-3 px-4 py-3 transition-colors duration-150"
+          style="border-bottom:1px solid var(--border)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+          (mouseleave)="$any($event.currentTarget).style.background=''">
 
           <!-- Toggle aprobación -->
-          <button
-            type="button"
-            (click)="toggleAprobado(mov)"
-            [disabled]="toggling() === mov.id"
+          <button type="button" (click)="toggleAprobado(mov)" [disabled]="toggling() === mov.id"
             class="shrink-0 transition-colors disabled:opacity-50"
-            [attr.aria-label]="mov.aprobado ? 'Quitar aprobación' : 'Aprobar movimiento'"
-          >
-            <lucide-icon
-              [img]="mov.aprobado ? CheckCircle2Icon : CircleIcon"
-              class="w-5 h-5"
-              [class]="mov.aprobado ? 'text-emerald-500' : 'text-slate-300 hover:text-slate-400'"
-            />
+            [attr.aria-label]="mov.aprobado ? 'Quitar aprobación' : 'Aprobar movimiento'">
+            <lucide-icon [img]="mov.aprobado ? CheckCircle2Icon : CircleIcon" class="w-5 h-5"
+              [style.color]="mov.aprobado ? 'var(--success)' : 'var(--border)'" />
           </button>
 
           <!-- Info -->
           <div class="flex-1 min-w-0">
-            <!-- Mobile: dos líneas; Desktop: una línea -->
             <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-              <span class="text-xs text-slate-400 shrink-0">{{ mov.fecha }}</span>
-              <span class="text-xs text-slate-500 font-medium truncate">{{ mov.casoNombre }}</span>
-              <span
-                class="text-xs px-1.5 py-0.5 rounded font-medium shrink-0"
-                [class]="tipoClasses(mov.tipo)"
-              >{{ tipoLabel(mov.tipo) }}</span>
-              <!-- Cuenta: badge editable o asignar -->
+              <span class="text-xs shrink-0" style="color:var(--text-faint);font-family:var(--font-mono)">{{ mov.fecha }}</span>
+              <span class="text-xs font-medium truncate" style="color:var(--text-muted)">{{ mov.casoNombre }}</span>
+              <span class="text-[10.5px] rounded px-1.5 py-0.5 font-bold shrink-0"
+                [class]="tipoClasses(mov.tipo)">{{ tipoLabel(mov.tipo) }}</span>
+              <!-- Cuenta badge -->
               @if (editandoMovId() === mov.id) {
                 <span class="flex items-center gap-1 shrink-0">
-                  <select
-                    [value]="mov.cuentaId ?? ''"
+                  <select [value]="mov.cuentaId ?? ''"
                     (change)="cambiarCuenta(mov, $any($event.target).value)"
                     [disabled]="cambiandoCuenta()"
-                    class="text-xs border border-slate-300 rounded px-1.5 py-0.5 bg-white focus:outline-none focus:ring-1 focus:ring-violet-400 disabled:opacity-50"
-                  >
+                    class="form-select text-xs disabled:opacity-50" style="width:auto;padding:0.125rem 0.375rem;border-radius:0.375rem">
                     <option value="">Sin cuenta</option>
                     @for (c of cuentas(); track c.id) {
                       <option [value]="c.id">{{ c.nombre }}</option>
                     }
                   </select>
                   <button type="button" (click)="editandoMovId.set(null)"
-                    class="text-slate-400 hover:text-slate-600"
-                    aria-label="Cancelar">
+                    style="color:var(--text-faint)" aria-label="Cancelar">
                     <lucide-icon [img]="XIcon" class="w-3.5 h-3.5" />
                   </button>
                 </span>
               } @else {
                 <span class="flex items-center gap-0.5 shrink-0 group">
                   @if (mov.cuentaNombre) {
-                    <span class="text-xs px-1.5 py-0.5 rounded font-medium bg-blue-50 text-blue-600">
+                    <span class="text-[10.5px] rounded px-1.5 py-0.5 font-bold"
+                      style="background:color-mix(in srgb,var(--brand) 10%,transparent);color:var(--brand)">
                       {{ mov.cuentaNombre }}
                     </span>
                   } @else {
-                    <span class="text-xs px-1.5 py-0.5 rounded font-medium bg-slate-100 text-slate-400 italic">
+                    <span class="text-[10.5px] rounded px-1.5 py-0.5 font-bold italic"
+                      style="background:var(--surface-2);color:var(--text-faint)">
                       Sin cuenta
                     </span>
                   }
                   <button type="button" (click)="editandoMovId.set(mov.id)"
-                    class="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-violet-600 ml-0.5"
+                    class="opacity-0 group-hover:opacity-100 transition-opacity ml-0.5"
+                    style="color:var(--text-faint)"
                     aria-label="Cambiar cuenta">
                     <lucide-icon [img]="PencilIcon" class="w-3 h-3" />
                   </button>
                 </span>
               }
             </div>
-            <p class="text-sm text-slate-800 truncate mt-0.5">{{ mov.concepto }}</p>
+            <p class="text-sm truncate mt-0.5" style="color:var(--text-strong)">{{ mov.concepto }}</p>
             @if (mov.creadoPorNombre) {
-              <p class="text-xs text-slate-400 mt-0.5">Por: {{ mov.creadoPorNombre }}</p>
+              <p class="text-xs mt-0.5" style="color:var(--text-faint)">Por: {{ mov.creadoPorNombre }}</p>
             }
           </div>
 
           <!-- Importe -->
-          <span
-            class="text-sm font-semibold shrink-0"
-            [class]="mov.esEntrada ? 'text-emerald-600' : 'text-red-500'"
-          >
+          <span class="text-sm font-bold shrink-0 tabular-nums" style="font-family:var(--font-mono)"
+            [style.color]="mov.esEntrada ? 'var(--success)' : 'var(--danger)'">
             {{ mov.esEntrada ? '+' : '−' }}{{ mov.importe | number:'1.2-2' }} €
           </span>
         </li>
@@ -135,16 +123,16 @@
 
   <!-- Footer: Aprobar todos -->
   @if (!loading() && puedeAprobarTodos()) {
-    <div class="px-4 py-3 border-t border-slate-200 bg-emerald-50 flex items-center justify-between gap-3">
-      <p class="text-xs text-emerald-700">
+    <div class="px-4 py-3 flex items-center justify-between gap-3"
+      style="border-top:1px solid var(--border);background:color-mix(in srgb,var(--success) 6%,transparent)">
+      <p class="text-xs" style="color:var(--success)">
         El cotejo está conciliado. Puedes confirmar todos los movimientos pendientes.
       </p>
-      <button
-        type="button"
-        (click)="aprobarTodos()"
-        [disabled]="aprobandoTodos()"
-        class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 shrink-0"
-      >
+      <button type="button" (click)="aprobarTodos()" [disabled]="aprobandoTodos()"
+        class="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 shrink-0 transition-all duration-150"
+        style="background:var(--success)"
+        (mouseenter)="$any($event.currentTarget).style.opacity='0.85'"
+        (mouseleave)="$any($event.currentTarget).style.opacity='1'">
         <lucide-icon [img]="CheckCheckIcon" class="w-4 h-4" />
         {{ aprobandoTodos() ? 'Aprobando...' : 'Aprobar todos' }}
       </button>

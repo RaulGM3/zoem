@@ -72,23 +72,23 @@ export class CalendarEventListComponent {
     return map[type] ?? Calendar;
   }
 
-  getTypeClass(type: string): string {
+  getTypeColor(type: string): string {
     const map: Record<string, string> = {
-      reunion: 'bg-violet-100 text-violet-700',
-      llamada: 'bg-green-100 text-green-700',
-      entrega: 'bg-blue-100 text-blue-700',
-      recordatorio: 'bg-amber-100 text-amber-700',
+      reunion: 'var(--accent)',
+      llamada: 'var(--success)',
+      entrega: 'var(--brand)',
+      recordatorio: 'var(--warning)',
     };
-    return map[type] ?? 'bg-slate-100 text-slate-600';
+    return map[type] ?? 'var(--text-muted)';
   }
 
-  getStatusClass(status: string): string {
+  getStatusColor(status: string): string {
     const map: Record<string, string> = {
-      confirmada: 'bg-green-100 text-green-700',
-      pendiente: 'bg-amber-100 text-amber-700',
-      cancelada: 'bg-red-100 text-red-700',
+      confirmada: 'var(--success)',
+      pendiente: 'var(--warning)',
+      cancelada: 'var(--danger)',
     };
-    return map[status] ?? 'bg-slate-100 text-slate-600';
+    return map[status] ?? 'var(--text-muted)';
   }
 
   getStatusLabel(status: string): string {

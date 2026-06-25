@@ -1,60 +1,64 @@
 <!-- Header -->
 <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
   <div>
-    <h1 class="text-2xl font-bold text-slate-900">Facturación</h1>
-    <p class="mt-1 text-sm text-slate-500">Sumatoria de la gestoría de los casos abiertos y cierre controlado</p>
+    <h1 class="text-[22px] font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Facturación</h1>
+    <p class="mt-1 text-sm" style="color:var(--text-muted)">Sumatoria de la gestoría de los casos abiertos y cierre controlado</p>
   </div>
 </div>
 
 <!-- Summary Cards: sumatoria de casos abiertos -->
 <div class="mb-6 grid gap-4 sm:grid-cols-4">
-  <div class="rounded-xl border border-slate-200 bg-white p-5">
+  <div class="kpi-card rounded-xl p-5" style="border:1px solid var(--border);background:var(--surface)">
     <div class="flex items-center gap-3 mb-3">
-      <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50">
-        <lucide-icon [img]="TrendingUpIcon" size="20" class="text-emerald-600"></lucide-icon>
+      <div class="flex h-10 w-10 items-center justify-center rounded-lg" style="background:color-mix(in srgb,var(--success) 12%,transparent)">
+        <lucide-icon [img]="TrendingUpIcon" size="20" style="color:var(--success)"></lucide-icon>
       </div>
-      <p class="text-sm text-slate-500">Ingresos</p>
+      <p class="text-sm" style="color:var(--text-muted)">Ingresos</p>
     </div>
-    <p class="text-2xl font-bold text-slate-900">{{ totales().ingresos | number:'1.0-0' }}€</p>
+    <p class="text-[26px] font-semibold tabular-nums" style="color:var(--text-strong);font-family:var(--font-display)">{{ totales().ingresos | number:'1.0-0' }}€</p>
   </div>
-  <div class="rounded-xl border border-slate-200 bg-white p-5">
+  <div class="kpi-card rounded-xl p-5" style="border:1px solid var(--border);background:var(--surface)">
     <div class="flex items-center gap-3 mb-3">
-      <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50">
-        <lucide-icon [img]="ClockIcon" size="20" class="text-amber-600"></lucide-icon>
+      <div class="flex h-10 w-10 items-center justify-center rounded-lg" style="background:color-mix(in srgb,var(--warning) 12%,transparent)">
+        <lucide-icon [img]="ClockIcon" size="20" style="color:var(--warning)"></lucide-icon>
       </div>
-      <p class="text-sm text-slate-500">Suplidos</p>
+      <p class="text-sm" style="color:var(--text-muted)">Suplidos</p>
     </div>
-    <p class="text-2xl font-bold text-slate-900">{{ totales().suplidos | number:'1.0-0' }}€</p>
+    <p class="text-[26px] font-semibold tabular-nums" style="color:var(--text-strong);font-family:var(--font-display)">{{ totales().suplidos | number:'1.0-0' }}€</p>
   </div>
-  <div class="rounded-xl border border-slate-200 bg-white p-5">
+  <div class="kpi-card rounded-xl p-5" style="border:1px solid var(--border);background:var(--surface)">
     <div class="flex items-center gap-3 mb-3">
-      <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-50">
-        <lucide-icon [img]="ReceiptIcon" size="20" class="text-violet-600"></lucide-icon>
+      <div class="flex h-10 w-10 items-center justify-center rounded-lg" style="background:color-mix(in srgb,var(--accent) 12%,transparent)">
+        <lucide-icon [img]="ReceiptIcon" size="20" style="color:var(--accent)"></lucide-icon>
       </div>
-      <p class="text-sm text-slate-500">Honorarios</p>
+      <p class="text-sm" style="color:var(--text-muted)">Honorarios</p>
     </div>
-    <p class="text-2xl font-bold text-slate-900">{{ totales().honorarios | number:'1.0-0' }}€</p>
+    <p class="text-[26px] font-semibold tabular-nums" style="color:var(--text-strong);font-family:var(--font-display)">{{ totales().honorarios | number:'1.0-0' }}€</p>
   </div>
-  <div class="rounded-xl border border-slate-200 bg-white p-5">
+  <div class="kpi-card rounded-xl p-5" style="border:1px solid var(--border);background:var(--surface)">
     <div class="flex items-center gap-3 mb-3">
-      <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100">
-        <lucide-icon [img]="EuroIcon" size="20" class="text-slate-600"></lucide-icon>
+      <div class="flex h-10 w-10 items-center justify-center rounded-lg" style="background:var(--surface-2)">
+        <lucide-icon [img]="EuroIcon" size="20" style="color:var(--text-muted)"></lucide-icon>
       </div>
-      <p class="text-sm text-slate-500">Saldo</p>
+      <p class="text-sm" style="color:var(--text-muted)">Saldo</p>
     </div>
-    <p class="text-2xl font-bold" [class.text-emerald-600]="totales().saldo >= 0" [class.text-red-600]="totales().saldo < 0">
+    <p class="text-[26px] font-semibold tabular-nums" style="font-family:var(--font-display)" [style.color]="totales().saldo >= 0 ? 'var(--success)' : 'var(--danger)'">
       {{ totales().saldo | number:'1.0-0' }}€
     </p>
   </div>
 </div>
 
 <!-- Tabs -->
-<div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
-  <div class="flex border-b border-slate-200 overflow-x-auto">
-    <button (click)="activeTab.set('casos')" [class]="activeTab() === 'casos' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Casos abiertos</button>
-    <button (click)="activeTab.set('archivo')" [class]="activeTab() === 'archivo' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Archivo</button>
-    <button (click)="activeTab.set('fiscal')" [class]="activeTab() === 'fiscal' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Panel Fiscal</button>
-    <button (click)="activeTab.set('horas')" [class]="activeTab() === 'horas' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Registro de Horas</button>
+<div class="rounded-xl overflow-hidden" style="border:1px solid var(--border);background:var(--surface)">
+  <div class="flex overflow-x-auto" style="border-bottom:1px solid var(--border)">
+    @for (tab of [['casos','Casos abiertos'],['archivo','Archivo'],['fiscal','Panel Fiscal'],['horas','Registro de Horas']]; track tab[0]) {
+      <button (click)="activeTab.set($any(tab[0]))"
+        class="px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors duration-150"
+        [style.color]="activeTab() === tab[0] ? 'var(--brand)' : 'var(--text-muted)'"
+        [style.border-bottom]="activeTab() === tab[0] ? '2px solid var(--brand)' : '2px solid transparent'">
+        {{ tab[1] }}
+      </button>
+    }
   </div>
 
   <!-- TAB: Casos abiertos -->
@@ -62,37 +66,37 @@
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
-          <tr class="border-b bg-slate-50">
-            <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Caso</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Ingresos</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Suplidos</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Honorarios</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Saldo</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Gestoría</th>
+          <tr style="border-bottom:1px solid var(--border);background:var(--surface-2)">
+            <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Caso</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Ingresos</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Suplidos</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Honorarios</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Saldo</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Gestoría</th>
             <th class="px-4 py-3"></th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-100">
+        <tbody>
           @for (caso of casosAbiertos(); track caso.id) {
-            <tr class="hover:bg-slate-50 transition-colors">
+            <tr class="transition-colors duration-150" style="border-bottom:1px solid var(--border-soft)"
+              (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+              (mouseleave)="$any($event.currentTarget).style.background=''">
               <td class="px-5 py-4">
-                <p class="font-semibold text-slate-900">{{ caso.titulo }}</p>
-                <p class="text-xs text-slate-400">{{ caso.tipo }}</p>
+                <p class="font-semibold" style="color:var(--text-strong)">{{ caso.titulo }}</p>
+                <p class="text-xs" style="color:var(--text-faint)">{{ caso.tipo }}</p>
               </td>
-              <td class="px-4 py-4 text-right text-slate-600">{{ caso.resumenFinanciero.totalIngresos | number:'1.0-0' }}€</td>
-              <td class="px-4 py-4 text-right text-slate-600">{{ caso.resumenFinanciero.totalSuplidos | number:'1.0-0' }}€</td>
-              <td class="px-4 py-4 text-right text-slate-600">{{ caso.resumenFinanciero.totalHonorarios | number:'1.0-0' }}€</td>
-              <td class="px-4 py-4 text-right font-semibold"
-                [class.text-emerald-600]="caso.resumenFinanciero.saldo >= 0"
-                [class.text-red-600]="caso.resumenFinanciero.saldo < 0">
+              <td class="px-4 py-4 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.totalIngresos | number:'1.0-0' }}€</td>
+              <td class="px-4 py-4 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.totalSuplidos | number:'1.0-0' }}€</td>
+              <td class="px-4 py-4 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.totalHonorarios | number:'1.0-0' }}€</td>
+              <td class="px-4 py-4 text-right font-semibold tabular-nums"
+                [style.color]="caso.resumenFinanciero.saldo >= 0 ? 'var(--success)' : 'var(--danger)'"
+                style="font-family:var(--font-mono)">
                 {{ caso.resumenFinanciero.saldo | number:'1.0-0' }}€
               </td>
               <td class="px-4 py-4">
                 <div class="flex items-center gap-2">
-                  <span class="w-2.5 h-2.5 rounded-full shrink-0"
-                    [class.bg-emerald-500]="esEjecutado(caso)"
-                    [class.bg-amber-400]="!esEjecutado(caso)"></span>
-                  <span class="text-xs" [class.text-emerald-600]="esEjecutado(caso)" [class.text-slate-500]="!esEjecutado(caso)">
+                  <span class="w-2.5 h-2.5 rounded-full shrink-0" [style.background]="esEjecutado(caso) ? 'var(--success)' : 'var(--warning)'"></span>
+                  <span class="text-xs" [style.color]="esEjecutado(caso) ? 'var(--success)' : 'var(--text-muted)'">
                     {{ esEjecutado(caso) ? 'Ejecutada' : slotsLabel(caso) }}
                   </span>
                 </div>
@@ -100,18 +104,25 @@
               <td class="px-4 py-4">
                 <div class="flex items-center justify-end gap-2">
                   @if (caso.facturaId) {
-                    <span class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
+                    <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium"
+                      style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">
                       <lucide-icon [img]="FileCheckIcon" size="13"></lucide-icon> Facturado
                     </span>
                   } @else if (perm.can('Facturación', 'crear')) {
                     <button (click)="abrirFactura(caso)" [disabled]="!esEjecutado(caso)"
-                      class="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40">
+                      class="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40"
+                      style="border:1px solid var(--border);color:var(--text-body)"
+                      (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                      (mouseleave)="$any($event.currentTarget).style.background=''">
                       <lucide-icon [img]="ReceiptIcon" size="14"></lucide-icon> Generar factura
                     </button>
                   }
                   @if (perm.can('Facturación', 'crear')) {
                     <button (click)="abrirCierre(caso)" [disabled]="!esEjecutado(caso)"
-                      class="inline-flex items-center gap-1 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-40">
+                      class="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40"
+                      style="background:var(--brand)"
+                      (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+                      (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
                       <lucide-icon [img]="CheckCircle2Icon" size="14"></lucide-icon> Cerrar caso
                     </button>
                   }
@@ -121,7 +132,7 @@
           }
           @if (casosAbiertos().length === 0) {
             <tr>
-              <td colspan="7" class="px-5 py-12 text-center text-sm text-slate-400">
+              <td colspan="7" class="px-5 py-12 text-center text-sm" style="color:var(--text-faint)">
                 {{ loading() ? 'Cargando casos…' : 'No hay casos abiertos' }}
               </td>
             </tr>
@@ -136,52 +147,53 @@
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
-          <tr class="border-b bg-slate-50">
-            <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Caso</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Saldo final</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Saldo bancario</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Cerrado</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Factura</th>
+          <tr style="border-bottom:1px solid var(--border);background:var(--surface-2)">
+            <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Caso</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Saldo final</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Saldo bancario</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Cerrado</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Factura</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-100">
+        <tbody>
           @for (caso of casosArchivados(); track caso.id) {
-            <tr class="hover:bg-slate-50 transition-colors">
+            <tr class="transition-colors duration-150" style="border-bottom:1px solid var(--border-soft)"
+              (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+              (mouseleave)="$any($event.currentTarget).style.background=''">
               <td class="px-5 py-4">
-                <p class="font-semibold text-slate-900">{{ caso.titulo }}</p>
-                <p class="text-xs text-slate-400">{{ caso.tipo }}</p>
+                <p class="font-semibold" style="color:var(--text-strong)">{{ caso.titulo }}</p>
+                <p class="text-xs" style="color:var(--text-faint)">{{ caso.tipo }}</p>
               </td>
-              <td class="px-4 py-4 text-right text-slate-600">{{ caso.resumenFinanciero.saldo | number:'1.0-0' }}€</td>
-              <td class="px-4 py-4 text-right text-slate-600">
+              <td class="px-4 py-4 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.saldo | number:'1.0-0' }}€</td>
+              <td class="px-4 py-4 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">
                 {{ caso.cierreSaldoBancario != null ? (caso.cierreSaldoBancario | number:'1.0-0') + '€' : '—' }}
               </td>
-              <td class="px-4 py-4 text-xs text-slate-500">{{ caso.cierreConfirmadoAt ? (caso.cierreConfirmadoAt | slice:0:10) : '—' }}</td>
+              <td class="px-4 py-4 text-xs" style="color:var(--text-muted)">{{ caso.cierreConfirmadoAt ? (caso.cierreConfirmadoAt | slice:0:10) : '—' }}</td>
               <td class="px-4 py-4">
                 @if (caso.facturaId) {
                   <div class="flex flex-col gap-1">
-                    <span class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
+                    <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium"
+                      style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">
                       <lucide-icon [img]="FileCheckIcon" size="13"></lucide-icon> Emitida
                     </span>
                     @if (verifactuEstado(caso.facturaId); as vf) {
-                      <span
-                        class="inline-flex items-center gap-1 text-xs"
-                        [class]="verifactuBadgeClass(caso.facturaId)"
-                        [title]="vf.csv ? 'CSV: ' + vf.csv : (vf.error ?? 'Verifactu: ' + vf.estado)"
-                      >
+                      <span class="inline-flex items-center gap-1 text-xs"
+                        [style.color]="verifactuBadgeColor(caso.facturaId)"
+                        [title]="vf.csv ? 'CSV: ' + vf.csv : (vf.error ?? 'Verifactu: ' + vf.estado)">
                         <lucide-icon [img]="verifactuBadgeIcon(caso.facturaId)" size="12"></lucide-icon>
                         {{ vf.estado === 'enviado' ? 'Verifactu ✓' : vf.estado === 'error' ? 'Error AEAT' : 'Pendiente AEAT' }}
                       </span>
                     }
                   </div>
                 } @else {
-                  <span class="text-xs text-slate-400">Sin factura</span>
+                  <span class="text-xs" style="color:var(--text-faint)">Sin factura</span>
                 }
               </td>
             </tr>
           }
           @if (casosArchivados().length === 0) {
             <tr>
-              <td colspan="5" class="px-5 py-12 text-center text-sm text-slate-400">No hay casos cerrados</td>
+              <td colspan="5" class="px-5 py-12 text-center text-sm" style="color:var(--text-faint)">No hay casos cerrados</td>
             </tr>
           }
         </tbody>
@@ -193,35 +205,40 @@
   @if (activeTab() === 'fiscal') {
     <div class="p-5 space-y-5">
       <div class="space-y-2">
-        <h3 class="text-sm font-semibold text-slate-700">Modelos fiscales</h3>
+        <h3 class="text-sm font-semibold" style="color:var(--text-strong)">Modelos fiscales</h3>
         @for (modelo of modelosFiscales; track modelo.modelo + modelo.descripcion) {
-          <div class="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50">
+          <div class="flex items-center justify-between p-4 rounded-lg transition-colors duration-150"
+            style="border:1px solid var(--border)"
+            (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+            (mouseleave)="$any($event.currentTarget).style.background=''">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <lucide-icon [img]="FileTextIcon" class="w-5 h-5 text-blue-600" />
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:color-mix(in srgb,var(--brand) 12%,transparent)">
+                <lucide-icon [img]="FileTextIcon" class="w-5 h-5" style="color:var(--brand)" />
               </div>
               <div>
-                <p class="font-semibold text-slate-800 text-sm">{{ modelo.modelo }}</p>
-                <p class="text-xs text-slate-500">{{ modelo.descripcion }}</p>
+                <p class="font-semibold text-sm" style="color:var(--text-strong)">{{ modelo.modelo }}</p>
+                <p class="text-xs" style="color:var(--text-muted)">{{ modelo.descripcion }}</p>
               </div>
             </div>
             <div class="flex items-center gap-4">
               <div class="text-right">
-                <p class="font-semibold text-slate-800">{{ modelo.importe | number:'1.0-0' }} €</p>
-                <p class="text-xs text-slate-400">{{ modelo.vencimiento }}</p>
+                <p class="font-semibold tabular-nums" style="color:var(--text-strong);font-family:var(--font-mono)">{{ modelo.importe | number:'1.0-0' }} €</p>
+                <p class="text-xs" style="color:var(--text-faint)">{{ modelo.vencimiento }}</p>
               </div>
-              <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getModeloEstadoClass(modelo.estado)">{{ modelo.estado }}</span>
+              <span class="px-2 py-0.5 text-xs rounded-full font-medium"
+                [style.background]="'color-mix(in srgb,' + getModeloEstadoColor(modelo.estado) + ' 12%,transparent)'"
+                [style.color]="getModeloEstadoColor(modelo.estado)">{{ modelo.estado }}</span>
             </div>
           </div>
         }
       </div>
 
-      <div class="p-4 bg-blue-50 rounded-xl border border-blue-200 text-sm">
+      <div class="p-4 rounded-xl text-sm" style="background:color-mix(in srgb,var(--brand) 6%,transparent);border:1px solid color-mix(in srgb,var(--brand) 20%,transparent)">
         <div class="flex items-center gap-2 mb-2">
-          <lucide-icon [img]="ShieldCheckIcon" class="w-4 h-4 text-blue-600" />
-          <p class="font-semibold text-blue-800">VeriFactu — Trazabilidad garantizada</p>
+          <lucide-icon [img]="ShieldCheckIcon" class="w-4 h-4" style="color:var(--brand)" />
+          <p class="font-semibold" style="color:var(--text-strong)">VeriFactu — Trazabilidad garantizada</p>
         </div>
-        <p class="text-xs text-blue-600">Todas las facturas están certificadas con hash SHA-256 conforme al RD 1007/2023. Período de retención: 5 años.</p>
+        <p class="text-xs" style="color:var(--text-body)">Todas las facturas están certificadas con hash SHA-256 conforme al RD 1007/2023. Período de retención: 5 años.</p>
       </div>
     </div>
   }
@@ -230,45 +247,49 @@
   @if (activeTab() === 'horas') {
     <div class="p-5 space-y-4">
       <div class="grid grid-cols-3 gap-3">
-        <div class="p-3 bg-slate-50 rounded-lg text-center">
-          <p class="text-xs text-slate-500">Horas totales</p>
-          <p class="text-xl font-bold text-slate-800">{{ totalHoras() }}h</p>
+        <div class="p-3 rounded-lg text-center" style="background:var(--surface-2)">
+          <p class="text-xs" style="color:var(--text-muted)">Horas totales</p>
+          <p class="text-xl font-semibold tabular-nums" style="color:var(--text-strong);font-family:var(--font-display)">{{ totalHoras() }}h</p>
         </div>
-        <div class="p-3 bg-amber-50 rounded-lg text-center">
-          <p class="text-xs text-slate-500">Sin facturar</p>
-          <p class="text-xl font-bold text-amber-700">{{ horasPendientes() }}h</p>
+        <div class="p-3 rounded-lg text-center" style="background:color-mix(in srgb,var(--warning) 10%,transparent)">
+          <p class="text-xs" style="color:var(--text-muted)">Sin facturar</p>
+          <p class="text-xl font-semibold tabular-nums" style="color:var(--warning);font-family:var(--font-display)">{{ horasPendientes() }}h</p>
         </div>
-        <div class="p-3 bg-violet-50 rounded-lg text-center">
-          <p class="text-xs text-slate-500">Valor pendiente</p>
-          <p class="text-xl font-bold text-violet-700">{{ horasPendientes() * 70 | number:'1.0-0' }} €</p>
+        <div class="p-3 rounded-lg text-center" style="background:color-mix(in srgb,var(--accent) 10%,transparent)">
+          <p class="text-xs" style="color:var(--text-muted)">Valor pendiente</p>
+          <p class="text-xl font-semibold tabular-nums" style="color:var(--accent);font-family:var(--font-display)">{{ horasPendientes() * 70 | number:'1.0-0' }} €</p>
         </div>
       </div>
 
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
-            <tr class="text-left text-slate-500 border-b border-slate-100">
-              <th class="pb-3 font-medium">Fecha</th>
-              <th class="pb-3 font-medium">Cliente / Proyecto</th>
-              <th class="pb-3 font-medium">Descripción</th>
-              <th class="pb-3 font-medium text-right">Horas</th>
-              <th class="pb-3 font-medium text-right">Importe</th>
-              <th class="pb-3 font-medium text-center">Estado</th>
+            <tr style="border-bottom:1px solid var(--border)">
+              <th class="pb-3 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Fecha</th>
+              <th class="pb-3 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Cliente / Proyecto</th>
+              <th class="pb-3 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Descripción</th>
+              <th class="pb-3 text-right text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Horas</th>
+              <th class="pb-3 text-right text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Importe</th>
+              <th class="pb-3 text-center text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Estado</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100">
+          <tbody>
             @for (hora of registroHoras; track hora.id) {
-              <tr class="hover:bg-slate-50">
-                <td class="py-3 text-slate-500 text-xs">{{ hora.fecha }}</td>
+              <tr class="transition-colors duration-150" style="border-bottom:1px solid var(--border-soft)"
+                (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                (mouseleave)="$any($event.currentTarget).style.background=''">
+                <td class="py-3 text-xs" style="color:var(--text-muted)">{{ hora.fecha }}</td>
                 <td class="py-3">
-                  <p class="font-medium text-slate-800">{{ hora.cliente }}</p>
-                  <p class="text-xs text-slate-400">{{ hora.proyecto }}</p>
+                  <p class="font-medium" style="color:var(--text-strong)">{{ hora.cliente }}</p>
+                  <p class="text-xs" style="color:var(--text-faint)">{{ hora.proyecto }}</p>
                 </td>
-                <td class="py-3 text-slate-500 text-xs max-w-48 truncate">{{ hora.descripcion }}</td>
-                <td class="py-3 text-right font-semibold text-slate-800">{{ hora.horas }}h</td>
-                <td class="py-3 text-right text-slate-600">{{ hora.importe | number:'1.0-0' }} €</td>
+                <td class="py-3 text-xs max-w-48 truncate" style="color:var(--text-muted)">{{ hora.descripcion }}</td>
+                <td class="py-3 text-right font-semibold tabular-nums" style="color:var(--text-strong);font-family:var(--font-mono)">{{ hora.horas }}h</td>
+                <td class="py-3 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ hora.importe | number:'1.0-0' }} €</td>
                 <td class="py-3 text-center">
-                  <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getHoraEstadoClass(hora.estadoFacturacion)">
+                  <span class="px-2 py-0.5 text-xs rounded-full font-medium"
+                    [style.background]="'color-mix(in srgb,' + getHoraEstadoColor(hora.estadoFacturacion) + ' 12%,transparent)'"
+                    [style.color]="getHoraEstadoColor(hora.estadoFacturacion)">
                     {{ hora.estadoFacturacion }}
                   </span>
                 </td>
@@ -283,64 +304,75 @@
 
 <!-- Drawer: Generar factura -->
 @if (facturaCaso(); as caso) {
-  <div class="fixed inset-0 z-50 flex justify-end bg-slate-900/40" (click)="cerrarFacturaDrawer()">
-    <div class="h-full w-full max-w-md overflow-y-auto bg-white shadow-xl" (click)="$event.stopPropagation()">
-      <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+  <div class="fixed inset-0 z-50 flex justify-end bg-black/40" (click)="cerrarFacturaDrawer()">
+    <div class="h-full w-full max-w-md overflow-y-auto shadow-2xl" style="background:var(--surface)" (click)="$event.stopPropagation()">
+      <div class="flex items-center justify-between px-5 py-4" style="border-bottom:1px solid var(--border)">
         <div>
-          <h2 class="text-lg font-bold text-slate-900">Generar factura</h2>
-          <p class="text-xs text-slate-400">{{ caso.titulo }}</p>
+          <h2 class="text-base font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Generar factura</h2>
+          <p class="text-xs" style="color:var(--text-faint)">{{ caso.titulo }}</p>
         </div>
-        <button (click)="cerrarFacturaDrawer()" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" aria-label="Cerrar">
+        <button (click)="cerrarFacturaDrawer()" class="rounded-xl p-1.5 transition-colors duration-150"
+          style="color:var(--text-muted)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+          (mouseleave)="$any($event.currentTarget).style.background=''"
+          aria-label="Cerrar">
           <lucide-icon [img]="XIcon" size="18"></lucide-icon>
         </button>
       </div>
 
       <div class="space-y-4 p-5">
         <div class="flex items-center justify-between">
-          <label for="ivaRate" class="text-sm font-medium text-slate-700">Tasa de IVA (%)</label>
+          <label for="ivaRate" class="form-label mb-0!">Tasa de IVA (%)</label>
           <input id="ivaRate" type="number" min="0" [value]="ivaRate()" (input)="setIvaRate($any($event.target).value)"
-            class="w-24 rounded-lg border border-slate-200 px-3 py-1.5 text-right text-sm focus:border-violet-300 focus:outline-none" />
+            class="form-input w-24 text-right" />
         </div>
 
         <div class="space-y-2">
-          <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Líneas</p>
+          <p class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-faint);font-family:var(--font-mono)">Líneas</p>
           @for (linea of lineas(); track linea.concepto; let i = $index) {
-            <div class="flex items-center gap-3 rounded-lg border border-slate-200 p-3">
+            <div class="flex items-center gap-3 rounded-lg p-3" style="border:1px solid var(--border)">
               <div class="flex-1">
-                <p class="text-sm font-medium text-slate-800">{{ linea.concepto }}</p>
-                <label class="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
-                  <input type="checkbox" [checked]="linea.aplicaIva" (change)="toggleLineaIva(i)" class="rounded border-slate-300 text-violet-600 focus:ring-violet-200" />
+                <p class="text-sm font-medium" style="color:var(--text-strong)">{{ linea.concepto }}</p>
+                <label class="mt-1 flex items-center gap-1.5 text-xs" style="color:var(--text-muted)">
+                  <input type="checkbox" [checked]="linea.aplicaIva" (change)="toggleLineaIva(i)" class="rounded" style="accent-color:var(--brand)" />
                   Aplicar IVA
                 </label>
               </div>
               <div class="flex items-center gap-1">
                 <input type="number" [value]="linea.base" (input)="setLineaBase(i, $any($event.target).value)"
-                  class="w-28 rounded-lg border border-slate-200 px-3 py-1.5 text-right text-sm focus:border-violet-300 focus:outline-none"
+                  class="form-input w-28 text-right"
                   [attr.aria-label]="'Base de ' + linea.concepto" />
-                <span class="text-sm text-slate-400">€</span>
+                <span class="text-sm" style="color:var(--text-faint)">€</span>
               </div>
             </div>
           }
         </div>
 
-        <div class="space-y-1 rounded-lg bg-slate-50 p-4 text-sm">
-          <div class="flex justify-between text-slate-600"><span>Base imponible</span><span>{{ facturaPreview().base | number:'1.2-2' }}€</span></div>
-          <div class="flex justify-between text-slate-600"><span>IVA</span><span>{{ facturaPreview().iva | number:'1.2-2' }}€</span></div>
-          <div class="flex justify-between border-t border-slate-200 pt-1 font-bold text-slate-900"><span>Total</span><span>{{ facturaPreview().total | number:'1.2-2' }}€</span></div>
+        <div class="space-y-1 rounded-lg p-4 text-sm" style="background:var(--surface-2)">
+          <div class="flex justify-between" style="color:var(--text-body)"><span>Base imponible</span><span class="tabular-nums" style="font-family:var(--font-mono)">{{ facturaPreview().base | number:'1.2-2' }}€</span></div>
+          <div class="flex justify-between" style="color:var(--text-body)"><span>IVA</span><span class="tabular-nums" style="font-family:var(--font-mono)">{{ facturaPreview().iva | number:'1.2-2' }}€</span></div>
+          <div class="flex justify-between font-semibold pt-1" style="color:var(--text-strong);border-top:1px solid var(--border)"><span>Total</span><span class="tabular-nums" style="font-family:var(--font-mono)">{{ facturaPreview().total | number:'1.2-2' }}€</span></div>
         </div>
       </div>
 
       @if (companyService.activeCompany()?.verifactu?.enabled) {
-        <div class="mx-5 mb-3 flex items-center gap-2 rounded-lg bg-violet-50 px-3 py-2 text-xs text-violet-700">
+        <div class="mx-5 mb-3 flex items-center gap-2 rounded-lg px-3 py-2 text-xs"
+          style="background:color-mix(in srgb,var(--brand) 8%,transparent);color:var(--brand)">
           <lucide-icon [img]="ShieldCheckIcon" size="14" class="shrink-0"></lucide-icon>
           Esta factura se registrará automáticamente en Verifactu (AEAT).
         </div>
       }
 
-      <div class="flex gap-3 border-t border-slate-200 px-5 py-4">
-        <button (click)="cerrarFacturaDrawer()" class="flex-1 rounded-lg border border-slate-200 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
+      <div class="flex gap-3 px-5 py-4" style="border-top:1px solid var(--border)">
+        <button (click)="cerrarFacturaDrawer()" class="flex-1 rounded-lg py-2.5 text-sm font-medium transition-colors duration-150"
+          style="border:1px solid var(--border);color:var(--text-body)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+          (mouseleave)="$any($event.currentTarget).style.background=''">Cancelar</button>
         <button (click)="confirmarFactura()" [disabled]="saving()"
-          class="flex-1 rounded-lg bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-50">
+          class="flex-1 rounded-lg py-2.5 text-sm font-semibold text-white disabled:opacity-50 transition-colors duration-150"
+          style="background:var(--brand)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+          (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
           {{ saving() ? 'Generando…' : 'Generar factura' }}
         </button>
       </div>
@@ -350,51 +382,61 @@
 
 <!-- Modal: Cerrar caso -->
 @if (cierreCaso(); as caso) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" (click)="cerrarCierreModal()">
-    <div class="w-full max-w-md rounded-xl bg-white shadow-xl" (click)="$event.stopPropagation()">
-      <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-        <h2 class="text-lg font-bold text-slate-900">Cerrar caso</h2>
-        <button (click)="cerrarCierreModal()" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" aria-label="Cerrar">
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" (click)="cerrarCierreModal()">
+    <div class="w-full max-w-md rounded-xl shadow-2xl" style="background:var(--surface)" (click)="$event.stopPropagation()">
+      <div class="flex items-center justify-between px-5 py-4" style="border-bottom:1px solid var(--border)">
+        <h2 class="text-base font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Cerrar caso</h2>
+        <button (click)="cerrarCierreModal()" class="rounded-xl p-1.5 transition-colors duration-150"
+          style="color:var(--text-muted)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+          (mouseleave)="$any($event.currentTarget).style.background=''"
+          aria-label="Cerrar">
           <lucide-icon [img]="XIcon" size="18"></lucide-icon>
         </button>
       </div>
 
       <div class="space-y-4 p-5">
-        <p class="text-sm text-slate-600">
-          Vas a cerrar <span class="font-semibold text-slate-900">{{ caso.titulo }}</span>. Confirma que la gestoría está
+        <p class="text-sm" style="color:var(--text-body)">
+          Vas a cerrar <span class="font-semibold" style="color:var(--text-strong)">{{ caso.titulo }}</span>. Confirma que la gestoría está
           revisada y cuadra con bancos antes de continuar. Esta acción lo mueve al archivo.
         </p>
 
         @if (!caso.facturaId) {
-          <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">
+          <div class="rounded-lg p-3 text-xs" style="background:color-mix(in srgb,var(--warning) 10%,transparent);border:1px solid color-mix(in srgb,var(--warning) 25%,transparent);color:var(--warning)">
             Este caso aún no tiene factura generada. Puedes cerrarlo igualmente, pero se recomienda facturar antes.
           </div>
         }
 
-        <label class="flex items-start gap-2 text-sm text-slate-700">
+        <label class="flex items-start gap-2 text-sm" style="color:var(--text-body)">
           <input type="checkbox" [checked]="movimientosOk()" (change)="movimientosOk.set($any($event.target).checked)"
-            class="mt-0.5 rounded border-slate-300 text-violet-600 focus:ring-violet-200" />
+            class="mt-0.5 rounded" style="accent-color:var(--brand)" />
           Confirmo que todos los movimientos financieros están contemplados correctamente.
         </label>
 
-        <label class="flex items-start gap-2 text-sm text-slate-700">
+        <label class="flex items-start gap-2 text-sm" style="color:var(--text-body)">
           <input type="checkbox" [checked]="bancoOk()" (change)="bancoOk.set($any($event.target).checked)"
-            class="mt-0.5 rounded border-slate-300 text-violet-600 focus:ring-violet-200" />
+            class="mt-0.5 rounded" style="accent-color:var(--brand)" />
           <span>
             Confirmo que el saldo está corroborado en bancos.
             @if (saldoBancario() != null) {
-              <span class="text-slate-400">(Saldo bancario: {{ saldoBancario() | number:'1.0-0' }}€)</span>
+              <span style="color:var(--text-faint)">(Saldo bancario: {{ saldoBancario() | number:'1.0-0' }}€)</span>
             } @else {
-              <span class="text-slate-400">(Sin saldo bancario registrado — corroboración manual)</span>
+              <span style="color:var(--text-faint)">(Sin saldo bancario registrado — corroboración manual)</span>
             }
           </span>
         </label>
       </div>
 
-      <div class="flex gap-3 border-t border-slate-200 px-5 py-4">
-        <button (click)="cerrarCierreModal()" class="flex-1 rounded-lg border border-slate-200 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
+      <div class="flex gap-3 px-5 py-4" style="border-top:1px solid var(--border)">
+        <button (click)="cerrarCierreModal()" class="flex-1 rounded-lg py-2.5 text-sm font-medium transition-colors duration-150"
+          style="border:1px solid var(--border);color:var(--text-body)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+          (mouseleave)="$any($event.currentTarget).style.background=''">Cancelar</button>
         <button (click)="confirmarCierre()" [disabled]="!puedeCerrar() || saving()"
-          class="flex-1 rounded-lg bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50">
+          class="flex-1 rounded-lg py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 transition-colors duration-150"
+          style="background:var(--brand)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+          (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
           {{ saving() ? 'Cerrando…' : 'Confirmar cierre' }}
         </button>
       </div>

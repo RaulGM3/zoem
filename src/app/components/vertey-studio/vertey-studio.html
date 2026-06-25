@@ -10,7 +10,7 @@
           <h1 class="text-xl font-semibold text-slate-800">Vertey Studio</h1>
           <span class="px-2 py-0.5 bg-violet-100 text-violet-700 text-xs font-semibold rounded-full">Pro</span>
         </div>
-        <p class="text-sm text-slate-500">Automatizaciones e integraciones avanzadas</p>
+        <p class="text-sm text-slate-700 font-medium">Automatizaciones e integraciones avanzadas</p>
       </div>
     </div>
   </div>
@@ -47,10 +47,10 @@
               <div [class]="'w-2 h-2 rounded-full mt-1.5 shrink-0 ' + (wf.activo ? 'bg-emerald-500' : 'bg-slate-300')"></div>
               <div class="min-w-0">
                 <p class="font-medium text-slate-800 text-sm">{{ wf.nombre }}</p>
-                <p class="text-xs text-slate-500 mt-0.5">{{ wf.descripcion }}</p>
+                <p class="text-xs text-slate-700 font-medium mt-0.5">{{ wf.descripcion }}</p>
               </div>
             </div>
-            <span [class]="'text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ' + (wf.activo ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500')">
+            <span [class]="'text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ' + (wf.activo ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700')">
               {{ wf.activo ? 'Activo' : 'Inactivo' }}
             </span>
           </div>
@@ -71,7 +71,7 @@
               <span class="text-2xl">{{ int.icono }}</span>
               <div>
                 <p class="font-medium text-slate-800 text-sm">{{ int.nombre }}</p>
-                <p class="text-xs text-slate-500">{{ int.descripcion }}</p>
+                <p class="text-xs text-slate-700 font-medium">{{ int.descripcion }}</p>
               </div>
             </div>
             @if (int.conectado) {
@@ -98,17 +98,17 @@
       <div class="p-4 border border-dashed border-violet-200 rounded-xl text-center hover:bg-violet-50 cursor-pointer transition-colors">
         <lucide-icon [img]="FileCode2Icon" class="w-6 h-6 text-violet-400 mx-auto mb-2" />
         <p class="text-sm font-medium text-slate-700">Entrenar con documentos</p>
-        <p class="text-xs text-slate-500 mt-1">Sube contratos, plantillas y procedimientos</p>
+        <p class="text-xs text-slate-700 font-medium mt-1">Sube contratos, plantillas y procedimientos</p>
       </div>
       <div class="p-4 border border-dashed border-violet-200 rounded-xl text-center hover:bg-violet-50 cursor-pointer transition-colors">
         <lucide-icon [img]="SparklesIcon" class="w-6 h-6 text-violet-400 mx-auto mb-2" />
         <p class="text-sm font-medium text-slate-700">Personalizar respuestas</p>
-        <p class="text-xs text-slate-500 mt-1">Ajusta el tono y estilo del agente IA</p>
+        <p class="text-xs text-slate-700 font-medium mt-1">Ajusta el tono y estilo del agente IA</p>
       </div>
       <div class="p-4 border border-dashed border-slate-200 rounded-xl text-center opacity-60">
         <lucide-icon [img]="LockIcon" class="w-6 h-6 text-slate-300 mx-auto mb-2" />
-        <p class="text-sm font-medium text-slate-400">API pública</p>
-        <p class="text-xs text-slate-400 mt-1">Disponible en plan Empresa</p>
+        <p class="text-sm font-medium text-slate-600">API pública</p>
+        <p class="text-xs text-slate-600 font-medium mt-1">Disponible en plan Empresa</p>
       </div>
     </div>
   </div>

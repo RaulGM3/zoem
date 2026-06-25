@@ -7,7 +7,7 @@
       </div>
       <div>
         <h1 class="text-xl font-semibold text-slate-800">Mi Perfil</h1>
-        <p class="text-sm text-slate-500">Información personal y profesional</p>
+        <p class="text-sm text-slate-700 font-medium">Información personal y profesional</p>
       </div>
     </div>
     <button
@@ -33,7 +33,7 @@
         </div>
         <p class="font-semibold text-slate-800">{{ currentUser()?.displayName ?? currentUser()?.email }}</p>
         @if (currentUser()?.despacho?.nombre) {
-          <p class="text-sm text-slate-500 mt-0.5">{{ currentUser()?.despacho?.nombre }}</p>
+          <p class="text-sm text-slate-700 font-medium mt-0.5">{{ currentUser()?.despacho?.nombre }}</p>
         }
         @if (currentUser()?.profesional?.especialidad) {
           <span class="mt-2 inline-block px-3 py-0.5 bg-violet-100 text-violet-700 text-xs font-semibold rounded-full">
@@ -41,7 +41,7 @@
           </span>
         }
         <div class="mt-4">
-          <div class="flex justify-between text-xs text-slate-500 mb-1">
+          <div class="flex justify-between text-xs text-slate-700 mb-1">
             <span>Perfil completado</span>
             <span>{{ completionPercent() }}%</span>
           </div>
@@ -54,16 +54,16 @@
       <div class="bg-white rounded-xl border border-slate-200 p-4 space-y-2 text-sm">
         <h3 class="font-semibold text-slate-700">Información de cuenta</h3>
         <div class="flex justify-between">
-          <span class="text-slate-500">Email</span>
+          <span class="text-slate-700">Email</span>
           <span class="text-slate-600 truncate max-w-40">{{ currentUser()?.email }}</span>
         </div>
         <div class="flex justify-between">
-          <span class="text-slate-500">Miembro desde</span>
+          <span class="text-slate-700">Miembro desde</span>
           <span class="text-slate-600">{{ memberSince() }}</span>
         </div>
         <div class="flex justify-between">
-          <span class="text-slate-500">ID de usuario</span>
-          <span class="text-slate-400 text-xs font-mono truncate max-w-27.5">{{ currentUser()?.id }}</span>
+          <span class="text-slate-700">ID de usuario</span>
+          <span class="text-slate-600 text-xs font-mono truncate max-w-27.5">{{ currentUser()?.id }}</span>
         </div>
       </div>
     </div>
@@ -71,13 +71,13 @@
     <!-- Formularios -->
     <div class="lg:col-span-2 bg-white rounded-xl border border-slate-200">
       <div class="flex border-b border-slate-200">
-        <button (click)="activeTab.set('personal')" [class]="activeTab() === 'personal' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700'">
+        <button (click)="activeTab.set('personal')" [class]="activeTab() === 'personal' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600' : 'px-5 py-3 text-sm font-medium text-slate-700 hover:text-slate-700'">
           Personal
         </button>
-        <button (click)="activeTab.set('despacho')" [class]="activeTab() === 'despacho' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700'">
+        <button (click)="activeTab.set('despacho')" [class]="activeTab() === 'despacho' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600' : 'px-5 py-3 text-sm font-medium text-slate-700 hover:text-slate-700'">
           Despacho
         </button>
-        <button (click)="activeTab.set('profesional')" [class]="activeTab() === 'profesional' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700'">
+        <button (click)="activeTab.set('profesional')" [class]="activeTab() === 'profesional' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600' : 'px-5 py-3 text-sm font-medium text-slate-700 hover:text-slate-700'">
           Profesional
         </button>
       </div>
@@ -90,7 +90,7 @@
           </div>
           <div class="space-y-1">
             <label class="text-sm font-medium text-slate-700" for="email">Email</label>
-            <input id="email" formControlName="email" type="email" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-400 cursor-not-allowed" />
+            <input id="email" formControlName="email" type="email" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-600 cursor-not-allowed" />
           </div>
           <div class="space-y-1">
             <label class="text-sm font-medium text-slate-700" for="telefono">Teléfono</label>

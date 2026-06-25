@@ -1,10 +1,12 @@
 import { Component, ChangeDetectionStrategy, input, computed } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { LucideAngularModule, ChevronRight, type LucideIconData } from 'lucide-angular';
+import { LucideAngularModule, type LucideIconData } from 'lucide-angular';
 
 export type StatTone = 'violet' | 'blue' | 'green' | 'emerald' | 'amber' | 'red' | 'slate';
 
-/** KPI card clickable, presentacional. Recibe valores ya formateados. */
+interface ToneStyle { bg: string; icon: string }
+
+/** KPI card clickable con hover-lift Vertey. Recibe valores ya formateados. */
 @Component({
   selector: 'app-stat-card',
   imports: [RouterLink, LucideAngularModule],
@@ -12,22 +14,35 @@ export type StatTone = 'violet' | 'blue' | 'green' | 'emerald' | 'amber' | 'red'
   template: `
     <a
       [routerLink]="href()"
-      class="group flex flex-col rounded-xl border border-slate-200 bg-white p-5 transition-shadow hover:shadow-md"
+      class="kpi-card group flex flex-col rounded-xl p-5"
+      style="background:var(--surface);border:1px solid var(--border)"
     >
       <div class="flex items-center justify-between">
-        <div class="flex h-10 w-10 items-center justify-center rounded-lg" [class]="bgClass()">
-          <lucide-icon [img]="icon()" size="20" [class]="iconClass()" />
+        <!-- Icon chip 40×40, radio 12px, tinte de color -->
+        <div
+          class="flex h-10 w-10 items-center justify-center rounded-xl"
+          [style.background]="toneStyle().bg"
+          [style.color]="toneStyle().icon"
+        >
+          <lucide-icon [img]="icon()" size="20" />
         </div>
-        <lucide-icon
-          [img]="ChevronRightIcon"
-          size="16"
-          class="text-slate-300 group-hover:text-slate-500"
-        />
+        <span
+          class="material-symbols-outlined transition-opacity duration-150 opacity-30 group-hover:opacity-60"
+          style="font-size:16px;color:var(--text-muted)"
+        >chevron_right</span>
       </div>
-      <p class="mt-3 text-sm font-medium text-slate-500">{{ label() }}</p>
-      <p class="mt-1 text-2xl font-bold text-slate-900">{{ value() }}</p>
+
+      <!-- Label -->
+      <p class="mt-3 text-[13px] font-medium" style="color:var(--text-muted)">{{ label() }}</p>
+
+      <!-- Número KPI: 29px Space Grotesk 600 -->
+      <p
+        class="mt-1 font-semibold tabular-nums"
+        style="font-size:29px;line-height:1;color:var(--text-strong);font-family:var(--font-display)"
+      >{{ value() }}</p>
+
       @if (sublabel()) {
-        <p class="mt-1 text-xs text-slate-400">{{ sublabel() }}</p>
+        <p class="mt-1.5 text-xs" style="color:var(--text-faint)">{{ sublabel() }}</p>
       }
     </a>
   `,
@@ -40,18 +55,15 @@ export class StatCardComponent {
   readonly href = input.required<string>();
   readonly tone = input<StatTone>('violet');
 
-  readonly ChevronRightIcon = ChevronRight;
-
-  private static readonly TONES: Record<StatTone, { bg: string; icon: string }> = {
-    violet: { bg: 'bg-violet-50', icon: 'text-violet-600' },
-    blue: { bg: 'bg-blue-50', icon: 'text-blue-600' },
-    green: { bg: 'bg-green-50', icon: 'text-green-600' },
-    emerald: { bg: 'bg-emerald-50', icon: 'text-emerald-600' },
-    amber: { bg: 'bg-amber-50', icon: 'text-amber-600' },
-    red: { bg: 'bg-red-50', icon: 'text-red-600' },
-    slate: { bg: 'bg-slate-100', icon: 'text-slate-600' },
+  private static readonly TONES: Record<StatTone, ToneStyle> = {
+    violet:  { bg: 'color-mix(in srgb,var(--accent-ia) 12%,transparent)', icon: 'var(--accent-ia)' },
+    blue:    { bg: 'color-mix(in srgb,var(--brand) 12%,transparent)',      icon: 'var(--brand)' },
+    green:   { bg: 'color-mix(in srgb,var(--success) 12%,transparent)',    icon: 'var(--success)' },
+    emerald: { bg: 'color-mix(in srgb,var(--success) 12%,transparent)',    icon: 'var(--success)' },
+    amber:   { bg: 'color-mix(in srgb,var(--warning) 12%,transparent)',    icon: 'var(--warning)' },
+    red:     { bg: 'color-mix(in srgb,var(--danger) 12%,transparent)',     icon: 'var(--danger)' },
+    slate:   { bg: 'color-mix(in srgb,var(--text-muted) 12%,transparent)', icon: 'var(--text-muted)' },
   };
 
-  readonly bgClass = computed(() => StatCardComponent.TONES[this.tone()].bg);
-  readonly iconClass = computed(() => StatCardComponent.TONES[this.tone()].icon);
+  readonly toneStyle = computed<ToneStyle>(() => StatCardComponent.TONES[this.tone()]);
 }

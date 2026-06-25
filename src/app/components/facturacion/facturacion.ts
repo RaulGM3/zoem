@@ -213,12 +213,12 @@ export class FacturacionComponent implements OnInit {
     return this.invoiceMap().get(facturaId)?.verifactu;
   }
 
-  verifactuBadgeClass(facturaId?: string): string {
+  verifactuBadgeColor(facturaId?: string): string {
     const estado = this.verifactuEstado(facturaId)?.estado;
-    if (estado === 'enviado') return 'text-green-400';
-    if (estado === 'pendiente') return 'text-amber-400';
-    if (estado === 'error') return 'text-red-400';
-    return 'text-neutral-500';
+    if (estado === 'enviado') return 'var(--success)';
+    if (estado === 'pendiente') return 'var(--warning)';
+    if (estado === 'error') return 'var(--danger)';
+    return 'var(--text-faint)';
   }
 
   verifactuBadgeIcon(facturaId?: string) {
@@ -237,22 +237,22 @@ export class FacturacionComponent implements OnInit {
     this.registroHoras.filter(h => h.estadoFacturacion === 'pendiente').reduce((s, h) => s + h.horas, 0)
   );
 
-  getModeloEstadoClass(estado: string): string {
+  getModeloEstadoColor(estado: string): string {
     const map: Record<string, string> = {
-      pendiente: 'bg-amber-100 text-amber-700',
-      presentado: 'bg-green-100 text-green-700',
-      borrador: 'bg-slate-100 text-slate-500',
+      pendiente: 'var(--warning)',
+      presentado: 'var(--success)',
+      borrador: 'var(--text-muted)',
     };
-    return map[estado] || 'bg-slate-100 text-slate-600';
+    return map[estado] || 'var(--text-muted)';
   }
 
-  getHoraEstadoClass(estado: string): string {
+  getHoraEstadoColor(estado: string): string {
     const map: Record<string, string> = {
-      facturado: 'bg-green-100 text-green-700',
-      pendiente: 'bg-amber-100 text-amber-700',
-      no_facturable: 'bg-slate-100 text-slate-500',
+      facturado: 'var(--success)',
+      pendiente: 'var(--warning)',
+      no_facturable: 'var(--text-muted)',
     };
-    return map[estado] || 'bg-slate-100 text-slate-600';
+    return map[estado] || 'var(--text-muted)';
   }
 
   async ngOnInit(): Promise<void> {

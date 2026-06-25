@@ -1,29 +1,37 @@
-<div class="mb-3 rounded-xl border border-slate-200 bg-white p-3">
+<div class="mb-3 rounded-xl p-3" style="border:1px solid var(--border);background:var(--surface)">
   <!-- Controls row -->
   <div class="mb-2 flex items-center gap-2">
     <button
       (click)="prevClicked.emit()"
-      class="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+      class="rounded-lg p-1.5 transition-colors duration-150"
+      style="color:var(--text-faint)"
+      (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-body)'"
+      (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
     >
       <lucide-icon [img]="ChevronLeftIcon" size="18"></lucide-icon>
     </button>
-    <span class="flex-1 text-center text-sm font-semibold text-slate-700">{{ weekMonthLabel() }}</span>
+    <span class="flex-1 text-center text-sm font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">{{ weekMonthLabel() }}</span>
     <button
       (click)="nextClicked.emit()"
-      class="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+      class="rounded-lg p-1.5 transition-colors duration-150"
+      style="color:var(--text-faint)"
+      (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-body)'"
+      (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
     >
       <lucide-icon [img]="ChevronRightIcon" size="18"></lucide-icon>
     </button>
-    <div class="flex overflow-hidden rounded-lg border border-slate-200">
+    <div class="flex overflow-hidden rounded-lg" style="border:1px solid var(--border)">
       <button
         (click)="viewModeChanged.emit('week')"
-        class="px-2.5 py-1 text-xs font-medium transition-colors"
-        [class]="viewMode() === 'week' ? 'bg-violet-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'"
+        class="px-2.5 py-1 text-xs font-medium transition-colors duration-150"
+        [style.background]="viewMode() === 'week' ? 'var(--brand)' : 'var(--surface)'"
+        [style.color]="viewMode() === 'week' ? '#fff' : 'var(--text-muted)'"
       >Sem</button>
       <button
         (click)="viewModeChanged.emit('month')"
-        class="px-2.5 py-1 text-xs font-medium transition-colors"
-        [class]="viewMode() === 'month' ? 'bg-violet-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'"
+        class="px-2.5 py-1 text-xs font-medium transition-colors duration-150"
+        [style.background]="viewMode() === 'month' ? 'var(--brand)' : 'var(--surface)'"
+        [style.color]="viewMode() === 'month' ? '#fff' : 'var(--text-muted)'"
       >Mes</button>
     </div>
   </div>
@@ -33,20 +41,27 @@
     <div #scrollRef class="scroll-hide flex overflow-x-auto gap-1 pb-0.5" (scroll)="onStripScroll($event)">
       @for (day of weekDays(); track day.date; let i = $index) {
         @if (i > 0 && i % 7 === 0) {
-          <div class="mx-0.5 w-px shrink-0 self-stretch bg-slate-100"></div>
+          <div class="mx-0.5 w-px shrink-0 self-stretch" style="background:var(--border)"></div>
         }
         <button
           (click)="dateToggled.emit(day.date)"
-          class="flex min-w-[14.285714%] shrink-0 flex-col items-center gap-0.5 rounded-xl p-1.5 text-xs transition-colors"
-          [class]="day.isSelected ? 'bg-violet-600 text-white' : day.isToday ? 'bg-violet-50 text-violet-700' : 'text-slate-600 hover:bg-slate-50'"
+          class="flex min-w-[14.285714%] shrink-0 flex-col items-center gap-0.5 rounded-xl p-1.5 text-xs transition-colors duration-150"
+          [style.background]="day.isSelected ? 'var(--brand)' : day.isToday ? 'color-mix(in srgb,var(--brand) 10%,transparent)' : ''"
+          [style.color]="day.isSelected ? '#fff' : day.isToday ? 'var(--brand)' : 'var(--text-body)'"
         >
           <span class="font-medium">{{ day.dayName }}</span>
           <span class="text-sm font-bold leading-none">{{ day.dayNum }}</span>
-          @if (day.hasEvents) {
-            <span class="h-1.5 w-1.5 rounded-full" [class]="day.isSelected ? 'bg-white/70' : 'bg-violet-400'"></span>
-          } @else {
-            <span class="h-1.5 w-1.5"></span>
-          }
+          <span class="flex h-1.5 items-center gap-0.5">
+            @if (day.hasEvents) {
+              <span class="h-1.5 w-1.5 rounded-full" [style.background]="day.isSelected ? 'rgba(255,255,255,.7)' : 'var(--brand)'"></span>
+            }
+            @if (day.hasUnscheduledHitos) {
+              <span class="h-1.5 w-1.5 rounded-full" [style.background]="day.isSelected ? 'rgba(255,255,255,.85)' : '#f59e0b'"></span>
+            }
+            @if (!day.hasEvents && !day.hasUnscheduledHitos) {
+              <span class="h-1.5 w-1.5"></span>
+            }
+          </span>
         </button>
       }
     </div>
@@ -56,26 +71,27 @@
   @if (viewMode() === 'month') {
     <div class="grid grid-cols-7 gap-1">
       @for (name of dayNames(); track name) {
-        <div class="py-1 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-400">{{ name }}</div>
+        <div class="py-1 text-center text-[10px] font-semibold uppercase tracking-wider" style="color:var(--text-faint);font-family:var(--font-mono)">{{ name }}</div>
       }
       @for (day of monthDays(); track day.date) {
         <button
           (click)="dateToggled.emit(day.date)"
-          class="flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-xs transition-colors"
-          [class]="day.isSelected
-            ? 'bg-violet-600 text-white'
-            : day.isToday
-              ? 'bg-violet-50 text-violet-700'
-              : day.isCurrentMonth
-                ? 'text-slate-700 hover:bg-slate-50'
-                : 'text-slate-300 hover:bg-slate-50'"
+          class="flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-xs transition-colors duration-150"
+          [style.background]="day.isSelected ? 'var(--brand)' : day.isToday ? 'color-mix(in srgb,var(--brand) 10%,transparent)' : ''"
+          [style.color]="day.isSelected ? '#fff' : day.isToday ? 'var(--brand)' : day.isCurrentMonth ? 'var(--text-body)' : 'var(--text-faint)'"
         >
           <span class="text-sm font-bold leading-none">{{ day.dayNum }}</span>
-          @if (day.hasEvents) {
-            <span class="h-1 w-1 rounded-full" [class]="day.isSelected ? 'bg-white/70' : 'bg-violet-400'"></span>
-          } @else {
-            <span class="h-1 w-1"></span>
-          }
+          <span class="flex h-1 items-center gap-0.5">
+            @if (day.hasEvents) {
+              <span class="h-1 w-1 rounded-full" [style.background]="day.isSelected ? 'rgba(255,255,255,.7)' : 'var(--brand)'"></span>
+            }
+            @if (day.hasUnscheduledHitos) {
+              <span class="h-1 w-1 rounded-full" [style.background]="day.isSelected ? 'rgba(255,255,255,.85)' : '#f59e0b'"></span>
+            }
+            @if (!day.hasEvents && !day.hasUnscheduledHitos) {
+              <span class="h-1 w-1"></span>
+            }
+          </span>
         </button>
       }
     </div>

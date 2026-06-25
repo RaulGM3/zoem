@@ -137,6 +137,11 @@ export class CalendarioComponent {
     const start = new Date(this.currentWeekStart() + 'T00:00:00');
     const items = this.allItems();
     const selected = this.selectedDates();
+    const unscheduledDates = new Set(
+      items
+        .filter(i => i.hitoEstado !== undefined && (i.registrosHoras?.length ?? 0) === 0)
+        .map(i => i.date),
+    );
     return Array.from({ length: this.stripDayCount() }, (_, i) => {
       const d = new Date(start);
       d.setDate(d.getDate() + i);
@@ -146,6 +151,7 @@ export class CalendarioComponent {
         dayName: DAY_NAMES[i % 7],
         dayNum: d.getDate(),
         hasEvents: items.some(e => e.date === date),
+        hasUnscheduledHitos: unscheduledDates.has(date),
         isToday: date === this.today,
         isSelected: selected.has(date),
       };
@@ -162,6 +168,11 @@ export class CalendarioComponent {
     const items = this.allItems();
     const selected = this.selectedDates();
     const currentMonth = anchor.getMonth();
+    const unscheduledDates = new Set(
+      items
+        .filter(i => i.hitoEstado !== undefined && (i.registrosHoras?.length ?? 0) === 0)
+        .map(i => i.date),
+    );
 
     return Array.from({ length: 42 }, (_, i) => {
       const d = new Date(gridStart);
@@ -172,6 +183,7 @@ export class CalendarioComponent {
         dayName: DAY_NAMES[i % 7],
         dayNum: d.getDate(),
         hasEvents: items.some(e => e.date === date),
+        hasUnscheduledHitos: unscheduledDates.has(date),
         isToday: date === this.today,
         isSelected: selected.has(date),
         isCurrentMonth: d.getMonth() === currentMonth,
@@ -192,7 +204,20 @@ export class CalendarioComponent {
     const grouped = new Map<string, CalendarItem[]>();
     for (const date of selected) grouped.set(date, []);
     for (const e of this.allItems()) {
-      if (selected.has(e.date)) grouped.get(e.date)!.push(e);
+      if (e.hitoEstado !== undefined && (e.registrosHoras?.length ?? 0) > 0) {
+        // Hito con registros: colocarlo en cada fecha seleccionada donde tenga un registro.
+        // Su fechaEstimada puede diferir si se arrastró el bloque a otro día, por lo que
+        // no se puede usar e.date como fuente de verdad de la posición en el grid.
+        const placed = new Set<string>();
+        for (const r of e.registrosHoras!) {
+          if (selected.has(r.fecha) && !placed.has(r.fecha)) {
+            grouped.get(r.fecha)!.push(e);
+            placed.add(r.fecha);
+          }
+        }
+      } else if (selected.has(e.date)) {
+        grouped.get(e.date)!.push(e);
+      }
     }
     return Array.from(grouped.entries())
       .sort(([a], [b]) => a.localeCompare(b))
@@ -332,6 +357,13 @@ export class CalendarioComponent {
     const d = new Date(date + 'T00:00:00');
     const label = d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
     return `Evento creado · ${label.charAt(0).toUpperCase() + label.slice(1)}`;
+  }
+
+  async onDeleteEvento({ id }: { id: string }): Promise<void> {
+    await this.toast.run(() => this.eventosService.deleteEvento(id), {
+      successMessage: 'Evento eliminado',
+      errorTitle: 'No se pudo eliminar el evento',
+    });
   }
 
   async updateItemColor({ id, color }: { id: string; color: ItemColor | null }): Promise<void> {

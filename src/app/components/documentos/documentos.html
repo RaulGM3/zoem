@@ -2,7 +2,7 @@
 <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
   <div>
     <h1 class="text-2xl font-bold text-slate-900">Plantillas de documentos</h1>
-    <p class="mt-1 text-sm text-slate-500">Sube un documento, la IA extrae los datos variables y genera versiones nuevas en segundos</p>
+    <p class="mt-1 text-sm font-medium text-slate-700">Sube un documento, la IA extrae los datos variables y genera versiones nuevas en segundos</p>
   </div>
   @if (perm.can('Documentos', 'crear')) {
     <button (click)="showDrawer.set(true)"
@@ -17,21 +17,21 @@
 <div class="mb-6 grid gap-4 sm:grid-cols-3">
   <div class="rounded-xl border border-slate-200 bg-white p-4 text-center">
     <p class="text-2xl font-bold text-slate-900">{{ total() }}</p>
-    <p class="text-xs text-slate-400">Plantillas</p>
+    <p class="text-xs font-medium text-slate-600">Plantillas</p>
   </div>
   <div class="rounded-xl border border-slate-200 bg-white p-4 text-center">
     <p class="text-2xl font-bold text-green-600">{{ listas() }}</p>
-    <p class="text-xs text-slate-400">Listas para generar</p>
+    <p class="text-xs font-medium text-slate-600">Listas para generar</p>
   </div>
   <div class="rounded-xl border border-slate-200 bg-white p-4 text-center">
     <p class="text-2xl font-bold text-violet-600">{{ totalVariables() }}</p>
-    <p class="text-xs text-slate-400">Variables detectadas</p>
+    <p class="text-xs font-medium text-slate-600">Variables detectadas</p>
   </div>
 </div>
 
 <!-- Search -->
 <div class="mb-4 relative">
-  <lucide-icon [img]="SearchIcon" size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></lucide-icon>
+  <lucide-icon [img]="SearchIcon" size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600"></lucide-icon>
   <input
     type="text"
     placeholder="Buscar plantillas..."
@@ -47,10 +47,10 @@
     <table class="w-full text-sm">
       <thead>
         <tr class="border-b bg-slate-50">
-          <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Plantilla</th>
-          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Variables</th>
-          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Estado</th>
-          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Actualizada</th>
+          <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Plantilla</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Variables</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Estado</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Actualizada</th>
           <th class="px-4 py-3"></th>
         </tr>
       </thead>
@@ -65,7 +65,7 @@
                 <div>
                   <p class="font-medium text-slate-900">{{ template.name }}</p>
                   @if (template.sourceFileName) {
-                    <p class="text-xs text-slate-400">{{ template.sourceFileName }}</p>
+                    <p class="text-xs font-medium text-slate-600">{{ template.sourceFileName }}</p>
                   }
                 </div>
               </div>
@@ -81,23 +81,23 @@
                 {{ getStatusLabel(template.status) }}
               </span>
             </td>
-            <td class="px-4 py-4 text-xs text-slate-500">{{ formatDate(template.updatedAt) }}</td>
+            <td class="px-4 py-4 text-xs text-slate-700">{{ formatDate(template.updatedAt) }}</td>
             <td class="px-4 py-4" (click)="$event.stopPropagation()">
               <div class="flex items-center justify-end gap-1">
                 @if (deletingId() === template.id) {
-                  <span class="text-xs text-slate-500 mr-1">¿Eliminar?</span>
+                  <span class="text-xs text-slate-700 mr-1">¿Eliminar?</span>
                   <button (click)="confirmDelete(template)"
                     class="rounded-lg px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50">Sí</button>
                   <button (click)="deletingId.set(null)"
-                    class="rounded-lg px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100">No</button>
+                    class="rounded-lg px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100">No</button>
                 } @else {
                   <button (click)="openTemplate(template)" aria-label="Generar documento"
-                    class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+                    class="rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 hover:text-slate-700">
                     <lucide-icon [img]="ArrowRightIcon" size="15"></lucide-icon>
                   </button>
                   @if (perm.can('Documentos', 'eliminar')) {
                     <button (click)="deletingId.set(template.id)" aria-label="Eliminar plantilla"
-                      class="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500">
+                      class="rounded-lg p-1.5 text-slate-600 hover:bg-red-50 hover:text-red-500">
                       <lucide-icon [img]="Trash2Icon" size="15"></lucide-icon>
                     </button>
                   }
@@ -108,14 +108,14 @@
         }
         @if (!loading() && filtered().length === 0) {
           <tr>
-            <td colspan="5" class="px-5 py-12 text-center text-sm text-slate-400">
+            <td colspan="5" class="px-5 py-12 text-center text-sm text-slate-600">
               No hay plantillas de documentos. Crea la primera subiendo un PDF o Word.
             </td>
           </tr>
         }
         @if (loading()) {
           <tr>
-            <td colspan="5" class="px-5 py-12 text-center text-sm text-slate-400">Cargando…</td>
+            <td colspan="5" class="px-5 py-12 text-center text-sm text-slate-600">Cargando…</td>
           </tr>
         }
       </tbody>

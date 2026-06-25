@@ -1,27 +1,30 @@
 <div class="flex h-full flex-col">
 @if (!hasSelectedDates()) {
-  <div class="rounded-xl border border-dashed border-slate-200 bg-slate-50 py-12 text-center text-sm text-slate-400">
+  <div class="rounded-xl py-12 text-center text-sm" style="border:1px dashed var(--border);background:var(--surface-2);color:var(--text-faint)">
     Selecciona un día para ver sus hitos
   </div>
 } @else {
 
   <!-- Hitos sin programar -->
   @if (unscheduledItems().length > 0) {
-    <div class="mb-3 shrink-0 rounded-xl border-2 border-violet-200 bg-violet-50 p-3 shadow-sm ring-1 ring-violet-100">
-      <p class="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-violet-700">
-        <span class="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-violet-500"></span>
+    <div class="mb-3 shrink-0 rounded-xl p-3" style="border:2px solid color-mix(in srgb,var(--brand) 25%,transparent);background:color-mix(in srgb,var(--brand) 6%,transparent)">
+      <p class="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider" style="color:var(--brand)">
+        <span class="inline-block h-1.5 w-1.5 animate-pulse rounded-full" style="background:var(--brand)"></span>
         Sin programar — click para añadir al horario
       </p>
       <div class="flex flex-wrap gap-2">
         @for (item of unscheduledItems(); track item.id) {
           <button
-            class="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:border-violet-300 hover:bg-violet-50 hover:text-violet-800"
+            class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150"
+            style="border:1px solid var(--border);background:var(--surface);color:var(--text-body)"
+            (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 8%,transparent)';$any($event.currentTarget).style.borderColor='color-mix(in srgb,var(--brand) 30%,transparent)'"
+            (mouseleave)="$any($event.currentTarget).style.background='var(--surface)';$any($event.currentTarget).style.borderColor='var(--border)'"
             (click)="scheduleItem(item)"
             [attr.aria-label]="'Programar ' + item.title"
           >
             <lucide-icon [img]="ClockIcon" size="12" class="shrink-0 opacity-60"></lucide-icon>
-            <span class="max-w-[9rem] truncate">{{ item.title }}</span>
-            <span class="max-w-[6rem] truncate text-slate-400">{{ item.client }}</span>
+            <span class="max-w-36 truncate">{{ item.title }}</span>
+            <span class="max-w-24 truncate" style="color:var(--text-faint)">{{ item.client }}</span>
           </button>
         }
       </div>
@@ -29,7 +32,7 @@
   }
 
   <!-- Grid de agenda -->
-  <div class="min-h-0 flex-1 overflow-hidden rounded-xl border border-slate-200">
+  <div class="min-h-0 flex-1 overflow-hidden rounded-xl" style="border:1px solid var(--border)">
       <div
         #scheduleArea
         class="h-full overflow-y-auto overflow-x-auto"
@@ -38,10 +41,10 @@
         (pointercancel)="onSchedulePointerCancel()"
       >
         <!-- Cabecera sticky -->
-        <div #scheduleHeader class="sticky top-0 z-20 flex border-b border-slate-200 bg-white">
+        <div #scheduleHeader class="sticky top-0 z-20 flex" style="border-bottom:1px solid var(--border);background:var(--surface)">
           <div class="w-14 shrink-0"></div>
           @for (group of groupedEvents(); track group.date) {
-            <div class="min-w-40 flex-1 border-l border-slate-100 py-2 text-center text-xs font-semibold text-slate-600">
+            <div class="min-w-40 flex-1 py-2 text-center text-xs font-semibold" style="border-left:1px solid var(--border-soft);color:var(--text-body)">
               {{ group.label }}
             </div>
           }
@@ -51,10 +54,11 @@
         <div class="flex" [style.height.px]="totalGridHeight">
 
           <!-- Regla de horas -->
-          <div class="relative w-14 shrink-0 border-r border-slate-100 bg-white">
+          <div class="relative w-14 shrink-0" style="border-right:1px solid var(--border-soft);background:var(--surface)">
             @for (hour of hours; track hour) {
               <div
-                class="absolute flex w-full items-start justify-end pr-2 text-[10px] leading-none text-slate-400"
+                class="absolute flex w-full items-start justify-end pr-2 text-[10px] leading-none"
+                style="color:var(--text-faint)"
                 [style.top.px]="hourHeight * hour - 6"
               >
                 @if (hour > 0) { {{ formatHour(hour) }} }
@@ -68,28 +72,30 @@
             @let dragReg = draggingReg();
 
             <div
-              class="relative min-w-40 flex-1 border-l border-slate-100"
+              class="relative min-w-40 flex-1"
+              style="border-left:1px solid var(--border-soft)"
               [attr.data-date]="group.date"
             >
               <!-- Líneas de hora -->
               @for (hour of hours; track hour) {
                 <div
                   class="pointer-events-none absolute inset-x-0 border-t"
-                  [class]="hour % 6 === 0 ? 'border-slate-200' : 'border-slate-100'"
+                  [style.border-top-color]="hour % 6 === 0 ? 'var(--border)' : 'var(--border-soft)'"
                   [style.top.px]="hourHeight * hour"
                 ></div>
               }
               <!-- Líneas de media hora (guión) -->
               @for (hour of hours; track hour) {
                 <div
-                  class="pointer-events-none absolute inset-x-0 border-t border-dashed border-slate-100"
+                  class="pointer-events-none absolute inset-x-0 border-t border-dashed"
+                  style="border-top-color:var(--border-soft)"
                   [style.top.px]="hourHeight * hour + hourHeight / 2"
                 ></div>
               }
 
               <!-- Halo indicador cuando el drag apunta a esta columna (distinta del origen) -->
               @if (drag && drag.currentDate === group.date && drag.originalDate !== group.date) {
-                <div class="pointer-events-none absolute inset-0 bg-violet-50/40 ring-1 ring-inset ring-violet-200"></div>
+                <div class="pointer-events-none absolute inset-0" style="background:color-mix(in srgb,var(--brand) 6%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--brand) 25%,transparent)"></div>
               }
 
               <!-- Bloques programados -->
@@ -100,7 +106,8 @@
                 <!-- Sombra fantasma en posición original (solo durante drag) -->
                 @if (isDragging) {
                   <div
-                    class="pointer-events-none absolute rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 opacity-40"
+                    class="pointer-events-none absolute rounded-lg border-2 border-dashed opacity-40"
+                    style="border-color:var(--border);background:var(--surface-2)"
                     [style.left]="getItemLeft(item)"
                     [style.width]="getItemWidth(item)"
                     [style.top.px]="getItemTop(item)"
@@ -123,8 +130,9 @@
                     tabindex="0"
                     [attr.aria-label]="item.title + (item.horaInicio ? ' — ' + item.horaInicio : '')"
                   >
-                    <div class="flex h-full flex-col p-1.5 pb-4">
-                      <div class="flex min-h-0 items-start gap-1">
+                    <div class="flex h-full flex-col gap-1 overflow-hidden p-1.5 pb-4">
+                      <!-- Fila 1: icono + título + estado -->
+                      <div class="flex shrink-0 items-start gap-1">
                         <lucide-icon
                           [img]="CalendarClockIcon"
                           size="11"
@@ -134,28 +142,32 @@
                         <p class="min-w-0 flex-1 truncate text-[11px] font-semibold leading-tight">
                           {{ item.title }}
                         </p>
-                        <div class="flex shrink-0 items-center gap-0.5">
-                          @if (item.eventoEstado) {
-                            <span
-                              class="max-w-18 truncate rounded px-1 py-0.5 text-[9px] font-semibold leading-none"
-                              [class]="getEventoBadgeClass(item.eventoEstado)"
-                            >{{ getEventoBadgeLabel(item.eventoEstado) }}</span>
-                          }
-                          <button
-                            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-red-200 text-red-700 transition-colors hover:bg-red-500 hover:text-white active:scale-95"
-                            (pointerdown)="$event.stopPropagation()"
-                            (click)="unscheduleItem($event, item)"
-                            [attr.aria-label]="'Quitar ' + item.title + ' del horario'"
-                          >
-                            <lucide-icon [img]="XIcon" size="13"></lucide-icon>
-                          </button>
-                        </div>
+                        @if (item.eventoEstado) {
+                          <span
+                            class="max-w-20 shrink-0 truncate rounded-md px-2 py-0.5 text-[10px] font-semibold leading-none"
+                            [class]="getEventoBadgeClass(item.eventoEstado)"
+                          >{{ getEventoBadgeLabel(item.eventoEstado) }}</span>
+                        }
                       </div>
-                      <p class="mt-0.5 truncate text-[10px] leading-none opacity-60">
-                        @if (isDragging) { {{ getDragTimeLabel() }} }
-                        @else if (isResizingItem(item)) { {{ getResizeTimeLabel() }} }
-                        @else { {{ getTimeLabel(item) }} }
-                      </p>
+                      <!-- Fila 2: tiempo + cerrar -->
+                      <div class="mt-auto flex items-center gap-1.5">
+                        <p class="min-w-0 flex-1 truncate text-[10px] leading-none opacity-60">
+                          @if (isDragging) { {{ getDragTimeLabel() }} }
+                          @else if (isResizingItem(item)) { {{ getResizeTimeLabel() }} }
+                          @else { {{ getTimeLabel(item) }} }
+                        </p>
+                        <button
+                          class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors active:scale-95"
+                          style="background:color-mix(in srgb,var(--danger) 18%,transparent);color:var(--danger)"
+                          (mouseenter)="$event.stopPropagation();$any($event.currentTarget).style.background='var(--danger)';$any($event.currentTarget).style.color='white'"
+                          (mouseleave)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 18%,transparent)';$any($event.currentTarget).style.color='var(--danger)'"
+                          (pointerdown)="$event.stopPropagation()"
+                          (click)="unscheduleItem($event, item)"
+                          [attr.aria-label]="'Quitar ' + item.title + ' del horario'"
+                        >
+                          <lucide-icon [img]="XIcon" size="13"></lucide-icon>
+                        </button>
+                      </div>
                     </div>
                     <!-- Handle de resize -->
                     <div
@@ -178,7 +190,8 @@
 
                 @if (regDragging) {
                   <div
-                    class="pointer-events-none absolute rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 opacity-40"
+                    class="pointer-events-none absolute rounded-lg border-2 border-dashed opacity-40"
+                    style="border-color:var(--border);background:var(--surface-2)"
                     [style.left]="getRegLeft(gr.reg)"
                     [style.width]="getRegWidth(gr.reg)"
                     [style.top.px]="getRegGhostTop(gr.reg)"
@@ -200,35 +213,35 @@
                     tabindex="0"
                     [attr.aria-label]="gr.title + ' — ' + getRegTimeLabel(gr.reg)"
                   >
-                    <div class="flex h-full flex-col gap-1 p-1.5 pb-4">
-                      <!-- Fila 1: icono + título -->
-                      <div class="flex min-h-0 items-start gap-1">
+                    <div class="flex h-full flex-col gap-1 overflow-hidden p-1.5 pb-4">
+                      <!-- Fila 1: icono + título + estado -->
+                      <div class="flex shrink-0 items-start gap-1">
                         <lucide-icon [img]="FlagIcon" size="11" class="mt-px shrink-0 opacity-70" aria-label="Hito"></lucide-icon>
                         <p class="min-w-0 flex-1 truncate text-[11px] font-semibold leading-tight">{{ gr.title }}</p>
-                      </div>
-                      <!-- Fila 2: estado -->
-                      <div class="flex items-center gap-1">
+                        @if (gr.reg.facturado) {
+                          <span class="shrink-0 rounded-md px-2 py-1 text-[10px] font-semibold leading-none" style="background:color-mix(in srgb,var(--success) 20%,transparent);color:var(--success)" title="Horas facturadas">€ Facturado</span>
+                        }
                         @if (gr.item.hitoEstado) {
                           <button
-                            class="truncate rounded-md px-2 py-1 text-[10px] font-semibold leading-none transition-all hover:brightness-110 active:scale-95"
+                            class="shrink-0 truncate rounded-md px-2 py-1 text-[10px] font-semibold leading-none transition-all hover:brightness-110 active:scale-95"
                             [class]="getHitoBadgeClass(gr.item)"
                             (pointerdown)="$event.stopPropagation()"
                             (click)="advanceHito($event, gr.item)"
                             [attr.aria-label]="'Avanzar estado de ' + gr.title"
                           >{{ getHitoBadgeLabel(gr.item) }}</button>
                         }
-                        @if (gr.reg.facturado) {
-                          <span class="rounded-md bg-green-200 px-2 py-1 text-[10px] font-semibold leading-none text-green-800" title="Horas facturadas">€ Facturado</span>
-                        }
                       </div>
-                      <!-- Fila 3: acciones + tiempo -->
+                      <!-- Fila 2: acciones + tiempo -->
                       <div class="flex items-center gap-1.5">
                         <p class="min-w-0 flex-1 truncate text-[10px] leading-none opacity-70">
                           {{ memberName(gr.reg.userId) }} · {{ getRegTimeLabel(gr.reg) }}
                         </p>
                         @if (!gr.reg.facturado) {
                           <button
-                            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-violet-200 text-violet-700 transition-colors hover:bg-violet-500 hover:text-white active:scale-95"
+                            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors active:scale-95"
+                            style="background:color-mix(in srgb,var(--brand) 18%,transparent);color:var(--brand)"
+                            (mouseenter)="$event.stopPropagation();$any($event.currentTarget).style.background='var(--brand)';$any($event.currentTarget).style.color='white'"
+                            (mouseleave)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 18%,transparent)';$any($event.currentTarget).style.color='var(--brand)'"
                             (pointerdown)="$event.stopPropagation()"
                             (click)="splitRegistro($event, gr)"
                             [attr.aria-label]="'Separar horas de ' + gr.title"
@@ -238,8 +251,11 @@
                           </button>
                           @let isLastRegistro = (gr.item.registrosHoras?.length ?? 0) <= 1;
                           <button
-                            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors active:scale-95"
-                            [class]="isLastRegistro ? 'bg-slate-100 text-slate-300 cursor-not-allowed' : 'bg-red-200 text-red-700 hover:bg-red-500 hover:text-white'"
+                            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors active:scale-95 disabled:cursor-not-allowed"
+                            [style.background]="isLastRegistro ? 'var(--surface-2)' : 'color-mix(in srgb,var(--danger) 18%,transparent)'"
+                            [style.color]="isLastRegistro ? 'var(--text-faint)' : 'var(--danger)'"
+                            (mouseenter)="$event.stopPropagation();!isLastRegistro && ($any($event.currentTarget).style.background='var(--danger)');!isLastRegistro && ($any($event.currentTarget).style.color='white')"
+                            (mouseleave)="!isLastRegistro && ($any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 18%,transparent)');!isLastRegistro && ($any($event.currentTarget).style.color='var(--danger)')"
                             [disabled]="isLastRegistro"
                             (pointerdown)="$event.stopPropagation()"
                             (click)="removeRegistro($event, gr)"
@@ -269,7 +285,7 @@
               <!-- Preview de segmento de hito arrastrado entre columnas -->
               @if (dragReg && dragReg.currentDate === group.date && dragReg.originalDate !== group.date) {
                 <div
-                  class="pointer-events-none absolute rounded-lg border-2 border-dashed border-violet-400 bg-violet-100/60 text-violet-800 z-20"
+                  [class]="getRegDragPreviewClass(dragReg.hitoId)"
                   style="left: 2px; width: calc(100% - 4px)"
                   [style.top.px]="getRegTop(dragReg.reg)"
                   [style.height.px]="getRegHeight(dragReg.reg)"
@@ -315,17 +331,18 @@
     [attr.aria-label]="'Detalle de ' + item.title"
   >
     <div
-      class="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl"
+      class="w-full max-w-md overflow-hidden rounded-2xl shadow-2xl"
+      style="background:var(--surface)"
       (click)="$event.stopPropagation()"
     >
       <!-- Header -->
-      <div class="flex items-start gap-3 border-b border-slate-100 p-5 pb-4">
+      <div class="flex items-start gap-3 p-5 pb-4" style="border-bottom:1px solid var(--border)">
         <div class="mt-1 h-3 w-3 shrink-0 rounded-full" [class]="getModalHeaderColor(item)"></div>
         <div class="min-w-0 flex-1">
-          <h2 id="modal-event-title" class="text-sm font-semibold leading-tight text-slate-900">
+          <h2 id="modal-event-title" class="text-sm font-semibold leading-tight" style="color:var(--text-strong)">
             {{ item.title }}
           </h2>
-          <p class="mt-0.5 text-xs text-slate-400">
+          <p class="mt-0.5 text-xs" style="color:var(--text-faint)">
             {{ getTimeLabel(item) }}
             @if (getTimeLabel(item)) { · }
             {{ getItemTypeLabel(item) }}
@@ -333,7 +350,10 @@
           </p>
         </div>
         <button
-          class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+          class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors duration-150"
+          style="color:var(--text-faint)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-body)'"
+          (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
           (click)="closeModal()"
           aria-label="Cerrar"
         >
@@ -345,12 +365,17 @@
         <!-- Estado del hito -->
         @if (item.hitoEstado !== undefined) {
           <div>
-            <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Estado</p>
+            <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider" style="color:var(--text-faint)">Estado</p>
             <div class="flex flex-wrap gap-2">
               @for (estado of HITO_ESTADOS; track estado) {
                 <button
                   class="rounded-lg px-3 py-1.5 text-xs font-medium transition-all"
                   [class]="getHitoEstadoBtnClass(estado, item.hitoEstado === estado)"
+                  [style.background]="item.hitoEstado === estado ? '' : 'var(--surface)'"
+                  [style.border]="item.hitoEstado === estado ? '' : '1px solid var(--border)'"
+                  [style.color]="item.hitoEstado === estado ? '' : 'var(--text-muted)'"
+                  (mouseenter)="item.hitoEstado !== estado && ($any($event.currentTarget).style.background='var(--surface-2)')"
+                  (mouseleave)="item.hitoEstado !== estado && ($any($event.currentTarget).style.background='var(--surface)')"
                   (click)="setHitoEstado(estado)"
                 >{{ getHitoEstadoFullLabel(estado) }}</button>
               }
@@ -362,10 +387,13 @@
         @if (item.hitoEstado !== undefined) {
           <div>
             <div class="mb-2 flex items-center justify-between">
-              <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Horas trabajadas</p>
+              <p class="text-[11px] font-semibold uppercase tracking-wider" style="color:var(--text-faint)">Horas trabajadas</p>
               @if (horasEditor() === null) {
                 <button
-                  class="flex items-center gap-1 rounded-lg bg-violet-50 px-2 py-1 text-[11px] font-medium text-violet-700 transition-colors hover:bg-violet-100"
+                  class="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium transition-colors duration-150"
+                  style="background:color-mix(in srgb,var(--brand) 8%,transparent);color:var(--brand)"
+                  (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 16%,transparent)'"
+                  (mouseleave)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 8%,transparent)'"
                   (click)="openHorasEditor()"
                 >
                   <lucide-icon [img]="ClockIcon" size="12"></lucide-icon>
@@ -378,10 +406,11 @@
               <!-- Editor de bloques -->
               <div class="space-y-2">
                 @for (r of regs; track r.id) {
-                  <div class="flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 p-2"
+                  <div class="flex flex-wrap items-center gap-1.5 rounded-lg p-2"
+                       style="border:1px solid var(--border);background:var(--surface-2)"
                        [class.opacity-60]="r.facturado">
                     <select
-                      class="min-w-0 flex-1 rounded border border-slate-200 bg-white px-1.5 py-1 text-[11px] text-slate-700 focus:border-violet-300 focus:outline-none"
+                      class="form-select min-w-0 flex-1 py-1! text-[11px]!"
                       [value]="r.userId" [disabled]="r.facturado"
                       (change)="updateBloqueField(r.id, 'userId', $event)"
                       aria-label="Miembro">
@@ -391,26 +420,32 @@
                     </select>
                     <input type="date" [value]="r.fecha" [disabled]="r.facturado"
                       (change)="updateBloqueField(r.id, 'fecha', $event)"
-                      class="rounded border border-slate-200 bg-white px-1.5 py-1 text-[11px] text-slate-700 focus:border-violet-300 focus:outline-none"
+                      class="form-input py-1! text-[11px]!"
                       aria-label="Fecha" />
                     <input type="time" [value]="r.horaInicio" [disabled]="r.facturado"
                       (change)="updateBloqueField(r.id, 'horaInicio', $event)"
-                      class="rounded border border-slate-200 bg-white px-1.5 py-1 text-[11px] text-slate-700 focus:border-violet-300 focus:outline-none"
+                      class="form-input py-1! text-[11px]!"
                       aria-label="Hora inicio" />
-                    <span class="text-[11px] text-slate-400">–</span>
+                    <span class="text-[11px]" style="color:var(--text-faint)">–</span>
                     <input type="time" [value]="r.horaFin" [disabled]="r.facturado"
                       (change)="updateBloqueField(r.id, 'horaFin', $event)"
-                      class="rounded border border-slate-200 bg-white px-1.5 py-1 text-[11px] text-slate-700 focus:border-violet-300 focus:outline-none"
+                      class="form-input py-1! text-[11px]!"
                       aria-label="Hora fin" />
-                    <span class="ml-auto text-[11px] font-medium text-slate-500">{{ bloqueHoras(r) }}h</span>
+                    <span class="ml-auto text-[11px] font-medium" style="color:var(--text-muted)">{{ bloqueHoras(r) }}h</span>
                     @if (r.facturado) {
-                      <span class="rounded bg-green-100 px-1.5 py-0.5 text-[9px] font-semibold text-green-700">Facturado</span>
+                      <span class="rounded px-1.5 py-0.5 text-[9px] font-semibold" style="background:color-mix(in srgb,var(--success) 15%,transparent);color:var(--success)">Facturado</span>
                     } @else {
-                      <button class="flex h-6 w-6 items-center justify-center rounded text-slate-400 transition-colors hover:bg-violet-100 hover:text-violet-600"
+                      <button class="flex h-6 w-6 items-center justify-center rounded transition-colors duration-150"
+                        style="color:var(--text-faint)"
+                        (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 12%,transparent)';$any($event.currentTarget).style.color='var(--brand)'"
+                        (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
                         (click)="splitBloque(r.id)" [attr.aria-label]="'Separar bloque en otro día'">
                         <lucide-icon [img]="ScissorsIcon" size="12"></lucide-icon>
                       </button>
-                      <button class="flex h-6 w-6 items-center justify-center rounded text-slate-400 transition-colors hover:bg-red-100 hover:text-red-500"
+                      <button class="flex h-6 w-6 items-center justify-center rounded transition-colors duration-150"
+                        style="color:var(--text-faint)"
+                        (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 12%,transparent)';$any($event.currentTarget).style.color='var(--danger)'"
+                        (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
                         (click)="removeBloque(r.id)" [attr.aria-label]="'Eliminar bloque'">
                         <lucide-icon [img]="Trash2Icon" size="12"></lucide-icon>
                       </button>
@@ -419,17 +454,23 @@
                 }
 
                 <div class="flex items-center justify-between pt-1">
-                  <button class="flex items-center gap-1 text-[11px] font-medium text-violet-600 hover:underline"
+                  <button class="flex items-center gap-1 text-[11px] font-medium hover:underline" style="color:var(--brand)"
                     (click)="addBloque()">
                     <lucide-icon [img]="PlusIcon" size="12"></lucide-icon> Añadir bloque
                   </button>
-                  <span class="text-[11px] font-semibold text-slate-600">Total: {{ horasEditorTotal() }}h</span>
+                  <span class="text-[11px] font-semibold" style="color:var(--text-body)">Total: {{ horasEditorTotal() }}h</span>
                 </div>
 
                 <div class="flex justify-end gap-2 pt-1">
-                  <button class="rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100"
+                  <button class="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150"
+                    style="color:var(--text-muted)"
+                    (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                    (mouseleave)="$any($event.currentTarget).style.background=''"
                     (click)="cancelHorasEditor()">Cancelar</button>
-                  <button class="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-700"
+                  <button class="rounded-lg px-3 py-1.5 text-xs font-medium text-white transition-colors duration-150"
+                    style="background:var(--brand)"
+                    (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+                    (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'"
                     (click)="saveHoras()">Guardar horas</button>
                 </div>
               </div>
@@ -437,18 +478,18 @@
               <!-- Resumen de horas registradas -->
               <ul class="space-y-1">
                 @for (r of item.registrosHoras!; track r.id) {
-                  <li class="flex items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-1.5 text-[11px] text-slate-600">
-                    <span class="font-medium text-slate-700">{{ memberName(r.userId) }}</span>
-                    <span class="text-slate-400">{{ r.fecha }} · {{ r.horaInicio }}–{{ r.horaFin }}</span>
+                  <li class="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11px]" style="background:var(--surface-2);color:var(--text-body)">
+                    <span class="font-medium" style="color:var(--text-strong)">{{ memberName(r.userId) }}</span>
+                    <span style="color:var(--text-faint)">{{ r.fecha }} · {{ r.horaInicio }}–{{ r.horaFin }}</span>
                     <span class="ml-auto font-medium">{{ bloqueHoras(r) }}h</span>
                     @if (r.facturado) {
-                      <span class="rounded bg-green-100 px-1.5 py-0.5 text-[9px] font-semibold text-green-700">Facturado</span>
+                      <span class="rounded px-1.5 py-0.5 text-[9px] font-semibold" style="background:color-mix(in srgb,var(--success) 15%,transparent);color:var(--success)">Facturado</span>
                     }
                   </li>
                 }
               </ul>
             } @else {
-              <p class="text-xs italic text-slate-400">Sin horas registradas todavía</p>
+              <p class="text-xs italic" style="color:var(--text-faint)">Sin horas registradas todavía</p>
             }
           </div>
         }
@@ -456,12 +497,17 @@
         <!-- Estado del evento -->
         @if (item.hitoEstado === undefined) {
           <div>
-            <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Estado</p>
+            <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider" style="color:var(--text-faint)">Estado</p>
             <div class="flex flex-wrap gap-2">
               @for (estado of EVENTO_ESTADOS; track estado) {
                 <button
                   class="rounded-lg px-3 py-1.5 text-xs font-medium transition-all"
                   [class]="getEventoEstadoBtnClass(estado, item.eventoEstado === estado)"
+                  [style.background]="item.eventoEstado === estado ? '' : 'var(--surface)'"
+                  [style.border]="item.eventoEstado === estado ? '' : '1px solid var(--border)'"
+                  [style.color]="item.eventoEstado === estado ? '' : 'var(--text-muted)'"
+                  (mouseenter)="item.eventoEstado !== estado && ($any($event.currentTarget).style.background='var(--surface-2)')"
+                  (mouseleave)="item.eventoEstado !== estado && ($any($event.currentTarget).style.background='var(--surface)')"
                   (click)="setEventoEstado(estado)"
                 >{{ getEventoEstadoLabel(estado) }}</button>
               }
@@ -471,10 +517,10 @@
 
         <!-- Anotaciones -->
         <div>
-          <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+          <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider" style="color:var(--text-faint)">
             Anotaciones
             @if ((item.anotaciones?.length ?? 0) > 0) {
-              <span class="ml-1 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">
+              <span class="ml-1 rounded-full px-1.5 py-0.5 text-[10px]" style="background:var(--surface-2);color:var(--text-muted)">
                 {{ item.anotaciones!.length }}
               </span>
             }
@@ -488,10 +534,13 @@
               [value]="newAnnotationText()"
               (input)="onAnnotationInput($event)"
               (keydown)="onAnnotationKeydown($event)"
-              class="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 placeholder:text-slate-400 focus:border-violet-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-100"
+              class="form-input flex-1 text-xs!"
             />
             <button
-              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500 text-white transition-colors hover:bg-violet-600 disabled:opacity-40"
+              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white transition-colors duration-150 disabled:opacity-40"
+              style="background:var(--brand)"
+              (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+              (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'"
               (click)="addAnnotation()"
               [disabled]="!newAnnotationText().trim()"
               aria-label="Añadir anotación"
@@ -504,12 +553,15 @@
           @if ((item.anotaciones?.length ?? 0) > 0) {
             <ul class="max-h-44 space-y-2 overflow-y-auto">
               @for (nota of item.anotaciones!; track nota.id) {
-                <li class="flex items-start gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                  <p class="min-w-0 flex-1 text-xs leading-relaxed text-slate-700">{{ nota.texto }}</p>
+                <li class="flex items-start gap-2 rounded-lg px-3 py-2" style="background:var(--surface-2)">
+                  <p class="min-w-0 flex-1 text-xs leading-relaxed" style="color:var(--text-body)">{{ nota.texto }}</p>
                   <div class="flex shrink-0 flex-col items-end gap-1">
-                    <span class="text-[10px] text-slate-400">{{ formatAnnotationDate(nota.creadaEn) }}</span>
+                    <span class="text-[10px]" style="color:var(--text-faint)">{{ formatAnnotationDate(nota.creadaEn) }}</span>
                     <button
-                      class="text-slate-300 transition-colors hover:text-red-400"
+                      class="transition-colors duration-150"
+                      style="color:var(--text-faint)"
+                      (mouseenter)="$any($event.currentTarget).style.color='var(--danger)'"
+                      (mouseleave)="$any($event.currentTarget).style.color='var(--text-faint)'"
                       (click)="deleteAnnotation(nota.id)"
                       [attr.aria-label]="'Eliminar anotación: ' + nota.texto"
                     >
@@ -520,16 +572,17 @@
               }
             </ul>
           } @else {
-            <p class="text-xs italic text-slate-400">Sin anotaciones todavía</p>
+            <p class="text-xs italic" style="color:var(--text-faint)">Sin anotaciones todavía</p>
           }
         </div>
         <!-- Color -->
         <div>
-          <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Color</p>
+          <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider" style="color:var(--text-faint)">Color</p>
           <div class="flex items-center gap-2">
             <!-- Reset a color por tipo -->
             <button
-              class="h-7 w-7 shrink-0 rounded-full border-2 border-dashed border-slate-300 bg-white transition-all hover:scale-110"
+              class="h-7 w-7 shrink-0 rounded-full border-2 border-dashed transition-all hover:scale-110"
+              style="border-color:var(--border);background:var(--surface)"
               [class]="!item.color ? 'ring-2 ring-offset-2 ring-slate-300 scale-110' : ''"
               (click)="setItemColor(null)"
               aria-label="Color automático según tipo"
@@ -546,6 +599,63 @@
         </div>
       </div>
 
+      <!-- Footer: eliminar evento (solo para eventos, no hitos) -->
+      @if (item.hitoEstado === undefined) {
+        <div class="flex justify-end px-5 pb-4" style="border-top:1px solid var(--border)">
+          <button
+            class="mt-4 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150"
+            style="color:var(--danger)"
+            (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 8%,transparent)'"
+            (mouseleave)="$any($event.currentTarget).style.background=''"
+            (click)="requestDeleteEvento()"
+            aria-label="Eliminar evento"
+          >
+            <lucide-icon [img]="Trash2Icon" size="13"></lucide-icon>
+            Eliminar evento
+          </button>
+        </div>
+      }
+
+    </div>
+  </div>
+}
+
+<!-- Dialog de confirmación de borrado -->
+@if (confirmingDelete()) {
+  <div
+    class="fixed inset-0 z-60 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+    (click)="cancelDelete()"
+    (keydown.escape)="cancelDelete()"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Confirmar eliminación de evento"
+  >
+    <div
+      class="w-full max-w-sm overflow-hidden rounded-2xl p-6 shadow-2xl"
+      style="background:var(--surface)"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="mb-4 flex h-10 w-10 items-center justify-center rounded-full" style="background:color-mix(in srgb,var(--danger) 12%,transparent)">
+        <lucide-icon [img]="Trash2Icon" size="18" style="color:var(--danger)"></lucide-icon>
+      </div>
+      <h3 class="mb-1 text-sm font-semibold" style="color:var(--text-strong)">¿Eliminar este evento?</h3>
+      <p class="mb-5 text-xs" style="color:var(--text-faint)">Esta acción no se puede deshacer.</p>
+      <div class="flex gap-2">
+        <button
+          class="flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors duration-150"
+          style="background:var(--surface-2);color:var(--text-body)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--border)'"
+          (mouseleave)="$any($event.currentTarget).style.background='var(--surface-2)'"
+          (click)="cancelDelete()"
+        >Cancelar</button>
+        <button
+          class="flex-1 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors duration-150"
+          style="background:var(--danger)"
+          (mouseenter)="$any($event.currentTarget).style.filter='brightness(1.1)'"
+          (mouseleave)="$any($event.currentTarget).style.filter=''"
+          (click)="confirmDeleteEvento()"
+        >Eliminar</button>
+      </div>
     </div>
   </div>
 }

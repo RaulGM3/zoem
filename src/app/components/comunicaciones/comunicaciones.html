@@ -7,7 +7,7 @@
       </div>
       <div>
         <h1 class="text-xl font-semibold text-slate-800">Centro de Comunicaciones</h1>
-        <p class="text-sm text-slate-500">Email, WhatsApp y SMS</p>
+        <p class="text-sm font-medium text-slate-700">Email, WhatsApp y SMS</p>
       </div>
     </div>
     <button class="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white text-sm rounded-lg hover:bg-violet-700">
@@ -19,22 +19,22 @@
   <!-- Stats -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
     <div class="bg-white rounded-xl border border-slate-200 p-4">
-      <p class="text-sm text-slate-500">Emails este mes</p>
+      <p class="text-sm font-medium text-slate-700">Emails este mes</p>
       <p class="text-2xl font-bold text-slate-800 mt-1">234</p>
       <p class="text-xs text-emerald-600 mt-1">+18% vs mes anterior</p>
     </div>
     <div class="bg-white rounded-xl border border-slate-200 p-4">
-      <p class="text-sm text-slate-500">WhatsApp este mes</p>
+      <p class="text-sm font-medium text-slate-700">WhatsApp este mes</p>
       <p class="text-2xl font-bold text-slate-800 mt-1">87</p>
       <p class="text-xs text-emerald-600 mt-1">+5% vs mes anterior</p>
     </div>
     <div class="bg-white rounded-xl border border-slate-200 p-4">
-      <p class="text-sm text-slate-500">SMS este mes</p>
+      <p class="text-sm font-medium text-slate-700">SMS este mes</p>
       <p class="text-2xl font-bold text-slate-800 mt-1">43</p>
-      <p class="text-xs text-slate-500 mt-1">Sin cambios</p>
+      <p class="text-xs font-medium text-slate-700 mt-1">Sin cambios</p>
     </div>
     <div class="bg-white rounded-xl border border-slate-200 p-4">
-      <p class="text-sm text-slate-500">Automatizaciones activas</p>
+      <p class="text-sm font-medium text-slate-700">Automatizaciones activas</p>
       <p class="text-2xl font-bold text-slate-800 mt-1">3</p>
       <p class="text-xs text-emerald-600 mt-1">Todas funcionando</p>
     </div>
@@ -43,16 +43,16 @@
   <!-- Tabs -->
   <div class="bg-white rounded-xl border border-slate-200">
     <div class="flex border-b border-slate-200 overflow-x-auto">
-      <button (click)="activeTab.set('bandeja')" [class]="activeTab() === 'bandeja' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">
+      <button (click)="activeTab.set('bandeja')" [class]="activeTab() === 'bandeja' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-700 hover:text-slate-700 whitespace-nowrap'">
         Bandeja unificada
         @if (totalNoLeidos() > 0) {
           <span class="ml-1 px-1.5 py-0.5 text-xs bg-blue-600 text-white rounded-full">{{ totalNoLeidos() }}</span>
         }
       </button>
-      <button (click)="activeTab.set('campanas')" [class]="activeTab() === 'campanas' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Campañas</button>
-      <button (click)="activeTab.set('plantillas')" [class]="activeTab() === 'plantillas' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Plantillas</button>
-      <button (click)="activeTab.set('automatizaciones')" [class]="activeTab() === 'automatizaciones' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Automatizaciones</button>
-      <button (click)="activeTab.set('historial')" [class]="activeTab() === 'historial' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">Historial</button>
+      <button (click)="activeTab.set('campanas')" [class]="activeTab() === 'campanas' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-700 hover:text-slate-700 whitespace-nowrap'">Campañas</button>
+      <button (click)="activeTab.set('plantillas')" [class]="activeTab() === 'plantillas' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-700 hover:text-slate-700 whitespace-nowrap'">Plantillas</button>
+      <button (click)="activeTab.set('automatizaciones')" [class]="activeTab() === 'automatizaciones' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-700 hover:text-slate-700 whitespace-nowrap'">Automatizaciones</button>
+      <button (click)="activeTab.set('historial')" [class]="activeTab() === 'historial' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-700 hover:text-slate-700 whitespace-nowrap'">Historial</button>
     </div>
 
     @if (activeTab() === 'bandeja') {
@@ -66,10 +66,10 @@
               <div class="flex items-start justify-between gap-2">
                 <div class="min-w-0">
                   <p class="font-medium text-slate-800 text-sm truncate">{{ conv.contacto }}</p>
-                  <p class="text-xs text-slate-400 truncate">{{ conv.ultimoMensaje }}</p>
+                  <p class="text-xs font-medium text-slate-600 truncate">{{ conv.ultimoMensaje }}</p>
                 </div>
                 <div class="flex flex-col items-end gap-1 shrink-0">
-                  <p class="text-xs text-slate-400">{{ conv.fecha }}</p>
+                  <p class="text-xs font-medium text-slate-600">{{ conv.fecha }}</p>
                   @if (conv.noLeidos > 0) {
                     <span class="w-4 h-4 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center">{{ conv.noLeidos }}</span>
                   }
@@ -97,7 +97,7 @@
                 <div [class]="'flex ' + (msg.entrante ? 'justify-start' : 'justify-end')">
                   <div [class]="'max-w-xs px-3 py-2 rounded-lg text-sm ' + (msg.entrante ? 'bg-slate-100 text-slate-700' : 'bg-violet-600 text-white')">
                     {{ msg.texto }}
-                    <p [class]="'text-xs mt-1 ' + (msg.entrante ? 'text-slate-400' : 'text-violet-200')">{{ msg.hora }}</p>
+                    <p [class]="'text-xs font-medium mt-1 ' + (msg.entrante ? 'text-slate-600' : 'text-violet-200')">{{ msg.hora }}</p>
                   </div>
                 </div>
               }
@@ -122,10 +122,10 @@
                 <span [class]="'px-2 py-1 text-xs rounded-full font-medium ' + getCanalClass(camp.canal)">{{ camp.canal }}</span>
                 <div>
                   <p class="font-medium text-slate-800 text-sm">{{ camp.nombre }}</p>
-                  <p class="text-xs text-slate-400">{{ camp.fecha }}</p>
+                  <p class="text-xs font-medium text-slate-600">{{ camp.fecha }}</p>
                 </div>
               </div>
-              <div class="flex items-center gap-6 text-sm text-slate-500">
+              <div class="flex items-center gap-6 text-sm text-slate-700">
                 <span>{{ camp.enviados }} enviados</span>
                 <span>{{ camp.abiertos }} abiertos</span>
                 <span [class]="'px-2 py-1 rounded-full text-xs font-medium ' + getCampanaEstadoClass(camp.estado)">{{ camp.estado }}</span>
@@ -143,10 +143,10 @@
             <div class="border border-slate-200 rounded-lg p-4 hover:border-violet-300 hover:shadow-sm transition-all">
               <div class="flex items-start justify-between mb-2">
                 <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getCanalClass(plt.canal)">{{ plt.canal }}</span>
-                <span class="text-xs text-slate-400">{{ plt.usos }} usos</span>
+                <span class="text-xs text-slate-600">{{ plt.usos }} usos</span>
               </div>
               <p class="font-medium text-slate-800 text-sm">{{ plt.nombre }}</p>
-              <p class="text-xs text-slate-500 mt-1">{{ plt.descripcion }}</p>
+              <p class="text-xs font-medium text-slate-700 mt-1">{{ plt.descripcion }}</p>
               <button class="mt-3 w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600">
                 Usar plantilla
               </button>
@@ -164,11 +164,11 @@
               <span [class]="'px-2 py-1 text-xs rounded-full font-medium ' + getCanalClass(auto.canal)">{{ auto.canal }}</span>
               <div>
                 <p class="font-medium text-slate-800 text-sm">{{ auto.nombre }}</p>
-                <p class="text-xs text-slate-400">Trigger: {{ auto.trigger }}</p>
+                <p class="text-xs font-medium text-slate-600">Trigger: {{ auto.trigger }}</p>
               </div>
             </div>
             <div class="flex items-center gap-2">
-              <span [class]="auto.activo ? 'text-xs text-emerald-600 font-medium' : 'text-xs text-slate-400'">
+              <span [class]="auto.activo ? 'text-xs text-emerald-600 font-medium' : 'text-xs text-slate-600'">
                 {{ auto.activo ? 'Activo' : 'Inactivo' }}
               </span>
               <lucide-icon [img]="auto.activo ? ToggleRightIcon : ToggleLeftIcon" [class]="'w-8 h-8 ' + (auto.activo ? 'text-emerald-500' : 'text-slate-300')" />
@@ -183,21 +183,21 @@
         <div class="grid grid-cols-3 gap-4 mb-4">
           <div class="text-center p-3 bg-green-50 rounded-lg">
             <p class="text-lg font-bold text-green-700">94%</p>
-            <p class="text-xs text-slate-500">Tasa de entrega</p>
+            <p class="text-xs font-medium text-slate-700">Tasa de entrega</p>
           </div>
           <div class="text-center p-3 bg-blue-50 rounded-lg">
             <p class="text-lg font-bold text-blue-700">61%</p>
-            <p class="text-xs text-slate-500">Tasa de apertura</p>
+            <p class="text-xs font-medium text-slate-700">Tasa de apertura</p>
           </div>
           <div class="text-center p-3 bg-violet-50 rounded-lg">
             <p class="text-lg font-bold text-violet-700">23%</p>
-            <p class="text-xs text-slate-500">Tasa de respuesta</p>
+            <p class="text-xs font-medium text-slate-700">Tasa de respuesta</p>
           </div>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
-              <tr class="text-left text-slate-500 border-b border-slate-100">
+              <tr class="text-left text-slate-700 border-b border-slate-100">
                 <th class="pb-3 font-medium">Destinatario</th>
                 <th class="pb-3 font-medium">Canal</th>
                 <th class="pb-3 font-medium">Asunto / Mensaje</th>
@@ -210,9 +210,9 @@
                 <tr class="hover:bg-slate-50">
                   <td class="py-3 font-medium text-slate-800">{{ h.destinatario }}</td>
                   <td class="py-3"><span [class]="'px-2 py-0.5 text-xs rounded-full ' + getCanalClass(h.canal)">{{ h.canal }}</span></td>
-                  <td class="py-3 text-slate-500">{{ h.asunto }}</td>
+                  <td class="py-3 text-slate-700">{{ h.asunto }}</td>
                   <td class="py-3 text-center"><span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getHistorialEstadoClass(h.estado)">{{ h.estado }}</span></td>
-                  <td class="py-3 text-slate-400">{{ h.fecha }}</td>
+                  <td class="py-3 text-slate-600">{{ h.fecha }}</td>
                 </tr>
               }
             </tbody>

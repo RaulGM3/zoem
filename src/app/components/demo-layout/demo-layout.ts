@@ -5,6 +5,7 @@ import { filter } from 'rxjs';
 import { SearchService, type SearchCategory } from '../../core/services/search.service';
 import { AuthService } from '../../auth/auth.service';
 import { PermissionService } from '../../core/services/permission.service';
+import { ThemeService } from '../../core/services/theme.service';
 import type { Modulo } from '../../core/permissions/permissions';
 import {
   LucideAngularModule,
@@ -69,6 +70,7 @@ export class DemoLayoutComponent {
   readonly LogOutIcon = LogOut;
 
   readonly searchSvc = inject(SearchService);
+  readonly themeSvc = inject(ThemeService);
   private readonly authSvc = inject(AuthService);
   private readonly perm = inject(PermissionService);
   private readonly router = inject(Router);
@@ -128,8 +130,8 @@ export class DemoLayoutComponent {
   sidebarCollapsed = signal(false);
   sidebarClass = computed(() =>
     this.sidebarCollapsed()
-      ? 'hidden flex-col border-r bg-white transition-all duration-300 ease-in-out lg:flex overflow-hidden w-16'
-      : 'hidden flex-col border-r bg-white transition-all duration-300 ease-in-out lg:flex overflow-hidden w-64'
+      ? 'hidden flex-col lg:flex overflow-hidden w-16 transition-all duration-300 ease-in-out'
+      : 'hidden flex-col lg:flex overflow-hidden w-64 transition-all duration-300 ease-in-out'
   );
 
   toggleSidebar(): void {

@@ -2,34 +2,35 @@
 
   <!-- Progress -->
   @if (hitos().length > 0) {
-    <div class="bg-white rounded-xl border border-slate-200 p-4">
+    <div class="rounded-xl p-4" style="background:var(--surface);border:1px solid var(--border)">
       <div class="flex items-center justify-between text-sm mb-2">
-        <span class="text-slate-600">Progreso general</span>
-        <span class="font-medium text-slate-800">{{ progress() }}%</span>
+        <span style="color:var(--text-muted)">Progreso general</span>
+        <span class="font-medium" style="color:var(--text-strong)">{{ progress() }}%</span>
       </div>
-      <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+      <div class="h-2 rounded-full overflow-hidden" style="background:var(--surface-2)">
         <div
-          class="h-full bg-violet-500 rounded-full transition-all"
+          class="h-full rounded-full transition-all"
+          style="background:var(--brand)"
           [style.width.%]="progress()"
         ></div>
       </div>
-      <p class="text-xs text-slate-400 mt-1.5">
+      <p class="text-xs mt-1.5" style="color:var(--text-faint)">
         {{ completados() }} de {{ hitos().length }} completados
       </p>
     </div>
   }
 
   <!-- List -->
-  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+  <div class="rounded-xl overflow-hidden" style="background:var(--surface);border:1px solid var(--border)">
     @if (hitos().length === 0) {
-      <div class="p-10 text-center text-slate-400 text-sm">
+      <div class="p-10 text-center text-sm" style="color:var(--text-faint)">
         <p>No hay hitos definidos</p>
         <p class="text-xs mt-1">Añade hitos para hacer seguimiento del caso</p>
       </div>
     } @else {
-      <ul class="divide-y divide-slate-100">
+      <ul>
         @for (hito of hitos(); track hito.id) {
-          <li class="p-4 flex items-start gap-3 group">
+          <li class="p-4 flex items-start gap-3 group" style="border-bottom:1px solid var(--border-soft)">
             <button
               (click)="toggle.emit(hito)"
               [class]="getHitoEstadoColor(hito.estado)"
@@ -40,13 +41,15 @@
               <lucide-icon [img]="getHitoEstadoIcon(hito.estado)" class="w-5 h-5" />
             </button>
             <div class="flex-1 min-w-0">
-              <p [class]="'text-sm font-medium ' + (hito.estado === 'completado' ? 'line-through text-slate-400' : 'text-slate-800')">
+              <p class="text-sm font-medium"
+                [style.color]="hito.estado === 'completado' ? 'var(--text-faint)' : 'var(--text-strong)'"
+                [style.text-decoration]="hito.estado === 'completado' ? 'line-through' : 'none'">
                 {{ hito.titulo }}
               </p>
               @if (hito.descripcion) {
-                <p class="text-xs text-slate-400 mt-0.5">{{ hito.descripcion }}</p>
+                <p class="text-xs mt-0.5" style="color:var(--text-faint)">{{ hito.descripcion }}</p>
               }
-              <div class="flex items-center gap-3 mt-1 text-xs text-slate-400">
+              <div class="flex items-center gap-3 mt-1 text-xs" style="color:var(--text-faint)">
                 @if (hito.fechaEstimada) {
                   <span>{{ hito.fechaEstimada }}</span>
                 }
@@ -54,7 +57,7 @@
                   <span>{{ asignadosLabel(hito) }}</span>
                 }
                 @if (totalHoras(hito) > 0) {
-                  <span class="inline-flex items-center gap-1 text-violet-600">
+                  <span class="inline-flex items-center gap-1" style="color:var(--brand)">
                     <lucide-icon [img]="ClockIcon" class="w-3 h-3" />
                     {{ totalHoras(hito) }}h
                   </span>
@@ -67,29 +70,38 @@
             <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               @if (tieneHorasPendientes(hito)) {
                 <button (click)="facturarHoras.emit(hito)"
-                  class="p-1 rounded hover:bg-violet-50"
+                  class="p-1 rounded transition-colors duration-150"
+                  (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 10%,transparent)'"
+                  (mouseleave)="$any($event.currentTarget).style.background=''"
                   aria-label="Facturar horas del hito" title="Facturar horas como honorarios">
-                  <lucide-icon [img]="EuroIcon" class="w-3.5 h-3.5 text-violet-500" />
+                  <lucide-icon [img]="EuroIcon" class="w-3.5 h-3.5" style="color:var(--brand)" />
                 </button>
               }
               <button (click)="editHito.emit(hito)"
-                class="p-1 rounded hover:bg-slate-100"
+                class="p-1 rounded transition-colors duration-150"
+                (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                (mouseleave)="$any($event.currentTarget).style.background=''"
                 aria-label="Editar hito">
-                <lucide-icon [img]="Edit2Icon" class="w-3.5 h-3.5 text-slate-400" />
+                <lucide-icon [img]="Edit2Icon" class="w-3.5 h-3.5" style="color:var(--text-faint)" />
               </button>
               <button (click)="deleteHito.emit(hito.id)"
-                class="p-1 rounded hover:bg-red-50"
+                class="p-1 rounded transition-colors duration-150"
+                (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)'"
+                (mouseleave)="$any($event.currentTarget).style.background=''"
                 aria-label="Eliminar hito">
-                <lucide-icon [img]="Trash2Icon" class="w-3.5 h-3.5 text-red-400" />
+                <lucide-icon [img]="Trash2Icon" class="w-3.5 h-3.5" style="color:color-mix(in srgb,var(--danger) 70%,transparent)" />
               </button>
             </div>
           </li>
         }
       </ul>
     }
-    <div class="p-3 border-t border-slate-100">
+    <div class="p-3" style="border-top:1px solid var(--border-soft)">
       <button (click)="addHito.emit()"
-        class="w-full flex items-center justify-center gap-2 py-2 text-sm text-slate-500 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-colors">
+        class="w-full flex items-center justify-center gap-2 py-2 text-sm rounded-lg transition-colors duration-150"
+        style="color:var(--text-muted)"
+        (mouseenter)="$any($event.currentTarget).style.color='var(--brand)';$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 8%,transparent)'"
+        (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)';$any($event.currentTarget).style.background=''">
         <lucide-icon [img]="PlusIcon" class="w-4 h-4" />
         Añadir hito
       </button>
@@ -100,7 +112,10 @@
   @if (isAdmin()) {
     <div class="flex justify-end">
       <button (click)="actividadVisible.set(true)"
-        class="flex items-center gap-2 px-3 py-2 text-sm text-slate-500 border border-slate-200 rounded-lg hover:text-violet-600 hover:bg-violet-50 transition-colors">
+        class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors duration-150"
+        style="border:1px solid var(--border);color:var(--text-muted)"
+        (mouseenter)="$any($event.currentTarget).style.color='var(--brand)';$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 8%,transparent)'"
+        (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)';$any($event.currentTarget).style.background=''">
         <lucide-icon [img]="ActivityIcon" class="w-4 h-4" />
         Ver actividad
       </button>
@@ -112,26 +127,31 @@
 @if (isAdmin() && actividadVisible()) {
   <div class="fixed inset-0 z-40 bg-black/30 flex items-center justify-center p-4"
     (click)="actividadVisible.set(false)">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col z-50"
+    <div class="rounded-xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col z-50"
+      style="background:var(--surface)"
       role="dialog" aria-modal="true" aria-labelledby="actividad-dialog-title"
       (click)="$event.stopPropagation()">
-      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-        <h2 id="actividad-dialog-title" class="text-base font-semibold text-slate-800">Actividad</h2>
-        <button (click)="actividadVisible.set(false)" class="p-1.5 rounded-lg hover:bg-slate-100" aria-label="Cerrar">
-          <lucide-icon [img]="XIcon" class="w-4 h-4 text-slate-500" />
+      <div class="flex items-center justify-between px-6 py-4" style="border-bottom:1px solid var(--border)">
+        <h2 id="actividad-dialog-title" class="text-base font-semibold" style="color:var(--text-strong)">Actividad</h2>
+        <button (click)="actividadVisible.set(false)"
+          class="p-1.5 rounded-lg transition-colors duration-150"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+          (mouseleave)="$any($event.currentTarget).style.background=''"
+          aria-label="Cerrar">
+          <lucide-icon [img]="XIcon" class="w-4 h-4" style="color:var(--text-faint)" />
         </button>
       </div>
       <div class="flex-1 overflow-y-auto px-6 py-5">
         @if (actividad().length === 0) {
-          <p class="text-sm text-slate-400 text-center py-8">No hay actividad registrada</p>
+          <p class="text-sm text-center py-8" style="color:var(--text-faint)">No hay actividad registrada</p>
         } @else {
           <ul class="space-y-3">
             @for (act of actividad(); track act.id) {
               <li class="flex items-start gap-3">
                 <span class="mt-1.5 w-2 h-2 rounded-full shrink-0" [class]="actividadDotClass(act)"></span>
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm text-slate-700">{{ describeActividad(act) }}</p>
-                  <p class="text-xs text-slate-400 mt-0.5">{{ actividadTiempo(act) }}</p>
+                  <p class="text-sm" style="color:var(--text-body)">{{ describeActividad(act) }}</p>
+                  <p class="text-xs mt-0.5" style="color:var(--text-faint)">{{ actividadTiempo(act) }}</p>
                 </div>
               </li>
             }

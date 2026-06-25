@@ -1,14 +1,14 @@
 <div class="flex items-center justify-between mb-6">
   <div class="flex items-center gap-3">
     <a routerLink="/casos" class="p-1.5 rounded-lg hover:bg-slate-100" aria-label="Volver a casos">
-      <lucide-icon [img]="ArrowLeftIcon" class="w-4 h-4 text-slate-500" />
+      <lucide-icon [img]="ArrowLeftIcon" class="w-4 h-4 text-slate-700" />
     </a>
     <div class="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center">
       <lucide-icon [img]="LayersIcon" class="w-5 h-5 text-violet-600" />
     </div>
     <div>
       <h1 class="text-xl font-semibold text-slate-800">Plantillas de caso</h1>
-      <p class="text-sm text-slate-500">Modelos reutilizables con hitos y costos predefinidos</p>
+      <p class="text-sm font-medium text-slate-700">Modelos reutilizables con hitos y costos predefinidos</p>
     </div>
   </div>
   <button (click)="newPlantilla.emit()"

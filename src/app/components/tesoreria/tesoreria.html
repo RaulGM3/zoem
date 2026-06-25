@@ -3,25 +3,32 @@
   <!-- Header -->
   <div class="flex items-center justify-between gap-3 flex-wrap">
     <div class="flex items-center gap-3">
-      <div class="p-2.5 bg-violet-100 rounded-xl">
-        <lucide-icon [img]="WalletIcon" class="w-5 h-5 text-violet-600" />
+      <div class="flex h-10 w-10 items-center justify-center rounded-xl"
+        style="background:color-mix(in srgb,var(--accent-ia) 12%,transparent)">
+        <lucide-icon [img]="WalletIcon" class="w-5 h-5" style="color:var(--accent-ia)" />
       </div>
       <div>
-        <h1 class="text-xl font-bold text-slate-800">Tesorería</h1>
-        <p class="text-sm text-slate-500">Contabilidad de casos y cotejo con el banco</p>
+        <h1 class="text-[19px] font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Tesorería</h1>
+        <p class="text-sm" style="color:var(--text-muted)">Contabilidad de casos y cotejo con el banco</p>
       </div>
     </div>
     <div class="flex items-center gap-2">
       @if (perm.can('Tesorería', 'editar')) {
         <button type="button" (click)="showCuentasDrawer.set(true)"
-          class="flex items-center gap-1.5 px-3 py-2 text-sm font-medium border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50">
+          class="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors duration-150"
+          style="border:1px solid var(--border);color:var(--text-body);background:var(--surface)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+          (mouseleave)="$any($event.currentTarget).style.background='var(--surface)'">
           <lucide-icon [img]="SettingsIcon" class="w-4 h-4" />
           Cuentas
         </button>
       }
       @if (perm.can('Tesorería', 'crear')) {
         <button type="button" (click)="showCierreModal.set(true)"
-          class="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors">
+          class="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-white transition-all duration-150"
+          style="background:var(--brand)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+          (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
           <lucide-icon [img]="LockIcon" class="w-4 h-4" />
           Cierre de caja
         </button>
@@ -30,50 +37,19 @@
   </div>
 
   <!-- Tabs -->
-  <div class="flex gap-1 border-b border-slate-200">
-    <button type="button"
-      (click)="activeTab.set('resumen')"
-      class="px-4 py-2 text-sm font-medium rounded-t-lg transition-colors"
-      [class]="activeTab() === 'resumen'
-        ? 'bg-white border border-b-white border-slate-200 text-violet-700 -mb-px'
-        : 'text-slate-500 hover:text-slate-700'">
-      Resumen
-    </button>
-    <button type="button"
-      (click)="activeTab.set('movimientos')"
-      class="px-4 py-2 text-sm font-medium rounded-t-lg transition-colors"
-      [class]="activeTab() === 'movimientos'
-        ? 'bg-white border border-b-white border-slate-200 text-violet-700 -mb-px'
-        : 'text-slate-500 hover:text-slate-700'">
-      Movimientos
-      @if (movimientosPendientes() > 0) {
-        <span class="ml-1.5 inline-flex items-center justify-center w-4 h-4 text-xs rounded-full bg-amber-400 text-white font-semibold">{{ movimientosPendientes() }}</span>
-      }
-    </button>
-    <button type="button"
-      (click)="activeTab.set('conciliacion')"
-      class="px-4 py-2 text-sm font-medium rounded-t-lg transition-colors"
-      [class]="activeTab() === 'conciliacion'
-        ? 'bg-white border border-b-white border-slate-200 text-violet-700 -mb-px'
-        : 'text-slate-500 hover:text-slate-700'">
-      Conciliación
-    </button>
-    <button type="button"
-      (click)="activeTab.set('reportes')"
-      class="px-4 py-2 text-sm font-medium rounded-t-lg transition-colors"
-      [class]="activeTab() === 'reportes'
-        ? 'bg-white border border-b-white border-slate-200 text-violet-700 -mb-px'
-        : 'text-slate-500 hover:text-slate-700'">
-      Reportes
-    </button>
-    <button type="button"
-      (click)="activeTab.set('casos')"
-      class="px-4 py-2 text-sm font-medium rounded-t-lg transition-colors"
-      [class]="activeTab() === 'casos'
-        ? 'bg-white border border-b-white border-slate-200 text-violet-700 -mb-px'
-        : 'text-slate-500 hover:text-slate-700'">
-      Casos
-    </button>
+  <div class="flex overflow-x-auto" style="border-bottom:1px solid var(--border)">
+    @for (tab of [['resumen','Resumen'],['movimientos','Movimientos'],['conciliacion','Conciliación'],['reportes','Reportes'],['casos','Casos']]; track tab[0]) {
+      <button type="button" (click)="activeTab.set($any(tab[0]))"
+        class="px-4 py-3 text-sm font-semibold whitespace-nowrap transition-colors duration-150"
+        [style.color]="activeTab() === tab[0] ? 'var(--brand)' : 'var(--text-muted)'"
+        [style.border-bottom]="activeTab() === tab[0] ? '2px solid var(--brand)' : '2px solid transparent'">
+        {{ tab[1] }}
+        @if (tab[0] === 'movimientos' && movimientosPendientes() > 0) {
+          <span class="ml-1.5 inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full font-bold text-white"
+            style="background:var(--warning)">{{ movimientosPendientes() }}</span>
+        }
+      </button>
+    }
   </div>
 
   <!-- Tab content -->

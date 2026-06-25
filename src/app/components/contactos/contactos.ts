@@ -208,20 +208,27 @@ export class ContactosComponent {
     return map[status] ?? status;
   }
 
-  getStatusClass(status: string): string {
-    const map: Record<string, string> = {
-      activo: 'bg-green-100 text-green-700',
-      inactivo: 'bg-slate-100 text-slate-500',
-      potencial: 'bg-violet-100 text-violet-700',
-      archivado: 'bg-amber-100 text-amber-700',
+  getStatusStyle(status: string): { background: string; color: string } {
+    const mix = (v: string) => `color-mix(in srgb,${v} 12%,transparent)`;
+    const map: Record<string, { background: string; color: string }> = {
+      activo:    { background: mix('var(--success)'),   color: 'var(--success)' },
+      potencial: { background: mix('var(--accent-ia)'), color: 'var(--accent-ia)' },
+      inactivo:  { background: 'var(--surface-2)',       color: 'var(--text-muted)' },
+      archivado: { background: mix('var(--warning)'),   color: 'var(--warning)' },
     };
-    return map[status] ?? 'bg-slate-100 text-slate-600';
+    return map[status] ?? { background: 'var(--surface-2)', color: 'var(--text-muted)' };
   }
 
-  getTypeClass(type: string): string {
+  getTypeStyle(type: string): { background: string; color: string } {
     return type === 'persona_fisica'
-      ? 'bg-amber-100 text-amber-700'
-      : 'bg-blue-100 text-blue-700';
+      ? { background: 'color-mix(in srgb,var(--warning) 12%,transparent)', color: 'var(--warning)' }
+      : { background: 'color-mix(in srgb,var(--brand) 12%,transparent)',   color: 'var(--brand)' };
+  }
+
+  getAvatarStyle(type: string): { background: string; color: string } {
+    return type === 'persona_fisica'
+      ? { background: 'color-mix(in srgb,var(--accent-ia) 15%,transparent)', color: 'var(--accent-ia)' }
+      : { background: 'color-mix(in srgb,var(--brand) 15%,transparent)',      color: 'var(--brand)' };
   }
 
   getSector(c: Contact): string | undefined {

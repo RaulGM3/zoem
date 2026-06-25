@@ -2,21 +2,24 @@
 
   <!-- Costos previstos por plantilla -->
   @if (slots().length > 0) {
-    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-      <div class="px-4 py-3 border-b border-slate-200">
+    <div class="rounded-xl overflow-hidden" style="background:var(--surface);border:1px solid var(--border)">
+      <div class="px-4 py-3" style="border-bottom:1px solid var(--border)">
         <div class="flex items-center justify-between mb-1.5">
-          <h3 class="text-sm font-medium text-slate-700">Costos previstos por plantilla</h3>
+          <h3 class="text-sm font-medium" style="color:var(--text-body)">Costos previstos por plantilla</h3>
           <div class="flex items-center gap-3">
             @let sp = slotsProgress();
             @if (sp) {
-              <span class="text-xs text-slate-500">
-                <span class="font-semibold text-slate-800">{{ sp.registrados }}</span> de {{ sp.total }} registrados
+              <span class="text-xs" style="color:var(--text-muted)">
+                <span class="font-semibold" style="color:var(--text-strong)">{{ sp.registrados }}</span> de {{ sp.total }} registrados
               </span>
               @if (sp.registrados > 0) {
                 <button
                   type="button"
                   (click)="showRegistrados.set(!showRegistrados())"
-                  class="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                  class="flex items-center gap-1 text-xs transition-colors duration-150"
+                  style="color:var(--text-faint)"
+                  (mouseenter)="$any($event.currentTarget).style.color='var(--text-body)'"
+                  (mouseleave)="$any($event.currentTarget).style.color='var(--text-faint)'"
                 >
                   <lucide-icon [img]="showRegistrados() ? EyeOffIcon : EyeIcon" class="w-3.5 h-3.5" />
                   {{ showRegistrados() ? 'Ocultar registrados' : 'Ver ' + sp.registrados + ' registrado' + (sp.registrados !== 1 ? 's' : '') }}
@@ -27,16 +30,17 @@
         </div>
         @let sp2 = slotsProgress();
         @if (sp2) {
-          <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div class="h-1.5 rounded-full overflow-hidden" style="background:var(--surface-2)">
             <div
-              class="h-full bg-violet-500 rounded-full transition-all duration-300"
+              class="h-full rounded-full transition-all duration-300"
+              style="background:var(--brand)"
               [style.width.%]="(sp2.registrados / sp2.total) * 100"
             ></div>
           </div>
         }
       </div>
 
-      <div class="divide-y divide-slate-100">
+      <div>
         @for (slot of orderedSlots(); track slot.id; let i = $index) {
           @if (showRegistrados() || slot.status !== 'registrado') {
           <div
@@ -45,14 +49,18 @@
             (dragover)="onSlotDragOver($event, i)"
             (drop)="onSlotDrop($event)"
             (dragend)="onSlotDragEnd()"
-            class="flex items-center gap-3 px-4 py-3 transition-colors"
-            [class.bg-violet-50]="dragOver() === i"
-            [class.opacity-50]="dragFrom() === i"
+            class="flex items-center gap-3 px-4 py-3 transition-colors duration-150"
+            style="border-bottom:1px solid var(--border-soft)"
+            [style.background]="dragOver() === i ? 'color-mix(in srgb,var(--brand) 8%,transparent)' : ''"
+            [style.opacity]="dragFrom() === i ? 0.5 : 1"
           >
 
             <button
               type="button"
-              class="cursor-grab active:cursor-grabbing p-0.5 text-slate-300 hover:text-slate-500 shrink-0 touch-none"
+              class="cursor-grab active:cursor-grabbing p-0.5 shrink-0 touch-none transition-colors duration-150"
+              style="color:var(--text-faint)"
+              (mouseenter)="$any($event.currentTarget).style.color='var(--text-muted)'"
+              (mouseleave)="$any($event.currentTarget).style.color='var(--text-faint)'"
               title="Arrastrar para reordenar"
               aria-label="Arrastrar para reordenar"
             >
@@ -61,43 +69,50 @@
 
             <lucide-icon
               [img]="slot.status === 'registrado' ? CheckCircle2Icon : CircleAlertIcon"
-              [class]="'w-4 h-4 shrink-0 ' + (slot.status === 'registrado' ? 'text-emerald-500' : 'text-amber-400')"
+              class="w-4 h-4 shrink-0"
+              [style.color]="slot.status === 'registrado' ? 'var(--success)' : 'var(--warning)'"
             />
 
             <div class="flex-1 min-w-0">
-              <p class="text-sm text-slate-700 font-medium truncate">{{ slot.nombre }}</p>
-              <p class="text-xs text-slate-400">{{ slot.tipoCosto | titlecase }}</p>
+              <p class="text-sm font-medium truncate" style="color:var(--text-body)">{{ slot.nombre }}</p>
+              <p class="text-xs" style="color:var(--text-faint)">{{ slot.tipoCosto | titlecase }}</p>
             </div>
 
             <div class="flex items-center gap-3 shrink-0">
               @if (slot.importeEstimado != null) {
-                <span class="text-sm text-slate-500">
+                <span class="text-sm" style="color:var(--text-muted)">
                   @if (slot.status !== 'registrado') {
-                    <span class="text-xs text-slate-400">est.</span>
+                    <span class="text-xs" style="color:var(--text-faint)">est.</span>
                   }
                   {{ slot.importeEstimado | number:'1.2-2' }} €
                 </span>
               }
               @if (slot.status === 'registrado') {
                 @if (slot.importeReal != null) {
-                  <span class="text-sm font-semibold text-emerald-700">
+                  <span class="text-sm font-semibold" style="color:var(--success)">
                     {{ slot.importeReal | number:'1.2-2' }} €
                   </span>
                 }
-                <span class="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 font-medium">Registrado</span>
+                <span class="px-2 py-0.5 text-xs rounded-full font-medium" style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">Registrado</span>
                 <button
                   (click)="unregisterSlot.emit(slot)"
-                  class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-300 hover:text-slate-500"
+                  class="p-1.5 rounded-lg transition-colors duration-150"
+                  style="color:var(--text-faint)"
+                  (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-muted)'"
+                  (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
                   title="Desasociar movimiento"
                   aria-label="Desasociar movimiento"
                 >
                   <lucide-icon [img]="XIcon" class="w-3.5 h-3.5" />
                 </button>
               } @else {
-                <span class="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-700 font-medium">Pendiente</span>
+                <span class="px-2 py-0.5 text-xs rounded-full font-medium" style="background:color-mix(in srgb,var(--warning) 12%,transparent);color:var(--warning)">Pendiente</span>
                 <button
                   (click)="registerSlot.emit(slot)"
-                  class="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-violet-600 text-white rounded-lg hover:bg-violet-700"
+                  class="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white rounded-lg transition-colors duration-150"
+                  style="background:var(--brand)"
+                  (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+                  (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'"
                 >
                   <lucide-icon [img]="PlusIcon" class="w-3 h-3" />
                   Registrar
@@ -117,38 +132,38 @@
   <div class="grid grid-cols-2 gap-3" [class]="rm.honorarios > 0 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'">
 
     <!-- Ingresos -->
-    <div class="bg-white rounded-xl border border-slate-200 p-4">
-      <p class="text-xs text-slate-500 uppercase tracking-wide">Ingresos</p>
-      <p class="text-xl font-bold text-emerald-600 mt-1">
+    <div class="kpi-card">
+      <p class="text-xs uppercase tracking-wide" style="color:var(--text-faint)">Ingresos</p>
+      <p class="text-xl font-bold mt-1" style="color:var(--success);font-family:var(--font-display)">
         {{ rm.totalIngresos | number:'1.2-2' }} €
       </p>
     </div>
 
     <!-- Egresos con desglose -->
-    <div class="bg-white rounded-xl border border-slate-200 p-4">
-      <p class="text-xs text-slate-500 uppercase tracking-wide">Egresos</p>
-      <p class="text-xl font-bold text-red-500 mt-1">
+    <div class="kpi-card">
+      <p class="text-xs uppercase tracking-wide" style="color:var(--text-faint)">Egresos</p>
+      <p class="text-xl font-bold mt-1" style="color:var(--danger);font-family:var(--font-display)">
         {{ rm.totalEgresos | number:'1.2-2' }} €
       </p>
       @if (rm.totalEgresos > 0) {
-        <div class="mt-2 space-y-0.5 border-t border-slate-100 pt-2">
+        <div class="mt-2 space-y-0.5 pt-2" style="border-top:1px solid var(--border-soft)">
           @if (rm.suplidos > 0) {
-            <div class="flex justify-between text-xs text-slate-500">
+            <div class="flex justify-between text-xs" style="color:var(--text-muted)">
               <span>Suplidos</span><span>{{ rm.suplidos | number:'1.2-2' }} €</span>
             </div>
           }
           @if (rm.honorarios > 0) {
-            <div class="flex justify-between text-xs text-slate-500">
+            <div class="flex justify-between text-xs" style="color:var(--text-muted)">
               <span>Honorarios</span><span>{{ rm.honorarios | number:'1.2-2' }} €</span>
             </div>
           }
           @if (rm.gastos > 0) {
-            <div class="flex justify-between text-xs text-slate-500">
+            <div class="flex justify-between text-xs" style="color:var(--text-muted)">
               <span>Gastos</span><span>{{ rm.gastos | number:'1.2-2' }} €</span>
             </div>
           }
           @if (rm.otros > 0) {
-            <div class="flex justify-between text-xs text-slate-500">
+            <div class="flex justify-between text-xs" style="color:var(--text-muted)">
               <span>Otros</span><span>{{ rm.otros | number:'1.2-2' }} €</span>
             </div>
           }
@@ -158,19 +173,19 @@
 
     <!-- Honorarios (solo si los hay) -->
     @if (rm.honorarios > 0) {
-      <div class="bg-white rounded-xl border border-slate-200 p-4">
-        <p class="text-xs text-slate-500 uppercase tracking-wide">Honorarios</p>
-        <p class="text-xl font-bold text-violet-600 mt-1">
+      <div class="kpi-card">
+        <p class="text-xs uppercase tracking-wide" style="color:var(--text-faint)">Honorarios</p>
+        <p class="text-xl font-bold mt-1" style="color:var(--accent-ia);font-family:var(--font-display)">
           {{ rm.honorarios | number:'1.2-2' }} €
         </p>
       </div>
     }
 
     <!-- Saldo neto -->
-    <div class="bg-white rounded-xl border border-slate-200 p-4">
-      <p class="text-xs text-slate-500 uppercase tracking-wide">Saldo neto del caso</p>
-      <p class="text-xl font-bold mt-1"
-        [class]="rm.saldo >= 0 ? 'text-emerald-600' : 'text-red-600'">
+    <div class="kpi-card">
+      <p class="text-xs uppercase tracking-wide" style="color:var(--text-faint)">Saldo neto del caso</p>
+      <p class="text-xl font-bold mt-1" style="font-family:var(--font-display)"
+        [style.color]="rm.saldo >= 0 ? 'var(--success)' : 'var(--danger)'">
         {{ rm.saldo | number:'1.2-2' }} €
       </p>
     </div>
@@ -179,39 +194,42 @@
 
   <!-- Resumen de IVA (solo si hay cuota repercutida o soportada) -->
   @if (rm.ivaRepercutido > 0 || rm.ivaSoportado > 0) {
-    <div class="bg-white rounded-xl border border-slate-200 p-4 flex flex-wrap items-center justify-between gap-3">
-      <p class="text-xs text-slate-500 uppercase tracking-wide">IVA del caso</p>
+    <div class="rounded-xl p-4 flex flex-wrap items-center justify-between gap-3" style="background:var(--surface);border:1px solid var(--border)">
+      <p class="text-xs uppercase tracking-wide" style="color:var(--text-faint)">IVA del caso</p>
       <div class="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
-        <span class="text-slate-500">Repercutido <span class="font-semibold text-slate-800">{{ rm.ivaRepercutido | number:'1.2-2' }} €</span></span>
-        <span class="text-slate-500">Soportado <span class="font-semibold text-slate-800">{{ rm.ivaSoportado | number:'1.2-2' }} €</span></span>
-        <span class="text-slate-500">Liquidación <span class="font-semibold" [class]="(rm.ivaRepercutido - rm.ivaSoportado) >= 0 ? 'text-red-600' : 'text-emerald-600'">{{ rm.ivaRepercutido - rm.ivaSoportado | number:'1.2-2' }} €</span></span>
+        <span style="color:var(--text-muted)">Repercutido <span class="font-semibold" style="color:var(--text-strong)">{{ rm.ivaRepercutido | number:'1.2-2' }} €</span></span>
+        <span style="color:var(--text-muted)">Soportado <span class="font-semibold" style="color:var(--text-strong)">{{ rm.ivaSoportado | number:'1.2-2' }} €</span></span>
+        <span style="color:var(--text-muted)">Liquidación <span class="font-semibold" [style.color]="(rm.ivaRepercutido - rm.ivaSoportado) >= 0 ? 'var(--danger)' : 'var(--success)'">{{ rm.ivaRepercutido - rm.ivaSoportado | number:'1.2-2' }} €</span></span>
       </div>
     </div>
   }
 
   <!-- Movements table -->
-  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-    <div class="flex items-center justify-between px-4 py-3 border-b border-slate-200">
-      <h3 class="text-sm font-medium text-slate-700">Movimientos</h3>
+  <div class="rounded-xl overflow-hidden" style="background:var(--surface);border:1px solid var(--border)">
+    <div class="flex items-center justify-between px-4 py-3" style="border-bottom:1px solid var(--border)">
+      <h3 class="text-sm font-medium" style="color:var(--text-body)">Movimientos</h3>
       <button (click)="addMov.emit()"
-        class="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700">
+        class="flex items-center gap-1.5 px-3 py-1.5 text-sm text-white rounded-lg transition-colors duration-150"
+        style="background:var(--brand)"
+        (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+        (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
         <lucide-icon [img]="PlusIcon" class="w-3.5 h-3.5" />
         Añadir
       </button>
     </div>
 
     @if (movimientosLoading()) {
-      <div class="p-8 text-center text-slate-400 text-sm">Cargando movimientos...</div>
+      <div class="p-8 text-center text-sm" style="color:var(--text-faint)">Cargando movimientos...</div>
     } @else if (movimientos().length === 0) {
-      <div class="p-10 text-center text-slate-400 text-sm">
+      <div class="p-10 text-center text-sm" style="color:var(--text-faint)">
         <p>Sin movimientos registrados</p>
         <p class="text-xs mt-1">Registra ingresos, suplidos y honorarios de este caso</p>
       </div>
     } @else {
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
-          <thead class="bg-slate-50">
-            <tr class="text-left text-slate-500 border-b border-slate-200">
+          <thead style="background:var(--surface-2)">
+            <tr class="text-left uppercase tracking-wider" style="border-bottom:1px solid var(--border);color:var(--text-faint);font-family:var(--font-mono);font-size:11px">
               <th class="px-4 py-2.5 font-medium">Concepto</th>
               <th class="px-4 py-2.5 font-medium">Tipo</th>
               <th class="px-4 py-2.5 font-medium">Cuenta</th>
@@ -221,48 +239,55 @@
               <th class="px-4 py-2.5"></th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100">
+          <tbody>
             @for (mov of movimientos(); track mov.id) {
-              <tr class="group">
+              <tr class="group transition-colors duration-150"
+                (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                (mouseleave)="$any($event.currentTarget).style.background=''"
+                style="border-bottom:1px solid var(--border-soft)">
                 <td class="px-4 py-3">
-                  <p class="text-slate-800">{{ mov.concepto }}</p>
+                  <p style="color:var(--text-body)">{{ mov.concepto }}</p>
                   @if (mov.notas) {
-                    <p class="text-xs text-slate-400">{{ mov.notas }}</p>
+                    <p class="text-xs" style="color:var(--text-faint)">{{ mov.notas }}</p>
                   }
                 </td>
                 <td class="px-4 py-3">
-                  <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getMovTipoClass(mov.tipo)">
+                  <span class="px-2 py-0.5 text-xs rounded-full font-medium"
+                    [style.background]="getMovTipoStyle(mov.tipo).background"
+                    [style.color]="getMovTipoStyle(mov.tipo).color">
                     {{ mov.tipo }}
                   </span>
                 </td>
-                <td class="px-4 py-3 text-slate-500 text-xs">
+                <td class="px-4 py-3 text-xs" style="color:var(--text-muted)">
                   @if (mov.cuentaId && cuentaMap().get(mov.cuentaId); as nombre) {
-                    <span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">{{ nombre }}</span>
+                    <span class="px-2 py-0.5 rounded-full font-medium" style="background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand)">{{ nombre }}</span>
                   } @else {
-                    <span class="text-slate-300">—</span>
+                    <span style="color:var(--text-faint)">—</span>
                   }
                 </td>
-                <td class="px-4 py-3 text-slate-500">{{ mov.fecha }}</td>
-                <td class="px-4 py-3 text-slate-500 text-xs">
+                <td class="px-4 py-3" style="color:var(--text-muted)">{{ mov.fecha }}</td>
+                <td class="px-4 py-3 text-xs" style="color:var(--text-muted)">
                   {{ miembros().get(mov.createdBy) ?? '—' }}
                 </td>
                 <td class="px-4 py-3 text-right font-medium"
-                  [class]="mov.esEntrada ? 'text-emerald-600' : 'text-red-600'">
+                  [style.color]="mov.esEntrada ? 'var(--success)' : 'var(--danger)'">
                   {{ mov.esEntrada ? '+' : '−' }}{{ mov.importe | number:'1.2-2' }} €
                   @if (mov.cuotaIva) {
-                    <p class="text-xs font-normal text-slate-400">
+                    <p class="text-xs font-normal" style="color:var(--text-faint)">
                       base {{ mov.baseImponible | number:'1.2-2' }} · IVA {{ mov.cuotaIva | number:'1.2-2' }}
                       @if (mov.tipoIva) { ({{ mov.tipoIva }}%) }
                     </p>
                   } @else if (mov.ivaExento) {
-                    <p class="text-xs font-normal text-slate-400">exento</p>
+                    <p class="text-xs font-normal" style="color:var(--text-faint)">exento</p>
                   }
                 </td>
                 <td class="px-4 py-3 text-right">
                   <button (click)="deleteMov.emit(mov.id)"
-                    class="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-50"
+                    class="p-1 rounded opacity-0 group-hover:opacity-100 transition-colors duration-150"
+                    (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)'"
+                    (mouseleave)="$any($event.currentTarget).style.background=''"
                     aria-label="Eliminar movimiento">
-                    <lucide-icon [img]="Trash2Icon" class="w-3.5 h-3.5 text-red-400" />
+                    <lucide-icon [img]="Trash2Icon" class="w-3.5 h-3.5" style="color:color-mix(in srgb,var(--danger) 70%,transparent)" />
                   </button>
                 </td>
               </tr>

@@ -1,7 +1,7 @@
 <div class="space-y-4 max-w-3xl">
 
   @if (loading()) {
-    <div class="flex items-center justify-center h-32 text-slate-400 text-sm">
+    <div class="flex items-center justify-center h-32 text-sm" style="color:var(--text-faint)">
       <lucide-icon [img]="LoaderIcon" class="w-4 h-4 mr-2 animate-spin" />
       Cargando documentos...
     </div>
@@ -10,16 +10,17 @@
     <!-- Progress header (global, todos los slots requeridos del caso) -->
     @let p = progress();
     @if (p) {
-      <div class="bg-white rounded-xl border border-slate-200 p-4">
+      <div class="rounded-xl p-4" style="background:var(--surface);border:1px solid var(--border)">
         <div class="flex items-center justify-between mb-2">
-          <span class="text-sm font-medium text-slate-700">Documentos requeridos</span>
-          <span class="text-sm text-slate-500">
-            <span class="font-semibold text-slate-800">{{ p.subidos }}</span> de {{ p.total }} completados
+          <span class="text-sm font-medium" style="color:var(--text-body)">Documentos requeridos</span>
+          <span class="text-sm" style="color:var(--text-muted)">
+            <span class="font-semibold" style="color:var(--text-strong)">{{ p.subidos }}</span> de {{ p.total }} completados
           </span>
         </div>
-        <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+        <div class="h-2 rounded-full overflow-hidden" style="background:var(--surface-2)">
           <div
-            class="h-full bg-violet-500 rounded-full transition-all duration-300"
+            class="h-full rounded-full transition-all duration-300"
+            style="background:var(--brand)"
             [style.width.%]="(p.subidos / p.total) * 100"
           ></div>
         </div>
@@ -31,15 +32,21 @@
       <nav class="flex items-center gap-1 text-sm flex-1 min-w-0" aria-label="Ruta de carpetas">
         <button
           (click)="navigateToRoot()"
-          class="px-1.5 py-0.5 rounded hover:bg-slate-100 text-slate-500 hover:text-slate-700 shrink-0"
+          class="px-1.5 py-0.5 rounded shrink-0 transition-colors duration-150"
+          style="color:var(--text-muted)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-body)'"
+          (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-muted)'"
         >
           Documentos
         </button>
         @for (folder of folderPath(); track folder.id; let i = $index) {
-          <lucide-icon [img]="ChevronRightIcon" class="w-3.5 h-3.5 text-slate-300 shrink-0" />
+          <lucide-icon [img]="ChevronRightIcon" class="w-3.5 h-3.5 shrink-0" style="color:var(--text-faint)" />
           <button
             (click)="navigateToBreadcrumb(i)"
-            class="px-1.5 py-0.5 rounded hover:bg-slate-100 text-slate-600 hover:text-slate-800 truncate"
+            class="px-1.5 py-0.5 rounded truncate transition-colors duration-150"
+            style="color:var(--text-body)"
+            (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-strong)'"
+            (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-body)'"
           >
             {{ folder.name }}
           </button>
@@ -50,7 +57,10 @@
         <button
           (click)="startCreateFolder()"
           [disabled]="busy()"
-          class="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+          class="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors duration-150 disabled:opacity-50"
+          style="border:1px solid var(--border);color:var(--text-muted)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+          (mouseleave)="$any($event.currentTarget).style.background=''"
         >
           <lucide-icon [img]="FolderPlusIcon" class="w-3.5 h-3.5" />
           Carpeta
@@ -58,7 +68,10 @@
         <button
           (click)="triggerFreeUpload()"
           [disabled]="busy()"
-          class="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50"
+          class="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white rounded-lg transition-colors duration-150 disabled:opacity-50"
+          style="background:var(--brand)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+          (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'"
         >
           @if (busy()) {
             <lucide-icon [img]="LoaderIcon" class="w-3.5 h-3.5 animate-spin" />
@@ -73,8 +86,8 @@
 
     <!-- Nueva carpeta inline -->
     @if (isCreatingFolder()) {
-      <div class="flex items-center gap-2 bg-white rounded-xl border border-violet-200 p-3">
-        <lucide-icon [img]="FolderIcon" class="w-4 h-4 text-violet-400 shrink-0" />
+      <div class="flex items-center gap-2 rounded-xl p-3" style="background:var(--surface);border:1px solid color-mix(in srgb,var(--brand) 30%,transparent)">
+        <lucide-icon [img]="FolderIcon" class="w-4 h-4 shrink-0" style="color:var(--brand)" />
         <input
           type="text"
           [value]="newFolderName()"
@@ -82,48 +95,72 @@
           (keyup.enter)="confirmCreateFolder()"
           (keyup.escape)="cancelCreateFolder()"
           placeholder="Nombre de la carpeta"
-          class="flex-1 text-sm bg-transparent outline-none text-slate-700 placeholder:text-slate-300"
+          class="flex-1 text-sm bg-transparent outline-none"
+          style="color:var(--text-body)"
           aria-label="Nombre de la nueva carpeta"
         />
-        <button (click)="confirmCreateFolder()" class="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-500" aria-label="Crear carpeta">
+        <button (click)="confirmCreateFolder()"
+          class="p-1.5 rounded-lg transition-colors duration-150"
+          style="color:var(--success)"
+          (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--success) 10%,transparent)'"
+          (mouseleave)="$any($event.currentTarget).style.background=''"
+          aria-label="Crear carpeta">
           <lucide-icon [img]="CheckIcon" class="w-4 h-4" />
         </button>
-        <button (click)="cancelCreateFolder()" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400" aria-label="Cancelar">
+        <button (click)="cancelCreateFolder()"
+          class="p-1.5 rounded-lg transition-colors duration-150"
+          style="color:var(--text-faint)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+          (mouseleave)="$any($event.currentTarget).style.background=''"
+          aria-label="Cancelar">
           <lucide-icon [img]="XIcon" class="w-4 h-4" />
         </button>
       </div>
     }
 
     <!-- Contenido del nivel actual -->
-    <div class="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
+    <div class="rounded-xl" style="background:var(--surface);border:1px solid var(--border)">
 
       @if (isEmptyHere() && !isCreatingFolder()) {
         <div class="flex flex-col items-center gap-3 text-center p-10">
-          <lucide-icon [img]="FolderOpenIcon" class="w-10 h-10 text-slate-300" />
-          <p class="text-slate-500 text-sm font-medium">Carpeta vacía</p>
-          <p class="text-slate-400 text-xs">Crea una carpeta o sube un archivo para empezar.</p>
+          <lucide-icon [img]="FolderOpenIcon" class="w-10 h-10" style="color:var(--text-faint)" />
+          <p class="text-sm font-medium" style="color:var(--text-muted)">Carpeta vacía</p>
+          <p class="text-xs" style="color:var(--text-faint)">Crea una carpeta o sube un archivo para empezar.</p>
         </div>
       }
 
       <!-- Carpetas -->
       @for (folder of currentFolders(); track folder.id) {
-        <div class="flex items-center gap-3 px-4 py-3 group">
+        <div class="flex items-center gap-3 px-4 py-3 group" style="border-bottom:1px solid var(--border-soft)">
           <button (click)="openFolder(folder)" class="flex items-center gap-3 flex-1 min-w-0 text-left">
-            <lucide-icon [img]="FolderIcon" class="w-5 h-5 text-amber-400 shrink-0" />
-            <span class="text-sm text-slate-700 font-medium truncate">{{ folder.name }}</span>
+            <lucide-icon [img]="FolderIcon" class="w-5 h-5 shrink-0" style="color:var(--warning)" />
+            <span class="text-sm font-medium truncate" style="color:var(--text-body)">{{ folder.name }}</span>
           </button>
           @if (confirmingDeleteFolderId() === folder.id) {
-            <span class="text-xs text-slate-400">¿Borrar y todo su contenido?</span>
-            <button (click)="confirmDeleteFolder(folder.id)" class="p-1.5 rounded-lg hover:bg-red-50 text-red-500" aria-label="Confirmar borrado">
+            <span class="text-xs" style="color:var(--text-faint)">¿Borrar y todo su contenido?</span>
+            <button (click)="confirmDeleteFolder(folder.id)"
+              class="p-1.5 rounded-lg transition-colors duration-150"
+              style="color:var(--danger)"
+              (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)'"
+              (mouseleave)="$any($event.currentTarget).style.background=''"
+              aria-label="Confirmar borrado">
               <lucide-icon [img]="CheckIcon" class="w-4 h-4" />
             </button>
-            <button (click)="confirmingDeleteFolderId.set(null)" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400" aria-label="Cancelar">
+            <button (click)="confirmingDeleteFolderId.set(null)"
+              class="p-1.5 rounded-lg transition-colors duration-150"
+              style="color:var(--text-faint)"
+              (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+              (mouseleave)="$any($event.currentTarget).style.background=''"
+              aria-label="Cancelar">
               <lucide-icon [img]="XIcon" class="w-4 h-4" />
             </button>
           } @else {
             <button
               (click)="requestDeleteFolder(folder.id)"
-              class="p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100"
+              class="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-colors duration-150"
+              style="color:var(--text-faint)"
+              (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)';$any($event.currentTarget).style.color='var(--danger)'"
+              (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
               aria-label="Eliminar carpeta"
             >
               <lucide-icon [img]="Trash2Icon" class="w-4 h-4" />
@@ -135,15 +172,16 @@
       <!-- Slots requeridos (de la plantilla) en este nivel -->
       @for (slot of currentSlots(); track slot.id) {
         @let completado = slot.status === 'subido' || slot.status === 'generado';
-        <div class="flex items-center gap-3 px-4 py-3">
+        <div class="flex items-center gap-3 px-4 py-3" style="border-bottom:1px solid var(--border-soft)">
           <lucide-icon
             [img]="completado ? CheckCircle2Icon : (slot.docTemplateId ? FilePenIcon : FileTextIcon)"
-            [class]="'w-5 h-5 shrink-0 ' + (completado ? 'text-emerald-500' : (slot.docTemplateId ? 'text-violet-400' : 'text-slate-300'))"
+            class="w-5 h-5 shrink-0"
+            [style.color]="completado ? 'var(--success)' : (slot.docTemplateId ? 'var(--accent-ia)' : 'var(--text-faint)')"
           />
           <div class="flex-1 min-w-0">
-            <p class="text-sm text-slate-700 font-medium truncate">{{ slot.name }}</p>
+            <p class="text-sm font-medium truncate" style="color:var(--text-body)">{{ slot.name }}</p>
             @if (slot.description) {
-              <p class="text-xs text-slate-400 truncate">{{ slot.description }}</p>
+              <p class="text-xs truncate" style="color:var(--text-faint)">{{ slot.description }}</p>
             }
           </div>
 
@@ -151,30 +189,39 @@
             @if (slot.docTemplateId) {
               <!-- Documento generable desde plantilla: rellenar y congelar -->
               @if (slot.status === 'generado') {
-                <span class="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 font-medium">Generado</span>
+                <span class="px-2 py-0.5 text-xs rounded-full font-medium" style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">Generado</span>
                 <button
                   (click)="openGenerador(slot)"
-                  class="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50"
+                  class="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors duration-150"
+                  style="border:1px solid var(--border);color:var(--text-muted)"
+                  (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                  (mouseleave)="$any($event.currentTarget).style.background=''"
                 >
                   <lucide-icon [img]="EyeIcon" class="w-3.5 h-3.5" />
                   Ver
                 </button>
               } @else {
-                <span class="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-700 font-medium">Pendiente</span>
+                <span class="px-2 py-0.5 text-xs rounded-full font-medium" style="background:color-mix(in srgb,var(--warning) 12%,transparent);color:var(--warning)">Pendiente</span>
                 <button
                   (click)="openGenerador(slot)"
-                  class="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-violet-600 text-white rounded-lg hover:bg-violet-700"
+                  class="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white rounded-lg transition-colors duration-150"
+                  style="background:var(--brand)"
+                  (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+                  (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'"
                 >
                   <lucide-icon [img]="FilePenIcon" class="w-3.5 h-3.5" />
                   Rellenar
                 </button>
               }
             } @else if (slot.status === 'subido') {
-              <span class="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 font-medium">Subido</span>
+              <span class="px-2 py-0.5 text-xs rounded-full font-medium" style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">Subido</span>
               @if (slot.downloadUrl) {
                 <button
                   (click)="openPreview({ name: slot.name, downloadUrl: slot.downloadUrl!, mimeType: slot.mimeType })"
-                  class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+                  class="p-1.5 rounded-lg transition-colors duration-150"
+                  style="color:var(--text-faint)"
+                  (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-muted)'"
+                  (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
                   aria-label="Previsualizar"
                 >
                   <lucide-icon [img]="EyeIcon" class="w-4 h-4" />
@@ -183,7 +230,10 @@
               <button
                 (click)="removeSlot.emit(slot)"
                 [disabled]="uploadingSlotId() === slot.id"
-                class="p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400 disabled:opacity-50"
+                class="p-1.5 rounded-lg transition-colors duration-150 disabled:opacity-50"
+                style="color:var(--text-faint)"
+                (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)';$any($event.currentTarget).style.color='var(--danger)'"
+                (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
                 aria-label="Quitar documento"
               >
                 @if (uploadingSlotId() === slot.id) {
@@ -193,11 +243,14 @@
                 }
               </button>
             } @else {
-              <span class="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-700 font-medium">Pendiente</span>
+              <span class="px-2 py-0.5 text-xs rounded-full font-medium" style="background:color-mix(in srgb,var(--warning) 12%,transparent);color:var(--warning)">Pendiente</span>
               <button
                 (click)="triggerSlotUpload(slot.id)"
                 [disabled]="uploadingSlotId() === slot.id"
-                class="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50"
+                class="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white rounded-lg transition-colors duration-150 disabled:opacity-50"
+                style="background:var(--brand)"
+                (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+                (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'"
               >
                 @if (uploadingSlotId() === slot.id) {
                   <lucide-icon [img]="LoaderIcon" class="w-3.5 h-3.5 animate-spin" />
@@ -221,18 +274,21 @@
 
       <!-- Archivos libres en este nivel -->
       @for (file of currentFiles(); track file.id) {
-        <div class="flex items-center gap-3 px-4 py-3 group">
-          <lucide-icon [img]="FileTextIcon" class="w-5 h-5 shrink-0 text-sky-400" />
+        <div class="flex items-center gap-3 px-4 py-3 group" style="border-bottom:1px solid var(--border-soft)">
+          <lucide-icon [img]="FileTextIcon" class="w-5 h-5 shrink-0" style="color:var(--brand)" />
           <div class="flex-1 min-w-0">
-            <p class="text-sm text-slate-700 font-medium truncate">{{ file.name }}</p>
+            <p class="text-sm font-medium truncate" style="color:var(--text-body)">{{ file.name }}</p>
             @if (file.sizeBytes) {
-              <p class="text-xs text-slate-400">{{ formatFileSize(file.sizeBytes) }}</p>
+              <p class="text-xs" style="color:var(--text-faint)">{{ formatFileSize(file.sizeBytes) }}</p>
             }
           </div>
           <div class="flex items-center gap-2 shrink-0">
             <button
               (click)="openPreview({ name: file.name, downloadUrl: file.downloadUrl, mimeType: file.mimeType })"
-              class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+              class="p-1.5 rounded-lg transition-colors duration-150"
+              style="color:var(--text-faint)"
+              (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-muted)'"
+              (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
               aria-label="Previsualizar"
             >
               <lucide-icon [img]="EyeIcon" class="w-4 h-4" />
@@ -242,22 +298,38 @@
               target="_blank"
               rel="noopener"
               download
-              class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+              class="p-1.5 rounded-lg transition-colors duration-150"
+              style="color:var(--text-faint)"
+              (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-muted)'"
+              (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
               aria-label="Descargar"
             >
               <lucide-icon [img]="DownloadIcon" class="w-4 h-4" />
             </a>
             @if (confirmingDeleteFileId() === file.id) {
-              <button (click)="confirmDeleteFile(file)" class="p-1.5 rounded-lg hover:bg-red-50 text-red-500" aria-label="Confirmar borrado">
+              <button (click)="confirmDeleteFile(file)"
+                class="p-1.5 rounded-lg transition-colors duration-150"
+                style="color:var(--danger)"
+                (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)'"
+                (mouseleave)="$any($event.currentTarget).style.background=''"
+                aria-label="Confirmar borrado">
                 <lucide-icon [img]="CheckIcon" class="w-4 h-4" />
               </button>
-              <button (click)="confirmingDeleteFileId.set(null)" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400" aria-label="Cancelar">
+              <button (click)="confirmingDeleteFileId.set(null)"
+                class="p-1.5 rounded-lg transition-colors duration-150"
+                style="color:var(--text-faint)"
+                (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                (mouseleave)="$any($event.currentTarget).style.background=''"
+                aria-label="Cancelar">
                 <lucide-icon [img]="XIcon" class="w-4 h-4" />
               </button>
             } @else {
               <button
                 (click)="requestDeleteFile(file.id)"
-                class="p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100"
+                class="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-colors duration-150"
+                style="color:var(--text-faint)"
+                (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)';$any($event.currentTarget).style.color='var(--danger)'"
+                (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
                 aria-label="Eliminar archivo"
               >
                 <lucide-icon [img]="Trash2Icon" class="w-4 h-4" />

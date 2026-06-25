@@ -253,29 +253,33 @@ export class RecepcionIAComponent implements OnInit {
     return relativeTime(ts.toDate());
   }
 
-  getUrgencyClass(u?: string): string {
+  getUrgencyStyle(u?: string): string {
     const map: Record<string, string> = {
-      urgente: 'bg-red-100 text-red-700',
-      alta: 'bg-orange-100 text-orange-700',
-      normal: 'bg-amber-100 text-amber-700',
-      baja: 'bg-slate-100 text-slate-500',
+      urgente: 'background:#fdecee;color:#e0455a',
+      alta: 'background:#fff5e6;color:#c1860f',
+      normal: 'background:#fff5e6;color:#c1860f',
+      baja: 'background:#e9f5ef;color:#1f9d63',
     };
-    return map[u ?? ''] ?? 'bg-slate-100 text-slate-500';
+    return map[u ?? ''] ?? 'background:var(--surface-2);color:var(--text-muted)';
   }
+
+  getUrgencyClass(_u?: string): string { return ''; }
 
   getUrgencyLabel(u?: string): string {
     const map: Record<string, string> = { urgente: 'Urgente', alta: 'Alta', normal: 'Normal', baja: 'Baja' };
     return map[u ?? ''] ?? (u ?? '—');
   }
 
-  getEstadoClass(estado: string): string {
+  getEstadoStyle(estado: string): string {
     const map: Record<string, string> = {
-      completada: 'bg-green-100 text-green-700',
-      fallida: 'bg-red-100 text-red-700',
-      interrumpida: 'bg-amber-100 text-amber-700',
+      completada: 'background:#e9f5ef;color:#1f9d63',
+      fallida: 'background:#fdecee;color:#e0455a',
+      interrumpida: 'background:#fff5e6;color:#c1860f',
     };
-    return map[estado] ?? 'bg-slate-100 text-slate-500';
+    return map[estado] ?? 'background:var(--surface-2);color:var(--text-muted)';
   }
+
+  getEstadoClass(_estado: string): string { return ''; }
 
   getEstadoLabel(estado: string): string {
     const map: Record<string, string> = {

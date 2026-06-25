@@ -7,7 +7,7 @@
       </div>
       <div>
         <h1 class="text-xl font-semibold text-slate-800">Usuarios y Permisos</h1>
-        <p class="text-sm text-slate-500">Gestión de accesos del equipo</p>
+        <p class="text-sm text-slate-700 font-medium">Gestión de accesos del equipo</p>
       </div>
     </div>
     @if (isAdmin()) {
@@ -24,19 +24,19 @@
   <!-- Stats -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
     <div class="bg-white rounded-xl border border-slate-200 p-4">
-      <p class="text-sm text-slate-500">Total usuarios</p>
+      <p class="text-sm text-slate-700 font-medium">Total usuarios</p>
       <p class="text-2xl font-bold text-slate-800 mt-1">{{ totalMiembros() }}</p>
     </div>
     <div class="bg-white rounded-xl border border-slate-200 p-4">
-      <p class="text-sm text-slate-500">Activos</p>
+      <p class="text-sm text-slate-700 font-medium">Activos</p>
       <p class="text-2xl font-bold text-emerald-600 mt-1">{{ activos() }}</p>
     </div>
     <div class="bg-white rounded-xl border border-slate-200 p-4">
-      <p class="text-sm text-slate-500">Pendientes</p>
+      <p class="text-sm text-slate-700 font-medium">Pendientes</p>
       <p class="text-2xl font-bold text-amber-600 mt-1">{{ pendientes() }}</p>
     </div>
     <div class="bg-white rounded-xl border border-slate-200 p-4">
-      <p class="text-sm text-slate-500">Roles definidos</p>
+      <p class="text-sm text-slate-700 font-medium">Roles definidos</p>
       <p class="text-2xl font-bold text-slate-800 mt-1">{{ roles().length }}</p>
     </div>
   </div>
@@ -45,20 +45,20 @@
     <!-- Main panel -->
     <div class="lg:col-span-2 bg-white rounded-xl border border-slate-200">
       <div class="flex border-b border-slate-200">
-        <button (click)="activeTab.set('usuarios')" [class]="activeTab() === 'usuarios' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700'">Usuarios</button>
-        <button (click)="activeTab.set('roles')" [class]="activeTab() === 'roles' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700'">Roles</button>
-        <button (click)="activeTab.set('permisos')" [class]="activeTab() === 'permisos' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700'">Permisos</button>
+        <button (click)="activeTab.set('usuarios')" [class]="activeTab() === 'usuarios' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600' : 'px-5 py-3 text-sm font-medium text-slate-700 hover:text-slate-700'">Usuarios</button>
+        <button (click)="activeTab.set('roles')" [class]="activeTab() === 'roles' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600' : 'px-5 py-3 text-sm font-medium text-slate-700 hover:text-slate-700'">Roles</button>
+        <button (click)="activeTab.set('permisos')" [class]="activeTab() === 'permisos' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600' : 'px-5 py-3 text-sm font-medium text-slate-700 hover:text-slate-700'">Permisos</button>
       </div>
 
       @if (activeTab() === 'usuarios') {
         <div class="p-4 space-y-3">
           @if (isLoading()) {
-            <div class="flex items-center justify-center py-8 text-slate-400 text-sm">Cargando usuarios...</div>
+            <div class="flex items-center justify-center py-8 text-slate-600 text-sm">Cargando usuarios...</div>
           } @else {
             <div class="overflow-x-auto">
               <table class="w-full text-sm">
                 <thead>
-                  <tr class="text-left text-slate-500 border-b border-slate-100">
+                  <tr class="text-left text-slate-700 border-b border-slate-100">
                     <th class="pb-3 font-medium">Usuario</th>
                     <th class="pb-3 font-medium">Rol</th>
                     <th class="pb-3 font-medium">Departamento</th>
@@ -86,18 +86,18 @@
                           </div>
                           <div>
                             <p class="font-medium text-slate-800">{{ usr.nombre }}</p>
-                            <p class="text-xs text-slate-400">{{ usr.email }}</p>
+                            <p class="text-xs text-slate-600 font-medium">{{ usr.email }}</p>
                           </div>
                         </div>
                       </td>
                       <td class="py-3">
                         <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getRolClass(usr.role)">{{ usr.role }}</span>
                       </td>
-                      <td class="py-3 text-slate-500">{{ usr.departamento || '—' }}</td>
+                      <td class="py-3 text-slate-700">{{ usr.departamento || '—' }}</td>
                       <td class="py-3 text-center">
                         <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getEstadoClass(usr.estado)">{{ usr.estado }}</span>
                       </td>
-                      <td class="py-3 text-slate-400 text-xs">{{ formatLogin(usr.ultimoLogin) }}</td>
+                      <td class="py-3 text-slate-600 text-xs">{{ formatLogin(usr.ultimoLogin) }}</td>
                       @if (isAdmin()) {
                         <td class="py-3 text-slate-600">
                           {{ usr.tarifaHoraria != null ? (usr.tarifaHoraria + ' €') : '—' }}
@@ -107,7 +107,7 @@
                   }
                   @if (filteredUsuarios().length === 0 && !isLoading()) {
                     <tr>
-                      <td [attr.colspan]="isAdmin() ? 6 : 5" class="py-8 text-center text-slate-400 text-sm">No se encontraron usuarios</td>
+                      <td [attr.colspan]="isAdmin() ? 6 : 5" class="py-8 text-center text-slate-600 text-sm">No se encontraron usuarios</td>
                     </tr>
                   }
                 </tbody>
@@ -131,7 +131,7 @@
                         </div>
                         <div class="min-w-0">
                           <p class="text-sm font-medium text-slate-700 truncate">{{ inv.email }}</p>
-                          <p class="text-xs text-slate-400">
+                          <p class="text-xs text-slate-600 font-medium">
                             <span [class]="'px-1.5 py-0.5 text-xs rounded-full font-medium mr-1 ' + getRolClass(inv.role)">{{ inv.role }}</span>
                             Expira {{ formatExpiry(inv.expiresAt) }}
                           </p>
@@ -158,7 +158,7 @@
                           class="p-1.5 hover:bg-red-100 rounded-lg group transition-colors disabled:opacity-50"
                           [attr.aria-label]="'Cancelar invitación a ' + inv.email"
                         >
-                          <lucide-icon [img]="Trash2Icon" class="w-4 h-4 text-slate-400 group-hover:text-red-500" />
+                          <lucide-icon [img]="Trash2Icon" class="w-4 h-4 text-slate-600 group-hover:text-red-500" />
                         </button>
                       </div>
                     </div>
@@ -176,7 +176,7 @@
             <div class="border border-slate-200 rounded-xl p-4">
               <div class="flex items-start justify-between mb-2">
                 <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + rol.color">{{ rol.nombre }}</span>
-                <span class="text-xs text-slate-400">{{ rol.usuarios }} usuarios</span>
+                <span class="text-xs text-slate-600">{{ rol.usuarios }} usuarios</span>
               </div>
               <p class="text-sm text-slate-600">{{ rol.descripcion }}</p>
               <button (click)="activeTab.set('permisos')" class="mt-3 text-xs text-violet-600 font-medium hover:underline">Ver permisos</button>
@@ -187,7 +187,7 @@
 
       @if (activeTab() === 'permisos') {
         <div class="p-4 overflow-x-auto">
-          <p class="text-xs text-slate-400 mb-3">
+          <p class="text-xs text-slate-600 font-medium mb-3">
             Capacidades por rol: <span class="font-medium">V</span> ver · <span class="font-medium">C</span> crear · <span class="font-medium">E</span> editar · <span class="font-medium">B</span> borrar
           </p>
           <table class="w-full text-sm">
@@ -227,7 +227,7 @@
     <!-- Actividad reciente -->
     <div class="bg-white rounded-xl border border-slate-200">
       <div class="p-4 border-b border-slate-100 flex items-center gap-2">
-        <lucide-icon [img]="ClockIcon" class="w-4 h-4 text-slate-400" />
+        <lucide-icon [img]="ClockIcon" class="w-4 h-4 text-slate-600" />
         <h3 class="font-semibold text-slate-700 text-sm">Actividad reciente</h3>
       </div>
       <div class="divide-y divide-slate-100">
@@ -238,12 +238,12 @@
             </div>
             <div class="min-w-0">
               <p class="text-sm text-slate-700 font-medium">{{ act.autorNombre }}</p>
-              <p class="text-xs text-slate-500 truncate">{{ act.accion }}</p>
-              <p class="text-xs text-slate-400 mt-0.5">{{ formatLogin(act.createdAt) }}</p>
+              <p class="text-xs text-slate-700 font-medium truncate">{{ act.accion }}</p>
+              <p class="text-xs text-slate-600 font-medium mt-0.5">{{ formatLogin(act.createdAt) }}</p>
             </div>
           </div>
         } @empty {
-          <div class="p-8 text-center text-slate-400 text-sm">Aún no hay actividad reciente</div>
+          <div class="p-8 text-center text-slate-600 text-sm">Aún no hay actividad reciente</div>
         }
       </div>
     </div>

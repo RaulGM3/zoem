@@ -1,8 +1,8 @@
 @if (loading()) {
-  <div class="flex items-center justify-center py-24 text-sm text-slate-400">Cargando plantilla…</div>
+  <div class="flex items-center justify-center py-24 text-sm text-slate-600">Cargando plantilla…</div>
 } @else if (!template()) {
   <div class="flex flex-col items-center justify-center gap-3 py-24">
-    <p class="text-sm text-slate-500">Plantilla no encontrada</p>
+    <p class="text-sm font-medium text-slate-700">Plantilla no encontrada</p>
     <button (click)="goBack()" class="text-sm font-medium text-violet-600 hover:text-violet-500">Volver a plantillas</button>
   </div>
 } @else {
@@ -10,21 +10,21 @@
     <!-- Header -->
     <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div class="flex items-center gap-3">
-        <button (click)="goBack()" class="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Volver">
+        <button (click)="goBack()" class="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-700" aria-label="Volver">
           <lucide-icon [img]="ArrowLeftIcon" size="18"></lucide-icon>
         </button>
         <div>
           <h1 class="text-2xl font-bold text-slate-900">{{ t.name }}</h1>
           @if (t.description) {
-            <p class="mt-0.5 text-sm text-slate-500">{{ t.description }}</p>
+            <p class="mt-0.5 text-sm font-medium text-slate-700">{{ t.description }}</p>
           }
         </div>
       </div>
       <div class="flex items-center gap-2">
         @if (confirmingDelete()) {
-          <span class="text-xs text-slate-500">¿Eliminar plantilla?</span>
+          <span class="text-xs text-slate-700">¿Eliminar plantilla?</span>
           <button (click)="deleteTemplate()" class="rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50">Sí, eliminar</button>
-          <button (click)="confirmingDelete.set(false)" class="rounded-lg px-3 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100">Cancelar</button>
+          <button (click)="confirmingDelete.set(false)" class="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">Cancelar</button>
         } @else {
           <button (click)="toggleEditMode()" [attr.aria-pressed]="editMode()"
             [class]="editMode()
@@ -34,7 +34,7 @@
             {{ editMode() ? 'Editando' : 'Editar plantilla' }}
           </button>
           <button (click)="confirmingDelete.set(true)" aria-label="Eliminar plantilla"
-            class="rounded-lg p-2.5 text-slate-400 hover:bg-red-50 hover:text-red-500">
+            class="rounded-lg p-2.5 text-slate-600 hover:bg-red-50 hover:text-red-500">
             <lucide-icon [img]="Trash2Icon" size="16"></lucide-icon>
           </button>
           <button (click)="copy()"
@@ -67,7 +67,7 @@
               <lucide-icon [img]="SparklesIcon" size="15" class="text-violet-500"></lucide-icon>
               Datos del documento
             </h2>
-            <span class="text-xs text-slate-400">{{ filledCount() }}/{{ t.variables.length }}</span>
+            <span class="text-xs text-slate-600">{{ filledCount() }}/{{ t.variables.length }}</span>
           </div>
 
           <div class="mb-4 h-1.5 overflow-hidden rounded-full bg-slate-100">
@@ -88,7 +88,7 @@
                       <!-- inline demote form -->
                     } @else {
                       <button (click)="startDemote(v)" title="Hacer estático: reemplazar {{'{{'}}{{v.key}}{{'}}'}} por un valor fijo en el documento"
-                        class="flex shrink-0 items-center gap-1 rounded px-2 py-0.5 text-xs text-slate-400 hover:bg-amber-50 hover:text-amber-600">
+                        class="flex shrink-0 items-center gap-1 rounded px-2 py-0.5 text-xs text-slate-600 hover:bg-amber-50 hover:text-amber-600">
                         <lucide-icon [img]="LockIcon" size="12"></lucide-icon>
                         Hacer estático
                       </button>
@@ -113,7 +113,7 @@
                     class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
                 }
                 @if (v.description) {
-                  <p class="text-xs text-slate-400">{{ v.description }}</p>
+                  <p class="text-xs font-medium text-slate-600">{{ v.description }}</p>
                 }
               </div>
             }
@@ -130,7 +130,7 @@
       <!-- Viewer -->
       <div class="flex flex-col rounded-xl border border-slate-200 bg-white max-h-[calc(100vh-200px)]" [class.border-violet-300]="editMode()">
         <div class="flex items-center gap-2 border-b border-slate-200 px-5 py-3">
-          <lucide-icon [img]="FileTextIcon" size="15" class="text-slate-400"></lucide-icon>
+          <lucide-icon [img]="FileTextIcon" size="15" class="text-slate-600"></lucide-icon>
           <h2 class="text-sm font-semibold text-slate-700">Vista previa</h2>
           @if (editMode()) {
             <span class="ml-auto text-xs text-violet-500">Selecciona texto para crear una variable</span>
@@ -161,7 +161,7 @@
                 {{ saving() ? 'Guardando…' : 'Crear variable' }}
               </button>
               <button (click)="cancelNewVar()"
-                class="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-50">
+                class="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50">
                 <lucide-icon [img]="XIcon" size="12"></lucide-icon>
                 Cancelar
               </button>
@@ -183,7 +183,7 @@
             <lucide-icon [img]="LockIcon" size="16" class="text-amber-500"></lucide-icon>
             <h3 id="dialog-static-title" class="text-sm font-semibold text-slate-800">Hacer estático</h3>
           </div>
-          <p class="mb-4 text-xs text-slate-500">
+          <p class="mb-4 text-xs font-medium text-slate-700">
             El marcador <span class="font-mono text-amber-700">{{'{{'}}{{ makeStaticFor() }}{{'}}'}}</span> será reemplazado por el texto que escribas a continuación y la variable se eliminará del formulario.
           </p>
           <input type="text"

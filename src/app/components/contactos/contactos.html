@@ -1,62 +1,67 @@
 <!-- Header -->
 <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
   <div>
-    <h1 class="text-2xl font-bold text-slate-900">Contactos</h1>
-    <p class="mt-1 text-sm text-slate-500">Gestiona tu CRM de clientes y contactos</p>
+    <h1 class="text-[19px] font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Contactos</h1>
+    <p class="mt-0.5 text-sm" style="color:var(--text-muted)">Gestiona tu CRM de clientes y contactos</p>
   </div>
   @if (perm.can('Contactos', 'crear')) {
-    <button (click)="openNew()" class="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-500">
-      <lucide-icon [img]="PlusIcon" size="16"></lucide-icon>
+    <button (click)="openNew()"
+      class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150"
+      style="background:var(--brand)"
+      (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+      (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+      <span class="material-symbols-outlined" style="font-size:16px">add</span>
       Nuevo Contacto
     </button>
   }
 </div>
 
-<!-- Summary -->
+<!-- Summary KPIs -->
 <div class="mb-6 grid gap-4 sm:grid-cols-3">
-  <div class="rounded-xl border border-slate-200 bg-white p-5">
-    <p class="text-sm text-slate-500">Total Contactos</p>
-    <p class="mt-1 text-3xl font-bold text-slate-900">{{ contactService.contacts().length }}</p>
-    <p class="mt-1 text-xs text-slate-400">En tu CRM</p>
+  <div class="kpi-card rounded-xl p-5" style="background:var(--surface);border:1px solid var(--border)">
+    <p class="text-[13px] font-medium" style="color:var(--text-muted)">Total Contactos</p>
+    <p class="mt-1 font-semibold tabular-nums" style="font-size:29px;line-height:1;color:var(--text-strong);font-family:var(--font-display)">
+      {{ contactService.contacts().length }}
+    </p>
+    <p class="mt-1.5 text-xs" style="color:var(--text-faint)">En tu CRM</p>
   </div>
-  <div class="rounded-xl border border-slate-200 bg-white p-5">
-    <p class="text-sm text-slate-500">Activos</p>
-    <p class="mt-1 text-3xl font-bold text-slate-900">{{ activeCount() }}</p>
-    <p class="mt-1 text-xs text-green-600">Con proyectos en curso</p>
+  <div class="kpi-card rounded-xl p-5" style="background:var(--surface);border:1px solid var(--border)">
+    <p class="text-[13px] font-medium" style="color:var(--text-muted)">Activos</p>
+    <p class="mt-1 font-semibold tabular-nums" style="font-size:29px;line-height:1;color:var(--text-strong);font-family:var(--font-display)">
+      {{ activeCount() }}
+    </p>
+    <p class="mt-1.5 text-xs" style="color:var(--success)">Con proyectos en curso</p>
   </div>
-  <div class="rounded-xl border border-slate-200 bg-white p-5">
-    <p class="text-sm text-slate-500">Facturación Total</p>
-    <p class="mt-1 text-3xl font-bold text-slate-900">{{ totalBilled() | number:'1.0-0' }}€</p>
-    <p class="mt-1 text-xs text-emerald-600">Facturado histórico</p>
+  <div class="kpi-card rounded-xl p-5" style="background:var(--surface);border:1px solid var(--border)">
+    <p class="text-[13px] font-medium" style="color:var(--text-muted)">Facturación Total</p>
+    <p class="mt-1 font-semibold tabular-nums" style="font-size:29px;line-height:1;color:var(--text-strong);font-family:var(--font-display)">
+      {{ totalBilled() | number:'1.0-0' }}€
+    </p>
+    <p class="mt-1.5 text-xs" style="color:var(--success)">Facturado histórico</p>
   </div>
 </div>
 
-<!-- Tabs -->
-<div class="bg-white rounded-xl border border-slate-200 mb-4">
-  <div class="flex border-b border-slate-200 overflow-x-auto">
-    <button (click)="activeTab.set('contactos')" [class]="activeTab() === 'contactos' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">
+<!-- Card contenedor -->
+<div class="rounded-xl mb-4" style="background:var(--surface);border:1px solid var(--border)">
+
+  <!-- Tabs -->
+  <div class="flex overflow-x-auto" style="border-bottom:1px solid var(--border)">
+    <button (click)="activeTab.set('contactos')"
+      class="px-5 py-3 text-sm font-semibold whitespace-nowrap transition-colors duration-150"
+      [style.color]="activeTab() === 'contactos' ? 'var(--brand)' : 'var(--text-muted)'"
+      [style.border-bottom]="activeTab() === 'contactos' ? '2px solid var(--brand)' : '2px solid transparent'">
       Contactos
     </button>
-    <!-- TODO: tabs con dummy data — ocultos hasta tener fuente real
-    <button (click)="activeTab.set('pipeline')" [class]="activeTab() === 'pipeline' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">
-      Embudo CRM
-    </button>
-    <button (click)="activeTab.set('rgpd')" [class]="activeTab() === 'rgpd' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">
-      RGPD
-    </button>
-    <button (click)="activeTab.set('herramientas')" [class]="activeTab() === 'herramientas' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600 whitespace-nowrap' : 'px-5 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap'">
-      Herramientas IA
-    </button>
-    -->
   </div>
 
   <!-- TAB: Contactos -->
   @if (activeTab() === 'contactos') {
     <div class="p-4">
-      <!-- Filters -->
+
+      <!-- Filtros -->
       <div class="mb-4 flex flex-col gap-3 sm:flex-row">
         <select (change)="filterStatus.set($any($event.target).value)"
-          class="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-violet-300 focus:outline-none"
+          class="form-select" style="width:auto;min-width:160px"
           aria-label="Filtrar por estado">
           <option value="">Todos los estados</option>
           <option value="activo">Activo</option>
@@ -65,7 +70,7 @@
           <option value="archivado">Archivado</option>
         </select>
         <select (change)="filterType.set($any($event.target).value)"
-          class="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-violet-300 focus:outline-none"
+          class="form-select" style="width:auto;min-width:160px"
           aria-label="Filtrar por tipo">
           <option value="">Todos los tipos</option>
           <option value="persona_fisica">Persona Física</option>
@@ -73,95 +78,138 @@
         </select>
       </div>
 
-      <!-- Loading indicator -->
       @if (contactService.isLoading()) {
-        <div class="py-12 text-center text-sm text-slate-400">Cargando contactos...</div>
+        <div class="py-12 text-center text-sm" style="color:var(--text-faint)">Cargando contactos...</div>
       } @else {
         <!-- Contacts Grid -->
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           @for (c of filtered(); track c.id) {
-            <div [routerLink]="['/contactos', c.id]" class="cursor-pointer rounded-xl border border-slate-200 bg-white p-5 transition-shadow hover:shadow-md">
+            <div [routerLink]="['/contactos', c.id]"
+              class="kpi-card cursor-pointer rounded-xl p-5"
+              style="background:var(--surface);border:1px solid var(--border)">
+
+              <!-- Avatar + nombre + chips -->
               <div class="flex items-start justify-between mb-4">
                 <div class="flex items-center gap-3">
-                  <div class="flex h-12 w-12 items-center justify-center rounded-full bg-violet-100 text-sm font-bold text-violet-700">
+                  <div class="flex h-12 w-12 items-center justify-center rounded-full text-sm font-bold shrink-0"
+                    [style]="getAvatarStyle(c.type)">
                     {{ initials(c) }}
                   </div>
                   <div>
-                    <p class="font-semibold text-slate-900 leading-tight">{{ displayName(c) }}</p>
-                    <span class="inline-block mt-0.5 rounded-full px-2 py-0.5 text-[10px] font-medium" [class]="getTypeClass(c.type)">
+                    <p class="font-bold leading-tight" style="font-size:14.5px;color:var(--text-strong)">{{ displayName(c) }}</p>
+                    <span class="inline-block mt-0.5 rounded-full px-2 py-0.5 text-[10.5px] font-bold"
+                      [style]="getTypeStyle(c.type)">
                       {{ typeLabel(c.type) }}
                     </span>
                   </div>
                 </div>
-                <span class="rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0" [class]="getStatusClass(c.status)">
+                <span class="rounded-full px-2 py-0.5 text-[10.5px] font-bold shrink-0"
+                  [style]="getStatusStyle(c.status)">
                   {{ statusLabel(c.status) }}
                 </span>
               </div>
-              <div class="space-y-2 text-xs text-slate-500">
+
+              <!-- Datos de contacto -->
+              <div class="space-y-1.5 text-[12.5px]" style="color:var(--text-muted)">
                 @if (c.email) {
                   <a [href]="'mailto:' + c.email"
                     (click)="$event.stopPropagation()"
-                    class="flex items-center gap-2 hover:text-violet-600"
+                    class="flex items-center gap-2 transition-colors duration-150"
+                    style="color:var(--text-muted)"
+                    (mouseenter)="$any($event.currentTarget).style.color='var(--brand)'"
+                    (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)'"
                     [attr.aria-label]="'Enviar email a ' + c.email">
-                    <lucide-icon [img]="MailIcon" size="12" class="text-slate-400 shrink-0"></lucide-icon>
+                    <lucide-icon [img]="MailIcon" size="12" class="shrink-0" style="color:var(--text-faint)"></lucide-icon>
                     <span class="truncate">{{ c.email }}</span>
                   </a>
                 }
                 @if (getPhone(c)) {
                   <a [href]="'tel:' + getPhone(c)"
                     (click)="$event.stopPropagation()"
-                    class="flex items-center gap-2 hover:text-violet-600"
+                    class="flex items-center gap-2 transition-colors duration-150"
+                    style="color:var(--text-muted);font-family:var(--font-mono)"
+                    (mouseenter)="$any($event.currentTarget).style.color='var(--brand)'"
+                    (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)'"
                     [attr.aria-label]="'Llamar a ' + getPhone(c)">
-                    <lucide-icon [img]="PhoneIcon" size="12" class="text-slate-400 shrink-0"></lucide-icon>
+                    <lucide-icon [img]="PhoneIcon" size="12" class="shrink-0" style="color:var(--text-faint)"></lucide-icon>
                     <span>{{ getPhone(c) }}</span>
                   </a>
                 }
                 @if (getSector(c)) {
                   <div class="flex items-center gap-2">
-                    <lucide-icon [img]="Building2Icon" size="12" class="text-slate-400 shrink-0"></lucide-icon>
+                    <lucide-icon [img]="Building2Icon" size="12" class="shrink-0" style="color:var(--text-faint)"></lucide-icon>
                     <span class="truncate">{{ getSector(c) }}</span>
                   </div>
                 }
                 @if (c.notes) {
-                  <div class="flex items-start gap-2 pt-1">
-                    <lucide-icon [img]="StickyNoteIcon" size="12" class="text-slate-400 shrink-0 mt-0.5"></lucide-icon>
-                    <span class="line-clamp-2 text-slate-400 italic">{{ c.notes }}</span>
+                  <div class="flex items-start gap-2 pt-0.5">
+                    <lucide-icon [img]="StickyNoteIcon" size="12" class="shrink-0 mt-0.5" style="color:var(--text-faint)"></lucide-icon>
+                    <span class="line-clamp-2 italic" style="color:var(--text-faint)">{{ c.notes }}</span>
                   </div>
                 }
               </div>
-              <div class="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4 text-center">
+
+              <!-- Stats -->
+              <div class="mt-4 grid grid-cols-2 gap-3 pt-4 text-center" style="border-top:1px solid var(--border)">
                 <div>
-                  <p class="text-base font-bold text-slate-900">{{ c.activeProjects ?? 0 }}</p>
-                  <p class="text-[10px] text-slate-400">Proyectos activos</p>
+                  <p class="text-base font-bold tabular-nums" style="color:var(--text-strong);font-family:var(--font-display)">
+                    {{ c.activeProjects ?? 0 }}
+                  </p>
+                  <p class="text-[10px]" style="color:var(--text-faint)">Proyectos activos</p>
                 </div>
                 <div>
-                  <p class="text-base font-bold text-slate-900">{{ (c.totalBilled ?? 0) | number:'1.0-0' }}€</p>
-                  <p class="text-[10px] text-slate-400">Facturado total</p>
+                  <p class="text-base font-bold tabular-nums" style="color:var(--text-strong);font-family:var(--font-display)">
+                    {{ (c.totalBilled ?? 0) | number:'1.0-0' }}€
+                  </p>
+                  <p class="text-[10px]" style="color:var(--text-faint)">Facturado total</p>
                 </div>
               </div>
+
+              <!-- Acciones rápidas -->
               <div class="mt-3 flex items-center justify-between">
-                <p class="text-[10px] text-slate-400 truncate mr-2">
+                <p class="text-[10px] truncate mr-2" style="color:var(--text-faint)">
                   @if (c.lastContact) { Último: {{ c.lastContact }} }
                 </p>
-                <div class="flex gap-1 shrink-0">
-                  <button (click)="abrirCaso(c.id); $event.stopPropagation()" class="rounded p-1 text-slate-400 hover:bg-violet-50 hover:text-violet-600" aria-label="Abrir caso para este contacto">
+                <div class="flex gap-0.5 shrink-0">
+                  <button (click)="abrirCaso(c.id); $event.stopPropagation()"
+                    class="rounded-lg p-1.5 transition-colors duration-150"
+                    style="color:var(--text-faint)"
+                    (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 10%,transparent)';$any($event.currentTarget).style.color='var(--brand)'"
+                    (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+                    aria-label="Abrir caso para este contacto">
                     <lucide-icon [img]="BriefcaseIcon" size="14"></lucide-icon>
                   </button>
                   @if (perm.can('Contactos', 'editar')) {
-                    <button (click)="openEdit(c); $event.stopPropagation()" class="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Editar contacto">
+                    <button (click)="openEdit(c); $event.stopPropagation()"
+                      class="rounded-lg p-1.5 transition-colors duration-150"
+                      style="color:var(--text-faint)"
+                      (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-body)'"
+                      (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+                      aria-label="Editar contacto">
                       <lucide-icon [img]="EditIcon" size="14"></lucide-icon>
                     </button>
                   }
                   @if (perm.can('Contactos', 'eliminar')) {
                     @if (deleteConfirmId() === c.id) {
-                      <button (click)="confirmDelete(c.id); $event.stopPropagation()" class="rounded p-1 text-red-500 hover:bg-red-50" aria-label="Confirmar eliminación">
+                      <button (click)="confirmDelete(c.id); $event.stopPropagation()"
+                        class="rounded-lg p-1.5 transition-colors duration-150"
+                        style="color:var(--danger)"
+                        aria-label="Confirmar eliminación">
                         <lucide-icon [img]="CheckIcon" size="14"></lucide-icon>
                       </button>
-                      <button (click)="deleteConfirmId.set(null); $event.stopPropagation()" class="rounded p-1 text-slate-400 hover:bg-slate-100" aria-label="Cancelar">
+                      <button (click)="deleteConfirmId.set(null); $event.stopPropagation()"
+                        class="rounded-lg p-1.5 transition-colors duration-150"
+                        style="color:var(--text-faint)"
+                        aria-label="Cancelar">
                         <lucide-icon [img]="XIcon" size="14"></lucide-icon>
                       </button>
                     } @else {
-                      <button (click)="deleteConfirmId.set(c.id); $event.stopPropagation()" class="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500" aria-label="Eliminar contacto">
+                      <button (click)="deleteConfirmId.set(c.id); $event.stopPropagation()"
+                        class="rounded-lg p-1.5 transition-colors duration-150"
+                        style="color:var(--text-faint)"
+                        (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)';$any($event.currentTarget).style.color='var(--danger)'"
+                        (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+                        aria-label="Eliminar contacto">
                         <lucide-icon [img]="Trash2Icon" size="14"></lucide-icon>
                       </button>
                     }
@@ -170,8 +218,9 @@
               </div>
             </div>
           }
+
           @if (filtered().length === 0) {
-            <div class="col-span-full rounded-xl border border-slate-200 bg-white py-16 text-center text-sm text-slate-400">
+            <div class="col-span-full rounded-xl py-16 text-center text-sm" style="color:var(--text-faint);border:1px dashed var(--border)">
               No se encontraron contactos
             </div>
           }
@@ -179,175 +228,6 @@
       }
     </div>
   }
-
-  <!-- TAB: Embudo CRM (Pipeline) — dummy data, oculto
-  @if (activeTab() === 'pipeline') {
-    <div class="p-4 space-y-4">
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div class="p-3 bg-slate-50 rounded-lg text-center">
-          <p class="text-xs text-slate-500">Pipeline total</p>
-          <p class="text-lg font-bold text-slate-800">{{ totalPipeline() | number:'1.0-0' }} €</p>
-        </div>
-        <div class="p-3 bg-emerald-50 rounded-lg text-center">
-          <p class="text-xs text-slate-500">Valor ganado</p>
-          <p class="text-lg font-bold text-emerald-700">{{ totalGanado() | number:'1.0-0' }} €</p>
-        </div>
-        <div class="p-3 bg-violet-50 rounded-lg text-center">
-          <p class="text-xs text-slate-500">Oportunidades</p>
-          <p class="text-lg font-bold text-violet-700">{{ pipelineDeals.length }}</p>
-        </div>
-        <div class="p-3 bg-blue-50 rounded-lg text-center">
-          <p class="text-xs text-slate-500">Tasa de cierre</p>
-          <p class="text-lg font-bold text-blue-700">34%</p>
-        </div>
-      </div>
-      <div class="flex gap-4 overflow-x-auto pb-2">
-        @for (etapa of etapasPipeline; track etapa.key) {
-          <div class="min-w-52 flex-1">
-            <div class="flex items-center justify-between mb-2">
-              <h3 class="text-xs font-semibold text-slate-600 uppercase tracking-wide">{{ etapa.label }}</h3>
-              <span class="text-xs text-slate-400">{{ dealsByEtapa()[etapa.key]?.length || 0 }}</span>
-            </div>
-            <div class="space-y-2">
-              @for (deal of dealsByEtapa()[etapa.key]; track deal.id) {
-                <div class="bg-white border border-slate-200 rounded-lg p-3 hover:shadow-sm transition-shadow">
-                  <p class="font-medium text-slate-800 text-sm">{{ deal.cliente }}</p>
-                  <p class="text-xs text-violet-600 font-semibold mt-1">{{ deal.importe | number:'1.0-0' }} €</p>
-                  <div class="flex items-center justify-between mt-2">
-                    <div class="flex-1 bg-slate-100 rounded-full h-1.5 mr-2">
-                      <div class="bg-violet-500 h-1.5 rounded-full" [style.width]="deal.probabilidad + '%'"></div>
-                    </div>
-                    <span class="text-xs text-slate-400">{{ deal.probabilidad }}%</span>
-                  </div>
-                  <p class="text-[10px] text-slate-400 mt-1">{{ deal.diasEnEtapa }}d en etapa</p>
-                </div>
-              }
-              @if (!dealsByEtapa()[etapa.key]?.length) {
-                <div class="border border-dashed border-slate-200 rounded-lg p-4 text-center text-xs text-slate-300">
-                  Sin oportunidades
-                </div>
-              }
-            </div>
-          </div>
-        }
-      </div>
-    </div>
-  }
-  -->
-
-  <!-- TAB: RGPD — dummy data, oculto
-  @if (activeTab() === 'rgpd') {
-    <div class="p-4 space-y-4">
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div class="p-3 bg-green-50 rounded-lg text-center">
-          <p class="text-xs text-slate-500">Con consentimiento marketing</p>
-          <p class="text-xl font-bold text-green-700">{{ conMarketing() }}</p>
-        </div>
-        <div class="p-3 bg-blue-50 rounded-lg text-center">
-          <p class="text-xs text-slate-500">Con perfilado</p>
-          <p class="text-xl font-bold text-blue-700">{{ conPerfilado() }}</p>
-        </div>
-        <div class="p-3 bg-amber-50 rounded-lg text-center">
-          <p class="text-xs text-slate-500">Total contactos</p>
-          <p class="text-xl font-bold text-amber-700">{{ rgpdData.length }}</p>
-        </div>
-        <div class="p-3 bg-red-50 rounded-lg text-center">
-          <p class="text-xs text-slate-500">Solicitudes pendientes</p>
-          <p class="text-xl font-bold text-red-600">0</p>
-        </div>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="text-left text-slate-500 border-b border-slate-200">
-              <th class="pb-3 font-medium">Contacto</th>
-              <th class="pb-3 font-medium text-center">Marketing</th>
-              <th class="pb-3 font-medium text-center">Perfilado</th>
-              <th class="pb-3 font-medium text-center">Terceros</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100">
-            @for (r of rgpdData; track r.id) {
-              <tr class="hover:bg-slate-50">
-                <td class="py-3 font-medium text-slate-800">{{ r.nombre }}</td>
-                <td class="py-3 text-center">
-                  <span [class]="r.marketing ? 'text-green-600' : 'text-slate-300'">{{ r.marketing ? '✓' : '✗' }}</span>
-                </td>
-                <td class="py-3 text-center">
-                  <span [class]="r.perfilado ? 'text-green-600' : 'text-slate-300'">{{ r.perfilado ? '✓' : '✗' }}</span>
-                </td>
-                <td class="py-3 text-center">
-                  <span [class]="r.terceros ? 'text-green-600' : 'text-slate-300'">{{ r.terceros ? '✓' : '✗' }}</span>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-      <div class="flex gap-3">
-        <button class="px-4 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600">Exportar registro LOPD</button>
-        <button class="px-4 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600">Generar informe RGPD</button>
-      </div>
-      <div class="p-4 bg-blue-50 rounded-lg border border-blue-200 text-sm text-blue-800">
-        <p class="font-semibold mb-1">Derechos ARCO</p>
-        <p class="text-xs text-blue-600">Los interesados pueden ejercer sus derechos de Acceso, Rectificación, Cancelación y Oposición. Plazo de respuesta: 30 días naturales.</p>
-      </div>
-    </div>
-  }
-  -->
-
-  <!-- TAB: Herramientas IA — dummy data, oculto
-  @if (activeTab() === 'herramientas') {
-    <div class="p-4 space-y-4">
-      <div class="grid md:grid-cols-2 gap-4">
-        <div class="border border-slate-200 rounded-xl p-4">
-          <div class="flex items-center gap-2 mb-3">
-            <lucide-icon [img]="GitMergeIcon" class="w-5 h-5 text-violet-500" />
-            <h3 class="font-semibold text-slate-700">Deduplicación IA</h3>
-          </div>
-          <p class="text-xs text-slate-500 mb-4">La IA analiza tus contactos y detecta posibles duplicados por nombre, email o teléfono.</p>
-          <div class="space-y-2">
-            <div class="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <div class="text-sm">
-                <p class="font-medium text-slate-700">María García — MG Consulting</p>
-                <p class="text-xs text-slate-400">Posible duplicado de María García López</p>
-              </div>
-              <button class="px-3 py-1 text-xs bg-violet-600 text-white rounded-lg hover:bg-violet-700">Fusionar</button>
-            </div>
-          </div>
-          <button class="mt-3 w-full py-2 text-sm border border-dashed border-slate-300 rounded-lg text-slate-500 hover:bg-slate-50">
-            Analizar todos los contactos
-          </button>
-        </div>
-        <div class="border border-slate-200 rounded-xl p-4">
-          <div class="flex items-center gap-2 mb-3">
-            <lucide-icon [img]="BrainIcon" class="w-5 h-5 text-blue-500" />
-            <h3 class="font-semibold text-slate-700">Enriquecimiento de datos</h3>
-          </div>
-          <p class="text-xs text-slate-500 mb-4">Completa automáticamente datos faltantes desde LinkedIn, BORME y registros públicos.</p>
-          <div class="space-y-2">
-            <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg">
-              <div class="text-sm">
-                <p class="font-medium text-slate-700">Carlos Rodríguez</p>
-                <p class="text-xs text-slate-400">Sin NIF, dirección, sector</p>
-              </div>
-              <button class="px-3 py-1 text-xs border border-slate-300 rounded-lg text-slate-600 hover:bg-white">Enriquecer</button>
-            </div>
-          </div>
-          <button class="mt-3 w-full py-2 text-sm border border-dashed border-slate-300 rounded-lg text-slate-500 hover:bg-slate-50">
-            Enriquecer todos los incompletos
-          </button>
-        </div>
-      </div>
-      <div class="flex gap-3">
-        <button class="px-4 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700 flex items-center gap-2">
-          <lucide-icon [img]="ArrowRightIcon" class="w-4 h-4" />Importar contactos
-        </button>
-        <button class="px-4 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600">Exportar CSV</button>
-      </div>
-    </div>
-  }
-  -->
 </div>
 
 <!-- Drawer backdrop -->
@@ -355,341 +235,348 @@
   <div class="fixed inset-0 bg-black/40 z-40" (click)="closeDrawer()" aria-hidden="true"></div>
 }
 
-<!-- Modal panel -->
+<!-- Modal drawer -->
 @if (showDrawer()) {
-<div
-  class="fixed inset-0 z-50 flex items-center justify-center p-4"
->
-<aside
-  class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
-  role="dialog"
-  aria-modal="true"
-  [attr.aria-label]="editingId() ? 'Editar contacto' : 'Nuevo contacto'"
->
-  <!-- Header -->
-  <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4 shrink-0">
-    <h2 class="font-semibold text-slate-800 text-lg">
-      {{ editingId() ? 'Editar contacto' : 'Nuevo contacto' }}
-    </h2>
-    <button (click)="closeDrawer()" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar">
-      <lucide-icon [img]="XIcon" size="20"></lucide-icon>
-    </button>
-  </div>
-
-  <!-- Step indicator (solo contacto nuevo) -->
-  @if (!editingId()) {
-    <div class="flex items-center gap-2 px-6 pt-5 pb-1">
-      <div class="flex items-center gap-1.5 shrink-0">
-        <span [class]="formStep() === 2 ? 'flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white' : 'flex h-5 w-5 items-center justify-center rounded-full bg-violet-600 text-[10px] font-bold text-white'">
-          @if (formStep() === 2) { <lucide-icon [img]="CheckIcon" size="10" /> } @else { 1 }
-        </span>
-        <span class="text-xs" [class]="formStep() === 1 ? 'font-semibold text-violet-700' : 'text-slate-400'">Datos principales</span>
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <aside
+      class="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl shadow-2xl"
+      style="background:var(--surface);border:1px solid var(--border)"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="editingId() ? 'Editar contacto' : 'Nuevo contacto'"
+    >
+      <!-- Header del drawer -->
+      <div class="flex items-center justify-between px-6 py-4 shrink-0"
+        style="border-bottom:1px solid var(--border)">
+        <h2 class="text-base font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">
+          {{ editingId() ? 'Editar contacto' : 'Nuevo contacto' }}
+        </h2>
+        <button (click)="closeDrawer()"
+          class="rounded-xl p-1.5 transition-colors duration-150"
+          style="color:var(--text-muted)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+          (mouseleave)="$any($event.currentTarget).style.background=''"
+          aria-label="Cerrar">
+          <span class="material-symbols-outlined" style="font-size:20px">close</span>
+        </button>
       </div>
-      <div class="mx-1 h-px flex-1 bg-slate-200"></div>
-      <div class="flex items-center gap-1.5 shrink-0">
-        <span [class]="formStep() === 2 ? 'flex h-5 w-5 items-center justify-center rounded-full bg-violet-600 text-[10px] font-bold text-white' : 'flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 text-[10px] font-medium text-slate-400'">2</span>
-        <span class="text-xs" [class]="formStep() === 2 ? 'font-semibold text-violet-700' : 'text-slate-400'">
-          Info adicional <span class="font-normal text-slate-400">(opcional)</span>
-        </span>
-      </div>
-    </div>
-  }
 
-  <!-- Body (scrollable) -->
-  <form [formGroup]="form" (ngSubmit)="saveContact()" class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-
-    <!-- Tipo de contacto (paso 1 o edición) -->
-    @if (showStep1Fields()) {
-      <div>
-        <p class="text-xs font-medium text-slate-500 mb-2">Tipo de contacto</p>
-        <div class="flex gap-3">
-          <button type="button" (click)="formType.set('persona_fisica')"
-            [class]="formType() === 'persona_fisica' ? 'flex-1 py-2.5 text-sm font-semibold rounded-lg border-2 border-violet-500 bg-violet-50 text-violet-700' : 'flex-1 py-2.5 text-sm font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50'">
-            Persona Física
-          </button>
-          <button type="button" (click)="formType.set('persona_juridica')"
-            [class]="formType() === 'persona_juridica' ? 'flex-1 py-2.5 text-sm font-semibold rounded-lg border-2 border-violet-500 bg-violet-50 text-violet-700' : 'flex-1 py-2.5 text-sm font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50'">
-            Persona Jurídica
-          </button>
-        </div>
-      </div>
-    }
-
-    <!-- PERSONA FÍSICA -->
-    @if (formType() === 'persona_fisica') {
-      @if (showStep1Fields()) {
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label for="nombre" class="block text-xs font-medium text-slate-500 mb-1">Nombre *</label>
-            <input id="nombre" formControlName="nombre" type="text"
-              class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
-              [class]="showErrors() && !form.get('nombre')?.value?.trim() ? 'border-red-300' : 'border-slate-200'" />
-            @if (showErrors() && !form.get('nombre')?.value?.trim()) {
-              <p class="mt-0.5 text-[11px] text-red-500">Campo obligatorio</p>
-            }
+      <!-- Step indicator (solo contacto nuevo) -->
+      @if (!editingId()) {
+        <div class="flex items-center gap-2 px-6 pt-5 pb-1">
+          <div class="flex items-center gap-1.5 shrink-0">
+            <span class="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white"
+              [style.background]="formStep() === 2 ? 'var(--success)' : 'var(--brand)'">
+              @if (formStep() === 2) { <lucide-icon [img]="CheckIcon" size="10" /> } @else { 1 }
+            </span>
+            <span class="text-xs font-semibold"
+              [style.color]="formStep() === 1 ? 'var(--brand)' : 'var(--text-faint)'">Datos principales</span>
           </div>
-          <div>
-            <label for="apellidos" class="block text-xs font-medium text-slate-500 mb-1">Apellidos *</label>
-            <input id="apellidos" formControlName="apellidos" type="text"
-              class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
-              [class]="showErrors() && !form.get('apellidos')?.value?.trim() ? 'border-red-300' : 'border-slate-200'" />
-            @if (showErrors() && !form.get('apellidos')?.value?.trim()) {
-              <p class="mt-0.5 text-[11px] text-red-500">Campo obligatorio</p>
-            }
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label for="nifType" class="block text-xs font-medium text-slate-500 mb-1">Documento</label>
-            <select id="nifType" formControlName="nifType"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
-              <option value="dni">DNI</option>
-              <option value="nie">NIE</option>
-              <option value="pasaporte">Pasaporte</option>
-              <option value="otro">Otro</option>
-            </select>
-          </div>
-          <div>
-            <label for="nif" class="block text-xs font-medium text-slate-500 mb-1">Número</label>
-            <input id="nif" formControlName="nif" type="text"
-              class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
-              [class]="showErrors() && !form.get('nif')?.value?.trim() ? 'border-red-300' : 'border-slate-200'" />
-            @if (showErrors() && !form.get('nif')?.value?.trim()) {
-              <p class="mt-0.5 text-[11px] text-red-500">Campo obligatorio</p>
-            }
+          <div class="mx-1 h-px flex-1" style="background:var(--border)"></div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <span class="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
+              [style.background]="formStep() === 2 ? 'var(--brand)' : 'transparent'"
+              [style.color]="formStep() === 2 ? 'white' : 'var(--text-muted)'"
+              [style.border]="formStep() !== 2 ? '1px solid var(--border)' : 'none'">2</span>
+            <span class="text-xs"
+              [style.color]="formStep() === 2 ? 'var(--brand)' : 'var(--text-faint)'">
+              <span class="font-semibold">Info adicional</span>
+              <span> (opcional)</span>
+            </span>
           </div>
         </div>
       }
-      @if (showStep2Fields()) {
-        <div>
-          <label for="nacionalidad" class="block text-xs font-medium text-slate-500 mb-1">Nacionalidad (ISO)</label>
-          <input id="nacionalidad" formControlName="nacionalidad" type="text" placeholder="ES"
-            class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-        </div>
-        <div>
-          <label for="estadoCivil" class="block text-xs font-medium text-slate-500 mb-1">Estado civil</label>
-          <select id="estadoCivil" formControlName="estadoCivil"
-            class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
-            <option value="">— Sin especificar —</option>
-            <option value="soltero">Soltero/a</option>
-            <option value="casado">Casado/a</option>
-            <option value="divorciado">Divorciado/a</option>
-            <option value="viudo">Viudo/a</option>
-            <option value="pareja_hecho">Pareja de hecho</option>
-          </select>
-        </div>
-      }
-    }
 
-    <!-- PERSONA JURÍDICA -->
-    @if (formType() === 'persona_juridica') {
-      @if (showStep1Fields()) {
-        <div>
-          <label for="razonSocial" class="block text-xs font-medium text-slate-500 mb-1">Razón social *</label>
-          <input id="razonSocial" formControlName="razonSocial" type="text"
-            class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
-            [class]="showErrors() && !form.get('razonSocial')?.value?.trim() ? 'border-red-300' : 'border-slate-200'" />
-          @if (showErrors() && !form.get('razonSocial')?.value?.trim()) {
-            <p class="mt-0.5 text-[11px] text-red-500">Campo obligatorio</p>
+      <!-- Body scrollable -->
+      <form [formGroup]="form" (ngSubmit)="saveContact()" class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+
+        <!-- Tipo de contacto -->
+        @if (showStep1Fields()) {
+          <div>
+            <p class="form-section-title">Tipo de contacto</p>
+            <div class="flex gap-3">
+              <button type="button" (click)="formType.set('persona_fisica')"
+                class="flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all duration-150"
+                [style.border]="formType() === 'persona_fisica' ? '2px solid var(--brand)' : '1px solid var(--border)'"
+                [style.background]="formType() === 'persona_fisica' ? 'color-mix(in srgb,var(--brand) 8%,transparent)' : 'var(--surface-2)'"
+                [style.color]="formType() === 'persona_fisica' ? 'var(--brand)' : 'var(--text-body)'">
+                Persona Física
+              </button>
+              <button type="button" (click)="formType.set('persona_juridica')"
+                class="flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all duration-150"
+                [style.border]="formType() === 'persona_juridica' ? '2px solid var(--brand)' : '1px solid var(--border)'"
+                [style.background]="formType() === 'persona_juridica' ? 'color-mix(in srgb,var(--brand) 8%,transparent)' : 'var(--surface-2)'"
+                [style.color]="formType() === 'persona_juridica' ? 'var(--brand)' : 'var(--text-body)'">
+                Persona Jurídica
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- PERSONA FÍSICA -->
+        @if (formType() === 'persona_fisica') {
+          @if (showStep1Fields()) {
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label for="nombre" class="form-label">Nombre *</label>
+                <input id="nombre" formControlName="nombre" type="text" class="form-input"
+                  [class.error]="showErrors() && !form.get('nombre')?.value?.trim()" />
+                @if (showErrors() && !form.get('nombre')?.value?.trim()) {
+                  <p class="form-error">Campo obligatorio</p>
+                }
+              </div>
+              <div>
+                <label for="apellidos" class="form-label">Apellidos *</label>
+                <input id="apellidos" formControlName="apellidos" type="text" class="form-input"
+                  [class.error]="showErrors() && !form.get('apellidos')?.value?.trim()" />
+                @if (showErrors() && !form.get('apellidos')?.value?.trim()) {
+                  <p class="form-error">Campo obligatorio</p>
+                }
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label for="nifType" class="form-label">Documento</label>
+                <select id="nifType" formControlName="nifType" class="form-select">
+                  <option value="dni">DNI</option>
+                  <option value="nie">NIE</option>
+                  <option value="pasaporte">Pasaporte</option>
+                  <option value="otro">Otro</option>
+                </select>
+              </div>
+              <div>
+                <label for="nif" class="form-label">Número</label>
+                <input id="nif" formControlName="nif" type="text" class="form-input"
+                  [class.error]="showErrors() && !form.get('nif')?.value?.trim()" />
+                @if (showErrors() && !form.get('nif')?.value?.trim()) {
+                  <p class="form-error">Campo obligatorio</p>
+                }
+              </div>
+            </div>
           }
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label for="cifType" class="block text-xs font-medium text-slate-500 mb-1">Documento</label>
-            <select id="cifType" formControlName="cifType"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
-              <option value="cif">CIF (España)</option>
-              <option value="vat">VAT (UE)</option>
-              <option value="otro">Otro</option>
-            </select>
-          </div>
-          <div>
-            <label for="cif" class="block text-xs font-medium text-slate-500 mb-1">Número *</label>
-            <input id="cif" formControlName="cif" type="text"
-              class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
-              [class]="showErrors() && !form.get('cif')?.value?.trim() ? 'border-red-300' : 'border-slate-200'" />
-            @if (showErrors() && !form.get('cif')?.value?.trim()) {
-              <p class="mt-0.5 text-[11px] text-red-500">Campo obligatorio</p>
-            }
-          </div>
-        </div>
-      }
-      @if (showStep2Fields()) {
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label for="nombreComercial" class="block text-xs font-medium text-slate-500 mb-1">Nombre comercial</label>
-            <input id="nombreComercial" formControlName="nombreComercial" type="text"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-          </div>
-          <div>
-            <label for="formaJuridica" class="block text-xs font-medium text-slate-500 mb-1">Forma jurídica</label>
-            <select id="formaJuridica" formControlName="formaJuridica"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
-              <option value="">— Seleccionar —</option>
-              <option value="S.L.">S.L.</option>
-              <option value="S.A.">S.A.</option>
-              <option value="S.L.U.">S.L.U.</option>
-              <option value="S.L.P.">S.L.P.</option>
-              <option value="Autónomo">Autónomo</option>
-              <option value="Cooperativa">Cooperativa</option>
-              <option value="Asociación">Asociación</option>
-              <option value="Fundación">Fundación</option>
-              <option value="Otro">Otro</option>
-            </select>
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label for="sectorActividad" class="block text-xs font-medium text-slate-500 mb-1">Sector de actividad</label>
-            <input id="sectorActividad" formControlName="sectorActividad" type="text"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-          </div>
-          <div>
-            <label for="website" class="block text-xs font-medium text-slate-500 mb-1">Sitio web</label>
-            <input id="website" formControlName="website" type="url" placeholder="https://"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-          </div>
-        </div>
-        <div>
-          <label for="representanteLegalNombre" class="block text-xs font-medium text-slate-500 mb-1">Representante legal</label>
-          <input id="representanteLegalNombre" formControlName="representanteLegalNombre" type="text"
-            class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-        </div>
-      }
-    }
-
-    <!-- Datos de contacto (paso 1 o edición) -->
-    @if (showStep1Fields()) {
-      <div class="border-t border-slate-100 pt-4">
-        <p class="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">Datos de contacto</p>
-        <div class="space-y-3">
-          <div>
-            <label for="email" class="block text-xs font-medium text-slate-500 mb-1">Email</label>
-            <input id="email" formControlName="email" type="email"
-              class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
-              [class]="((showErrors() || form.get('email')?.touched) && form.get('email')?.invalid) || (showErrors() && missingContactChannel()) ? 'border-red-300' : 'border-slate-200'" />
-            @if ((showErrors() || form.get('email')?.touched) && form.get('email')?.invalid && form.get('email')?.value) {
-              <p class="mt-0.5 text-[11px] text-red-500">Email no válido</p>
-            }
-          </div>
-          <div>
-            <label for="mobile" class="block text-xs font-medium text-slate-500 mb-1">Móvil</label>
-            <input id="mobile" formControlName="mobile" type="tel"
-              class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
-              [class]="showErrors() && missingContactChannel() ? 'border-red-300' : 'border-slate-200'" />
-          </div>
-          @if (showErrors() && missingContactChannel()) {
-            <p class="text-[11px] text-red-500">Indica al menos un email o un móvil.</p>
+          @if (showStep2Fields()) {
+            <div>
+              <label for="nacionalidad" class="form-label">Nacionalidad (ISO)</label>
+              <input id="nacionalidad" formControlName="nacionalidad" type="text" placeholder="ES" class="form-input" />
+            </div>
+            <div>
+              <label for="estadoCivil" class="form-label">Estado civil</label>
+              <select id="estadoCivil" formControlName="estadoCivil" class="form-select">
+                <option value="">— Sin especificar —</option>
+                <option value="soltero">Soltero/a</option>
+                <option value="casado">Casado/a</option>
+                <option value="divorciado">Divorciado/a</option>
+                <option value="viudo">Viudo/a</option>
+                <option value="pareja_hecho">Pareja de hecho</option>
+              </select>
+            </div>
           }
-        </div>
-      </div>
-    }
+        }
 
-    <!-- Dirección (paso 2 o edición) -->
-    @if (showStep2Fields()) {
-      <div class="border-t border-slate-100 pt-4">
-        <p class="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">Dirección</p>
-        <div class="space-y-3">
-          <div class="grid grid-cols-3 gap-3">
-            <div class="col-span-2">
-              <label for="calle" class="block text-xs font-medium text-slate-500 mb-1">Calle</label>
-              <input id="calle" formControlName="calle" type="text"
-                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+        <!-- PERSONA JURÍDICA -->
+        @if (formType() === 'persona_juridica') {
+          @if (showStep1Fields()) {
+            <div>
+              <label for="razonSocial" class="form-label">Razón social *</label>
+              <input id="razonSocial" formControlName="razonSocial" type="text" class="form-input"
+                [class.error]="showErrors() && !form.get('razonSocial')?.value?.trim()" />
+              @if (showErrors() && !form.get('razonSocial')?.value?.trim()) {
+                <p class="form-error">Campo obligatorio</p>
+              }
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label for="cifType" class="form-label">Documento</label>
+                <select id="cifType" formControlName="cifType" class="form-select">
+                  <option value="cif">CIF (España)</option>
+                  <option value="vat">VAT (UE)</option>
+                  <option value="otro">Otro</option>
+                </select>
+              </div>
+              <div>
+                <label for="cif" class="form-label">Número *</label>
+                <input id="cif" formControlName="cif" type="text" class="form-input"
+                  [class.error]="showErrors() && !form.get('cif')?.value?.trim()" />
+                @if (showErrors() && !form.get('cif')?.value?.trim()) {
+                  <p class="form-error">Campo obligatorio</p>
+                }
+              </div>
+            </div>
+          }
+          @if (showStep2Fields()) {
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label for="nombreComercial" class="form-label">Nombre comercial</label>
+                <input id="nombreComercial" formControlName="nombreComercial" type="text" class="form-input" />
+              </div>
+              <div>
+                <label for="formaJuridica" class="form-label">Forma jurídica</label>
+                <select id="formaJuridica" formControlName="formaJuridica" class="form-select">
+                  <option value="">— Seleccionar —</option>
+                  <option value="S.L.">S.L.</option>
+                  <option value="S.A.">S.A.</option>
+                  <option value="S.L.U.">S.L.U.</option>
+                  <option value="S.L.P.">S.L.P.</option>
+                  <option value="Autónomo">Autónomo</option>
+                  <option value="Cooperativa">Cooperativa</option>
+                  <option value="Asociación">Asociación</option>
+                  <option value="Fundación">Fundación</option>
+                  <option value="Otro">Otro</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label for="sectorActividad" class="form-label">Sector de actividad</label>
+                <input id="sectorActividad" formControlName="sectorActividad" type="text" class="form-input" />
+              </div>
+              <div>
+                <label for="website" class="form-label">Sitio web</label>
+                <input id="website" formControlName="website" type="url" placeholder="https://" class="form-input" />
+              </div>
             </div>
             <div>
-              <label for="numero" class="block text-xs font-medium text-slate-500 mb-1">Nº / Piso</label>
-              <input id="numero" formControlName="numero" type="text"
-                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+              <label for="representanteLegalNombre" class="form-label">Representante legal</label>
+              <input id="representanteLegalNombre" formControlName="representanteLegalNombre" type="text" class="form-input" />
+            </div>
+          }
+        }
+
+        <!-- Datos de contacto -->
+        @if (showStep1Fields()) {
+          <div class="form-divider">
+            <p class="form-section-title">Datos de contacto</p>
+            <div class="space-y-3">
+              <div>
+                <label for="email" class="form-label">Email</label>
+                <input id="email" formControlName="email" type="email" class="form-input"
+                  [class.error]="((showErrors() || form.get('email')?.touched) && form.get('email')?.invalid) || (showErrors() && missingContactChannel())" />
+                @if ((showErrors() || form.get('email')?.touched) && form.get('email')?.invalid && form.get('email')?.value) {
+                  <p class="form-error">Email no válido</p>
+                }
+              </div>
+              <div>
+                <label for="mobile" class="form-label">Móvil</label>
+                <input id="mobile" formControlName="mobile" type="tel" class="form-input"
+                  [class.error]="showErrors() && missingContactChannel()" />
+              </div>
+              @if (showErrors() && missingContactChannel()) {
+                <p class="form-error">Indica al menos un email o un móvil.</p>
+              }
             </div>
           </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label for="codigoPostal" class="block text-xs font-medium text-slate-500 mb-1">C.P.</label>
-              <input id="codigoPostal" formControlName="codigoPostal" type="text"
-                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-            </div>
-            <div>
-              <label for="municipio" class="block text-xs font-medium text-slate-500 mb-1">Municipio</label>
-              <input id="municipio" formControlName="municipio" type="text"
-                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+        }
+
+        <!-- Dirección -->
+        @if (showStep2Fields()) {
+          <div class="form-divider">
+            <p class="form-section-title">Dirección</p>
+            <div class="space-y-3">
+              <div class="grid grid-cols-3 gap-3">
+                <div class="col-span-2">
+                  <label for="calle" class="form-label">Calle</label>
+                  <input id="calle" formControlName="calle" type="text" class="form-input" />
+                </div>
+                <div>
+                  <label for="numero" class="form-label">Nº / Piso</label>
+                  <input id="numero" formControlName="numero" type="text" class="form-input" />
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label for="codigoPostal" class="form-label">C.P.</label>
+                  <input id="codigoPostal" formControlName="codigoPostal" type="text" class="form-input" />
+                </div>
+                <div>
+                  <label for="municipio" class="form-label">Municipio</label>
+                  <input id="municipio" formControlName="municipio" type="text" class="form-input" />
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label for="provincia" class="form-label">Provincia</label>
+                  <input id="provincia" formControlName="provincia" type="text" class="form-input" />
+                </div>
+                <div>
+                  <label for="pais" class="form-label">País (ISO)</label>
+                  <input id="pais" formControlName="pais" type="text" placeholder="ES" class="form-input" />
+                </div>
+              </div>
             </div>
           </div>
-          <div class="grid grid-cols-2 gap-3">
+        }
+
+        <!-- Estado y notas -->
+        @if (showStep1Fields()) {
+          <div class="form-divider space-y-3">
             <div>
-              <label for="provincia" class="block text-xs font-medium text-slate-500 mb-1">Provincia</label>
-              <input id="provincia" formControlName="provincia" type="text"
-                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+              <label for="status" class="form-label">Estado *</label>
+              <select id="status" formControlName="status" class="form-select">
+                <option value="activo">Activo</option>
+                <option value="potencial">Potencial</option>
+                <option value="inactivo">Inactivo</option>
+                <option value="archivado">Archivado</option>
+              </select>
             </div>
             <div>
-              <label for="pais" class="block text-xs font-medium text-slate-500 mb-1">País (ISO)</label>
-              <input id="pais" formControlName="pais" type="text" placeholder="ES"
-                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+              <label for="notes" class="form-label">Notas internas</label>
+              <textarea id="notes" formControlName="notes" rows="3"
+                class="form-input resize-none"></textarea>
             </div>
           </div>
-        </div>
+        }
+
+        <div class="h-4"></div>
+      </form>
+
+      <!-- Footer sticky -->
+      <div class="flex gap-3 px-6 py-4 shrink-0"
+        style="border-top:1px solid var(--border);background:var(--surface)">
+        @if (!editingId() && formStep() === 1) {
+          <button type="button" (click)="closeDrawer()"
+            class="flex-1 rounded-xl py-2.5 text-sm font-medium transition-colors duration-150"
+            style="border:1px solid var(--border);color:var(--text-body);background:var(--surface-2)">
+            Cancelar
+          </button>
+          <button type="button" (click)="nextStep()"
+            class="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white flex items-center justify-center gap-1.5 transition-all duration-150"
+            style="background:var(--brand)"
+            (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+            (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+            Continuar
+            <span class="material-symbols-outlined" style="font-size:16px">chevron_right</span>
+          </button>
+        } @else if (!editingId() && formStep() === 2) {
+          <button type="button" (click)="prevStep()"
+            class="rounded-xl px-3 py-2.5 text-sm font-medium flex items-center gap-1 transition-colors duration-150"
+            style="border:1px solid var(--border);color:var(--text-body);background:var(--surface-2)">
+            <span class="material-symbols-outlined" style="font-size:16px">chevron_left</span>
+            Atrás
+          </button>
+          <button type="button" (click)="saveContact()" [disabled]="isSaving()"
+            class="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all duration-150"
+            style="background:var(--brand)"
+            (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+            (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+            @if (isSaving()) { <lucide-icon [img]="Loader2Icon" size="16" class="animate-spin"></lucide-icon> }
+            Guardar contacto
+          </button>
+        } @else {
+          <button type="button" (click)="closeDrawer()"
+            class="flex-1 rounded-xl py-2.5 text-sm font-medium transition-colors duration-150"
+            style="border:1px solid var(--border);color:var(--text-body);background:var(--surface-2)">
+            Cancelar
+          </button>
+          <button type="button" (click)="saveContact()" [disabled]="isSaving()"
+            class="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all duration-150"
+            style="background:var(--brand)"
+            (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+            (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+            @if (isSaving()) { <lucide-icon [img]="Loader2Icon" size="16" class="animate-spin"></lucide-icon> }
+            Guardar cambios
+          </button>
+        }
       </div>
-    }
-
-    <!-- Estado y notas (paso 1 o edición) -->
-    @if (showStep1Fields()) {
-      <div class="border-t border-slate-100 pt-4 space-y-3">
-        <div>
-          <label for="status" class="block text-xs font-medium text-slate-500 mb-1">Estado *</label>
-          <select id="status" formControlName="status"
-            class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
-            <option value="activo">Activo</option>
-            <option value="potencial">Potencial</option>
-            <option value="inactivo">Inactivo</option>
-            <option value="archivado">Archivado</option>
-          </select>
-        </div>
-        <div>
-          <label for="notes" class="block text-xs font-medium text-slate-500 mb-1">Notas internas</label>
-          <textarea id="notes" formControlName="notes" rows="3"
-            class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none"></textarea>
-        </div>
-      </div>
-    }
-
-    <!-- Spacer para que el sticky footer no tape contenido -->
-    <div class="h-4"></div>
-  </form>
-
-  <!-- Footer (sticky) -->
-  <div class="flex gap-3 border-t border-slate-200 px-6 py-4 shrink-0 bg-white">
-    @if (!editingId() && formStep() === 1) {
-      <button type="button" (click)="closeDrawer()"
-        class="flex-1 rounded-lg border border-slate-200 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
-        Cancelar
-      </button>
-      <button type="button" (click)="nextStep()"
-        class="flex-1 rounded-lg bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 flex items-center justify-center gap-1.5">
-        Continuar
-        <lucide-icon [img]="ChevronRightIcon" size="16"></lucide-icon>
-      </button>
-    } @else if (!editingId() && formStep() === 2) {
-      <button type="button" (click)="prevStep()"
-        class="rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 flex items-center gap-1">
-        <lucide-icon [img]="ChevronLeftIcon" size="16"></lucide-icon>
-        Atrás
-      </button>
-      <button type="button" (click)="saveContact()" [disabled]="isSaving()"
-        class="flex-1 rounded-lg bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-        @if (isSaving()) { <lucide-icon [img]="Loader2Icon" size="16" class="animate-spin"></lucide-icon> }
-        Guardar contacto
-      </button>
-    } @else {
-      <button type="button" (click)="closeDrawer()"
-        class="flex-1 rounded-lg border border-slate-200 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
-        Cancelar
-      </button>
-      <button type="button" (click)="saveContact()" [disabled]="isSaving()"
-        class="flex-1 rounded-lg bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-        @if (isSaving()) { <lucide-icon [img]="Loader2Icon" size="16" class="animate-spin"></lucide-icon> }
-        Guardar cambios
-      </button>
-    }
+    </aside>
   </div>
-</aside>
-</div>
 }

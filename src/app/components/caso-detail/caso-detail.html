@@ -1,9 +1,9 @@
 @if (loading()) {
-  <div class="flex items-center justify-center h-64 text-slate-400 text-sm">Cargando caso...</div>
+  <div class="flex items-center justify-center h-64 text-sm" style="color:var(--text-faint)">Cargando caso...</div>
 } @else if (!caso()) {
   <div class="flex flex-col items-center justify-center h-64 gap-2">
-    <p class="text-slate-500">Caso no encontrado</p>
-    <a routerLink="/casos" class="text-sm text-violet-600 hover:underline">Volver a casos</a>
+    <p style="color:var(--text-muted)">Caso no encontrado</p>
+    <a routerLink="/casos" class="text-sm hover:underline" style="color:var(--brand)">Volver a casos</a>
   </div>
 } @else {
   <div class="flex flex-col h-full">

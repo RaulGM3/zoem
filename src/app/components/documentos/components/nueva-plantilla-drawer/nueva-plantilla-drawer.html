@@ -11,7 +11,7 @@
         }
       </h2>
       <button (click)="closed.emit()" class="p-1.5 rounded-lg hover:bg-slate-100" aria-label="Cerrar">
-        <lucide-icon [img]="XIcon" class="w-4 h-4 text-slate-500" />
+        <lucide-icon [img]="XIcon" class="w-4 h-4 text-slate-700" />
       </button>
     </div>
 
@@ -40,11 +40,11 @@
               @if (file(); as f) {
                 <lucide-icon [img]="FileTextIcon" class="w-8 h-8 text-violet-500" />
                 <p class="text-sm font-medium text-slate-700">{{ f.name }}</p>
-                <p class="text-xs text-slate-400">Haz clic para cambiar el archivo</p>
+                <p class="text-xs font-medium text-slate-600">Haz clic para cambiar el archivo</p>
               } @else {
-                <lucide-icon [img]="UploadIcon" class="w-8 h-8 text-slate-400" />
+                <lucide-icon [img]="UploadIcon" class="w-8 h-8 text-slate-600" />
                 <p class="text-sm font-medium text-slate-700">Arrastra un PDF o Word (.docx) aquí</p>
-                <p class="text-xs text-slate-400">o haz clic para seleccionarlo · máx. 15MB</p>
+                <p class="text-xs font-medium text-slate-600">o haz clic para seleccionarlo · máx. 15MB</p>
               }
             </label>
 
@@ -61,7 +61,7 @@
               <lucide-icon [img]="SparklesIcon" class="absolute inset-0 m-auto w-5 h-5 text-violet-500" />
             </div>
             <p class="text-sm font-medium text-slate-700">Analizando documento con IA…</p>
-            <p class="text-xs text-slate-400">Detectando datos variables y generando la plantilla</p>
+            <p class="text-xs font-medium text-slate-600">Detectando datos variables y generando la plantilla</p>
           </div>
         }
 
@@ -78,7 +78,7 @@
                   <div class="flex items-center gap-2">
                     <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">{{ '{{' + v.key + '}}' }}</code>
                     <span class="flex-1"></span>
-                    <label class="flex items-center gap-1.5 text-xs text-slate-500">
+                    <label class="flex items-center gap-1.5 text-xs text-slate-700">
                       <input type="checkbox" [checked]="v.required" (change)="updateVariable(i, { required: $any($event.target).checked })"
                         class="rounded border-slate-300 text-violet-600 focus:ring-violet-300" />
                       Obligatoria
@@ -109,7 +109,7 @@
               <button (click)="showPreview.set(!showPreview())"
                 class="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
                 Vista previa del documento
-                <lucide-icon [img]="showPreview() ? ChevronUpIcon : ChevronDownIcon" class="w-4 h-4 text-slate-400" />
+                <lucide-icon [img]="showPreview() ? ChevronUpIcon : ChevronDownIcon" class="w-4 h-4 text-slate-600" />
               </button>
               @if (showPreview()) {
                 <div class="max-h-72 overflow-y-auto border-t border-slate-200 px-4 py-3 text-sm text-slate-700 prose-sm"
@@ -129,7 +129,7 @@
               <lucide-icon [img]="TriangleAlertIcon" class="w-6 h-6 text-red-500" />
             </div>
             <p class="text-sm font-medium text-slate-700">No se pudo procesar el documento</p>
-            <p class="max-w-sm text-center text-xs text-slate-500">{{ errorMessage() }}</p>
+            <p class="max-w-sm text-center text-xs font-medium text-slate-700">{{ errorMessage() }}</p>
           </div>
         }
       }

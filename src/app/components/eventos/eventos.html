@@ -29,12 +29,12 @@
     <div class="h-8 w-8 animate-spin rounded-full border-4 border-violet-200 border-t-violet-600"></div>
   </div>
 } @else if (selectedDates().size === 0) {
-  <div class="mt-6 rounded-xl border border-dashed border-slate-200 bg-slate-50 py-12 text-center text-sm text-slate-400">
+  <div class="mt-6 rounded-xl border border-dashed border-slate-200 bg-slate-50 py-12 text-center text-sm text-slate-600">
     Selecciona un día para ver sus eventos
   </div>
 } @else if (groupedEventos().length === 0) {
   <div class="mt-6 rounded-xl border border-dashed border-slate-200 bg-slate-50 py-12 text-center">
-    <p class="text-sm text-slate-400">No hay eventos para los días seleccionados</p>
+    <p class="text-sm text-slate-600 font-medium">No hay eventos para los días seleccionados</p>
     <button
       (click)="showDrawer.set(true)"
       class="mt-3 text-sm font-medium text-violet-600 hover:text-violet-700"
@@ -46,7 +46,7 @@
   <div class="mt-6 space-y-6">
     @for (group of groupedEventos(); track group.date) {
       <div>
-        <h2 class="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
+        <h2 class="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-700">
           {{ group.label }}
           <span class="rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-bold text-violet-700">
             {{ group.items.length }}
@@ -67,7 +67,7 @@
                 <div class="flex items-start justify-between gap-2">
                   <div class="min-w-0">
                     <p class="font-semibold text-slate-900">{{ evento.titulo }}</p>
-                    <p class="mt-0.5 text-sm text-slate-500">{{ formatTime(evento) }}</p>
+                    <p class="mt-0.5 text-sm text-slate-700 font-medium">{{ formatTime(evento) }}</p>
                   </div>
                   <div class="flex shrink-0 items-center gap-2">
                     @if (evento.prioridad !== 'ninguna') {
@@ -80,7 +80,7 @@
                     }
                     <button
                       (click)="deleteEvento(evento.id)"
-                      class="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                      class="rounded p-1 text-slate-600 hover:bg-red-50 hover:text-red-500 transition-colors"
                       aria-label="Eliminar evento"
                     >
                       <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -90,7 +90,7 @@
                   </div>
                 </div>
 
-                <div class="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                <div class="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-700">
                   @if (evento.lugar) {
                     <span class="flex items-center gap-1">
                       <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -130,7 +130,7 @@
                 </div>
 
                 @if (evento.descripcion) {
-                  <p class="mt-2 text-xs text-slate-500">{{ evento.descripcion }}</p>
+                  <p class="mt-2 text-xs text-slate-700 font-medium">{{ evento.descripcion }}</p>
                 }
               </div>
             </div>

@@ -20,7 +20,7 @@
           class="p-1.5 rounded-lg hover:bg-slate-100"
           aria-label="Cerrar"
         >
-          <lucide-icon [img]="XIcon" class="w-5 h-5 text-slate-500" />
+          <lucide-icon [img]="XIcon" class="w-5 h-5 text-slate-700" />
         </button>
       </div>
 
@@ -39,7 +39,7 @@
             [value]="titulo()"
             (input)="titulo.set($any($event.target).value)"
             placeholder="Nombre del evento"
-            class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+            class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-600 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
           />
         </div>
 
@@ -66,7 +66,7 @@
 
           <div class="grid grid-cols-3 gap-3">
             <div class="space-y-1">
-              <label for="ev-fecha" class="text-xs font-medium text-slate-500">Fecha *</label>
+              <label for="ev-fecha" class="text-xs font-medium text-slate-700">Fecha *</label>
               <input
                 id="ev-fecha"
                 type="date"
@@ -78,7 +78,7 @@
             </div>
             @if (!todoDia()) {
               <div class="space-y-1">
-                <label for="ev-hora-inicio" class="text-xs font-medium text-slate-500">Inicio</label>
+                <label for="ev-hora-inicio" class="text-xs font-medium text-slate-700">Inicio</label>
                 <input
                   id="ev-hora-inicio"
                   type="time"
@@ -88,7 +88,7 @@
                 />
               </div>
               <div class="space-y-1">
-                <label for="ev-hora-fin" class="text-xs font-medium text-slate-500">Fin</label>
+                <label for="ev-hora-fin" class="text-xs font-medium text-slate-700">Fin</label>
                 <input
                   id="ev-hora-fin"
                   type="time"
@@ -119,7 +119,7 @@
 
           @if (recurrencia() !== 'ninguna') {
             <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
-              <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Termina</p>
+              <p class="text-xs font-medium text-slate-700 uppercase tracking-wide">Termina</p>
 
               <!-- Tipo de fin -->
               <div class="flex gap-3">
@@ -145,7 +145,7 @@
 
               @if (recurrenciaFinTipo() === 'fecha') {
                 <div class="space-y-1">
-                  <label for="ev-recurrencia-fin" class="text-xs font-medium text-slate-500">Fecha de fin</label>
+                  <label for="ev-recurrencia-fin" class="text-xs font-medium text-slate-700">Fecha de fin</label>
                   <input
                     id="ev-recurrencia-fin"
                     type="date"
@@ -157,7 +157,7 @@
                 </div>
               } @else {
                 <div class="space-y-1">
-                  <label for="ev-recurrencia-ocurrencias" class="text-xs font-medium text-slate-500">Número de ocurrencias</label>
+                  <label for="ev-recurrencia-ocurrencias" class="text-xs font-medium text-slate-700">Número de ocurrencias</label>
                   <div class="flex items-center gap-2">
                     <input
                       id="ev-recurrencia-ocurrencias"
@@ -167,9 +167,9 @@
                       [value]="recurrenciaOcurrencias() ?? ''"
                       (input)="recurrenciaOcurrencias.set(+$any($event.target).value || null)"
                       placeholder="ej. 10"
-                      class="w-28 rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100 bg-white"
+                      class="w-28 rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-600 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100 bg-white"
                     />
-                    <span class="text-sm text-slate-500">veces</span>
+                    <span class="text-sm text-slate-700">veces</span>
                   </div>
                 </div>
               }
@@ -187,7 +187,7 @@
               [value]="lugar()"
               (input)="lugar.set($any($event.target).value)"
               placeholder="Añadir ubicación"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+              class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-600 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
             />
           </div>
           <div class="space-y-1.5">
@@ -198,7 +198,7 @@
               [value]="link()"
               (input)="link.set($any($event.target).value)"
               placeholder="https://..."
-              class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+              class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-600 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
             />
           </div>
         </div>
@@ -212,7 +212,7 @@
             [value]="descripcion()"
             (input)="descripcion.set($any($event.target).value)"
             placeholder="Añadir notas u observaciones..."
-            class="w-full resize-none rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+            class="w-full resize-none rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-600 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
           ></textarea>
         </div>
 
@@ -274,7 +274,7 @@
             </button>
             <div>
               <p class="text-sm font-medium text-slate-700">Toda la compañía</p>
-              <p class="text-xs text-slate-400">Invita a todos los miembros del equipo</p>
+              <p class="text-xs text-slate-600 font-medium">Invita a todos los miembros del equipo</p>
             </div>
           </div>
 
@@ -287,12 +287,12 @@
                   [value]="memberQuery()"
                   (input)="memberQuery.set($any($event.target).value)"
                   placeholder="Buscar miembro..."
-                  class="w-full text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none bg-transparent"
+                  class="w-full text-sm text-slate-800 placeholder:text-slate-600 focus:outline-none bg-transparent"
                 />
               </div>
               <div class="max-h-44 overflow-y-auto divide-y divide-slate-50">
                 @if (membersFiltrados().length === 0) {
-                  <p class="py-6 text-center text-sm text-slate-400">Sin resultados</p>
+                  <p class="py-6 text-center text-sm text-slate-600 font-medium">Sin resultados</p>
                 } @else {
                   @for (m of membersFiltrados(); track m.id) {
                     <button
@@ -316,7 +316,7 @@
                       </div>
                       <div class="min-w-0 flex-1">
                         <p class="truncate text-sm font-medium text-slate-700">{{ m.nombre }}</p>
-                        <p class="truncate text-xs text-slate-400">{{ m.email }}</p>
+                        <p class="truncate text-xs text-slate-600 font-medium">{{ m.email }}</p>
                       </div>
                     </button>
                   }
