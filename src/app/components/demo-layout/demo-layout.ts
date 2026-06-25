@@ -107,6 +107,22 @@ export class DemoLayoutComponent {
     this.searchInput()?.nativeElement.focus();
   }
 
+  closeSearch(): void {
+    this.searchMenuOpen.set(false);
+    this.searchSvc.clear();
+    this.searchInput()?.nativeElement.blur();
+  }
+
+  submitSearch(): void {
+    const meta = this.searchSvc.activeMeta();
+    if (!meta) {
+      this.searchMenuOpen.set(true);
+      return;
+    }
+    this.searchMenuOpen.set(false);
+    this.router.navigateByUrl(meta.route);
+  }
+
   sidebarOpen = signal(false);
   logoutDialogOpen = signal(false);
   sidebarCollapsed = signal(false);

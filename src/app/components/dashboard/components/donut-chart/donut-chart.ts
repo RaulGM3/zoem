@@ -12,6 +12,7 @@ interface Segment extends DonutItem {
   dash: number;
   gap: number;
   offset: number;
+  /** Porcentaje redondeado con Largest Remainder Method — siempre suma 100%. */
   pct: number;
 }
 
@@ -69,15 +70,27 @@ export class DonutChartComponent {
     const total = this.total();
     if (total === 0) return [];
     const c = this.circumference;
+    const filtered = this.data().filter(d => d.value > 0);
+
+    // Largest Remainder Method — integer percentages that always sum to 100.
+    const rawPcts = filtered.map(d => (d.value / total) * 100);
+    const floors = rawPcts.map(p => Math.floor(p));
+    const remainder = 100 - floors.reduce((a, b) => a + b, 0);
+    const bonusIndices = new Set(
+      rawPcts
+        .map((p, i) => ({ i, frac: p - Math.floor(p) }))
+        .sort((a, b) => b.frac - a.frac)
+        .slice(0, remainder)
+        .map(x => x.i),
+    );
+
     let cursor = 0;
-    return this.data()
-      .filter(d => d.value > 0)
-      .map(d => {
-        const pct = (d.value / total) * 100;
-        const dash = (d.value / total) * c;
-        const seg: Segment = { ...d, dash, gap: c - dash, offset: cursor, pct };
-        cursor += dash;
-        return seg;
-      });
+    return filtered.map((d, idx) => {
+      const dash = (d.value / total) * c;
+      const pct = floors[idx] + (bonusIndices.has(idx) ? 1 : 0);
+      const seg: Segment = { ...d, dash, gap: c - dash, offset: cursor, pct };
+      cursor += dash;
+      return seg;
+    });
   });
 }

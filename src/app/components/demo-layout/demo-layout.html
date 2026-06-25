@@ -106,6 +106,8 @@
             [placeholder]="searchSvc.activeMeta()?.placeholder ?? 'Buscar contactos, casos, personal...'"
             (input)="searchSvc.setTerm($any($event.target).value)"
             (click)="searchMenuOpen.set(true)"
+            (keydown.enter)="submitSearch()"
+            (keydown.escape)="closeSearch()"
             class="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-10 pr-24 text-sm text-slate-700 placeholder-slate-400 focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-100"
           />
           @if (searchSvc.term()) {

@@ -41,6 +41,7 @@ const TIPO_COLOR: Record<MovimientoTipo, string> = {
   ingreso: '#10b981', honorario: '#8b5cf6', suplido: '#3b82f6', gasto: '#ef4444', otro: '#94a3b8',
 };
 const MES_CORTO = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+const MES_LARGO = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
 const MODULO_ICON: Record<Modulo, LucideIconData> = {
   Casos: Briefcase, Contactos: Users, Calendario: Calendar, Documentos: FileText,
@@ -103,6 +104,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   /** 'YYYY-MM' del mes en curso. */
   private readonly mesActual = new Date().toISOString().slice(0, 7);
+  /** Etiqueta legible del mes en curso, p. ej. "junio 2026". */
+  readonly mesActualLabel = `${MES_LARGO[new Date().getMonth()]} ${new Date().getFullYear()}`;
   /** 'YYYY-MM-DD' de hoy. */
   private readonly hoy = new Date().toISOString().slice(0, 10);
 
@@ -187,7 +190,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
     }
 
-    return items
+    const seen = new Set<string>();
+    const unique = items.filter(item => {
+      if (seen.has(item.id)) return false;
+      seen.add(item.id);
+      return true;
+    });
+
+    return unique
       .sort((a, b) =>
         a.fecha === b.fecha
           ? (a.hora ?? '99:99').localeCompare(b.hora ?? '99:99')
@@ -202,7 +212,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const meses: { key: string; label: string }[] = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date(base.getFullYear(), base.getMonth() - i, 1);
-      meses.push({ key: d.toISOString().slice(0, 7), label: MES_CORTO[d.getMonth()] });
+      // Use local year/month directly — toISOString() converts to UTC and shifts
+      // months in timezones ahead of UTC (e.g. UTC+2 → Jan 1 00:00 → Dec 31 UTC).
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      meses.push({ key, label: MES_CORTO[d.getMonth()] });
     }
     return meses;
   });

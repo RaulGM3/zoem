@@ -32,12 +32,11 @@ export class SearchService {
     () => this.categories.find((c) => c.key === this.category()) ?? null
   );
 
-  /** Selecciona una categoría, reinicia el término y navega a su ruta. */
+  /** Selecciona una categoría y navega a su ruta preservando el término actual. */
   selectCategory(key: SearchCategory): void {
     const meta = this.categories.find((c) => c.key === key);
     if (!meta) return;
     this.category.set(key);
-    this.term.set('');
     this.router.navigateByUrl(meta.route);
   }
 
