@@ -36,6 +36,7 @@ export class RevisionMovimientosComponent implements OnInit, OnDestroy {
   readonly XIcon = X;
 
   readonly conciliado = input<boolean>(false);
+  readonly hoveringAprobacion = signal<string | null>(null);
 
   readonly cuentas = this.cuentasService.cuentas;
 

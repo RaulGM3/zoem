@@ -1,0 +1,63 @@
+<div class="p-5 space-y-4">
+  <div class="grid grid-cols-3 gap-3">
+    <div class="p-3 rounded-lg text-center" style="background:var(--surface-2)">
+      <p class="text-xs" style="color:var(--text-muted)">Horas totales</p>
+      <p class="text-xl font-semibold tabular-nums" style="color:var(--text-strong);font-family:var(--font-display)">{{ totalHoras() | number:'1.0-1' }}h</p>
+    </div>
+    <div class="p-3 rounded-lg text-center" style="background:color-mix(in srgb,var(--warning) 10%,transparent)">
+      <p class="text-xs" style="color:var(--text-muted)">Sin facturar</p>
+      <p class="text-xl font-semibold tabular-nums" style="color:var(--warning);font-family:var(--font-display)">{{ horasPendientes() | number:'1.0-1' }}h</p>
+    </div>
+    <div class="p-3 rounded-lg text-center" style="background:color-mix(in srgb,var(--accent) 10%,transparent)">
+      <p class="text-xs" style="color:var(--text-muted)">Valor pendiente</p>
+      <p class="text-xl font-semibold tabular-nums" style="color:var(--accent);font-family:var(--font-display)">{{ valorPendiente() | number:'1.0-0' }} €</p>
+    </div>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border)">
+          <th class="pb-3 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Fecha</th>
+          <th class="pb-3 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Caso / Hito</th>
+          <th class="pb-3 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Miembro</th>
+          <th class="pb-3 text-right text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Horas</th>
+          <th class="pb-3 text-right text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Importe</th>
+          <th class="pb-3 text-center text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (hora of horasFlat(); track hora.id) {
+          <tr class="transition-colors duration-150" style="border-bottom:1px solid var(--border-soft)"
+            (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+            (mouseleave)="$any($event.currentTarget).style.background=''">
+            <td class="py-3 text-xs" style="color:var(--text-muted)">{{ hora.fecha }}</td>
+            <td class="py-3">
+              <p class="font-medium" style="color:var(--text-strong)">{{ hora.casoTitulo }}</p>
+              <p class="text-xs" style="color:var(--text-faint)">{{ hora.hitoTitulo }}</p>
+            </td>
+            <td class="py-3 text-xs" style="color:var(--text-muted)">{{ hora.memberName }}</td>
+            <td class="py-3 text-right font-semibold tabular-nums" style="color:var(--text-strong);font-family:var(--font-mono)">{{ hora.horas | number:'1.0-1' }}h</td>
+            <td class="py-3 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">
+              {{ hora.importe != null ? (hora.importe | number:'1.0-0') + ' €' : '—' }}
+            </td>
+            <td class="py-3 text-center">
+              <span class="px-2 py-0.5 text-xs rounded-full font-medium"
+                [style.background]="hora.facturado ? 'color-mix(in srgb,var(--success) 12%,transparent)' : 'color-mix(in srgb,var(--warning) 12%,transparent)'"
+                [style.color]="hora.facturado ? 'var(--success)' : 'var(--warning)'">
+                {{ hora.facturado ? 'Facturado' : 'Pendiente' }}
+              </span>
+            </td>
+          </tr>
+        }
+        @if (horasFlat().length === 0) {
+          <tr>
+            <td colspan="6" class="py-12 text-center text-sm" style="color:var(--text-faint)">
+              No hay registros de horas declaradas
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

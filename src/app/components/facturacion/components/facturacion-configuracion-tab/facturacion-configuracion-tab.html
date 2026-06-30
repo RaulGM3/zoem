@@ -1,0 +1,79 @@
+<div class="p-5 space-y-6 max-w-2xl">
+
+  <!-- Datos de facturación -->
+  <div class="rounded-xl overflow-hidden" style="border:1px solid var(--border)">
+    <div class="flex items-center gap-2 px-5 py-4" style="border-bottom:1px solid var(--border);background:var(--surface-2)">
+      <lucide-icon [img]="Building2Icon" size="16" style="color:var(--text-muted)"></lucide-icon>
+      <h3 class="text-sm font-semibold" style="color:var(--text-strong)">Datos de facturación</h3>
+    </div>
+    <form [formGroup]="form()" (ngSubmit)="save.emit()" class="p-5 space-y-4">
+
+      <!-- Tipo de persona -->
+      <div>
+        <label class="form-label">Tipo de persona</label>
+        <div class="flex gap-3 mt-1">
+          <label class="flex items-center gap-2 text-sm cursor-pointer" style="color:var(--text-body)">
+            <input type="radio" formControlName="tipoPersona" value="juridica" style="accent-color:var(--brand)" />
+            Jurídica (sociedad)
+          </label>
+          <label class="flex items-center gap-2 text-sm cursor-pointer" style="color:var(--text-body)">
+            <input type="radio" formControlName="tipoPersona" value="fisica" style="accent-color:var(--brand)" />
+            Física (autónomo)
+          </label>
+        </div>
+      </div>
+
+      <!-- Nombre -->
+      <div>
+        <label for="configName" class="form-label">Nombre / Razón social</label>
+        <input id="configName" type="text" formControlName="name" class="form-input" placeholder="Despacho Ejemplo S.L." />
+      </div>
+
+      <!-- CIF / NIF -->
+      <div>
+        <label for="configCif" class="form-label">{{ cifLabel() }}</label>
+        <input id="configCif" type="text" formControlName="cif" class="form-input"
+          [placeholder]="form().controls.tipoPersona.value === 'fisica' ? '12345678Z' : 'B12345678'" />
+      </div>
+
+      <!-- Verifactu -->
+      <div class="rounded-lg p-4 space-y-3" style="border:1px solid var(--border);background:var(--surface-2)">
+        <p class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-faint);font-family:var(--font-mono)">Verifactu (AEAT)</p>
+        <label class="flex items-center justify-between gap-4 cursor-pointer">
+          <span class="text-sm" style="color:var(--text-body)">Activar envío automático a AEAT</span>
+          <input type="checkbox" formControlName="verifactuEnabled" style="accent-color:var(--brand);width:1rem;height:1rem" />
+        </label>
+        <label class="flex items-center justify-between gap-4 cursor-pointer">
+          <span class="text-sm" style="color:var(--text-body)">
+            Modo sandbox
+            <span class="text-xs" style="color:var(--text-faint)">(prewww1.aeat.es — pruebas)</span>
+          </span>
+          <input type="checkbox" formControlName="verifactuSandbox" style="accent-color:var(--brand);width:1rem;height:1rem" />
+        </label>
+      </div>
+
+      <div class="flex justify-end pt-1">
+        <button type="submit" [disabled]="form().invalid || saving()"
+          class="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50 transition-colors duration-150"
+          style="background:var(--brand)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+          (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+          <lucide-icon [img]="SaveIcon" size="15"></lucide-icon>
+          {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Certificado digital AEAT -->
+  <div class="rounded-xl overflow-hidden" style="border:1px solid var(--border)">
+    <div class="flex items-center gap-2 px-5 py-4" style="border-bottom:1px solid var(--border);background:var(--surface-2)">
+      <lucide-icon [img]="ShieldCheckIcon" size="16" style="color:var(--text-muted)"></lucide-icon>
+      <h3 class="text-sm font-semibold" style="color:var(--text-strong)">Certificado digital AEAT</h3>
+    </div>
+    <div class="p-5">
+      <app-credenciales-aeat></app-credenciales-aeat>
+    </div>
+  </div>
+
+</div>

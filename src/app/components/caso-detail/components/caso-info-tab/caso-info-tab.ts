@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy, input, output, signal, effect } from '@angular/core';
-import { LucideAngularModule, User, X } from 'lucide-angular';
+import { LucideAngularModule, User, X, Mail, Phone, Hash } from 'lucide-angular';
 import type { Caso, CasoEstado, CasoPrioridad, CasoTipo, Contact } from '../../../../interfaces';
 import { getContactDisplayName } from '../../../../interfaces';
 
@@ -36,6 +36,9 @@ export class CasoInfoTabComponent {
 
   readonly UserIcon = User;
   readonly XIcon = X;
+  readonly MailIcon = Mail;
+  readonly PhoneIcon = Phone;
+  readonly HashIcon = Hash;
 
   readonly editTitulo = signal('');
   readonly editDescripcion = signal('');
@@ -79,6 +82,19 @@ export class CasoInfoTabComponent {
 
   displayName(c: Contact): string {
     return getContactDisplayName(c);
+  }
+
+  getContactId(c: Contact): string | undefined {
+    return c.type === 'persona_fisica' ? c.nif : c.cif;
+  }
+
+  getContactIdLabel(c: Contact): string {
+    if (c.type === 'persona_fisica') return c.nifType?.toUpperCase() ?? 'NIF';
+    return c.cifType?.toUpperCase() ?? 'CIF';
+  }
+
+  getContactPhone(c: Contact): string | undefined {
+    return c.mobile ?? c.phone;
   }
 
   askRemoveContact(c: Contact): void {

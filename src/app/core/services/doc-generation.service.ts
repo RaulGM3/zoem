@@ -43,18 +43,20 @@ export class DocGenerationService {
     }
   }
 
-  async downloadAsDocx(renderedHtml: string, fileName: string): Promise<void> {
+  async generateDocxBlob(renderedHtml: string, fileName: string): Promise<Blob> {
     const fn = httpsCallable<{ html: string; fileName: string }, { docx: string }>(
       this.functions,
       'generateDocx'
     );
     const result = await fn({ html: renderedHtml, fileName });
-
     const byteArray = Uint8Array.from(atob(result.data.docx), (c) => c.charCodeAt(0));
-    const blob = new Blob([byteArray], {
+    return new Blob([byteArray], {
       type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     });
+  }
 
+  async downloadAsDocx(renderedHtml: string, fileName: string): Promise<void> {
+    const blob = await this.generateDocxBlob(renderedHtml, fileName);
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;

@@ -65,6 +65,8 @@ export class TesoreriaResumenTabComponent {
   readonly cuentaSeleccionada = signal<string | null>(null);
   readonly filtros = signal<Record<string, FiltroAprobado>>({});
   readonly cierreExpandido = signal<string | null>(null);
+  readonly hoveredDiscrepancia = signal<string | null>(null);
+  readonly dialogDiscrepancia = signal<CotejoCuenta | null>(null);
 
   readonly cotejosFiltrados = computed(() => {
     const sel = this.cuentaSeleccionada();

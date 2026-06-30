@@ -1,0 +1,88 @@
+<div class="overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead>
+      <tr style="border-bottom:1px solid var(--border);background:var(--surface-2)">
+        <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Caso</th>
+        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Saldo final</th>
+        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Saldo bancario</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Cerrado</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Factura</th>
+        <th class="px-4 py-3"></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (caso of casos(); track caso.id) {
+        <tr class="transition-colors duration-150 cursor-pointer" style="border-bottom:1px solid var(--border-soft)"
+          (click)="navigateToCaso.emit(caso.id)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+          (mouseleave)="$any($event.currentTarget).style.background=''">
+          <td class="px-5 py-4">
+            <p class="font-semibold" style="color:var(--text-strong)">{{ caso.titulo }}</p>
+            <p class="text-xs" style="color:var(--text-faint)">{{ caso.tipo }}</p>
+          </td>
+          <td class="px-4 py-4 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.saldo | number:'1.0-0' }}€</td>
+          <td class="px-4 py-4 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">
+            {{ caso.cierreSaldoBancario != null ? (caso.cierreSaldoBancario | number:'1.0-0') + '€' : '—' }}
+          </td>
+          <td class="px-4 py-4 text-xs" style="color:var(--text-muted)">{{ caso.cierreConfirmadoAt ? (caso.cierreConfirmadoAt | slice:0:10) : '—' }}</td>
+          <td class="px-4 py-4">
+            @if (caso.facturaId) {
+              <div class="flex flex-col gap-1.5">
+                <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium"
+                  style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">
+                  <lucide-icon [img]="FileCheckIcon" size="13"></lucide-icon> Emitida
+                </span>
+                @if (verifactuEstado(caso.facturaId); as vf) {
+                  <span class="inline-flex items-center gap-1 text-xs"
+                    [style.color]="verifactuBadgeColor(caso.facturaId)"
+                    [title]="vf.csv ? 'CSV: ' + vf.csv : (vf.error ?? 'Verifactu: ' + vf.estado)">
+                    <lucide-icon [img]="verifactuBadgeIcon(caso.facturaId)" size="12"></lucide-icon>
+                    {{ vf.estado === 'enviado' ? 'Verifactu ✓' : vf.estado === 'error' ? 'Error AEAT' : 'Pendiente AEAT' }}
+                  </span>
+                }
+                @if (pdfUrl(caso.facturaId)) {
+                  <div class="flex items-center gap-1.5">
+                    <button (click)="downloadPdf.emit(caso.facturaId)"
+                      class="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition-colors duration-150"
+                      style="border:1px solid var(--border);color:var(--text-muted)"
+                      title="Descargar PDF"
+                      (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                      (mouseleave)="$any($event.currentTarget).style.background=''">
+                      <lucide-icon [img]="DownloadIcon" size="12"></lucide-icon> Descargar
+                    </button>
+                    <button (click)="copyPdfLink.emit(caso.facturaId)"
+                      class="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition-colors duration-150"
+                      style="border:1px solid var(--border);color:var(--text-muted)"
+                      title="Copiar link de descarga"
+                      (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                      (mouseleave)="$any($event.currentTarget).style.background=''">
+                      <lucide-icon [img]="LinkIcon" size="12"></lucide-icon> Copiar link
+                    </button>
+                  </div>
+                }
+              </div>
+            } @else {
+              <span class="text-xs" style="color:var(--text-faint)">Sin factura</span>
+            }
+          </td>
+          <td class="px-4 py-4" (click)="$event.stopPropagation()">
+            @if (canReabrir()) {
+              <button (click)="reabrirCaso.emit(caso)" [disabled]="saving()"
+                class="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150 disabled:opacity-50"
+                style="border:1px solid var(--border);color:var(--text-muted)"
+                (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                (mouseleave)="$any($event.currentTarget).style.background=''">
+                <lucide-icon [img]="CheckCircle2Icon" size="13"></lucide-icon> Reabrir
+              </button>
+            }
+          </td>
+        </tr>
+      }
+      @if (casos().length === 0) {
+        <tr>
+          <td colspan="6" class="px-5 py-12 text-center text-sm" style="color:var(--text-faint)">No hay casos cerrados</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

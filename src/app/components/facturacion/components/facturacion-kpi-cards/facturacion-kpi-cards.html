@@ -1,0 +1,40 @@
+<div class="mb-6 grid gap-4 sm:grid-cols-4">
+  <div class="kpi-card rounded-xl p-5" style="border:1px solid var(--border);background:var(--surface)">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="flex h-10 w-10 items-center justify-center rounded-lg" style="background:color-mix(in srgb,var(--success) 12%,transparent)">
+        <lucide-icon [img]="TrendingUpIcon" size="20" style="color:var(--success)"></lucide-icon>
+      </div>
+      <p class="text-sm" style="color:var(--text-muted)">Ingresos</p>
+    </div>
+    <p class="text-[26px] font-semibold tabular-nums" style="color:var(--text-strong);font-family:var(--font-display)">{{ totales().ingresos | number:'1.0-0' }}€</p>
+  </div>
+  <div class="kpi-card rounded-xl p-5" style="border:1px solid var(--border);background:var(--surface)">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="flex h-10 w-10 items-center justify-center rounded-lg" style="background:color-mix(in srgb,var(--warning) 12%,transparent)">
+        <lucide-icon [img]="ClockIcon" size="20" style="color:var(--warning)"></lucide-icon>
+      </div>
+      <p class="text-sm" style="color:var(--text-muted)">Suplidos</p>
+    </div>
+    <p class="text-[26px] font-semibold tabular-nums" style="color:var(--text-strong);font-family:var(--font-display)">{{ totales().suplidos | number:'1.0-0' }}€</p>
+  </div>
+  <div class="kpi-card rounded-xl p-5" style="border:1px solid var(--border);background:var(--surface)">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="flex h-10 w-10 items-center justify-center rounded-lg" style="background:color-mix(in srgb,var(--accent) 12%,transparent)">
+        <lucide-icon [img]="ReceiptIcon" size="20" style="color:var(--accent)"></lucide-icon>
+      </div>
+      <p class="text-sm" style="color:var(--text-muted)">Honorarios</p>
+    </div>
+    <p class="text-[26px] font-semibold tabular-nums" style="color:var(--text-strong);font-family:var(--font-display)">{{ totales().honorarios | number:'1.0-0' }}€</p>
+  </div>
+  <div class="kpi-card rounded-xl p-5" style="border:1px solid var(--border);background:var(--surface)">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="flex h-10 w-10 items-center justify-center rounded-lg" style="background:var(--surface-2)">
+        <lucide-icon [img]="EuroIcon" size="20" style="color:var(--text-muted)"></lucide-icon>
+      </div>
+      <p class="text-sm" style="color:var(--text-muted)">Saldo</p>
+    </div>
+    <p class="text-[26px] font-semibold tabular-nums" style="font-family:var(--font-display)" [style.color]="totales().saldo >= 0 ? 'var(--success)' : 'var(--danger)'">
+      {{ totales().saldo | number:'1.0-0' }}€
+    </p>
+  </div>
+</div>

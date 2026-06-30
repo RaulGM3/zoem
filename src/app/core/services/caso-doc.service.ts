@@ -229,6 +229,72 @@ export class CasoDocService {
     );
   }
 
+  async getFolders(casoId: string): Promise<CasoDocFolder[]> {
+    const snap = await getDocs(this.foldersRef(casoId));
+    return snap.docs
+      .map(d => ({ id: d.id, ...d.data() }) as CasoDocFolder)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /**
+   * Ancla una plantilla de documento rellenada a un caso: sube el .docx a Storage
+   * y crea un doc_slot con status='generado', el HTML congelado y los valores
+   * usados — aparece en la tab Documentos del caso listo para ver/editar.
+   */
+  async anclarPlantilla(
+    casoId: string,
+    params: {
+      name: string;
+      docTemplateId: string;
+      folderId: string | null;
+      generatedHtml: string;
+      generatedValues: Record<string, string>;
+    },
+    docxBlob: Blob
+  ): Promise<void> {
+    const companyId = this.companyId;
+    const timestamp = Date.now();
+    const fileName = params.name.endsWith('.docx') ? params.name : `${params.name}.docx`;
+    const storagePath = `companies/${companyId}/casos/${casoId}/docs/${params.folderId ?? 'root'}/${timestamp}_${fileName}`;
+    const storageRef = ref(this.storage, storagePath);
+
+    await uploadBytes(storageRef, docxBlob);
+    const downloadUrl = await getDownloadURL(storageRef);
+
+    const slotRef = await addDoc(this.slotsRef(casoId), stripUndefinedDeep({
+      folderId: params.folderId,
+      name: params.name,
+      status: 'generado',
+      docTemplateId: params.docTemplateId,
+      generatedHtml: params.generatedHtml,
+      generatedValues: params.generatedValues,
+      storagePath,
+      downloadUrl,
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      sizeBytes: docxBlob.size,
+      generatedBy: this.auth.currentUser?.uid ?? '',
+      generatedAt: serverTimestamp(),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }));
+
+    this.slots.update(list =>
+      [...list, {
+        id: slotRef.id,
+        folderId: params.folderId,
+        name: params.name,
+        status: 'generado' as const,
+        docTemplateId: params.docTemplateId,
+        generatedHtml: params.generatedHtml,
+        generatedValues: params.generatedValues,
+        storagePath,
+        downloadUrl,
+        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        sizeBytes: docxBlob.size,
+      } as CasoDocSlot].sort((a, b) => a.name.localeCompare(b.name))
+    );
+  }
+
   async removeUpload(casoId: string, slot: CasoDocSlot): Promise<void> {
     if (slot.storagePath) {
       try {

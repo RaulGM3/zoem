@@ -91,6 +91,11 @@ export class CasoDocumentosTabComponent {
     && this.currentFiles().length === 0
   );
 
+  // ── Panel lateral: slots pendientes de la plantilla ────
+  readonly pendingSlots = computed(() =>
+    this.slots().filter(s => s.status !== 'subido' && s.status !== 'generado')
+  );
+
   // ── Navegación ─────────────────────────────────────────
   openFolder(folder: CasoDocFolder): void {
     this.currentFolderId.set(folder.id);
@@ -202,6 +207,36 @@ export class CasoDocumentosTabComponent {
   onGenerated(event: GeneratedDocEvent): void {
     this.generateDoc.emit(event);
     this.generatingSlot.set(null);
+  }
+
+  // ── Panel lateral ──────────────────────────────────────
+  jumpToSlot(slot: CasoDocSlot): void {
+    if (!slot.folderId) {
+      this.navigateToRoot();
+    } else {
+      const path = this.buildFolderPath(slot.folderId);
+      this.currentFolderId.set(slot.folderId);
+      this.folderPath.set(path);
+      this.resetTransient();
+    }
+    if (slot.docTemplateId) {
+      this.generatingSlot.set(slot);
+    } else {
+      setTimeout(() => this.triggerSlotUpload(slot.id), 50);
+    }
+  }
+
+  private buildFolderPath(folderId: string): CasoDocFolder[] {
+    const all = this.folders();
+    const path: CasoDocFolder[] = [];
+    let currentId: string | null = folderId;
+    while (currentId) {
+      const folder = all.find(f => f.id === currentId);
+      if (!folder) break;
+      path.unshift(folder);
+      currentId = folder.parentId ?? null;
+    }
+    return path;
   }
 
   // ── Helpers ────────────────────────────────────────────

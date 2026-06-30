@@ -1,0 +1,60 @@
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" (click)="closed.emit()">
+  <div class="w-full max-w-md rounded-xl shadow-2xl" style="background:var(--surface)" (click)="$event.stopPropagation()">
+    <div class="flex items-center justify-between px-5 py-4" style="border-bottom:1px solid var(--border)">
+      <h2 class="text-base font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Cerrar caso</h2>
+      <button (click)="closed.emit()" class="rounded-xl p-1.5 transition-colors duration-150"
+        style="color:var(--text-muted)"
+        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+        (mouseleave)="$any($event.currentTarget).style.background=''"
+        aria-label="Cerrar">
+        <lucide-icon [img]="XIcon" size="18"></lucide-icon>
+      </button>
+    </div>
+
+    <div class="space-y-4 p-5">
+      <p class="text-sm" style="color:var(--text-body)">
+        Vas a cerrar <span class="font-semibold" style="color:var(--text-strong)">{{ caso().titulo }}</span>. Confirma que la gestoría está
+        revisada y cuadra con bancos antes de continuar. Esta acción lo mueve al archivo.
+      </p>
+
+      @if (!caso().facturaId) {
+        <div class="rounded-lg p-3 text-xs" style="background:color-mix(in srgb,var(--warning) 10%,transparent);border:1px solid color-mix(in srgb,var(--warning) 25%,transparent);color:var(--warning)">
+          Este caso aún no tiene factura generada. Puedes cerrarlo igualmente, pero se recomienda facturar antes.
+        </div>
+      }
+
+      <label class="flex items-start gap-2 text-sm" style="color:var(--text-body)">
+        <input type="checkbox" [checked]="movimientosOk()" (change)="movimientosOkChange.emit($any($event.target).checked)"
+          class="mt-0.5 rounded" style="accent-color:var(--brand)" />
+        Confirmo que todos los movimientos financieros están contemplados correctamente.
+      </label>
+
+      <label class="flex items-start gap-2 text-sm" style="color:var(--text-body)">
+        <input type="checkbox" [checked]="bancoOk()" (change)="bancoOkChange.emit($any($event.target).checked)"
+          class="mt-0.5 rounded" style="accent-color:var(--brand)" />
+        <span>
+          Confirmo que el saldo está corroborado en bancos.
+          @if (saldoBancario() != null) {
+            <span style="color:var(--text-faint)">(Saldo bancario: {{ saldoBancario() | number:'1.0-0' }}€)</span>
+          } @else {
+            <span style="color:var(--text-faint)">(Sin saldo bancario registrado — corroboración manual)</span>
+          }
+        </span>
+      </label>
+    </div>
+
+    <div class="flex gap-3 px-5 py-4" style="border-top:1px solid var(--border)">
+      <button (click)="closed.emit()" class="flex-1 rounded-lg py-2.5 text-sm font-medium transition-colors duration-150"
+        style="border:1px solid var(--border);color:var(--text-body)"
+        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+        (mouseleave)="$any($event.currentTarget).style.background=''">Cancelar</button>
+      <button (click)="confirmed.emit()" [disabled]="!puedeCerrar() || saving()"
+        class="flex-1 rounded-lg py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 transition-colors duration-150"
+        style="background:var(--brand)"
+        (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+        (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+        {{ saving() ? 'Cerrando…' : 'Confirmar cierre' }}
+      </button>
+    </div>
+  </div>
+</div>

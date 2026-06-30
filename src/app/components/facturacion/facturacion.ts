@@ -1,22 +1,27 @@
 import { Component, signal, computed, inject, OnInit, effect, ChangeDetectionStrategy } from '@angular/core';
-import { DecimalPipe, SlicePipe } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import {
-  LucideAngularModule,
-  Receipt, Search, Plus, TrendingUp, Clock, CheckCircle2,
-  AlertCircle, Download, Send, Eye, MoreHorizontal, Euro,
-  FileText, ShieldCheck, ShieldAlert, ShieldX, ExternalLink, Timer, X, Archive, FileCheck, Link,
-  Settings, Save, Building2,
-} from 'lucide-angular';
-import type { VerifactuEstado } from '../../interfaces/verifactu.interface';
+import { Router } from '@angular/router';
+import { FormBuilder, Validators } from '@angular/forms';
+import { LucideAngularModule, Settings } from 'lucide-angular';
 import type { Invoice } from '../../core/services/invoice.service';
-import { REGISTRO_HORAS } from '../../data/dummy-data';
 import { CasosService } from '../../core/services/casos.service';
+import { UsersService } from '../../core/services/users';
 import { InvoiceService, InvoiceLinea } from '../../core/services/invoice.service';
 import { InvoicePdfService } from '../../core/services/invoice-pdf.service';
 import { CompanyService, getLabelIdentificacion } from '../../core/services/company.service';
 import { ContactService } from '../../core/services/contact.service';
 import { getContactDisplayName, type Contact, type Direccion } from '../../interfaces/contact.interface';
+import { PermissionService } from '../../core/services/permission.service';
+import { ToastService } from '../../core/services/toast.service';
+import { Caso, gestoriaCompleta, Hito } from '../../interfaces';
+import type { ConfigFormGroup } from './components/facturacion-configuracion-tab/facturacion-configuracion-tab';
+import type { HoraFlat } from './components/facturacion-horas-tab/facturacion-horas-tab';
+import { FacturacionKpiCardsComponent } from './components/facturacion-kpi-cards/facturacion-kpi-cards';
+import { FacturacionCasosTabComponent } from './components/facturacion-casos-tab/facturacion-casos-tab';
+import { FacturacionArchivoTabComponent } from './components/facturacion-archivo-tab/facturacion-archivo-tab';
+import { FacturacionHorasTabComponent } from './components/facturacion-horas-tab/facturacion-horas-tab';
+import { FacturacionConfiguracionTabComponent } from './components/facturacion-configuracion-tab/facturacion-configuracion-tab';
+import { FacturaDrawerComponent } from './components/factura-drawer/factura-drawer';
+import { CierreModalComponent } from './components/cierre-modal/cierre-modal';
 
 function getContactNif(c: Contact): string | undefined {
   return c.type === 'persona_fisica' ? c.nif : c.cif;
@@ -27,65 +32,41 @@ function getContactDireccion(c: Contact): string | undefined {
   if (!d) return undefined;
   return [d.calle, d.numero, d.piso, d.codigoPostal, d.municipio, d.provincia].filter(Boolean).join(', ');
 }
-import { PermissionService } from '../../core/services/permission.service';
-import { ToastService } from '../../core/services/toast.service';
-import { CredencialesAeatComponent } from '../credenciales-aeat/credenciales-aeat';
-import { Caso, gestoriaCompleta } from '../../interfaces';
 
 type FacturacionTab = 'casos' | 'archivo' | 'fiscal' | 'horas' | 'configuracion';
-
-const MODELOS_FISCALES = [
-  { modelo: 'Modelo 303', descripcion: 'IVA — 2º Trimestre 2026', estado: 'pendiente', importe: 3240, vencimiento: '20 Jul 2026' },
-  { modelo: 'Modelo 130', descripcion: 'IRPF fraccionado — 2T 2026', estado: 'pendiente', importe: 1180, vencimiento: '20 Jul 2026' },
-  { modelo: 'Modelo 111', descripcion: 'Retenciones IRPF — 2T 2026', estado: 'borrador', importe: 890, vencimiento: '20 Jul 2026' },
-  { modelo: 'Modelo 303', descripcion: 'IVA — 1º Trimestre 2026', estado: 'presentado', importe: 2980, vencimiento: '20 Abr 2026' },
-];
 
 @Component({
   selector: 'app-facturacion',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LucideAngularModule, DecimalPipe, SlicePipe, ReactiveFormsModule, CredencialesAeatComponent],
+  imports: [
+    LucideAngularModule,
+    FacturacionKpiCardsComponent,
+    FacturacionCasosTabComponent,
+    FacturacionArchivoTabComponent,
+    FacturacionHorasTabComponent,
+    FacturacionConfiguracionTabComponent,
+    FacturaDrawerComponent,
+    CierreModalComponent,
+  ],
   templateUrl: './facturacion.html',
 })
 export class FacturacionComponent implements OnInit {
   private readonly casosService = inject(CasosService);
+  private readonly usersService = inject(UsersService);
   private readonly invoiceService = inject(InvoiceService);
   private readonly invoicePdfService = inject(InvoicePdfService);
   protected readonly companyService = inject(CompanyService);
   private readonly contactService = inject(ContactService);
-  readonly perm = inject(PermissionService);
+  private readonly perm = inject(PermissionService);
   private readonly toast = inject(ToastService);
   private readonly fb = inject(FormBuilder);
+  private readonly router = inject(Router);
 
-  readonly ReceiptIcon = Receipt;
-  readonly SearchIcon = Search;
-  readonly PlusIcon = Plus;
-  readonly TrendingUpIcon = TrendingUp;
-  readonly ClockIcon = Clock;
-  readonly CheckCircle2Icon = CheckCircle2;
-  readonly AlertCircleIcon = AlertCircle;
-  readonly DownloadIcon = Download;
-  readonly SendIcon = Send;
-  readonly EyeIcon = Eye;
-  readonly MoreHorizontalIcon = MoreHorizontal;
-  readonly EuroIcon = Euro;
-  readonly FileTextIcon = FileText;
-  readonly ShieldCheckIcon = ShieldCheck;
-  readonly ShieldAlertIcon = ShieldAlert;
-  readonly ShieldXIcon = ShieldX;
-  readonly ExternalLinkIcon = ExternalLink;
-  readonly TimerIcon = Timer;
-  readonly XIcon = X;
-  readonly ArchiveIcon = Archive;
-  readonly FileCheckIcon = FileCheck;
-  readonly LinkIcon = Link;
   readonly SettingsIcon = Settings;
-  readonly SaveIcon = Save;
-  readonly Building2Icon = Building2;
 
   activeTab = signal<FacturacionTab>('casos');
 
-  // --- Config: datos de facturación ---
+  // --- Config ---
   readonly savingConfig = signal(false);
 
   readonly cifLabel = computed(() => {
@@ -93,7 +74,7 @@ export class FacturacionComponent implements OnInit {
     return c ? getLabelIdentificacion(c) : 'CIF / NIF';
   });
 
-  readonly configForm = this.fb.nonNullable.group({
+  readonly configForm: ConfigFormGroup = this.fb.nonNullable.group({
     name: ['', Validators.required],
     cif: [''],
     tipoPersona: ['juridica' as 'fisica' | 'juridica'],
@@ -127,11 +108,7 @@ export class FacturacionComponent implements OnInit {
           name: name.trim(),
           cif: cif.trim() || undefined,
           tipoPersona,
-          verifactu: {
-            ...company.verifactu,
-            enabled: verifactuEnabled,
-            sandbox: verifactuSandbox,
-          },
+          verifactu: { ...company.verifactu, enabled: verifactuEnabled, sandbox: verifactuSandbox },
         }),
         { successMessage: 'Configuración guardada', errorTitle: 'No se pudo guardar la configuración' }
       );
@@ -140,7 +117,7 @@ export class FacturacionComponent implements OnInit {
     }
   }
 
-  // --- Casos (fuente real desde Firestore) ---
+  // --- Casos ---
   private readonly casos = this.casosService.casos;
   readonly loading = this.casosService.loading;
   readonly saving = signal(false);
@@ -152,7 +129,6 @@ export class FacturacionComponent implements OnInit {
     this.casos().filter(c => c.estado === 'cerrado' || c.estado === 'archivado')
   );
 
-  // Totales globales (sumatoria de la gestoría de los casos abiertos).
   readonly totales = computed(() =>
     this.casosAbiertos().reduce(
       (acc, c) => {
@@ -167,15 +143,12 @@ export class FacturacionComponent implements OnInit {
     )
   );
 
-  esEjecutado(caso: Caso): boolean {
-    return gestoriaCompleta(caso);
-  }
+  readonly canCreateFactura = computed(() => this.perm.can('Facturación', 'crear'));
+  readonly canEditCasos = computed(() => this.perm.can('Casos', 'editar'));
 
-  slotsLabel(caso: Caso): string {
-    const r = caso.gestoriaResumenSlots;
-    if (!r || r.total === 0) return 'Sin costos previstos';
-    return `${r.registrados}/${r.total} registrados`;
-  }
+  readonly invoiceMap = computed(() =>
+    new Map<string, Invoice>(this.invoiceService.invoices().map(i => [i.id, i]))
+  );
 
   // --- Drawer: Generar factura ---
   readonly facturaCaso = signal<Caso | null>(null);
@@ -239,7 +212,7 @@ export class FacturacionComponent implements OnInit {
         ),
         { errorTitle: 'No se pudo generar la factura' }
       );
-      if (facturaId === undefined) return; // falló: el toast ya avisó
+      if (facturaId === undefined) return;
       await this.toast.run(() => this.casosService.marcarFacturado(caso.id, facturaId), {
         successMessage: 'Factura generada',
         errorTitle: 'La factura se creó pero no se pudo marcar el caso como facturado',
@@ -259,7 +232,7 @@ export class FacturacionComponent implements OnInit {
 
   readonly puedeCerrar = computed(() => {
     const caso = this.cierreCaso();
-    return !!caso && this.esEjecutado(caso) && this.movimientosOk() && this.bancoOk();
+    return !!caso && gestoriaCompleta(caso) && this.movimientosOk() && this.bancoOk();
   });
 
   abrirCierre(caso: Caso): void {
@@ -291,81 +264,77 @@ export class FacturacionComponent implements OnInit {
   }
 
   // --- PDF actions ---
-  pdfUrl(facturaId: string | undefined): string | undefined {
-    if (!facturaId) return undefined;
-    return this.invoiceMap().get(facturaId)?.pdfUrl;
-  }
-
   downloadPdf(facturaId: string | undefined): void {
-    const url = this.pdfUrl(facturaId);
-    if (!url) return;
-    const invoice = this.invoiceMap().get(facturaId!);
-    this.invoicePdfService.downloadFromUrl(url, `${invoice?.invoiceNumber ?? 'factura'}.pdf`);
+    if (!facturaId) return;
+    const invoice = this.invoiceMap().get(facturaId);
+    if (!invoice?.pdfUrl) return;
+    this.invoicePdfService.downloadFromUrl(invoice.pdfUrl, `${invoice.invoiceNumber ?? 'factura'}.pdf`);
   }
 
   async copyPdfLink(facturaId: string | undefined): Promise<void> {
-    const url = this.pdfUrl(facturaId);
+    if (!facturaId) return;
+    const url = this.invoiceMap().get(facturaId)?.pdfUrl;
     if (!url) return;
     await navigator.clipboard.writeText(url);
     this.toast.success('Link copiado al portapapeles');
   }
 
-  // --- Verifactu helpers ---
-  private readonly invoiceMap = computed(() =>
-    new Map<string, Invoice>(this.invoiceService.invoices().map((i) => [i.id, i]))
-  );
+  // --- Registro de Horas ---
+  private readonly allHitos = signal<Hito[]>([]);
 
-  verifactuEstado(facturaId?: string): VerifactuEstado | undefined {
-    if (!facturaId) return undefined;
-    return this.invoiceMap().get(facturaId)?.verifactu;
+  readonly horasFlat = computed<HoraFlat[]>(() => {
+    const membersMap = new Map(this.usersService.members().map(m => [m.userId, m]));
+    const result: HoraFlat[] = [];
+    for (const hito of this.allHitos()) {
+      for (const r of hito.registrosHoras ?? []) {
+        const member = membersMap.get(r.userId);
+        const horas = r.minutos / 60;
+        const tarifa = member?.tarifaHoraria;
+        result.push({
+          id: `${hito.id}::${r.id}`,
+          casoId: hito.casoId,
+          casoTitulo: hito.casoTitulo,
+          hitoId: hito.id,
+          hitoTitulo: hito.titulo,
+          memberName: member ? `${member.nombre}${member.apellido ? ' ' + member.apellido : ''}` : r.userId,
+          fecha: r.fecha,
+          minutos: r.minutos,
+          horas,
+          facturado: r.facturado ?? false,
+          ...(tarifa ? { importe: tarifa * horas } : {}),
+        });
+      }
+    }
+    return result.sort((a, b) => b.fecha.localeCompare(a.fecha));
+  });
+
+  readonly totalHoras = computed(() => this.horasFlat().reduce((s, h) => s + h.horas, 0));
+  readonly horasPendientes = computed(() => this.horasFlat().filter(h => !h.facturado).reduce((s, h) => s + h.horas, 0));
+  readonly valorPendiente = computed(() => this.horasFlat().filter(h => !h.facturado && h.importe !== undefined).reduce((s, h) => s + (h.importe ?? 0), 0));
+
+  navigateToCaso(id: string): void {
+    this.router.navigate(['/casos', id]);
   }
 
-  verifactuBadgeColor(facturaId?: string): string {
-    const estado = this.verifactuEstado(facturaId)?.estado;
-    if (estado === 'enviado') return 'var(--success)';
-    if (estado === 'pendiente') return 'var(--warning)';
-    if (estado === 'error') return 'var(--danger)';
-    return 'var(--text-faint)';
-  }
-
-  verifactuBadgeIcon(facturaId?: string) {
-    const estado = this.verifactuEstado(facturaId)?.estado;
-    if (estado === 'enviado') return this.ShieldCheckIcon;
-    if (estado === 'error') return this.ShieldXIcon;
-    return this.ShieldAlertIcon;
-  }
-
-  // --- Tabs mock (fuera de alcance) ---
-  registroHoras = REGISTRO_HORAS;
-  modelosFiscales = MODELOS_FISCALES;
-
-  totalHoras = computed(() => this.registroHoras.reduce((s, h) => s + h.horas, 0));
-  horasPendientes = computed(() =>
-    this.registroHoras.filter(h => h.estadoFacturacion === 'pendiente').reduce((s, h) => s + h.horas, 0)
-  );
-
-  getModeloEstadoColor(estado: string): string {
-    const map: Record<string, string> = {
-      pendiente: 'var(--warning)',
-      presentado: 'var(--success)',
-      borrador: 'var(--text-muted)',
-    };
-    return map[estado] || 'var(--text-muted)';
-  }
-
-  getHoraEstadoColor(estado: string): string {
-    const map: Record<string, string> = {
-      facturado: 'var(--success)',
-      pendiente: 'var(--warning)',
-      no_facturable: 'var(--text-muted)',
-    };
-    return map[estado] || 'var(--text-muted)';
+  async reabrirCaso(caso: Caso): Promise<void> {
+    if (this.saving()) return;
+    this.saving.set(true);
+    try {
+      await this.toast.run(
+        () => this.casosService.updateCaso(caso.id, { estado: 'en_proceso' }),
+        { successMessage: 'Caso reabierto', errorTitle: 'No se pudo reabrir el caso' }
+      );
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   async ngOnInit(): Promise<void> {
     await Promise.all([
       this.casosService.loadCasos(),
       this.invoiceService.loadInvoices(),
+      this.usersService.loadMembers(),
+      this.casosService.loadAllHitos().then(h => this.allHitos.set(h)),
     ]);
   }
 }

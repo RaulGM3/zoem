@@ -237,6 +237,11 @@ export class CasosService {
     await batch.commit();
   }
 
+  async loadAllHitos(): Promise<Hito[]> {
+    const snapshot = await getDocs(this.hitosRef);
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }) as Hito);
+  }
+
   async clearHitoSchedule(hitoId: string): Promise<void> {
     await updateDoc(doc(this.hitosRef, hitoId), {
       horaAgenda: deleteField(),

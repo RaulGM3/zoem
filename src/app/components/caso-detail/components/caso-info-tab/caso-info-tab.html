@@ -104,23 +104,50 @@
       <h3 class="font-medium" style="color:var(--text-strong)">Clientes vinculados</h3>
 
       @if (linkedContacts().length > 0) {
-        <ul class="space-y-2">
+        <ul class="space-y-3">
           @for (c of linkedContacts(); track c.id) {
-            <li class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background:var(--surface-2)">
-                  <lucide-icon [img]="UserIcon" class="w-4 h-4" style="color:var(--text-faint)" />
+            <li class="rounded-lg p-3" style="background:var(--surface-2);border:1px solid var(--border)">
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex items-center gap-2 min-w-0">
+                  <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background:color-mix(in srgb,var(--brand) 10%,transparent)">
+                    <lucide-icon [img]="UserIcon" class="w-4 h-4" style="color:var(--brand)" />
+                  </div>
+                  <span class="text-sm font-medium truncate" style="color:var(--text-strong)">{{ displayName(c) }}</span>
                 </div>
-                <span class="text-sm" style="color:var(--text-body)">{{ displayName(c) }}</span>
+                <button (click)="askRemoveContact(c)"
+                  class="p-1 rounded transition-colors duration-150 shrink-0"
+                  style="color:var(--text-faint)"
+                  (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)';$any($event.currentTarget).style.color='var(--danger)'"
+                  (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+                  [attr.aria-label]="'Quitar ' + displayName(c)">
+                  <lucide-icon [img]="XIcon" class="w-3.5 h-3.5" />
+                </button>
               </div>
-              <button (click)="askRemoveContact(c)"
-                class="p-1 rounded transition-colors duration-150"
-                style="color:var(--text-faint)"
-                (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)';$any($event.currentTarget).style.color='var(--danger)'"
-                (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
-                [attr.aria-label]="'Quitar ' + displayName(c)">
-                <lucide-icon [img]="XIcon" class="w-3.5 h-3.5" />
-              </button>
+              <dl class="mt-2 space-y-1 pl-10">
+                @if (getContactId(c)) {
+                  <div class="flex items-center gap-1.5">
+                    <lucide-icon [img]="HashIcon" class="w-3 h-3 shrink-0" style="color:var(--text-faint)" />
+                    <dt class="text-xs font-medium shrink-0" style="color:var(--text-faint)">{{ getContactIdLabel(c) }}</dt>
+                    <dd class="text-xs" style="color:var(--text-muted)">{{ getContactId(c) }}</dd>
+                  </div>
+                }
+                @if (c.email) {
+                  <div class="flex items-center gap-1.5 min-w-0">
+                    <lucide-icon [img]="MailIcon" class="w-3 h-3 shrink-0" style="color:var(--text-faint)" />
+                    <dd class="text-xs truncate" style="color:var(--text-muted)">
+                      <a [href]="'mailto:' + c.email" class="hover:underline" style="color:inherit">{{ c.email }}</a>
+                    </dd>
+                  </div>
+                }
+                @if (getContactPhone(c)) {
+                  <div class="flex items-center gap-1.5">
+                    <lucide-icon [img]="PhoneIcon" class="w-3 h-3 shrink-0" style="color:var(--text-faint)" />
+                    <dd class="text-xs" style="color:var(--text-muted)">
+                      <a [href]="'tel:' + getContactPhone(c)" class="hover:underline" style="color:inherit">{{ getContactPhone(c) }}</a>
+                    </dd>
+                  </div>
+                }
+              </dl>
             </li>
           }
         </ul>

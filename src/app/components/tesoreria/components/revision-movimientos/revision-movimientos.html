@@ -53,10 +53,18 @@
 
           <!-- Toggle aprobación -->
           <button type="button" (click)="toggleAprobado(mov)" [disabled]="toggling() === mov.id"
-            class="shrink-0 transition-colors disabled:opacity-50"
-            [attr.aria-label]="mov.aprobado ? 'Quitar aprobación' : 'Aprobar movimiento'">
-            <lucide-icon [img]="mov.aprobado ? CheckCircle2Icon : CircleIcon" class="w-5 h-5"
-              [style.color]="mov.aprobado ? 'var(--success)' : 'var(--border)'" />
+            class="shrink-0 transition-all duration-150 disabled:opacity-50 rounded-full flex items-center justify-center w-7 h-7"
+            [attr.aria-label]="mov.aprobado ? 'Quitar aprobación' : 'Aprobar movimiento'"
+            [attr.title]="mov.aprobado ? 'Aprobado — clic para desaprobar' : 'Clic para aprobar'"
+            (mouseenter)="hoveringAprobacion.set(mov.id)"
+            (mouseleave)="hoveringAprobacion.set(null)"
+            [style.background]="mov.aprobado
+              ? 'color-mix(in srgb,var(--success) 14%,transparent)'
+              : (hoveringAprobacion() === mov.id ? 'color-mix(in srgb,var(--success) 12%,transparent)' : 'color-mix(in srgb,var(--text-muted) 8%,transparent)')">
+            <lucide-icon
+              [img]="(mov.aprobado || hoveringAprobacion() === mov.id) ? CheckCircle2Icon : CircleIcon"
+              class="w-5 h-5 transition-colors duration-150"
+              [style.color]="mov.aprobado ? 'var(--success)' : (hoveringAprobacion() === mov.id ? 'var(--success)' : 'var(--text-muted)')" />
           </button>
 
           <!-- Info -->

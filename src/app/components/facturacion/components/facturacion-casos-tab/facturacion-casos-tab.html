@@ -1,0 +1,93 @@
+<div class="overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead>
+      <tr style="border-bottom:1px solid var(--border);background:var(--surface-2)">
+        <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Caso</th>
+        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Ingresos</th>
+        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Suplidos</th>
+        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Honorarios</th>
+        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Saldo</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Gestoría</th>
+        <th class="px-4 py-3"></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (caso of casos(); track caso.id) {
+        <tr class="transition-colors duration-150" style="border-bottom:1px solid var(--border-soft)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+          (mouseleave)="$any($event.currentTarget).style.background=''">
+          <td class="px-5 py-4">
+            <p class="font-semibold" style="color:var(--text-strong)">{{ caso.titulo }}</p>
+            <p class="text-xs" style="color:var(--text-faint)">{{ caso.tipo }}</p>
+          </td>
+          <td class="px-4 py-4 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.totalIngresos | number:'1.0-0' }}€</td>
+          <td class="px-4 py-4 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.totalSuplidos | number:'1.0-0' }}€</td>
+          <td class="px-4 py-4 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.totalHonorarios | number:'1.0-0' }}€</td>
+          <td class="px-4 py-4 text-right font-semibold tabular-nums"
+            [style.color]="caso.resumenFinanciero.saldo >= 0 ? 'var(--success)' : 'var(--danger)'"
+            style="font-family:var(--font-mono)">
+            {{ caso.resumenFinanciero.saldo | number:'1.0-0' }}€
+          </td>
+          <td class="px-4 py-4">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full shrink-0" [style.background]="esEjecutado(caso) ? 'var(--success)' : 'var(--warning)'"></span>
+              <span class="text-xs" [style.color]="esEjecutado(caso) ? 'var(--success)' : 'var(--text-muted)'">
+                {{ esEjecutado(caso) ? 'Ejecutada' : slotsLabel(caso) }}
+              </span>
+            </div>
+          </td>
+          <td class="px-4 py-4">
+            <div class="flex items-center justify-end gap-2">
+              @if (caso.facturaId) {
+                <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium"
+                  style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">
+                  <lucide-icon [img]="FileCheckIcon" size="13"></lucide-icon> Facturado
+                </span>
+                @if (pdfUrl(caso.facturaId)) {
+                  <button (click)="downloadPdf.emit(caso.facturaId)" title="Descargar PDF"
+                    class="inline-flex items-center justify-center rounded-lg p-1.5 transition-colors duration-150"
+                    style="border:1px solid var(--border);color:var(--text-muted)"
+                    (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                    (mouseleave)="$any($event.currentTarget).style.background=''">
+                    <lucide-icon [img]="DownloadIcon" size="14"></lucide-icon>
+                  </button>
+                  <button (click)="copyPdfLink.emit(caso.facturaId)" title="Copiar link de descarga"
+                    class="inline-flex items-center justify-center rounded-lg p-1.5 transition-colors duration-150"
+                    style="border:1px solid var(--border);color:var(--text-muted)"
+                    (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                    (mouseleave)="$any($event.currentTarget).style.background=''">
+                    <lucide-icon [img]="LinkIcon" size="14"></lucide-icon>
+                  </button>
+                }
+              } @else if (canCreate()) {
+                <button (click)="abrirFactura.emit(caso)" [disabled]="!esEjecutado(caso)"
+                  class="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40"
+                  style="border:1px solid var(--border);color:var(--text-body)"
+                  (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                  (mouseleave)="$any($event.currentTarget).style.background=''">
+                  <lucide-icon [img]="ReceiptIcon" size="14"></lucide-icon> Generar factura
+                </button>
+              }
+              @if (canCreate()) {
+                <button (click)="abrirCierre.emit(caso)" [disabled]="!esEjecutado(caso)"
+                  class="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40"
+                  style="background:var(--brand)"
+                  (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+                  (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+                  <lucide-icon [img]="CheckCircle2Icon" size="14"></lucide-icon> Cerrar caso
+                </button>
+              }
+            </div>
+          </td>
+        </tr>
+      }
+      @if (casos().length === 0) {
+        <tr>
+          <td colspan="7" class="px-5 py-12 text-center text-sm" style="color:var(--text-faint)">
+            {{ loading() ? 'Cargando casos…' : 'No hay casos abiertos' }}
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

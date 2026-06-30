@@ -1,4 +1,7 @@
-<div class="space-y-4 max-w-3xl">
+<div class="flex gap-6 items-start">
+
+<!-- ── Columna principal (~70%) ───────────────────────── -->
+<div class="flex-1 min-w-0 space-y-4">
 
   @if (loading()) {
     <div class="flex items-center justify-center h-32 text-sm" style="color:var(--text-faint)">
@@ -342,21 +345,76 @@
     </div>
   }
 
-  <!-- Modal de previsualización -->
-  @let pv = preview();
-  @if (pv) {
-    <app-caso-doc-preview [docu]="pv" (close)="closePreview()" />
-  }
+</div><!-- end columna principal -->
 
-  <!-- Modal de relleno/visualización de documento generado -->
-  @let gen = generatingSlot();
-  @if (gen) {
-    <app-caso-doc-generador
-      [slot]="gen"
-      [casoContext]="casoContext()"
-      (save)="onGenerated($event)"
-      (close)="closeGenerador()"
-    />
-  }
+<!-- ── Panel lateral pendientes (~30%) ────────────────── -->
+@if (!loading() && slots().length > 0) {
+  <aside class="w-72 shrink-0 sticky top-4 space-y-2" aria-label="Documentos pendientes">
+    <div class="rounded-xl overflow-hidden" style="border:1px solid var(--border);background:var(--surface)">
 
-</div>
+      <!-- Cabecera -->
+      <div class="px-4 py-3 flex items-center justify-between" style="border-bottom:1px solid var(--border-soft)">
+        <span class="text-xs font-semibold uppercase tracking-wide" style="color:var(--text-muted)">Checklist plantilla</span>
+        <span class="text-xs font-medium px-2 py-0.5 rounded-full"
+          [style.background]="pendingSlots().length === 0 ? 'color-mix(in srgb,var(--success) 12%,transparent)' : 'color-mix(in srgb,var(--warning) 12%,transparent)'"
+          [style.color]="pendingSlots().length === 0 ? 'var(--success)' : 'var(--warning)'">
+          {{ pendingSlots().length === 0 ? '✓ Completo' : pendingSlots().length + ' pendiente' + (pendingSlots().length > 1 ? 's' : '') }}
+        </span>
+      </div>
+
+      <!-- Lista de slots -->
+      @if (pendingSlots().length === 0) {
+        <div class="flex flex-col items-center gap-2 py-8 px-4 text-center">
+          <lucide-icon [img]="CheckCircle2Icon" class="w-8 h-8" style="color:var(--success)" />
+          <p class="text-xs" style="color:var(--text-muted)">Todos los documentos requeridos están completados.</p>
+        </div>
+      } @else {
+        @for (slot of pendingSlots(); track slot.id) {
+          <button
+            (click)="jumpToSlot(slot)"
+            [disabled]="busy()"
+            class="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors duration-150 disabled:opacity-50 group"
+            style="border-bottom:1px solid var(--border-soft)"
+            (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+            (mouseleave)="$any($event.currentTarget).style.background=''"
+          >
+            <lucide-icon
+              [img]="slot.docTemplateId ? FilePenIcon : FileTextIcon"
+              class="w-4 h-4 shrink-0"
+              [style.color]="slot.docTemplateId ? 'var(--accent-ia)' : 'var(--text-faint)'"
+            />
+            <span class="flex-1 min-w-0 text-xs truncate" style="color:var(--text-body)">{{ slot.name }}</span>
+            <lucide-icon [img]="ChevronRightIcon" class="w-3.5 h-3.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style="color:var(--text-faint)" />
+          </button>
+        }
+      }
+
+      <!-- Slots completados (colapsados) -->
+      @let done = slots().length - pendingSlots().length;
+      @if (done > 0) {
+        <div class="px-4 py-2 flex items-center gap-1.5" style="border-top:1px solid var(--border-soft)">
+          <lucide-icon [img]="CheckCircle2Icon" class="w-3.5 h-3.5" style="color:var(--success)" />
+          <span class="text-xs" style="color:var(--text-faint)">{{ done }} completado{{ done > 1 ? 's' : '' }}</span>
+        </div>
+      }
+    </div>
+  </aside>
+}
+
+</div><!-- end flex wrapper -->
+
+<!-- Modales fuera del flex para no afectar el layout -->
+@let pv = preview();
+@if (pv) {
+  <app-caso-doc-preview [docu]="pv" (close)="closePreview()" />
+}
+
+@let gen = generatingSlot();
+@if (gen) {
+  <app-caso-doc-generador
+    [slot]="gen"
+    [casoContext]="casoContext()"
+    (save)="onGenerated($event)"
+    (close)="closeGenerador()"
+  />
+}

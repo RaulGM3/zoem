@@ -1,0 +1,74 @@
+<div class="fixed inset-0 z-50 flex justify-end bg-black/40" (click)="closed.emit()">
+  <div class="h-full w-full max-w-md overflow-y-auto shadow-2xl" style="background:var(--surface)" (click)="$event.stopPropagation()">
+    <div class="flex items-center justify-between px-5 py-4" style="border-bottom:1px solid var(--border)">
+      <div>
+        <h2 class="text-base font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Generar factura</h2>
+        <p class="text-xs" style="color:var(--text-faint)">{{ caso().titulo }}</p>
+      </div>
+      <button (click)="closed.emit()" class="rounded-xl p-1.5 transition-colors duration-150"
+        style="color:var(--text-muted)"
+        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+        (mouseleave)="$any($event.currentTarget).style.background=''"
+        aria-label="Cerrar">
+        <lucide-icon [img]="XIcon" size="18"></lucide-icon>
+      </button>
+    </div>
+
+    <div class="space-y-4 p-5">
+      <div class="flex items-center justify-between">
+        <label for="ivaRate" class="form-label mb-0!">Tasa de IVA (%)</label>
+        <input id="ivaRate" type="number" min="0" [value]="ivaRate()" (input)="ivaRateChanged.emit($any($event.target).value)"
+          class="form-input w-24 text-right" />
+      </div>
+
+      <div class="space-y-2">
+        <p class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-faint);font-family:var(--font-mono)">Líneas</p>
+        @for (linea of lineas(); track linea.concepto; let i = $index) {
+          <div class="flex items-center gap-3 rounded-lg p-3" style="border:1px solid var(--border)">
+            <div class="flex-1">
+              <p class="text-sm font-medium" style="color:var(--text-strong)">{{ linea.concepto }}</p>
+              <label class="mt-1 flex items-center gap-1.5 text-xs" style="color:var(--text-muted)">
+                <input type="checkbox" [checked]="linea.aplicaIva" (change)="lineaIvaToggled.emit(i)" class="rounded" style="accent-color:var(--brand)" />
+                Aplicar IVA
+              </label>
+            </div>
+            <div class="flex items-center gap-1">
+              <input type="number" [value]="linea.base" (input)="lineaBaseChanged.emit({ index: i, value: $any($event.target).value })"
+                class="form-input w-28 text-right"
+                [attr.aria-label]="'Base de ' + linea.concepto" />
+              <span class="text-sm" style="color:var(--text-faint)">€</span>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="space-y-1 rounded-lg p-4 text-sm" style="background:var(--surface-2)">
+        <div class="flex justify-between" style="color:var(--text-body)"><span>Base imponible</span><span class="tabular-nums" style="font-family:var(--font-mono)">{{ facturaPreview().base | number:'1.2-2' }}€</span></div>
+        <div class="flex justify-between" style="color:var(--text-body)"><span>IVA</span><span class="tabular-nums" style="font-family:var(--font-mono)">{{ facturaPreview().iva | number:'1.2-2' }}€</span></div>
+        <div class="flex justify-between font-semibold pt-1" style="color:var(--text-strong);border-top:1px solid var(--border)"><span>Total</span><span class="tabular-nums" style="font-family:var(--font-mono)">{{ facturaPreview().total | number:'1.2-2' }}€</span></div>
+      </div>
+    </div>
+
+    @if (verifactuEnabled()) {
+      <div class="mx-5 mb-3 flex items-center gap-2 rounded-lg px-3 py-2 text-xs"
+        style="background:color-mix(in srgb,var(--brand) 8%,transparent);color:var(--brand)">
+        <lucide-icon [img]="ShieldCheckIcon" size="14" class="shrink-0"></lucide-icon>
+        Esta factura se registrará automáticamente en Verifactu (AEAT).
+      </div>
+    }
+
+    <div class="flex gap-3 px-5 py-4" style="border-top:1px solid var(--border)">
+      <button (click)="closed.emit()" class="flex-1 rounded-lg py-2.5 text-sm font-medium transition-colors duration-150"
+        style="border:1px solid var(--border);color:var(--text-body)"
+        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+        (mouseleave)="$any($event.currentTarget).style.background=''">Cancelar</button>
+      <button (click)="confirmed.emit()" [disabled]="saving()"
+        class="flex-1 rounded-lg py-2.5 text-sm font-semibold text-white disabled:opacity-50 transition-colors duration-150"
+        style="background:var(--brand)"
+        (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+        (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+        {{ saving() ? 'Generando…' : 'Generar factura' }}
+      </button>
+    </div>
+  </div>
+</div>

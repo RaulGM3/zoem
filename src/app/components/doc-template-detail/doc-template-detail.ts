@@ -13,7 +13,9 @@ import {
   Tag,
   Lock,
   X,
+  Link,
 } from 'lucide-angular';
+import { AnclarCasoDialogComponent } from './anclar-caso-dialog/anclar-caso-dialog';
 import { DocTemplateService } from '../../core/services/doc-template.service';
 import { ToastService } from '../../core/services/toast.service';
 
@@ -25,7 +27,7 @@ import type { DocTemplate, TemplateVariable } from '../../interfaces';
 
 @Component({
   selector: 'app-doc-template-detail',
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, AnclarCasoDialogComponent],
   templateUrl: './doc-template-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -33,7 +35,7 @@ export class DocTemplateDetailComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly templateService = inject(DocTemplateService);
   private readonly toast = inject(ToastService);
-  private readonly generationService = inject(DocGenerationService);
+  protected readonly generationService = inject(DocGenerationService);
   @ViewChild('previewContent') private readonly previewContent?: ElementRef<HTMLElement>;
 
   readonly id = input.required<string>();
@@ -49,6 +51,9 @@ export class DocTemplateDetailComponent implements OnInit {
   readonly TagIcon = Tag;
   readonly LockIcon = Lock;
   readonly XIcon = X;
+  readonly LinkIcon = Link;
+
+  readonly showAnclarDialog = signal(false);
 
   readonly template = signal<DocTemplate | null>(null);
   readonly loading = signal(true);
