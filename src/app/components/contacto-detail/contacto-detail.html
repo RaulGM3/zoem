@@ -212,8 +212,8 @@
               (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
               (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
               <lucide-icon [img]="UploadIcon" size="13"></lucide-icon>
-              @if (isUploading()) { Subiendo... } @else { Subir archivo }
-              <input type="file" multiple class="hidden" (change)="onFileSelected($event)" [disabled]="isUploading()" />
+              Subir archivo
+              <input type="file" multiple class="hidden" (change)="onFileSelected($event)" />
             </label>
           </div>
         </div>

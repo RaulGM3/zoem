@@ -14,6 +14,7 @@ import { ContactService } from '../../core/services/contact.service';
 import { ContactFolderService } from '../../core/services/contact-folder.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ContactFileService } from '../../core/services/contact-file.service';
+import { UploadQueueService } from '../../core/services/upload-queue.service';
 import { CasosService } from '../../core/services/casos.service';
 import {
   Contact, ContactFolder, ContactFile, Caso,
@@ -51,6 +52,7 @@ export class ContactoDetailComponent {
   readonly folderService = inject(ContactFolderService);
   readonly fileService = inject(ContactFileService);
   private readonly toast = inject(ToastService);
+  private readonly uploadQueue = inject(UploadQueueService);
   private readonly contactService = inject(ContactService);
   private readonly casosService = inject(CasosService);
 
@@ -63,7 +65,6 @@ export class ContactoDetailComponent {
   renameValue = signal('');
   deletingFolderId = signal<string | null>(null);
   deletingFileId = signal<string | null>(null);
-  isUploading = signal(false);
 
   contacto = signal<Contact | null>(null);
 
@@ -288,23 +289,16 @@ export class ContactoDetailComponent {
     await this.folderService.deleteFolder(folderId);
   }
 
-  async onFileSelected(event: Event) {
+  onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     const files = Array.from(input.files ?? []);
-    if (!files.length) return;
-    this.isUploading.set(true);
-    try {
-      await this.toast.run(
-        async () => {
-          for (const file of files) {
-            await this.fileService.uploadFile(this.id(), this.currentFolderId(), file);
-          }
-        },
-        { successMessage: 'Archivos subidos', errorTitle: 'No se pudieron subir los archivos' }
+    input.value = '';
+    for (const file of files) {
+      this.uploadQueue.enqueue(
+        () => this.fileService.uploadFile(this.id(), this.currentFolderId(), file),
+        file.name,
+        { successMessage: `"${file.name}" subido`, errorTitle: 'No se pudo subir el archivo' },
       );
-    } finally {
-      this.isUploading.set(false);
-      input.value = '';
     }
   }
 

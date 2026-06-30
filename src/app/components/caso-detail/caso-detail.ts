@@ -12,6 +12,7 @@ import { ContactService } from '../../core/services/contact.service';
 import { UsersService } from '../../core/services/users';
 import { UserSyncService } from '../../core/services/user-sync.service';
 import { CasoDocService } from '../../core/services/caso-doc.service';
+import { UploadQueueService } from '../../core/services/upload-queue.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { CuentasService } from '../../core/services/cuentas.service';
 import { cycleHitoEstado, stampEstadoChange } from '../../core/hitos/hito-estado';
@@ -56,6 +57,7 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
   readonly usersService = inject(UsersService);
   private readonly userSync = inject(UserSyncService);
   readonly casoDocService = inject(CasoDocService);
+  private readonly uploadQueue = inject(UploadQueueService);
   readonly permissionService = inject(PermissionService);
   readonly cuentasService = inject(CuentasService);
   readonly cuentas = this.cuentasService.cuentas;
@@ -435,18 +437,19 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
 
   // ── Documentos ─────────────────────────────────────────
 
-  async onUploadSlot(event: DocUploadEvent): Promise<void> {
+  onUploadSlot(event: DocUploadEvent): void {
     const casoId = this.caso()?.id;
-    if (!casoId) return;
+    if (!casoId || this.uploadingSlotId() === event.slot.id) return;
     this.uploadingSlotId.set(event.slot.id);
-    try {
-      await this.toast.run(() => this.casoDocService.uploadSlot(casoId, event.slot, event.file), {
+    this.uploadQueue.enqueue(
+      () => this.casoDocService.uploadSlot(casoId, event.slot, event.file),
+      event.file.name,
+      {
         successMessage: 'Documento subido',
         errorTitle: 'No se pudo subir el documento',
-      });
-    } finally {
-      this.uploadingSlotId.set(null);
-    }
+        onFinally: () => this.uploadingSlotId.set(null),
+      },
+    );
   }
 
   async onRemoveSlot(slot: CasoDocSlot): Promise<void> {
@@ -471,18 +474,17 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
     );
   }
 
-  async onUploadFile(event: FreeUploadEvent): Promise<void> {
+  onUploadFile(event: FreeUploadEvent): void {
     const casoId = this.caso()?.id;
     if (!casoId) return;
-    this.docsBusy.set(true);
-    try {
-      await this.toast.run(() => this.casoDocService.uploadFile(casoId, event.folderId, event.file), {
+    this.uploadQueue.enqueue(
+      () => this.casoDocService.uploadFile(casoId, event.folderId, event.file),
+      event.file.name,
+      {
         successMessage: 'Archivo subido',
         errorTitle: 'No se pudo subir el archivo',
-      });
-    } finally {
-      this.docsBusy.set(false);
-    }
+      },
+    );
   }
 
   async onDeleteFile(file: CasoDocFile): Promise<void> {
