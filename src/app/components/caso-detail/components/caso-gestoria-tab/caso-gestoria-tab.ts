@@ -121,6 +121,7 @@ export class CasoGestoriaTabComponent {
       honorario: { background: mix('var(--accent-ia)'), color: 'var(--accent-ia)' },
       gasto:     { background: mix('var(--danger)'),  color: 'var(--danger)' },
       otro:      { background: 'var(--surface-2)',     color: 'var(--text-muted)' },
+      ajuste:    { background: 'var(--surface-2)',     color: 'var(--text-muted)' },
     };
     return map[tipo];
   }

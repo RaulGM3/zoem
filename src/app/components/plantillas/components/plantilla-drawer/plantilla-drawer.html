@@ -126,6 +126,13 @@
                 <div class="min-w-0">
                   <span class="text-slate-700 font-medium">{{ s.nombre }}</span>
                   <span class="ml-1.5 text-xs text-slate-600">{{ getTipoCostoLabel(s.tipo) }}</span>
+                  @if (s.ivaIncluido != null) {
+                    <span class="ml-1.5 text-xs rounded px-1 py-0.5"
+                      [class.bg-amber-50]="s.ivaIncluido" [class.text-amber-700]="s.ivaIncluido"
+                      [class.bg-blue-50]="!s.ivaIncluido" [class.text-blue-700]="!s.ivaIncluido">
+                      {{ s.ivaIncluido ? 'IVA inc.' : 'base + IVA' }}
+                    </span>
+                  }
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
                   @if (s.importeEstimado != null) {
@@ -150,7 +157,7 @@
           </div>
           <div class="space-y-1">
             <label class="text-xs text-slate-700">Tipo <span class="text-red-400">*</span></label>
-            <select [value]="suplidoTipo()" (change)="suplidoTipo.set($any($event.target).value)"
+            <select [value]="suplidoTipo()" (change)="onSuplidoTipoChange($any($event.target).value)"
               class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
               <option value="">Selecciona un tipo</option>
               @for (t of tiposCosto(); track t.value) {
@@ -158,6 +165,25 @@
               }
             </select>
           </div>
+          <!-- Toggle IVA incluido -->
+          @if (suplidoTipo()) {
+            <div class="flex items-center justify-between gap-3 bg-slate-50 rounded-lg px-3 py-2">
+              <div>
+                <p class="text-xs font-medium text-slate-700">IVA incluido en el precio</p>
+                <p class="text-xs text-slate-500 mt-0.5">
+                  {{ suplidoIvaIncluido() ? 'El importe ya contiene el IVA' : 'El importe es la base; se añade IVA encima' }}
+                </p>
+              </div>
+              <button type="button" role="switch" [attr.aria-checked]="suplidoIvaIncluido()"
+                (click)="suplidoIvaIncluido.set(!suplidoIvaIncluido())"
+                class="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-200"
+                [style.background]="suplidoIvaIncluido() ? '#7c3aed' : '#cbd5e1'"
+                aria-label="IVA incluido en el precio">
+                <span class="inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform duration-200"
+                  [style.transform]="suplidoIvaIncluido() ? 'translateX(18px)' : 'translateX(2px)'"></span>
+              </button>
+            </div>
+          }
           <div class="space-y-1">
             <label class="text-xs text-slate-700">Precio aproximado (€, opcional)</label>
             <input type="number" min="0" step="0.01" [value]="suplidoImporte()" (input)="suplidoImporte.set($any($event.target).value)"

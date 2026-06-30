@@ -64,6 +64,7 @@ export class PlantillaDrawerComponent {
   suplidoNombre = signal('');
   suplidoTipo = signal<TipoCosto | ''>('');
   suplidoImporte = signal('');
+  suplidoIvaIncluido = signal(true);
 
   pendingPlantillaId = signal<string | null>(null);
   effectivePlantillaId = computed(() => this.pendingPlantillaId() ?? this.plantilla()?.id ?? null);
@@ -208,6 +209,23 @@ export class PlantillaDrawerComponent {
     this.hitoAsignado.set(m.length === 1 ? m[0].userId : '');
   }
 
+  onSuplidoTipoChange(tipo: string): void {
+    this.suplidoTipo.set(tipo as TipoCosto | '');
+    this.suplidoIvaIncluido.set(this.ivaIncluidoDefaultForTipoCosto(tipo as TipoCosto | ''));
+  }
+
+  private ivaIncluidoDefaultForTipoCosto(tipo: TipoCosto | ''): boolean {
+    switch (tipo) {
+      case 'cuota_litis':
+      case 'provisiones_fondos':
+      case 'saldos_clientes':
+      case 'intereses_demora':
+        return false;
+      default:
+        return true;
+    }
+  }
+
   addSuplido(): void {
     if (!this.suplidoNombre().trim() || !this.suplidoTipo()) return;
     const importe = this.suplidoImporte() ? parseFloat(this.suplidoImporte()) : undefined;
@@ -217,6 +235,7 @@ export class PlantillaDrawerComponent {
         nombre: this.suplidoNombre().trim(),
         tipo: this.suplidoTipo() as TipoCosto,
         ...(importe != null ? { importeEstimado: importe } : {}),
+        ivaIncluido: this.suplidoIvaIncluido(),
       },
     ]);
     this.clearSuplidoForm();
@@ -230,6 +249,7 @@ export class PlantillaDrawerComponent {
     this.suplidoNombre.set('');
     this.suplidoTipo.set('');
     this.suplidoImporte.set('');
+    this.suplidoIvaIncluido.set(true);
   }
 
   getTipoCostoLabel(tipo: TipoCosto): string {

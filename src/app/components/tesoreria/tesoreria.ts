@@ -1,7 +1,7 @@
 import { Component, inject, signal, computed, ChangeDetectionStrategy, OnInit, OnDestroy } from '@angular/core';
 import {
   LucideAngularModule, Wallet, Landmark, CheckCircle2, AlertTriangle, Save, Scale,
-  Building2, Settings, History, Lock,
+  Building2, Settings, History, Lock, Plus,
 } from 'lucide-angular';
 import {
   Firestore, doc, onSnapshot, type Unsubscribe,
@@ -9,6 +9,7 @@ import {
 import { CasosService } from '../../core/services/casos.service';
 import { CompanyService } from '../../core/services/company.service';
 import { PermissionService } from '../../core/services/permission.service';
+import { UsersService } from '../../core/services/users';
 import { GestoriaService } from '../../core/services/gestoria.service';
 import { CuentasService } from '../../core/services/cuentas.service';
 import { CierreCajaService } from '../../core/services/cierre-caja.service';
@@ -25,6 +26,8 @@ import { TesoreriaCasosTabComponent } from './components/casos-tab/casos-tab';
 import { CierreCajaModalComponent } from './components/cierre-caja-modal/cierre-caja-modal';
 import { ConciliacionTabComponent } from './components/conciliacion-tab/conciliacion-tab';
 import { ReportesTabComponent } from './components/reportes-tab/reportes-tab';
+import { MovimientoGeneralDrawerComponent } from './components/movimiento-general-drawer/movimiento-general-drawer';
+import { MovimientoGestoria } from '../../interfaces';
 
 const COTEJO_TOLERANCIA = 0.01;
 
@@ -38,6 +41,7 @@ export type TabTesoreria = 'resumen' | 'movimientos' | 'conciliacion' | 'reporte
     CuentasDrawerComponent,
     TesoreriaResumenTabComponent, TesoreriaCasosTabComponent,
     CierreCajaModalComponent, ConciliacionTabComponent, ReportesTabComponent,
+    MovimientoGeneralDrawerComponent,
   ],
   templateUrl: './tesoreria.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -51,6 +55,7 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
   private readonly conciliacionService = inject(ConciliacionService);
   private readonly toast = inject(ToastService);
   private readonly firestore = inject(Firestore);
+  private readonly usersService = inject(UsersService);
   readonly perm = inject(PermissionService);
 
   readonly importandoExtracto = signal(false);
@@ -65,6 +70,7 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
   readonly SettingsIcon = Settings;
   readonly HistoryIcon = History;
   readonly LockIcon = Lock;
+  readonly PlusIcon = Plus;
 
   readonly activeTab = signal<TabTesoreria>('resumen');
   readonly casos = this.casosService.casos;
@@ -77,6 +83,8 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
   readonly showCuentasDrawer = signal(false);
   readonly showCierreModal = signal(false);
   readonly savingCierre = signal(false);
+  readonly showMovimientoGeneralDrawer = signal(false);
+  readonly editandoMovimientoGeneral = signal<MovimientoGestoria | null>(null);
 
   readonly cierres = this.cierreCajaService.cierres;
 
@@ -112,7 +120,7 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
       concepto: m.concepto,
       importe: m.importe,
       esEntrada: m.esEntrada,
-      casoNombre: nombres.get(m.casoId) ?? m.casoId,
+      casoNombre: m.casoId ? (nombres.get(m.casoId) ?? m.casoId) : 'General',
       conciliado: casados.has(m.id),
     }));
   });
@@ -217,7 +225,8 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
     const map = new Map<string, Array<ReturnType<typeof this.gestoriaService.todosMovimientos>[number] & { casoNombre: string }>>();
     for (const m of this.gestoriaService.todosMovimientos()) {
       if (!m.cuentaId) continue;
-      const enriched = { ...m, casoNombre: nombres.get(m.casoId) ?? m.casoId };
+      const casoNombre = m.casoId ? (nombres.get(m.casoId) ?? m.casoId) : 'General';
+      const enriched = { ...m, casoNombre };
       if (!map.has(m.cuentaId)) map.set(m.cuentaId, []);
       map.get(m.cuentaId)!.push(enriched);
     }
@@ -239,7 +248,8 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
     const map = new Map<string, { ingresos: number; egresos: number; saldoAprobado: number; saldoProyectado: number }>();
 
     for (const m of this.gestoriaService.todosMovimientos()) {
-      const entry = map.get(m.casoId) ?? { ingresos: 0, egresos: 0, saldoAprobado: 0, saldoProyectado: 0 };
+      const key = m.casoId ?? '__general__';
+      const entry = map.get(key) ?? { ingresos: 0, egresos: 0, saldoAprobado: 0, saldoProyectado: 0 };
 
       if (m.esEntrada) entry.ingresos += m.importe;
       else entry.egresos += m.importe;
@@ -250,7 +260,7 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
         entry.saldoProyectado += m.esEntrada ? m.importe : -m.importe;
       }
 
-      map.set(m.casoId, entry);
+      map.set(key, entry);
     }
 
     for (const entry of map.values()) {
@@ -308,7 +318,7 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
     const cabecera = ['Fecha', 'Caso', 'Tipo', 'Concepto', 'Cuenta', 'Direccion', 'Base', 'IVA', 'Importe', 'Aprobado'];
     const filas = this.movimientosEnRango().map(m => [
       m.fecha,
-      nombresCaso.get(m.casoId) ?? m.casoId,
+      m.casoId ? (nombresCaso.get(m.casoId) ?? m.casoId) : 'General',
       m.tipo,
       m.concepto,
       m.cuentaId ? (nombresCuenta.get(m.cuentaId) ?? '') : '',
@@ -330,6 +340,7 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
   }
 
   async ngOnInit(): Promise<void> {
+    if (this.usersService.members().length === 0) this.usersService.loadMembers();
     await this.casosService.loadCasos();
     this.gestoriaService.loadTodosMovimientos();
     this.cuentasService.loadCuentas();

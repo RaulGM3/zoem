@@ -1,0 +1,207 @@
+@if (visible()) {
+  <!-- Backdrop -->
+  <div class="fixed inset-0 z-40" style="background:rgba(0,0,0,0.3)" (click)="closed.emit()" aria-hidden="true"></div>
+
+  <!-- Drawer -->
+  <aside role="dialog" aria-modal="true" [attr.aria-label]="modoEdicion() ? 'Editar movimiento general' : 'Nuevo movimiento general'"
+    class="fixed right-0 top-0 bottom-0 z-50 flex flex-col w-full max-w-md shadow-2xl"
+    style="background:var(--surface);border-left:1px solid var(--border)">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between gap-3 px-5 py-4" style="border-bottom:1px solid var(--border)">
+      <div>
+        <h2 class="text-base font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">
+          {{ modoEdicion() ? 'Editar movimiento' : 'Nuevo movimiento general' }}
+        </h2>
+        <p class="text-xs mt-0.5" style="color:var(--text-muted)">
+          Gastos de oficina, saldos iniciales, ajustes de balance
+        </p>
+      </div>
+      <button type="button" (click)="closed.emit()" class="rounded-lg p-1.5 transition-colors duration-150"
+        style="color:var(--text-muted)"
+        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+        (mouseleave)="$any($event.currentTarget).style.background=''"
+        aria-label="Cerrar">
+        <lucide-icon [img]="XIcon" class="w-4 h-4" />
+      </button>
+    </div>
+
+    <!-- Form -->
+    <div class="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+
+      <!-- Tipo -->
+      <div>
+        <label class="form-label" for="mg-tipo">Tipo</label>
+        <select id="mg-tipo" class="form-input mt-1"
+          [value]="formTipo()"
+          (change)="onTipoChange($any($event.target).value)">
+          @for (t of tipos; track t.value) {
+            <option [value]="t.value">{{ t.label }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Dirección (entrada / salida) -->
+      <div>
+        <label class="form-label">Dirección</label>
+        <div class="mt-1 flex rounded-xl overflow-hidden text-sm font-semibold" style="border:1px solid var(--border)">
+          <button type="button" (click)="formEsEntrada.set(true)"
+            class="flex-1 py-2 transition-colors duration-150"
+            [style.background]="formEsEntrada() ? 'color-mix(in srgb,var(--success) 10%,transparent)' : 'transparent'"
+            [style.color]="formEsEntrada() ? 'var(--success)' : 'var(--text-muted)'">
+            Entrada
+          </button>
+          <button type="button" (click)="formEsEntrada.set(false)"
+            class="flex-1 py-2 transition-colors duration-150"
+            style="border-left:1px solid var(--border)"
+            [style.background]="!formEsEntrada() ? 'color-mix(in srgb,var(--danger) 10%,transparent)' : 'transparent'"
+            [style.color]="!formEsEntrada() ? 'var(--danger)' : 'var(--text-muted)'">
+            Salida
+          </button>
+        </div>
+      </div>
+
+      <!-- Concepto -->
+      <div>
+        <label class="form-label" for="mg-concepto">Concepto</label>
+        <input id="mg-concepto" type="text" class="form-input mt-1"
+          placeholder="Ej: Alquiler oficina, Saldo inicial cliente…"
+          [value]="formConcepto()"
+          (input)="formConcepto.set($any($event.target).value)" />
+      </div>
+
+      <!-- Importe + IVA -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="form-label" for="mg-importe">
+            {{ formIvaIncluido() ? 'Importe total (€)' : 'Base imponible (€)' }}
+          </label>
+          <div class="relative mt-1">
+            <input id="mg-importe" type="number" inputmode="decimal" step="0.01" min="0.01"
+              class="form-input text-right pr-7" style="font-family:var(--font-mono)"
+              placeholder="0.00"
+              [value]="formImporte()"
+              (input)="formImporte.set($any($event.target).value)" />
+            <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs" style="color:var(--text-faint)">€</span>
+          </div>
+        </div>
+        <div>
+          <label class="form-label" for="mg-iva">IVA</label>
+          <select id="mg-iva" class="form-input mt-1"
+            [value]="formIva()"
+            (change)="formIva.set($any($event.target).value)">
+            <option value="21">21 %</option>
+            <option value="10">10 %</option>
+            <option value="4">4 %</option>
+            <option value="0">0 %</option>
+            <option value="exento">Exento</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Switch IVA incluido (solo cuando aplica IVA real) -->
+      @if (formIva() !== 'exento' && formIva() !== '0') {
+        <div class="flex items-center justify-between gap-3 rounded-xl px-4 py-3" style="background:var(--surface-2)">
+          <div>
+            <p class="text-sm font-medium" style="color:var(--text-body)">IVA incluido en el precio</p>
+            <p class="text-xs mt-0.5" style="color:var(--text-muted)">
+              {{ formIvaIncluido() ? 'El importe introducido ya contiene el IVA' : 'El importe es la base; se calculará el IVA encima' }}
+            </p>
+          </div>
+          <button type="button" role="switch" [attr.aria-checked]="formIvaIncluido()"
+            (click)="formIvaIncluido.set(!formIvaIncluido())"
+            class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2"
+            [style.background]="formIvaIncluido() ? 'var(--brand)' : 'var(--border)'"
+            aria-label="IVA incluido en el precio">
+            <span class="inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-200"
+              [style.transform]="formIvaIncluido() ? 'translateX(22px)' : 'translateX(3px)'"></span>
+          </button>
+        </div>
+      }
+
+      <!-- Desglose IVA -->
+      @if (formImporte() && desglose().cuotaIva > 0) {
+        <div class="rounded-xl px-4 py-3 text-xs grid grid-cols-3 gap-2" style="background:var(--surface-2)">
+          <div>
+            <p style="color:var(--text-muted)">Base imponible</p>
+            <p class="font-semibold tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ desglose().baseImponible | number:'1.2-2' }} €</p>
+          </div>
+          <div>
+            <p style="color:var(--text-muted)">Cuota IVA</p>
+            <p class="font-semibold tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ desglose().cuotaIva | number:'1.2-2' }} €</p>
+          </div>
+          <div>
+            <p style="color:var(--text-muted)">Total</p>
+            <p class="font-semibold tabular-nums" style="font-family:var(--font-mono)"
+              [style.color]="formEsEntrada() ? 'var(--success)' : 'var(--danger)'">
+              {{ desglose().total | number:'1.2-2' }} €
+            </p>
+          </div>
+        </div>
+      }
+
+      <!-- Fecha -->
+      <div>
+        <label class="form-label" for="mg-fecha">Fecha</label>
+        <input id="mg-fecha" type="date" class="form-input mt-1"
+          [value]="formFecha()"
+          (change)="formFecha.set($any($event.target).value)" />
+      </div>
+
+      <!-- Cuenta -->
+      <div>
+        <label class="form-label" for="mg-cuenta">Cuenta bancaria</label>
+        <select id="mg-cuenta" class="form-input mt-1"
+          [value]="formCuentaId()"
+          (change)="formCuentaId.set($any($event.target).value)">
+          <option value="">Sin asignar</option>
+          @for (c of cuentas(); track c.id) {
+            <option [value]="c.id">{{ c.nombre }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Notas -->
+      <div>
+        <label class="form-label" for="mg-notas">Notas (opcional)</label>
+        <textarea id="mg-notas" rows="3" class="form-input mt-1 resize-none"
+          placeholder="Detalles adicionales…"
+          [value]="formNotas()"
+          (input)="formNotas.set($any($event.target).value)"></textarea>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="px-5 py-4 flex items-center gap-3" style="border-top:1px solid var(--border)">
+      @if (modoEdicion()) {
+        <button type="button" (click)="eliminar()" [disabled]="deleting() || saving()"
+          class="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold transition-all duration-150 disabled:opacity-50"
+          style="color:var(--danger);border:1px solid var(--border)"
+          (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 8%,transparent)'"
+          (mouseleave)="$any($event.currentTarget).style.background=''">
+          <lucide-icon [img]="Trash2Icon" class="w-4 h-4" />
+          Eliminar
+        </button>
+      }
+      <button type="button" (click)="closed.emit()"
+        class="ml-auto rounded-xl px-4 py-2 text-sm font-medium transition-colors duration-150"
+        style="border:1px solid var(--border);color:var(--text-body)"
+        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+        (mouseleave)="$any($event.currentTarget).style.background=''">
+        Cancelar
+      </button>
+      <button type="button" (click)="submit()" [disabled]="!canSubmit() || saving()"
+        class="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white transition-all duration-150 disabled:opacity-50"
+        style="background:var(--brand)"
+        (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+        (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+        @if (saving()) {
+          <span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-hidden="true"></span>
+        }
+        {{ modoEdicion() ? 'Guardar cambios' : 'Registrar' }}
+      </button>
+    </div>
+
+  </aside>
+}

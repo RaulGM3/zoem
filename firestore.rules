@@ -118,10 +118,11 @@ service cloud.firestore {
       }
 
       // ---- Finanzas / tesorería: Admin + Gestor ----------------------
-      match /cuentas/{doc=**}        { allow read, write: if isSuper() || isManager(cid); }
-      match /cierres_caja/{doc=**}   { allow read, write: if isSuper() || isManager(cid); }
-      match /retiros/{doc=**}        { allow read, write: if isSuper() || isManager(cid); }
-      match /tesoreria_meta/{doc=**} { allow read, write: if isSuper() || isManager(cid); }
+      match /cuentas/{doc=**}                { allow read, write: if isSuper() || isManager(cid); }
+      match /cierres_caja/{doc=**}           { allow read, write: if isSuper() || isManager(cid); }
+      match /retiros/{doc=**}                { allow read, write: if isSuper() || isManager(cid); }
+      match /tesoreria_meta/{doc=**}         { allow read, write: if isSuper() || isManager(cid); }
+      match /movimientos_generales/{doc=**}  { allow read, write: if isSuper() || isManager(cid); }
 
       // ---- Casos (operativo) -----------------------------------------
       match /casos/{casoId} {

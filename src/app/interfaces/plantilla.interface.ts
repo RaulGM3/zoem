@@ -24,6 +24,7 @@ export interface PartidaCosto {
   tipo: TipoCosto;
   importeEstimado?: number;
   orden?: number;
+  ivaIncluido?: boolean;
 }
 
 export interface CasoPlantilla {

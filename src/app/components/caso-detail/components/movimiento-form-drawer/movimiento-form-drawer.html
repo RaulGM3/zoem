@@ -27,7 +27,10 @@
           </select>
         </div>
         <div class="space-y-1">
-          <label class="form-label">Importe total (€) <span style="color:var(--danger)">*</span></label>
+          <label class="form-label">
+            {{ formIvaIncluido() ? 'Importe total (€)' : 'Base imponible (€)' }}
+            <span style="color:var(--danger)">*</span>
+          </label>
           <input type="number" min="0" step="0.01" [value]="formImporte()" (input)="formImporte.set($any($event.target).value)" class="form-input" />
         </div>
       </div>
@@ -40,11 +43,28 @@
         </select>
         @if (formImporte() && desglose().baseImponible > 0) {
           <div class="flex justify-between text-xs pt-1" style="color:var(--text-muted)">
-            <span>Base imponible: <span class="font-medium" style="color:var(--text-body)">{{ desglose().baseImponible | number:'1.2-2' }} €</span></span>
-            <span>Cuota IVA: <span class="font-medium" style="color:var(--text-body)">{{ desglose().cuotaIva | number:'1.2-2' }} €</span></span>
+            <span>Base: <span class="font-medium" style="color:var(--text-body)">{{ desglose().baseImponible | number:'1.2-2' }} €</span></span>
+            <span>Cuota: <span class="font-medium" style="color:var(--text-body)">{{ desglose().cuotaIva | number:'1.2-2' }} €</span></span>
+            @if (!formIvaIncluido()) {
+              <span>Total: <span class="font-semibold" style="color:var(--text-body)">{{ desglose().total | number:'1.2-2' }} €</span></span>
+            }
           </div>
         }
       </div>
+      <!-- Switch IVA incluido (solo cuando aplica IVA real) -->
+      @if (formIva() !== 'exento' && formIva() !== '0') {
+        <div class="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5" style="background:var(--surface-2)">
+          <p class="text-sm" style="color:var(--text-body)">IVA incluido en el precio</p>
+          <button type="button" role="switch" [attr.aria-checked]="formIvaIncluido()"
+            (click)="formIvaIncluido.set(!formIvaIncluido())"
+            class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2"
+            [style.background]="formIvaIncluido() ? 'var(--brand)' : 'var(--border)'"
+            aria-label="IVA incluido en el precio">
+            <span class="inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-200"
+              [style.transform]="formIvaIncluido() ? 'translateX(22px)' : 'translateX(3px)'"></span>
+          </button>
+        </div>
+      }
       <div class="grid grid-cols-2 gap-3">
         <div class="space-y-1">
           <label class="form-label">Dirección</label>

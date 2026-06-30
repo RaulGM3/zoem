@@ -33,3 +33,10 @@ export function desglosarIva(total: number, tipoIva: TipoIva, exento: boolean): 
   const base = round2(total / (1 + tipoIva / 100));
   return { baseImponible: base, cuotaIva: round2(total - base) };
 }
+
+/** Calcula IVA sobre una BASE imponible (precio sin IVA). */
+export function calcularIvaDesdeBase(base: number, tipoIva: TipoIva, exento: boolean): DesgloseIva {
+  if (exento || tipoIva === 0) return { baseImponible: round2(base), cuotaIva: 0 };
+  const cuotaIva = round2(base * tipoIva / 100);
+  return { baseImponible: round2(base), cuotaIva };
+}

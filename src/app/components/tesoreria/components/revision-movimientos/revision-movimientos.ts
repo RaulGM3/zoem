@@ -71,7 +71,7 @@ export class RevisionMovimientosComponent implements OnInit, OnDestroy {
     const miembros = this.miembrosMap();
     return this.movimientos().map(m => ({
       ...m,
-      casoNombre: nombres.get(m.casoId) ?? m.casoId,
+      casoNombre: (m.casoId ? (nombres.get(m.casoId) ?? m.casoId) : 'General'),
       cuentaNombre: m.cuentaId ? (cuentas.get(m.cuentaId) ?? null) : null,
       creadoPorNombre: miembros.get(m.createdBy) ?? null,
     }));
@@ -151,7 +151,7 @@ export class RevisionMovimientosComponent implements OnInit, OnDestroy {
   tipoLabel(tipo: MovimientoTipo): string {
     const labels: Record<MovimientoTipo, string> = {
       ingreso: 'Ingreso', suplido: 'Suplido', honorario: 'Honorario',
-      gasto: 'Gasto', otro: 'Otro',
+      gasto: 'Gasto', otro: 'Otro', ajuste: 'Ajuste',
     };
     return labels[tipo] ?? tipo;
   }
@@ -163,6 +163,7 @@ export class RevisionMovimientosComponent implements OnInit, OnDestroy {
       honorario: 'bg-violet-100 text-violet-700',
       gasto: 'bg-red-100 text-red-700',
       otro: 'bg-slate-100 text-slate-600',
+      ajuste: 'bg-slate-100 text-slate-600',
     };
     return map[tipo] ?? 'bg-slate-100 text-slate-600';
   }

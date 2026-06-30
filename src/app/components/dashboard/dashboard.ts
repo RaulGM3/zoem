@@ -35,10 +35,10 @@ const ESTADOS_ACTIVOS: ReadonlySet<Caso['estado']> = new Set(['pendiente', 'en_p
 const IA_CERRADOS: ReadonlySet<string> = new Set(['resuelto', 'descartado', 'cerrado']);
 
 const TIPO_LABEL: Record<MovimientoTipo, string> = {
-  ingreso: 'Ingresos', honorario: 'Honorarios', suplido: 'Suplidos', gasto: 'Gastos', otro: 'Otros',
+  ingreso: 'Ingresos', honorario: 'Honorarios', suplido: 'Suplidos', gasto: 'Gastos', otro: 'Otros', ajuste: 'Ajustes',
 };
 const TIPO_COLOR: Record<MovimientoTipo, string> = {
-  ingreso: '#10b981', honorario: '#8b5cf6', suplido: '#3b82f6', gasto: '#ef4444', otro: '#94a3b8',
+  ingreso: '#10b981', honorario: '#8b5cf6', suplido: '#3b82f6', gasto: '#ef4444', otro: '#94a3b8', ajuste: '#64748b',
 };
 const MES_CORTO = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 const MES_LARGO = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -153,8 +153,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       concepto: m.concepto,
       importe: m.importe,
       esEntrada: m.esEntrada,
-      casoNombre: nombres.get(m.casoId) ?? '—',
-      link: `/casos/${m.casoId}`,
+      casoNombre: m.casoId ? (nombres.get(m.casoId) ?? '—') : 'General',
+      link: m.casoId ? `/casos/${m.casoId}` : '',
     }));
   });
 

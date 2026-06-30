@@ -24,6 +24,14 @@
         </button>
       }
       @if (perm.can('Tesorería', 'crear')) {
+        <button type="button" (click)="editandoMovimientoGeneral.set(null); showMovimientoGeneralDrawer.set(true)"
+          class="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors duration-150"
+          style="border:1px solid var(--border);color:var(--text-body);background:var(--surface)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+          (mouseleave)="$any($event.currentTarget).style.background='var(--surface)'">
+          <lucide-icon [img]="PlusIcon" class="w-4 h-4" />
+          Mov. general
+        </button>
         <button type="button" (click)="showCierreModal.set(true)"
           class="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-white transition-all duration-150"
           style="background:var(--brand)"
@@ -126,3 +134,9 @@
     (closed)="showCierreModal.set(false)"
   />
 }
+
+<app-movimiento-general-drawer
+  [visible]="showMovimientoGeneralDrawer()"
+  [editando]="editandoMovimientoGeneral()"
+  (closed)="showMovimientoGeneralDrawer.set(false)"
+/>

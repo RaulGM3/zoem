@@ -9,6 +9,7 @@ export interface GestoriaSlot {
   nombre: string;
   tipoCosto: GestoriaSlotTipo;
   importeEstimado?: number;
+  ivaIncluido?: boolean;
   status: GestoriaSlotStatus;
   movimientoId?: string;
   importeReal?: number;

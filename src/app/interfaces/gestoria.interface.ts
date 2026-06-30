@@ -1,11 +1,11 @@
 import { Timestamp } from '@angular/fire/firestore';
 import type { TipoIva } from './iva';
 
-export type MovimientoTipo = 'ingreso' | 'suplido' | 'honorario' | 'gasto' | 'otro';
+export type MovimientoTipo = 'ingreso' | 'suplido' | 'honorario' | 'gasto' | 'otro' | 'ajuste';
 
 export interface MovimientoGestoria {
   id: string;
-  casoId: string;
+  casoId?: string;
   companyId: string;
   tipo: MovimientoTipo;
   concepto: string;

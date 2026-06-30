@@ -1,4 +1,4 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { inject, Injectable, signal, computed } from '@angular/core';
 import {
   Firestore,
   collection,
@@ -27,6 +27,7 @@ import { Auth } from '@angular/fire/auth';
 type MovimientoCreate = Pick<MovimientoGestoria, 'tipo' | 'concepto' | 'importe' | 'esEntrada' | 'fecha' | 'notas' | 'cuentaId' | 'tipoIva' | 'ivaExento' | 'baseImponible' | 'cuotaIva'>;
 type MovimientoOpt = Omit<MovimientoCreate, 'notas' | 'cuentaId'> & { notas?: string; cuentaId?: string };
 type RetiroCreate = Pick<Retiro, 'concepto' | 'importe' | 'fecha' | 'cuentaId' | 'notas'>;
+type MovimientoGeneralCreate = Pick<MovimientoGestoria, 'tipo' | 'concepto' | 'importe' | 'esEntrada' | 'fecha' | 'notas' | 'cuentaId'>;
 
 @Injectable({ providedIn: 'root' })
 export class GestoriaService {
@@ -37,7 +38,14 @@ export class GestoriaService {
   private readonly actividad = inject(ActividadService);
 
   readonly movimientos = signal<MovimientoGestoria[]>([]);
-  readonly todosMovimientos = signal<MovimientoGestoria[]>([]);
+  readonly movimientosGenerales = signal<MovimientoGestoria[]>([]);
+
+  private readonly _movimientosDeCasos = signal<MovimientoGestoria[]>([]);
+  readonly todosMovimientos = computed(() => [
+    ...this._movimientosDeCasos(),
+    ...this.movimientosGenerales(),
+  ]);
+
   readonly retiros = signal<Retiro[]>([]);
   readonly slots = signal<GestoriaSlot[]>([]);
   readonly loading = signal(false);
@@ -45,6 +53,7 @@ export class GestoriaService {
 
   private movimientosUnsub: Unsubscribe | null = null;
   private todosMovimientosUnsub: Unsubscribe | null = null;
+  private movimientosGeneralesUnsub: Unsubscribe | null = null;
   private retirosUnsub: Unsubscribe | null = null;
 
   private get companyId(): string {
@@ -63,6 +72,14 @@ export class GestoriaService {
 
   private retirosRef() {
     return collection(this.firestore, 'companies', this.companyId, 'retiros');
+  }
+
+  private movimientosGeneralesRef() {
+    return collection(this.firestore, 'companies', this.companyId, 'movimientos_generales');
+  }
+
+  private movimientoGeneralDocRef(id: string) {
+    return doc(this.firestore, 'companies', this.companyId, 'movimientos_generales', id);
   }
 
   async loadSlots(casoId: string): Promise<void> {
@@ -208,37 +225,73 @@ export class GestoriaService {
       orderBy('fecha', 'desc'),
     );
     this.todosMovimientosUnsub = onSnapshot(q, snapshot => {
-      this.todosMovimientos.set(
+      this._movimientosDeCasos.set(
         snapshot.docs.map(d => ({ id: d.id, ...d.data() }) as MovimientoGestoria)
       );
       this.todosLoading.set(false);
+    });
+
+    this.movimientosGeneralesUnsub?.();
+    const qGen = query(this.movimientosGeneralesRef(), orderBy('fecha', 'desc'));
+    this.movimientosGeneralesUnsub = onSnapshot(qGen, snapshot => {
+      this.movimientosGenerales.set(
+        snapshot.docs.map(d => ({ id: d.id, ...d.data() }) as MovimientoGestoria)
+      );
     });
   }
 
   stopTodosMovimientos(): void {
     this.todosMovimientosUnsub?.();
     this.todosMovimientosUnsub = null;
+    this.movimientosGeneralesUnsub?.();
+    this.movimientosGeneralesUnsub = null;
   }
 
-  async aprobarMovimiento(casoId: string, movId: string, aprobado: boolean): Promise<void> {
+  async addMovimientoGeneral(data: MovimientoGeneralCreate): Promise<void> {
+    await addDoc(this.movimientosGeneralesRef(), {
+      ...stripUndefinedDeep(data as Record<string, unknown>),
+      companyId: this.companyId,
+      createdBy: this.auth.currentUser?.uid ?? '',
+      createdAt: serverTimestamp(),
+    });
+  }
+
+  async updateMovimientoGeneral(id: string, data: Partial<MovimientoGeneralCreate>): Promise<void> {
+    await updateDoc(this.movimientoGeneralDocRef(id), stripUndefinedDeep(data as Record<string, unknown>));
+  }
+
+  async deleteMovimientoGeneral(id: string): Promise<void> {
+    await deleteDoc(this.movimientoGeneralDocRef(id));
+    this.movimientosGenerales.update(list => list.filter(m => m.id !== id));
+  }
+
+  async aprobarMovimiento(casoId: string | undefined, movId: string, aprobado: boolean): Promise<void> {
     const uid = this.auth.currentUser?.uid ?? '';
-    const docRef = doc(this.firestore, 'companies', this.companyId, 'casos', casoId, 'gestoria', movId);
+    const docRef = casoId
+      ? doc(this.firestore, 'companies', this.companyId, 'casos', casoId, 'gestoria', movId)
+      : this.movimientoGeneralDocRef(movId);
     await updateDoc(docRef, {
       aprobado,
       aprobadoAt: aprobado ? serverTimestamp() : null,
       aprobadoPor: aprobado ? uid : null,
     });
-    this.todosMovimientos.update(list =>
-      list.map(m => m.id === movId ? { ...m, aprobado } : m)
-    );
+    if (!casoId) {
+      this.movimientosGenerales.update(list =>
+        list.map(m => m.id === movId ? { ...m, aprobado } : m)
+      );
+    }
   }
 
-  async cambiarCuenta(casoId: string, movId: string, cuentaId: string | null): Promise<void> {
-    const docRef = doc(this.firestore, 'companies', this.companyId, 'casos', casoId, 'gestoria', movId);
+  async cambiarCuenta(casoId: string | undefined, movId: string, cuentaId: string | null): Promise<void> {
+    const docRef = casoId
+      ? doc(this.firestore, 'companies', this.companyId, 'casos', casoId, 'gestoria', movId)
+      : this.movimientoGeneralDocRef(movId);
     await updateDoc(docRef, { cuentaId: cuentaId ?? deleteField() });
-    this.todosMovimientos.update(list =>
-      list.map(m => m.id === movId ? { ...m, cuentaId: cuentaId ?? undefined } : m)
-    );
+    if (!casoId) {
+      this.movimientosGenerales.update(list =>
+        list.map(m => m.id === movId ? { ...m, cuentaId: cuentaId ?? undefined } : m)
+      );
+    }
   }
 
   async aprobarTodos(movimientos: MovimientoGestoria[]): Promise<void> {
@@ -246,12 +299,14 @@ export class GestoriaService {
     const companyId = this.companyId;
     const batch = writeBatch(this.firestore);
     for (const mov of movimientos) {
-      const docRef = doc(this.firestore, 'companies', companyId, 'casos', mov.casoId, 'gestoria', mov.id);
+      const docRef = mov.casoId
+        ? doc(this.firestore, 'companies', companyId, 'casos', mov.casoId, 'gestoria', mov.id)
+        : doc(this.firestore, 'companies', companyId, 'movimientos_generales', mov.id);
       batch.update(docRef, { aprobado: true, aprobadoAt: serverTimestamp(), aprobadoPor: uid });
     }
     await batch.commit();
     const ids = new Set(movimientos.map(m => m.id));
-    this.todosMovimientos.update(list =>
+    this.movimientosGenerales.update(list =>
       list.map(m => ids.has(m.id) ? { ...m, aprobado: true } : m)
     );
   }
