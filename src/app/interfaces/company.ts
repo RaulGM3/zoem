@@ -27,9 +27,22 @@ export type CompanyPlan = 'free' | 'pro' | 'enterprise';
 
 export type CompanyStatus = 'active' | 'inactive' | 'trial';
 
+export type TipoPersona = 'fisica' | 'juridica';
+
+export interface CompanyVerifactu {
+  enabled: boolean;
+  /** true → prewww1.aeat.es (sandbox AEAT), false → producción real */
+  sandbox: boolean;
+  certNif?: string;
+  certTitular?: string;
+  certExpiry?: string;
+  certStoredAt?: string;
+}
+
 export interface Company {
   id?: string;
   name: string;
+  tipoPersona: TipoPersona;
   ca: ComunidadAutonoma;
   rubro: Rubro;
   email: string;
@@ -43,6 +56,7 @@ export interface Company {
   descripcion?: string;
   plan: CompanyPlan;
   status: CompanyStatus;
+  verifactu?: CompanyVerifactu;
   createdAt: Timestamp | Date;
   updatedAt: Timestamp | Date;
   createdBy?: string;

@@ -4,6 +4,16 @@
     <h1 class="text-[22px] font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Facturación</h1>
     <p class="mt-1 text-sm" style="color:var(--text-muted)">Sumatoria de la gestoría de los casos abiertos y cierre controlado</p>
   </div>
+  <button (click)="activeTab.set('configuracion')"
+    class="inline-flex items-center gap-2 self-start rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150"
+    style="border:1px solid var(--border);color:var(--text-muted)"
+    [style.background]="activeTab() === 'configuracion' ? 'var(--surface-2)' : ''"
+    [style.color]="activeTab() === 'configuracion' ? 'var(--brand)' : 'var(--text-muted)'"
+    (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+    (mouseleave)="$any($event.currentTarget).style.background= activeTab() === 'configuracion' ? 'var(--surface-2)' : ''">
+    <lucide-icon [img]="SettingsIcon" size="15"></lucide-icon>
+    Configuración
+  </button>
 </div>
 
 <!-- Summary Cards: sumatoria de casos abiertos -->
@@ -51,7 +61,7 @@
 <!-- Tabs -->
 <div class="rounded-xl overflow-hidden" style="border:1px solid var(--border);background:var(--surface)">
   <div class="flex overflow-x-auto" style="border-bottom:1px solid var(--border)">
-    @for (tab of [['casos','Casos abiertos'],['archivo','Archivo'],['fiscal','Panel Fiscal'],['horas','Registro de Horas']]; track tab[0]) {
+    @for (tab of [['casos','Casos abiertos'],['archivo','Archivo'],['fiscal','Panel Fiscal'],['horas','Registro de Horas'],['configuracion','Configuración']]; track tab[0]) {
       <button (click)="activeTab.set($any(tab[0]))"
         class="px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors duration-150"
         [style.color]="activeTab() === tab[0] ? 'var(--brand)' : 'var(--text-muted)'"
@@ -108,6 +118,22 @@
                       style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">
                       <lucide-icon [img]="FileCheckIcon" size="13"></lucide-icon> Facturado
                     </span>
+                    @if (pdfUrl(caso.facturaId)) {
+                      <button (click)="downloadPdf(caso.facturaId)" title="Descargar PDF"
+                        class="inline-flex items-center justify-center rounded-lg p-1.5 transition-colors duration-150"
+                        style="border:1px solid var(--border);color:var(--text-muted)"
+                        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                        (mouseleave)="$any($event.currentTarget).style.background=''">
+                        <lucide-icon [img]="DownloadIcon" size="14"></lucide-icon>
+                      </button>
+                      <button (click)="copyPdfLink(caso.facturaId)" title="Copiar link de descarga"
+                        class="inline-flex items-center justify-center rounded-lg p-1.5 transition-colors duration-150"
+                        style="border:1px solid var(--border);color:var(--text-muted)"
+                        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                        (mouseleave)="$any($event.currentTarget).style.background=''">
+                        <lucide-icon [img]="LinkIcon" size="14"></lucide-icon>
+                      </button>
+                    }
                   } @else if (perm.can('Facturación', 'crear')) {
                     <button (click)="abrirFactura(caso)" [disabled]="!esEjecutado(caso)"
                       class="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40"
@@ -171,7 +197,7 @@
               <td class="px-4 py-4 text-xs" style="color:var(--text-muted)">{{ caso.cierreConfirmadoAt ? (caso.cierreConfirmadoAt | slice:0:10) : '—' }}</td>
               <td class="px-4 py-4">
                 @if (caso.facturaId) {
-                  <div class="flex flex-col gap-1">
+                  <div class="flex flex-col gap-1.5">
                     <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium"
                       style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">
                       <lucide-icon [img]="FileCheckIcon" size="13"></lucide-icon> Emitida
@@ -183,6 +209,26 @@
                         <lucide-icon [img]="verifactuBadgeIcon(caso.facturaId)" size="12"></lucide-icon>
                         {{ vf.estado === 'enviado' ? 'Verifactu ✓' : vf.estado === 'error' ? 'Error AEAT' : 'Pendiente AEAT' }}
                       </span>
+                    }
+                    @if (pdfUrl(caso.facturaId)) {
+                      <div class="flex items-center gap-1.5">
+                        <button (click)="downloadPdf(caso.facturaId)"
+                          class="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition-colors duration-150"
+                          style="border:1px solid var(--border);color:var(--text-muted)"
+                          title="Descargar PDF"
+                          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                          (mouseleave)="$any($event.currentTarget).style.background=''">
+                          <lucide-icon [img]="DownloadIcon" size="12"></lucide-icon> Descargar
+                        </button>
+                        <button (click)="copyPdfLink(caso.facturaId)"
+                          class="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition-colors duration-150"
+                          style="border:1px solid var(--border);color:var(--text-muted)"
+                          title="Copiar link de descarga"
+                          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                          (mouseleave)="$any($event.currentTarget).style.background=''">
+                          <lucide-icon [img]="LinkIcon" size="12"></lucide-icon> Copiar link
+                        </button>
+                      </div>
                     }
                   </div>
                 } @else {
@@ -298,6 +344,89 @@
           </tbody>
         </table>
       </div>
+    </div>
+  }
+
+  <!-- TAB: Configuración -->
+  @if (activeTab() === 'configuracion') {
+    <div class="p-5 space-y-6 max-w-2xl">
+
+      <!-- Datos de facturación -->
+      <div class="rounded-xl overflow-hidden" style="border:1px solid var(--border)">
+        <div class="flex items-center gap-2 px-5 py-4" style="border-bottom:1px solid var(--border);background:var(--surface-2)">
+          <lucide-icon [img]="Building2Icon" size="16" style="color:var(--text-muted)"></lucide-icon>
+          <h3 class="text-sm font-semibold" style="color:var(--text-strong)">Datos de facturación</h3>
+        </div>
+        <form [formGroup]="configForm" (ngSubmit)="saveConfig()" class="p-5 space-y-4">
+
+          <!-- Tipo de persona -->
+          <div>
+            <label class="form-label">Tipo de persona</label>
+            <div class="flex gap-3 mt-1">
+              <label class="flex items-center gap-2 text-sm cursor-pointer" style="color:var(--text-body)">
+                <input type="radio" formControlName="tipoPersona" value="juridica" style="accent-color:var(--brand)" />
+                Jurídica (sociedad)
+              </label>
+              <label class="flex items-center gap-2 text-sm cursor-pointer" style="color:var(--text-body)">
+                <input type="radio" formControlName="tipoPersona" value="fisica" style="accent-color:var(--brand)" />
+                Física (autónomo)
+              </label>
+            </div>
+          </div>
+
+          <!-- Nombre -->
+          <div>
+            <label for="configName" class="form-label">Nombre / Razón social</label>
+            <input id="configName" type="text" formControlName="name" class="form-input" placeholder="Despacho Ejemplo S.L." />
+          </div>
+
+          <!-- CIF / NIF -->
+          <div>
+            <label for="configCif" class="form-label">{{ cifLabel() }}</label>
+            <input id="configCif" type="text" formControlName="cif" class="form-input"
+              [placeholder]="configForm.controls.tipoPersona.value === 'fisica' ? '12345678Z' : 'B12345678'" />
+          </div>
+
+          <!-- Verifactu -->
+          <div class="rounded-lg p-4 space-y-3" style="border:1px solid var(--border);background:var(--surface-2)">
+            <p class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-faint);font-family:var(--font-mono)">Verifactu (AEAT)</p>
+            <label class="flex items-center justify-between gap-4 cursor-pointer">
+              <span class="text-sm" style="color:var(--text-body)">Activar envío automático a AEAT</span>
+              <input type="checkbox" formControlName="verifactuEnabled" style="accent-color:var(--brand);width:1rem;height:1rem" />
+            </label>
+            <label class="flex items-center justify-between gap-4 cursor-pointer">
+              <span class="text-sm" style="color:var(--text-body)">
+                Modo sandbox
+                <span class="text-xs" style="color:var(--text-faint)">(prewww1.aeat.es — pruebas)</span>
+              </span>
+              <input type="checkbox" formControlName="verifactuSandbox" style="accent-color:var(--brand);width:1rem;height:1rem" />
+            </label>
+          </div>
+
+          <div class="flex justify-end pt-1">
+            <button type="submit" [disabled]="configForm.invalid || savingConfig()"
+              class="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50 transition-colors duration-150"
+              style="background:var(--brand)"
+              (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+              (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+              <lucide-icon [img]="SaveIcon" size="15"></lucide-icon>
+              {{ savingConfig() ? 'Guardando…' : 'Guardar cambios' }}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Certificado digital AEAT -->
+      <div class="rounded-xl overflow-hidden" style="border:1px solid var(--border)">
+        <div class="flex items-center gap-2 px-5 py-4" style="border-bottom:1px solid var(--border);background:var(--surface-2)">
+          <lucide-icon [img]="ShieldCheckIcon" size="16" style="color:var(--text-muted)"></lucide-icon>
+          <h3 class="text-sm font-semibold" style="color:var(--text-strong)">Certificado digital AEAT</h3>
+        </div>
+        <div class="p-5">
+          <app-credenciales-aeat></app-credenciales-aeat>
+        </div>
+      </div>
+
     </div>
   }
 </div>

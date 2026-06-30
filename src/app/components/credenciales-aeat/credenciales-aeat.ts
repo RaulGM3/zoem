@@ -10,6 +10,7 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Functions, httpsCallable } from '@angular/fire/functions';
 import { LucideAngularModule, ShieldCheck, ShieldAlert, ShieldX, Upload, Loader2 } from 'lucide-angular';
 import { CompanyService } from '../../core/services/company.service';
+import { ToastService } from '../../core/services/toast.service';
 
 type EstadoCert = 'sin_configurar' | 'activo' | 'expirado';
 
@@ -18,60 +19,81 @@ type EstadoCert = 'sin_configurar' | 'activo' | 'expirado';
   imports: [LucideAngularModule, ReactiveFormsModule, DatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="space-y-6">
-      <div class="flex items-center gap-3">
-        <lucide-icon [img]="iconEstado()" class="size-6" [class]="colorEstado()"></lucide-icon>
-        <div>
-          <p class="font-semibold text-sm">Certificado digital AEAT (Verifactu)</p>
-          <p class="text-xs text-neutral-400">{{ descripcionEstado() }}</p>
+    <div class="space-y-5">
+
+      <!-- Estado actual del certificado -->
+      <div class="flex items-start gap-3 rounded-lg p-4"
+        [style.background]="estadoCert() === 'activo' ? 'color-mix(in srgb,var(--success) 8%,transparent)' : estadoCert() === 'expirado' ? 'color-mix(in srgb,var(--warning) 8%,transparent)' : 'var(--surface-2)'"
+        [style.border]="'1px solid ' + (estadoCert() === 'activo' ? 'color-mix(in srgb,var(--success) 20%,transparent)' : estadoCert() === 'expirado' ? 'color-mix(in srgb,var(--warning) 20%,transparent)' : 'var(--border)')">
+        <lucide-icon [img]="iconEstado()" size="18" class="mt-0.5 shrink-0"
+          [style.color]="estadoCert() === 'activo' ? 'var(--success)' : estadoCert() === 'expirado' ? 'var(--warning)' : 'var(--text-faint)'">
+        </lucide-icon>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-semibold" style="color:var(--text-strong)">
+            {{ estadoCert() === 'activo' ? 'Certificado activo' : estadoCert() === 'expirado' ? 'Certificado expirado' : 'Sin certificado configurado' }}
+          </p>
+          <p class="text-xs mt-0.5" style="color:var(--text-muted)">{{ descripcionEstado() }}</p>
+
+          @if (company()?.verifactu?.certTitular) {
+            <dl class="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
+              <dt style="color:var(--text-faint)">Titular</dt>
+              <dd class="font-medium truncate" style="color:var(--text-body)">{{ company()!.verifactu!.certTitular }}</dd>
+              <dt style="color:var(--text-faint)">NIF cert.</dt>
+              <dd style="color:var(--text-body);font-family:var(--font-mono)">{{ company()!.verifactu!.certNif }}</dd>
+              <dt style="color:var(--text-faint)">Expira</dt>
+              <dd [style.color]="estadoCert() === 'expirado' ? 'var(--warning)' : 'var(--text-body)'">
+                {{ company()!.verifactu!.certExpiry | date:'dd/MM/yyyy' }}
+              </dd>
+              @if (company()!.verifactu!.certStoredAt) {
+                <dt style="color:var(--text-faint)">Subido</dt>
+                <dd style="color:var(--text-faint)">{{ company()!.verifactu!.certStoredAt | date:'dd/MM/yyyy HH:mm' }}</dd>
+              }
+            </dl>
+          }
         </div>
       </div>
 
-      @if (company()?.verifactu?.certTitular) {
-        <div class="rounded-lg bg-neutral-800 p-4 text-sm space-y-1">
-          <p><span class="text-neutral-400">Titular:</span> {{ company()!.verifactu!.certTitular }}</p>
-          <p><span class="text-neutral-400">NIF cert:</span> {{ company()!.verifactu!.certNif }}</p>
-          <p><span class="text-neutral-400">Expira:</span> {{ company()!.verifactu!.certExpiry | date:'dd/MM/yyyy' }}</p>
-        </div>
-      }
-
+      <!-- Formulario: subir nuevo certificado -->
       <form [formGroup]="form" (ngSubmit)="subir()" class="space-y-4">
+        <p class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-faint);font-family:var(--font-mono)">
+          {{ company()?.verifactu?.certTitular ? 'Reemplazar certificado' : 'Subir certificado' }}
+        </p>
+
         <div>
-          <label class="block text-xs text-neutral-400 mb-1">Archivo .pfx / .p12</label>
+          <label class="form-label">Archivo .pfx / .p12</label>
           <input
             type="file"
             accept=".pfx,.p12"
             (change)="onFileChange($event)"
-            class="block w-full text-sm text-neutral-300 file:mr-3 file:rounded-md file:border-0 file:bg-neutral-700 file:px-3 file:py-1.5 file:text-xs file:text-neutral-200 hover:file:bg-neutral-600"
+            class="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:px-3 file:py-1.5 file:text-xs file:font-medium file:cursor-pointer"
+            style="color:var(--text-muted);file:background:var(--surface-2);file:color:var(--text-body)"
           />
         </div>
 
         <div>
-          <label class="block text-xs text-neutral-400 mb-1">Contraseña del certificado</label>
+          <label class="form-label">Contraseña del certificado</label>
           <input
             type="password"
             formControlName="password"
             autocomplete="current-password"
             placeholder="••••••••"
-            class="w-full rounded-md bg-neutral-800 border border-neutral-700 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            class="form-input"
           />
         </div>
-
-        @if (error()) {
-          <p class="text-xs text-red-400">{{ error() }}</p>
-        }
 
         <button
           type="submit"
           [disabled]="!archivoBase64() || form.invalid || cargando()"
-          class="flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed"
+          class="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+          style="background:var(--brand)"
         >
           @if (cargando()) {
-            <lucide-icon [img]="Loader2Icon" class="size-4 animate-spin"></lucide-icon>
+            <lucide-icon [img]="Loader2Icon" size="15" class="animate-spin"></lucide-icon>
+            Guardando…
           } @else {
-            <lucide-icon [img]="UploadIcon" class="size-4"></lucide-icon>
+            <lucide-icon [img]="UploadIcon" size="15"></lucide-icon>
+            {{ company()?.verifactu?.certTitular ? 'Reemplazar certificado' : 'Guardar certificado' }}
           }
-          Guardar certificado
         </button>
       </form>
     </div>
@@ -87,11 +109,11 @@ export class CredencialesAeatComponent {
   private readonly fb = inject(FormBuilder);
   private readonly functions = inject(Functions);
   private readonly companyService = inject(CompanyService);
+  private readonly toast = inject(ToastService);
 
   readonly company = this.companyService.activeCompany;
 
   readonly cargando = signal(false);
-  readonly error = signal<string | null>(null);
   readonly archivoBase64 = signal<string | null>(null);
 
   readonly form = this.fb.group({
@@ -147,7 +169,6 @@ export class CredencialesAeatComponent {
     if (!pfxBase64 || !password || !companyId) return;
 
     this.cargando.set(true);
-    this.error.set(null);
 
     try {
       const fn = httpsCallable<
@@ -161,6 +182,7 @@ export class CredencialesAeatComponent {
       await this.companyService.updateCompany(companyId, {
         verifactu: {
           enabled: true,
+          sandbox: this.company()?.verifactu?.sandbox ?? false,
           certNif,
           certTitular,
           certExpiry,
@@ -170,8 +192,9 @@ export class CredencialesAeatComponent {
 
       this.form.reset();
       this.archivoBase64.set(null);
+      this.toast.success('Certificado guardado correctamente. Las facturas se enviarán automáticamente a Verifactu.');
     } catch (err) {
-      this.error.set(err instanceof Error ? err.message : 'Error al guardar el certificado');
+      this.toast.fromError(err, { title: 'No se pudo guardar el certificado' });
     } finally {
       this.cargando.set(false);
     }

@@ -1,22 +1,38 @@
-import { Component, signal, computed, inject, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, computed, inject, OnInit, effect, ChangeDetectionStrategy } from '@angular/core';
 import { DecimalPipe, SlicePipe } from '@angular/common';
+import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import {
   LucideAngularModule,
   Receipt, Search, Plus, TrendingUp, Clock, CheckCircle2,
   AlertCircle, Download, Send, Eye, MoreHorizontal, Euro,
-  FileText, ShieldCheck, ShieldAlert, ShieldX, ExternalLink, Timer, X, Archive, FileCheck,
+  FileText, ShieldCheck, ShieldAlert, ShieldX, ExternalLink, Timer, X, Archive, FileCheck, Link,
+  Settings, Save, Building2,
 } from 'lucide-angular';
 import type { VerifactuEstado } from '../../interfaces/verifactu.interface';
 import type { Invoice } from '../../core/services/invoice.service';
 import { REGISTRO_HORAS } from '../../data/dummy-data';
 import { CasosService } from '../../core/services/casos.service';
 import { InvoiceService, InvoiceLinea } from '../../core/services/invoice.service';
-import { CompanyService } from '../../core/services/company.service';
+import { InvoicePdfService } from '../../core/services/invoice-pdf.service';
+import { CompanyService, getLabelIdentificacion } from '../../core/services/company.service';
+import { ContactService } from '../../core/services/contact.service';
+import { getContactDisplayName, type Contact, type Direccion } from '../../interfaces/contact.interface';
+
+function getContactNif(c: Contact): string | undefined {
+  return c.type === 'persona_fisica' ? c.nif : c.cif;
+}
+
+function getContactDireccion(c: Contact): string | undefined {
+  const d: Direccion | undefined = c.type === 'persona_fisica' ? c.direccion : (c.direccionFiscal ?? c.direccionSocial);
+  if (!d) return undefined;
+  return [d.calle, d.numero, d.piso, d.codigoPostal, d.municipio, d.provincia].filter(Boolean).join(', ');
+}
 import { PermissionService } from '../../core/services/permission.service';
 import { ToastService } from '../../core/services/toast.service';
+import { CredencialesAeatComponent } from '../credenciales-aeat/credenciales-aeat';
 import { Caso, gestoriaCompleta } from '../../interfaces';
 
-type FacturacionTab = 'casos' | 'archivo' | 'fiscal' | 'horas';
+type FacturacionTab = 'casos' | 'archivo' | 'fiscal' | 'horas' | 'configuracion';
 
 const MODELOS_FISCALES = [
   { modelo: 'Modelo 303', descripcion: 'IVA — 2º Trimestre 2026', estado: 'pendiente', importe: 3240, vencimiento: '20 Jul 2026' },
@@ -28,15 +44,18 @@ const MODELOS_FISCALES = [
 @Component({
   selector: 'app-facturacion',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LucideAngularModule, DecimalPipe, SlicePipe],
+  imports: [LucideAngularModule, DecimalPipe, SlicePipe, ReactiveFormsModule, CredencialesAeatComponent],
   templateUrl: './facturacion.html',
 })
 export class FacturacionComponent implements OnInit {
   private readonly casosService = inject(CasosService);
   private readonly invoiceService = inject(InvoiceService);
+  private readonly invoicePdfService = inject(InvoicePdfService);
   protected readonly companyService = inject(CompanyService);
+  private readonly contactService = inject(ContactService);
   readonly perm = inject(PermissionService);
   private readonly toast = inject(ToastService);
+  private readonly fb = inject(FormBuilder);
 
   readonly ReceiptIcon = Receipt;
   readonly SearchIcon = Search;
@@ -59,8 +78,67 @@ export class FacturacionComponent implements OnInit {
   readonly XIcon = X;
   readonly ArchiveIcon = Archive;
   readonly FileCheckIcon = FileCheck;
+  readonly LinkIcon = Link;
+  readonly SettingsIcon = Settings;
+  readonly SaveIcon = Save;
+  readonly Building2Icon = Building2;
 
   activeTab = signal<FacturacionTab>('casos');
+
+  // --- Config: datos de facturación ---
+  readonly savingConfig = signal(false);
+
+  readonly cifLabel = computed(() => {
+    const c = this.companyService.activeCompany();
+    return c ? getLabelIdentificacion(c) : 'CIF / NIF';
+  });
+
+  readonly configForm = this.fb.nonNullable.group({
+    name: ['', Validators.required],
+    cif: [''],
+    tipoPersona: ['juridica' as 'fisica' | 'juridica'],
+    verifactuEnabled: [false],
+    verifactuSandbox: [false],
+  });
+
+  constructor() {
+    effect(() => {
+      const c = this.companyService.activeCompany();
+      if (c) {
+        this.configForm.patchValue({
+          name: c.name,
+          cif: c.cif ?? '',
+          tipoPersona: c.tipoPersona ?? 'juridica',
+          verifactuEnabled: c.verifactu?.enabled ?? false,
+          verifactuSandbox: c.verifactu?.sandbox ?? false,
+        }, { emitEvent: false });
+      }
+    });
+  }
+
+  async saveConfig(): Promise<void> {
+    const company = this.companyService.activeCompany();
+    if (!company?.id || this.savingConfig()) return;
+    const { name, cif, tipoPersona, verifactuEnabled, verifactuSandbox } = this.configForm.getRawValue();
+    this.savingConfig.set(true);
+    try {
+      await this.toast.run(
+        () => this.companyService.updateCompany(company.id, {
+          name: name.trim(),
+          cif: cif.trim() || undefined,
+          tipoPersona,
+          verifactu: {
+            ...company.verifactu,
+            enabled: verifactuEnabled,
+            sandbox: verifactuSandbox,
+          },
+        }),
+        { successMessage: 'Configuración guardada', errorTitle: 'No se pudo guardar la configuración' }
+      );
+    } finally {
+      this.savingConfig.set(false);
+    }
+  }
 
   // --- Casos (fuente real desde Firestore) ---
   private readonly casos = this.casosService.casos;
@@ -144,11 +222,20 @@ export class FacturacionComponent implements OnInit {
     if (!caso || this.saving()) return;
     this.saving.set(true);
     try {
+      const contactoId = caso.contactoIds?.[0];
+      let cliente: { nombre: string; nif?: string; direccion?: string } | undefined;
+      if (contactoId) {
+        const c = await this.contactService.getContact(contactoId).catch(() => null);
+        if (c) cliente = { nombre: getContactDisplayName(c), nif: getContactNif(c), direccion: getContactDireccion(c) };
+      }
+
       const facturaId = await this.toast.run(
         () => this.invoiceService.createInvoiceForCaso(
           caso.id,
           this.lineas().filter(l => l.base !== 0),
-          this.ivaRate() / 100
+          this.ivaRate() / 100,
+          caso.titulo,
+          cliente,
         ),
         { errorTitle: 'No se pudo generar la factura' }
       );
@@ -201,6 +288,26 @@ export class FacturacionComponent implements OnInit {
     } finally {
       this.saving.set(false);
     }
+  }
+
+  // --- PDF actions ---
+  pdfUrl(facturaId: string | undefined): string | undefined {
+    if (!facturaId) return undefined;
+    return this.invoiceMap().get(facturaId)?.pdfUrl;
+  }
+
+  downloadPdf(facturaId: string | undefined): void {
+    const url = this.pdfUrl(facturaId);
+    if (!url) return;
+    const invoice = this.invoiceMap().get(facturaId!);
+    this.invoicePdfService.downloadFromUrl(url, `${invoice?.invoiceNumber ?? 'factura'}.pdf`);
+  }
+
+  async copyPdfLink(facturaId: string | undefined): Promise<void> {
+    const url = this.pdfUrl(facturaId);
+    if (!url) return;
+    await navigator.clipboard.writeText(url);
+    this.toast.success('Link copiado al portapapeles');
   }
 
   // --- Verifactu helpers ---

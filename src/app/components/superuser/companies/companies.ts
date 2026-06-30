@@ -17,7 +17,7 @@ import {
   Trash2,
   X,
 } from 'lucide-angular';
-import { CA_LABELS, Company, CompanyPlan, RUBRO_LABELS } from '../../../interfaces/company';
+import { CA_LABELS, Company, CompanyPlan, RUBRO_LABELS, TipoPersona } from '../../../interfaces/company';
 import { SuperuserService } from '../../../services/superuser';
 import { ToastService } from '../../../core/services/toast.service';
 
@@ -49,6 +49,10 @@ export class CompaniesComponent {
   showForm = signal(false);
   editingId = signal<string | null>(null);
   saving = signal(false);
+  tipoPersona = signal<TipoPersona>('juridica');
+
+  cifLabel = computed(() => this.tipoPersona() === 'juridica' ? 'CIF' : 'NIF');
+  cifPlaceholder = computed(() => this.tipoPersona() === 'juridica' ? 'B12345678' : '12345678A');
 
   filteredCompanies = computed(() => {
     const q = this.search().toLowerCase();
@@ -64,6 +68,7 @@ export class CompaniesComponent {
 
   form = this.fb.group({
     name: ['', Validators.required],
+    tipoPersona: ['juridica' as TipoPersona, Validators.required],
     ca: ['madrid' as Company['ca'], Validators.required],
     rubro: ['abogados' as Company['rubro'], Validators.required],
     email: ['', [Validators.required, Validators.email]],
@@ -76,18 +81,30 @@ export class CompaniesComponent {
     descripcion: [''],
     plan: ['free' as Company['plan'], Validators.required],
     status: ['active' as Company['status'], Validators.required],
+    verifactuEnabled: [false],
+    verifactuSandbox: [true],
   });
+
+  constructor() {
+    this.form.get('tipoPersona')!.valueChanges.subscribe(v => {
+      this.tipoPersona.set((v ?? 'juridica') as TipoPersona);
+    });
+  }
 
   openCreate(): void {
     this.editingId.set(null);
-    this.form.reset({ ca: 'madrid', rubro: 'abogados', plan: 'free', status: 'active' });
+    this.form.reset({ ca: 'madrid', rubro: 'abogados', tipoPersona: 'juridica', plan: 'free', status: 'active', verifactuEnabled: false, verifactuSandbox: true });
+    this.tipoPersona.set('juridica');
     this.showForm.set(true);
   }
 
   openEdit(company: Company): void {
     this.editingId.set(company.id!);
+    const tipo = company.tipoPersona ?? 'juridica';
+    this.tipoPersona.set(tipo);
     this.form.patchValue({
       name: company.name,
+      tipoPersona: tipo,
       ca: company.ca,
       rubro: company.rubro,
       email: company.email,
@@ -100,6 +117,8 @@ export class CompaniesComponent {
       descripcion: company.descripcion ?? '',
       plan: company.plan,
       status: company.status,
+      verifactuEnabled: company.verifactu?.enabled ?? false,
+      verifactuSandbox: company.verifactu?.sandbox ?? true,
     });
     this.showForm.set(true);
   }
@@ -111,6 +130,7 @@ export class CompaniesComponent {
     const raw = this.form.getRawValue();
     const payload = {
       name: raw.name!,
+      tipoPersona: raw.tipoPersona!,
       ca: raw.ca!,
       rubro: raw.rubro!,
       email: raw.email!,
@@ -123,6 +143,7 @@ export class CompaniesComponent {
       descripcion: raw.descripcion || undefined,
       plan: raw.plan!,
       status: raw.status!,
+      verifactu: { enabled: !!raw.verifactuEnabled, sandbox: !!raw.verifactuSandbox },
     };
 
     const id = this.editingId();

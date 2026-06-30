@@ -16,6 +16,8 @@ import { stripUndefinedDeep } from '../firebase/sanitize';
 
 export interface CompanyVerifactu {
   enabled: boolean;
+  /** true → prewww1.aeat.es (sandbox AEAT), false → producción real */
+  sandbox: boolean;
   /** NIF del certificado digital almacenado en Secret Manager */
   certNif?: string;
   certTitular?: string;
@@ -27,10 +29,22 @@ export interface Company {
   id: string;
   name: string;
   slug: string;
-  /** NIF fiscal de la empresa (requerido para Verifactu) */
-  nif?: string;
+  /**
+   * Persona física (autónomo) → el identificador fiscal es un NIF.
+   * Persona jurídica (sociedad) → el identificador fiscal es un CIF.
+   * En ambos casos el valor se almacena en `cif`. El label cambia en la UI.
+   */
+  tipoPersona?: 'fisica' | 'juridica';
+  /** Identificador fiscal de la empresa. Para persona jurídica es el CIF,
+   *  para persona física es el NIF. Siempre se almacena en este campo. */
+  cif?: string;
   plan?: string;
   isActive: boolean;
+  email?: string;
+  telefono?: string;
+  direccion?: string;
+  codigoPostal?: string;
+  ciudad?: string;
   /** Saldo bancario real cargado manualmente, para cotejar con el sistema. */
   saldoBancario?: number;
   /** Fecha (ISO yyyy-mm-dd) en que se actualizó el saldo bancario. */
@@ -38,6 +52,16 @@ export interface Company {
   verifactu?: CompanyVerifactu;
   createdAt?: unknown;
   updatedAt?: unknown;
+}
+
+/** Identificador fiscal de la empresa (CIF o NIF según tipo). Siempre en `cif`. */
+export function getIdentificacionFiscal(company: Company): string | undefined {
+  return company.cif;
+}
+
+/** Label para mostrar en la UI: "CIF" para juridica, "NIF" para física. */
+export function getLabelIdentificacion(company: Company): string {
+  return company.tipoPersona === 'fisica' ? 'NIF' : 'CIF';
 }
 
 export interface CompanyMember {

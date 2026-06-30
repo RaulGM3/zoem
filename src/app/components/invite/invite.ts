@@ -179,7 +179,10 @@ export class InviteComponent implements OnInit {
       await this.companyService.loadMyCompanies(uid);
       await this.usersService.loadMembers();
       this.state.set('accepted');
-      setTimeout(() => this.router.navigate(['/']), 2000);
+      // Hard reload so onAuthStateChanged fires fresh with the user already a company
+      // member, avoiding the race between the auth callback's loadMyCompanies (which
+      // runs before acceptInvitation and finds 0 memberships) and this flow.
+      setTimeout(() => { window.location.href = '/'; }, 1500);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Error al crear la cuenta.';
       this.errorMessage.set(msg);
@@ -197,7 +200,7 @@ export class InviteComponent implements OnInit {
       await this.companyService.loadMyCompanies(uid);
       await this.usersService.loadMembers();
       this.state.set('accepted');
-      setTimeout(() => this.router.navigate(['/']), 2000);
+      setTimeout(() => { window.location.href = '/'; }, 1500);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Error al aceptar la invitación.';
       this.errorMessage.set(msg);

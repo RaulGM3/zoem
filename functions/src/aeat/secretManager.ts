@@ -22,7 +22,9 @@ export async function storeSecret(name: string, payload: Buffer): Promise<void> 
 }
 
 export async function getSecret(name: string): Promise<Buffer> {
-  const [version] = await client.accessSecretVersion({ name: `${name}/versions/latest` });
+  const versionName = `${name}/versions/latest`;
+  console.log(`[SecretManager] accessSecretVersion: ${versionName}`);
+  const [version] = await client.accessSecretVersion({ name: versionName });
   const data = version.payload?.data;
   if (!data) throw new Error(`Secret vacío: ${name}`);
   return Buffer.from(data as Uint8Array);

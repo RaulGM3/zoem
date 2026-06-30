@@ -10,6 +10,7 @@ import {
   updateProfile,
   type User,
 } from '@angular/fire/auth';
+import { Router } from '@angular/router';
 import { UserSyncService } from '../core/services/user-sync.service';
 import { CompanyService } from '../core/services/company.service';
 import { UsersService } from '../core/services/users';
@@ -17,6 +18,7 @@ import { UsersService } from '../core/services/users';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly auth = inject(Auth);
+  private readonly router = inject(Router);
   private readonly userSync = inject(UserSyncService);
   private readonly companyService = inject(CompanyService);
   private readonly usersService = inject(UsersService);
@@ -40,6 +42,11 @@ export class AuthService {
           this.userSync.currentUser.set(null);
           this.companyService.activeCompany.set(null);
           this.usersService.members.set([]);
+          const currentUrl = this.router.url;
+          const isPublicRoute = currentUrl.startsWith('/login') || currentUrl.startsWith('/invite');
+          if (!isPublicRoute) {
+            this.router.navigate(['/login']);
+          }
         }
       } catch (err) {
         // Un fallo de sincronización (red, permisos, Firestore offline) NO debe

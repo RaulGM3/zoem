@@ -16,7 +16,7 @@ interface StoreCredentialResponse {
 }
 
 export const storeAeatCredential = onCall<StoreCredentialRequest, Promise<StoreCredentialResponse>>(
-  { enforceAppCheck: false },
+  { enforceAppCheck: false, invoker: 'public' },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'Autenticación requerida');

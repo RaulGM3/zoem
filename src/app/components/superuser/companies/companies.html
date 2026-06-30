@@ -126,9 +126,9 @@
     aria-modal="true"
     aria-labelledby="company-form-title"
   >
-    <div class="w-full max-w-2xl rounded-xl border border-slate-700 bg-slate-900 shadow-2xl">
+    <div class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-xl border border-slate-700 bg-slate-900 shadow-2xl">
       <!-- Header -->
-      <div class="flex items-center justify-between border-b border-slate-800 px-6 py-4">
+      <div class="flex shrink-0 items-center justify-between border-b border-slate-800 px-6 py-4">
         <h2 id="company-form-title" class="text-lg font-semibold text-white">
           {{ editingId() ? 'Editar empresa' : 'Nueva empresa' }}
         </h2>
@@ -142,7 +142,37 @@
       </div>
 
       <!-- Body -->
-      <form [formGroup]="form" (ngSubmit)="save()" class="space-y-5 p-6">
+      <form [formGroup]="form" (ngSubmit)="save()" class="flex min-h-0 flex-1 flex-col">
+        <div class="flex-1 space-y-5 overflow-y-auto p-6">
+
+        <!-- Tipo de persona -->
+        <div>
+          <span class="mb-2 block text-xs font-medium text-slate-400">
+            Tipo de persona <span class="text-red-400">*</span>
+          </span>
+          <div class="flex gap-4" role="group" aria-label="Tipo de persona">
+            <label class="flex cursor-pointer items-center gap-2 text-sm text-slate-300">
+              <input
+                type="radio"
+                formControlName="tipoPersona"
+                value="juridica"
+                class="accent-violet-500"
+              />
+              Persona jurídica
+              <span class="text-xs text-slate-500">(empresa / S.L. / S.A.)</span>
+            </label>
+            <label class="flex cursor-pointer items-center gap-2 text-sm text-slate-300">
+              <input
+                type="radio"
+                formControlName="tipoPersona"
+                value="fisica"
+                class="accent-violet-500"
+              />
+              Persona física
+              <span class="text-xs text-slate-500">(autónomo)</span>
+            </label>
+          </div>
+        </div>
 
         <!-- Nombre -->
         <div>
@@ -258,16 +288,16 @@
           </div>
         </div>
 
-        <!-- CIF + Web -->
+        <!-- CIF/NIF + Web -->
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label for="co-cif" class="mb-1 block text-xs font-medium text-slate-400">CIF/NIF</label>
+            <label for="co-cif" class="mb-1 block text-xs font-medium text-slate-400">{{ cifLabel() }}</label>
             <input
               id="co-cif"
               type="text"
               formControlName="cif"
               class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-violet-500 focus:outline-none"
-              placeholder="B12345678"
+              [placeholder]="cifPlaceholder()"
             />
           </div>
           <div>
@@ -310,6 +340,44 @@
           </div>
         </div>
 
+        <!-- Verifactu -->
+        <div class="space-y-2 rounded-lg border border-slate-700 bg-slate-800/50 px-4 py-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-slate-200">Verifactu</p>
+              <p class="text-xs text-slate-500">Envío automático de facturas a la AEAT</p>
+            </div>
+            <label class="relative inline-flex cursor-pointer items-center">
+              <input
+                id="co-verifactu"
+                type="checkbox"
+                formControlName="verifactuEnabled"
+                class="peer sr-only"
+              />
+              <div class="h-5 w-9 rounded-full bg-slate-600 transition-colors peer-checked:bg-violet-600 peer-focus-visible:ring-2 peer-focus-visible:ring-violet-500 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-slate-900"></div>
+              <div class="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform peer-checked:translate-x-4"></div>
+            </label>
+          </div>
+          @if (form.get('verifactuEnabled')?.value) {
+            <div class="flex items-center justify-between border-t border-slate-700 pt-2">
+              <div>
+                <p class="text-sm font-medium text-amber-400">Modo sandbox</p>
+                <p class="text-xs text-slate-500">Usa prewww1.aeat.es — desactívalo para producción real</p>
+              </div>
+              <label class="relative inline-flex cursor-pointer items-center">
+                <input
+                  id="co-verifactu-sandbox"
+                  type="checkbox"
+                  formControlName="verifactuSandbox"
+                  class="peer sr-only"
+                />
+                <div class="h-5 w-9 rounded-full bg-slate-600 transition-colors peer-checked:bg-amber-500 peer-focus-visible:ring-2 peer-focus-visible:ring-amber-500 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-slate-900"></div>
+                <div class="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform peer-checked:translate-x-4"></div>
+              </label>
+            </div>
+          }
+        </div>
+
         <!-- Descripción -->
         <div>
           <label for="co-desc" class="mb-1 block text-xs font-medium text-slate-400">
@@ -324,8 +392,10 @@
           ></textarea>
         </div>
 
+        </div><!-- end scrollable body -->
+
         <!-- Actions -->
-        <div class="flex justify-end gap-3 border-t border-slate-800 pt-4">
+        <div class="flex shrink-0 justify-end gap-3 border-t border-slate-800 px-6 py-4">
           <button
             type="button"
             (click)="showForm.set(false)"

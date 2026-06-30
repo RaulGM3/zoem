@@ -1,11 +1,9 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
-import { defineString } from 'firebase-functions/params';
 import * as forge from 'node-forge';
 import * as https from 'https';
 import { certSecretName, getSecret } from './secretManager';
 import { assertCompanyAccess } from '../lib/assertCompanyAccess';
 
-const verifactuEnv = defineString('VERIFACTU_ENV', { default: 'sandbox' });
 
 const AEAT_ENDPOINTS: Record<string, string> = {
   sandbox: 'https://prewww1.aeat.es/wlpl/TIKE-CONT/ws/SistemaVerifactu',
@@ -15,6 +13,8 @@ const AEAT_ENDPOINTS: Record<string, string> = {
 interface VerifactuSubmitRequest {
   companyId: string;
   registro: Record<string, unknown>;
+  /** Si true → endpoint sandbox AEAT (prewww1.aeat.es). Por defecto true si no se indica. */
+  sandbox?: boolean;
 }
 
 interface VerifactuSubmitResponse {
@@ -140,13 +140,13 @@ function isAceptado(xml: string): boolean {
 }
 
 export const verifactuSubmit = onCall<VerifactuSubmitRequest, Promise<VerifactuSubmitResponse>>(
-  { enforceAppCheck: false, timeoutSeconds: 60 },
+  { enforceAppCheck: false, timeoutSeconds: 60, invoker: 'public' },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'Autenticación requerida');
     }
 
-    const { companyId, registro } = request.data;
+    const { companyId, registro, sandbox } = request.data;
     if (!companyId || !registro) {
       throw new HttpsError('invalid-argument', 'Faltan parámetros requeridos');
     }
@@ -155,14 +155,21 @@ export const verifactuSubmit = onCall<VerifactuSubmitRequest, Promise<VerifactuS
     // puede emitir facturas a AEAT con su certificado. Las rules NO aplican acá.
     await assertCompanyAccess(request.auth.uid, companyId);
 
+    // sandbox=true (o undefined → safe default) → endpoint de preproducción AEAT
+    const useSandbox = sandbox !== false;
+    const endpoint = useSandbox ? AEAT_ENDPOINTS['sandbox']! : AEAT_ENDPOINTS['production']!;
+    console.log(`[Verifactu] Enviando a ${useSandbox ? 'SANDBOX' : 'PRODUCCIÓN'}: ${endpoint}`);
+
     const secretName = certSecretName(companyId);
 
+    console.log(`[Verifactu] Buscando secret: ${secretName}`);
     let pfxBuffer: Buffer;
     let password: string;
     try {
       pfxBuffer = await getSecret(secretName);
       password = (await getSecret(`${secretName}-pwd`)).toString('utf-8');
-    } catch {
+    } catch (err) {
+      console.error(`[Verifactu] Error accediendo Secret Manager (${secretName}):`, err);
       throw new HttpsError('not-found', 'Certificado AEAT no configurado para esta empresa');
     }
 
@@ -185,7 +192,6 @@ export const verifactuSubmit = onCall<VerifactuSubmitRequest, Promise<VerifactuS
     }
 
     const soapBody = buildSoapEnvelope(registro);
-    const endpoint = AEAT_ENDPOINTS[verifactuEnv.value()] ?? AEAT_ENDPOINTS['sandbox']!;
 
     let rawResponse: string;
     try {

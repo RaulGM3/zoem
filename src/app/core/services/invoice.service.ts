@@ -13,8 +13,9 @@ import {
   serverTimestamp,
 } from '@angular/fire/firestore';
 import { Functions, httpsCallable } from '@angular/fire/functions';
-import { CompanyService } from './company.service';
+import { CompanyService, getIdentificacionFiscal } from './company.service';
 import { VerifactuClientService } from './verifactu-client.service';
+import { InvoicePdfService } from './invoice-pdf.service';
 import { stripUndefinedDeep } from '../firebase/sanitize';
 import { VerifactuEstado, VerifactuSubmitResponse } from '../../interfaces/verifactu.interface';
 
@@ -32,6 +33,13 @@ export interface Invoice {
   contactId?: string;
   projectId?: string;
   casoId?: string;
+  casoTitulo?: string;
+  clienteNombre?: string;
+  clienteNif?: string;
+  clienteDireccion?: string;
+  lineas?: InvoiceLinea[];
+  ivaRate?: number;
+  pdfUrl?: string;
   verifactu?: VerifactuEstado;
   createdAt?: unknown;
   updatedAt?: unknown;
@@ -53,6 +61,7 @@ export class InvoiceService {
   private readonly functions = inject(Functions);
   private readonly companyService = inject(CompanyService);
   private readonly verifactuClient = inject(VerifactuClientService);
+  private readonly pdfService = inject(InvoicePdfService);
 
   readonly invoices = signal<Invoice[]>([]);
   readonly isLoading = signal(false);
@@ -113,7 +122,13 @@ export class InvoiceService {
    * Genera una factura para un caso a partir de líneas editables. El IVA se aplica
    * por línea según `aplicaIva` y la tasa `ivaRate` (p. ej. 0.21). Devuelve el id.
    */
-  async createInvoiceForCaso(casoId: string, lineas: InvoiceLinea[], ivaRate: number): Promise<string> {
+  async createInvoiceForCaso(
+    casoId: string,
+    lineas: InvoiceLinea[],
+    ivaRate: number,
+    casoTitulo?: string,
+    cliente?: { nombre: string; nif?: string; direccion?: string },
+  ): Promise<string> {
     const amount = lineas.reduce((s, l) => s + l.base, 0);
     const vat = lineas.reduce((s, l) => s + (l.aplicaIva ? l.base * ivaRate : 0), 0);
     const total = amount + vat;
@@ -130,32 +145,67 @@ export class InvoiceService {
       issueDate: issue.toISOString().slice(0, 10),
       dueDate: due.toISOString().slice(0, 10),
       casoId,
+      casoTitulo,
+      clienteNombre: cliente?.nombre,
+      clienteNif: cliente?.nif,
+      clienteDireccion: cliente?.direccion,
+      lineas,
+      ivaRate,
     };
 
     const invoiceId = await this.createInvoice(invoiceData);
-    const company = this.companyService.activeCompany();
+    console.log('[Verifactu] Factura creada en Firestore:', { invoiceId, invoiceData });
 
-    if (company?.verifactu?.enabled && company.nif) {
+    const company = this.companyService.activeCompany();
+    const identificacion = company ? getIdentificacionFiscal(company) : undefined;
+    console.log('[Verifactu] Guard check:', {
+      companyId: company?.id,
+      tipoPersona: company?.tipoPersona ?? '⚠️ SIN TIPO',
+      identificacion: identificacion ?? '⚠️ SIN NIF/CIF',
+      verifactuEnabled: company?.verifactu?.enabled ?? '⚠️ DISABLED',
+      pasa: !!(company?.verifactu?.enabled && identificacion),
+    });
+
+    if (company?.verifactu?.enabled && identificacion) {
       const fullInvoice: Invoice = { id: invoiceId, companyId: company.id, ...invoiceData };
       this.submitVerifactu(invoiceId, fullInvoice, company.id);
+    } else {
+      console.warn('[Verifactu] ⛔ Submit cancelado — falta NIF/CIF o verifactu.enabled=false en la empresa');
+    }
+
+    // Genera PDF y guarda la URL en Firestore (fire-and-forget — no bloquea el flujo principal)
+    if (company?.id) {
+      const fullInvoice: Invoice = { id: invoiceId, companyId: company.id, ...invoiceData };
+      this.pdfService.generateAndUpload(fullInvoice)
+        .then(pdfUrl => this.updateInvoice(invoiceId, { pdfUrl }))
+        .catch(err => console.error('[PDF] Error generando PDF de factura:', err));
     }
 
     return invoiceId;
   }
 
   private submitVerifactu(invoiceId: string, invoice: Invoice, companyId: string): void {
+    const company = this.companyService.activeCompany();
+    const sandbox = company?.verifactu?.sandbox ?? true;
+    console.log('[Verifactu] Iniciando submit para factura:', invoiceId, '| sandbox:', sandbox);
     this.verifactuClient
       .prepareVerifactu(invoice, companyId)
       .then(async ({ registro, estadoInicial }) => {
+        console.log('[Verifactu] Registro preparado:', JSON.stringify(registro, null, 2));
+        console.log('[Verifactu] Estado inicial:', estadoInicial);
+
         await this.updateInvoice(invoiceId, { verifactu: estadoInicial });
+        console.log('[Verifactu] Estado "pendiente" guardado en Firestore');
 
         const fn = httpsCallable<
-          { companyId: string; registro: unknown },
+          { companyId: string; registro: unknown; sandbox: boolean },
           VerifactuSubmitResponse
         >(this.functions, 'verifactuSubmit');
 
+        console.log('[Verifactu] Llamando Cloud Function verifactuSubmit...');
         try {
-          const result = await fn({ companyId, registro });
+          const result = await fn({ companyId, registro, sandbox });
+          console.log('[Verifactu] Respuesta Cloud Function:', result.data);
           const { csv, estado } = result.data;
           const verifactuFinal: VerifactuEstado = {
             ...estadoInicial,
@@ -163,8 +213,21 @@ export class InvoiceService {
             csv: csv || undefined,
             enviadoAt: new Date().toISOString(),
           };
+          console.log('[Verifactu] Estado final a persistir:', verifactuFinal);
           await this.updateInvoice(invoiceId, { verifactu: verifactuFinal });
+
+          // Regenerar PDF con QR de Verifactu si fue aceptado
+          if (verifactuFinal.estado === 'enviado') {
+            const company = this.companyService.activeCompany();
+            if (company?.id) {
+              const updatedInvoice: Invoice = { ...invoice, id: invoiceId, verifactu: verifactuFinal };
+              this.pdfService.generateAndUpload(updatedInvoice)
+                .then(pdfUrl => this.updateInvoice(invoiceId, { pdfUrl }))
+                .catch(err => console.error('[PDF] Error regenerando PDF con QR Verifactu:', err));
+            }
+          }
         } catch (err) {
+          console.error('[Verifactu] ❌ Cloud Function falló:', err);
           const verifactuError: VerifactuEstado = {
             ...estadoInicial,
             estado: 'error',
@@ -173,8 +236,8 @@ export class InvoiceService {
           await this.updateInvoice(invoiceId, { verifactu: verifactuError });
         }
       })
-      .catch(() => {
-        // Si falla la preparación local (ej. sin NIF) no bloqueamos la factura
+      .catch((err) => {
+        console.error('[Verifactu] ❌ prepareVerifactu falló (silenciado):', err);
       });
   }
 

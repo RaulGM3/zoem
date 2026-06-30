@@ -8,7 +8,7 @@ import {
   orderBy,
   limit,
 } from '@angular/fire/firestore';
-import { CompanyService } from './company.service';
+import { CompanyService, getIdentificacionFiscal } from './company.service';
 import type { Invoice } from './invoice.service';
 import type {
   VerifactuDesgloseIVA,
@@ -30,13 +30,17 @@ export class VerifactuClientService {
   buildRegistro(invoice: Invoice, huellaAnterior: string): VerifactuRegistro {
     const company = this.companyService.activeCompany();
     if (!company) throw new Error('No active company');
-    if (!company.nif) throw new Error('La empresa no tiene NIF configurado');
+    const identificacion = getIdentificacionFiscal(company);
+    if (!identificacion) {
+      const label = company.tipoPersona === 'fisica' ? 'NIF' : 'CIF';
+      throw new Error(`La empresa no tiene ${label} configurado`);
+    }
 
     const [year, month, day] = invoice.issueDate.split('-');
     const fechaAeat = `${day}-${month}-${year}`; // dd-mm-yyyy
 
     const idFactura: VerifactuIDFactura = {
-      NIF: company.nif,
+      NIF: identificacion,
       NumSerieFactura: invoice.invoiceNumber,
       FechaExpedicionFactura: fechaAeat,
     };
@@ -121,6 +125,7 @@ export class VerifactuClientService {
    * para esta empresa. Devuelve cadena vacía si es la primera.
    */
   async getLastHuella(companyId: string): Promise<string> {
+    console.log('[Verifactu] Buscando última huella para companyId:', companyId);
     const q = query(
       collection(this.firestore, 'invoices'),
       where('companyId', '==', companyId),
@@ -129,6 +134,8 @@ export class VerifactuClientService {
       limit(1),
     );
     const snap = await getDocs(q);
+    const huella = snap.empty ? '' : ((snap.docs[0].data() as { verifactu?: VerifactuEstado }).verifactu?.huella ?? '');
+    console.log('[Verifactu] Última huella:', snap.empty ? '(ninguna — primera factura)' : huella);
     if (snap.empty) return '';
     const data = snap.docs[0].data() as { verifactu?: VerifactuEstado };
     return data.verifactu?.huella ?? '';
@@ -144,8 +151,13 @@ export class VerifactuClientService {
   ): Promise<{ registro: VerifactuRegistro; estadoInicial: VerifactuEstado }> {
     const huellaAnterior = await this.getLastHuella(companyId);
     const registro = this.buildRegistro(invoice, huellaAnterior);
+    console.log('[Verifactu] buildRegistro resultado:', JSON.stringify(registro, null, 2));
+
     const huella = await this.computeHash(registro);
+    console.log('[Verifactu] SHA-256 calculado:', huella);
+
     const qrUrl = this.generateQrUrl(registro);
+    console.log('[Verifactu] QR URL:', qrUrl);
 
     const estadoInicial: VerifactuEstado = {
       estado: 'pendiente',
