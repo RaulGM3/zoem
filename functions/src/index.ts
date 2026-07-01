@@ -207,3 +207,6 @@ export { verifactuSubmit } from './aeat/verifactuSubmit';
 
 // ─── Generación de documentos ────────────────────────────────────────────────
 export { generateDocx } from './htmlToDocx';
+
+// ─── Push Notifications ──────────────────────────────────────────────────────
+export { sendPushNotification } from './notifications';

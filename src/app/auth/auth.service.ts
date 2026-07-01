@@ -14,6 +14,7 @@ import { Router } from '@angular/router';
 import { UserSyncService } from '../core/services/user-sync.service';
 import { CompanyService } from '../core/services/company.service';
 import { UsersService } from '../core/services/users';
+import { PushNotificationService } from '../core/services/push-notification.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -22,6 +23,7 @@ export class AuthService {
   private readonly userSync = inject(UserSyncService);
   private readonly companyService = inject(CompanyService);
   private readonly usersService = inject(UsersService);
+  private readonly pushNotifications = inject(PushNotificationService);
 
   readonly user = signal<User | null>(null);
   readonly isLoading = signal(true);
@@ -38,6 +40,7 @@ export class AuthService {
           // usuario esté disponible app-wide (sidebar, dashboard) sin importar por
           // qué ruta entre. El permissionGuard ya no es el único que los carga.
           await this.usersService.loadMembers();
+          void this.pushNotifications.init();
         } else {
           this.userSync.currentUser.set(null);
           this.companyService.activeCompany.set(null);

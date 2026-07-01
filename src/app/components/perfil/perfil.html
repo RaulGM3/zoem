@@ -2,18 +2,20 @@
   <!-- Header -->
   <div class="flex items-center justify-between">
     <div class="flex items-center gap-3">
-      <div class="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center">
-        <lucide-icon [img]="UserIcon" class="w-5 h-5 text-violet-600" />
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center"
+        style="background:color-mix(in srgb,var(--brand) 12%,transparent)">
+        <lucide-icon [img]="UserIcon" class="w-5 h-5" style="color:var(--brand)" />
       </div>
       <div>
-        <h1 class="text-xl font-semibold text-slate-800">Mi Perfil</h1>
-        <p class="text-sm text-slate-700 font-medium">Información personal y profesional</p>
+        <h1 class="text-xl font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Mi Perfil</h1>
+        <p class="text-sm font-medium" style="color:var(--text-muted)">Información personal y profesional</p>
       </div>
     </div>
     <button
       (click)="guardar()"
       [disabled]="guardando()"
-      [class]="'flex items-center gap-2 px-4 py-2 text-sm rounded-lg font-medium transition-colors disabled:opacity-60 ' + (guardado() ? 'bg-emerald-600 text-white' : 'bg-violet-600 text-white hover:bg-violet-700')">
+      class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg font-medium transition-colors disabled:opacity-60 text-white"
+      [style.background]="guardado() ? 'var(--success)' : 'var(--brand)'">
       @if (guardando()) {
         <lucide-icon [img]="LoaderIcon" class="w-4 h-4 animate-spin" />Guardando…
       } @else if (guardado()) {
@@ -27,57 +29,73 @@
   <div class="grid lg:grid-cols-3 gap-6">
     <!-- Resumen perfil -->
     <div class="space-y-4">
-      <div class="bg-white rounded-xl border border-slate-200 p-5 text-center">
-        <div class="w-20 h-20 bg-violet-100 rounded-full flex items-center justify-center text-violet-700 font-bold text-2xl mx-auto mb-3">
+      <div class="rounded-xl p-5 text-center"
+        style="background:var(--surface);border:1px solid var(--border)">
+        <div class="w-20 h-20 rounded-full flex items-center justify-center font-bold text-2xl mx-auto mb-3"
+          style="background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand)">
           {{ initials() }}
         </div>
-        <p class="font-semibold text-slate-800">{{ currentUser()?.displayName ?? currentUser()?.email }}</p>
+        <p class="font-semibold" style="color:var(--text-strong)">{{ currentUser()?.displayName ?? currentUser()?.email }}</p>
         @if (currentUser()?.despacho?.nombre) {
-          <p class="text-sm text-slate-700 font-medium mt-0.5">{{ currentUser()?.despacho?.nombre }}</p>
+          <p class="text-sm font-medium mt-0.5" style="color:var(--text-muted)">{{ currentUser()?.despacho?.nombre }}</p>
         }
         @if (currentUser()?.profesional?.especialidad) {
-          <span class="mt-2 inline-block px-3 py-0.5 bg-violet-100 text-violet-700 text-xs font-semibold rounded-full">
+          <span class="mt-2 inline-block px-3 py-0.5 text-xs font-semibold rounded-full"
+            style="background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand)">
             {{ currentUser()?.profesional?.especialidad }}
           </span>
         }
         <div class="mt-4">
-          <div class="flex justify-between text-xs text-slate-700 mb-1">
+          <div class="flex justify-between text-xs mb-1" style="color:var(--text-muted)">
             <span>Perfil completado</span>
             <span>{{ completionPercent() }}%</span>
           </div>
-          <div class="w-full bg-slate-100 rounded-full h-2">
-            <div class="bg-violet-500 h-2 rounded-full transition-all duration-500" [style.width]="completionPercent() + '%'"></div>
+          <div class="w-full rounded-full h-2" style="background:var(--surface-2)">
+            <div class="h-2 rounded-full transition-all duration-500"
+              style="background:var(--brand)"
+              [style.width]="completionPercent() + '%'"></div>
           </div>
         </div>
       </div>
 
-      <div class="bg-white rounded-xl border border-slate-200 p-4 space-y-2 text-sm">
-        <h3 class="font-semibold text-slate-700">Información de cuenta</h3>
+      <div class="rounded-xl p-4 space-y-2 text-sm"
+        style="background:var(--surface);border:1px solid var(--border)">
+        <h3 class="font-semibold" style="color:var(--text-body)">Información de cuenta</h3>
         <div class="flex justify-between">
-          <span class="text-slate-700">Email</span>
-          <span class="text-slate-600 truncate max-w-40">{{ currentUser()?.email }}</span>
+          <span style="color:var(--text-muted)">Email</span>
+          <span class="truncate max-w-40" style="color:var(--text-body)">{{ currentUser()?.email }}</span>
         </div>
         <div class="flex justify-between">
-          <span class="text-slate-700">Miembro desde</span>
-          <span class="text-slate-600">{{ memberSince() }}</span>
+          <span style="color:var(--text-muted)">Miembro desde</span>
+          <span style="color:var(--text-body)">{{ memberSince() }}</span>
         </div>
         <div class="flex justify-between">
-          <span class="text-slate-700">ID de usuario</span>
-          <span class="text-slate-600 text-xs font-mono truncate max-w-27.5">{{ currentUser()?.id }}</span>
+          <span style="color:var(--text-muted)">ID de usuario</span>
+          <span class="text-xs font-mono truncate max-w-27.5" style="color:var(--text-faint)">{{ currentUser()?.id }}</span>
         </div>
       </div>
     </div>
 
     <!-- Formularios -->
-    <div class="lg:col-span-2 bg-white rounded-xl border border-slate-200">
-      <div class="flex border-b border-slate-200">
-        <button (click)="activeTab.set('personal')" [class]="activeTab() === 'personal' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600' : 'px-5 py-3 text-sm font-medium text-slate-700 hover:text-slate-700'">
+    <div class="lg:col-span-2 rounded-xl"
+      style="background:var(--surface);border:1px solid var(--border)">
+      <div class="flex" style="border-bottom:1px solid var(--border)">
+        <button (click)="activeTab.set('personal')"
+          class="px-5 py-3 text-sm font-medium transition-colors"
+          [style.color]="activeTab() === 'personal' ? 'var(--brand)' : 'var(--text-muted)'"
+          [style.border-bottom]="activeTab() === 'personal' ? '2px solid var(--brand)' : '2px solid transparent'">
           Personal
         </button>
-        <button (click)="activeTab.set('despacho')" [class]="activeTab() === 'despacho' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600' : 'px-5 py-3 text-sm font-medium text-slate-700 hover:text-slate-700'">
+        <button (click)="activeTab.set('despacho')"
+          class="px-5 py-3 text-sm font-medium transition-colors"
+          [style.color]="activeTab() === 'despacho' ? 'var(--brand)' : 'var(--text-muted)'"
+          [style.border-bottom]="activeTab() === 'despacho' ? '2px solid var(--brand)' : '2px solid transparent'">
           Despacho
         </button>
-        <button (click)="activeTab.set('profesional')" [class]="activeTab() === 'profesional' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600' : 'px-5 py-3 text-sm font-medium text-slate-700 hover:text-slate-700'">
+        <button (click)="activeTab.set('profesional')"
+          class="px-5 py-3 text-sm font-medium transition-colors"
+          [style.color]="activeTab() === 'profesional' ? 'var(--brand)' : 'var(--text-muted)'"
+          [style.border-bottom]="activeTab() === 'profesional' ? '2px solid var(--brand)' : '2px solid transparent'">
           Profesional
         </button>
       </div>
@@ -85,24 +103,25 @@
       @if (activeTab() === 'personal') {
         <form [formGroup]="personalForm" class="p-5 grid md:grid-cols-2 gap-4">
           <div class="md:col-span-2 space-y-1">
-            <label class="text-sm font-medium text-slate-700" for="nombre">Nombre completo</label>
-            <input id="nombre" formControlName="nombre" type="text" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+            <label class="form-label" for="nombre">Nombre completo</label>
+            <input id="nombre" formControlName="nombre" type="text" class="form-input" />
           </div>
           <div class="space-y-1">
-            <label class="text-sm font-medium text-slate-700" for="email">Email</label>
-            <input id="email" formControlName="email" type="email" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-600 cursor-not-allowed" />
+            <label class="form-label" for="email">Email</label>
+            <input id="email" formControlName="email" type="email" class="form-input"
+              style="background:var(--surface-2);color:var(--text-muted);cursor:not-allowed" />
           </div>
           <div class="space-y-1">
-            <label class="text-sm font-medium text-slate-700" for="telefono">Teléfono</label>
-            <input id="telefono" formControlName="telefono" type="tel" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+            <label class="form-label" for="telefono">Teléfono</label>
+            <input id="telefono" formControlName="telefono" type="tel" class="form-input" />
           </div>
           <div class="md:col-span-2 space-y-1">
-            <label class="text-sm font-medium text-slate-700" for="linkedin">LinkedIn</label>
-            <input id="linkedin" formControlName="linkedin" type="text" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+            <label class="form-label" for="linkedin">LinkedIn</label>
+            <input id="linkedin" formControlName="linkedin" type="text" class="form-input" />
           </div>
           <div class="md:col-span-2 space-y-1">
-            <label class="text-sm font-medium text-slate-700" for="biografia">Biografía</label>
-            <textarea id="biografia" formControlName="biografia" rows="4" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none"></textarea>
+            <label class="form-label" for="biografia">Biografía</label>
+            <textarea id="biografia" formControlName="biografia" rows="4" class="form-input resize-none"></textarea>
           </div>
         </form>
       }
@@ -110,28 +129,28 @@
       @if (activeTab() === 'despacho') {
         <form [formGroup]="despachoForm" class="p-5 grid md:grid-cols-2 gap-4">
           <div class="md:col-span-2 space-y-1">
-            <label class="text-sm font-medium text-slate-700" for="nombreDespacho">Nombre del despacho</label>
-            <input id="nombreDespacho" formControlName="nombre" type="text" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+            <label class="form-label" for="nombreDespacho">Nombre del despacho</label>
+            <input id="nombreDespacho" formControlName="nombre" type="text" class="form-input" />
           </div>
           <div class="space-y-1">
-            <label class="text-sm font-medium text-slate-700" for="website">Web</label>
-            <input id="website" formControlName="website" type="text" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+            <label class="form-label" for="website">Web</label>
+            <input id="website" formControlName="website" type="text" class="form-input" />
           </div>
           <div class="space-y-1">
-            <label class="text-sm font-medium text-slate-700" for="ciudad">Ciudad</label>
-            <input id="ciudad" formControlName="ciudad" type="text" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+            <label class="form-label" for="ciudad">Ciudad</label>
+            <input id="ciudad" formControlName="ciudad" type="text" class="form-input" />
           </div>
           <div class="md:col-span-2 space-y-1">
-            <label class="text-sm font-medium text-slate-700" for="direccion">Dirección</label>
-            <input id="direccion" formControlName="direccion" type="text" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+            <label class="form-label" for="direccion">Dirección</label>
+            <input id="direccion" formControlName="direccion" type="text" class="form-input" />
           </div>
           <div class="space-y-1">
-            <label class="text-sm font-medium text-slate-700" for="cp">Código postal</label>
-            <input id="cp" formControlName="cp" type="text" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+            <label class="form-label" for="cp">Código postal</label>
+            <input id="cp" formControlName="cp" type="text" class="form-input" />
           </div>
           <div class="space-y-1">
-            <label class="text-sm font-medium text-slate-700" for="pais">País</label>
-            <input id="pais" formControlName="pais" type="text" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+            <label class="form-label" for="pais">País</label>
+            <input id="pais" formControlName="pais" type="text" class="form-input" />
           </div>
         </form>
       }
@@ -139,20 +158,20 @@
       @if (activeTab() === 'profesional') {
         <form [formGroup]="profesionalForm" class="p-5 grid md:grid-cols-2 gap-4">
           <div class="md:col-span-2 space-y-1">
-            <label class="text-sm font-medium text-slate-700" for="colegio">Colegio profesional</label>
-            <input id="colegio" formControlName="colegio" type="text" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+            <label class="form-label" for="colegio">Colegio profesional</label>
+            <input id="colegio" formControlName="colegio" type="text" class="form-input" />
           </div>
           <div class="space-y-1">
-            <label class="text-sm font-medium text-slate-700" for="numColegiado">Nº de colegiado</label>
-            <input id="numColegiado" formControlName="numeroColegiado" type="text" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+            <label class="form-label" for="numColegiado">Nº de colegiado</label>
+            <input id="numColegiado" formControlName="numeroColegiado" type="text" class="form-input" />
           </div>
           <div class="space-y-1">
-            <label class="text-sm font-medium text-slate-700" for="anos">Años de experiencia</label>
-            <input id="anos" formControlName="anos" type="number" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+            <label class="form-label" for="anos">Años de experiencia</label>
+            <input id="anos" formControlName="anos" type="number" class="form-input" />
           </div>
           <div class="md:col-span-2 space-y-1">
-            <label class="text-sm font-medium text-slate-700" for="especialidad">Especialidad principal</label>
-            <select id="especialidad" formControlName="especialidad" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
+            <label class="form-label" for="especialidad">Especialidad principal</label>
+            <select id="especialidad" formControlName="especialidad" class="form-select">
               <option value="">— Sin especificar —</option>
               @for (esp of especialidades; track esp) {
                 <option [value]="esp">{{ esp }}</option>
