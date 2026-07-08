@@ -1,12 +1,55 @@
 {
   "indexes": [
     {
+      "collectionGroup": "permission_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "contact_files",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "companyId", "order": "ASCENDING" },
         { "fieldPath": "contactId", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "contact_files",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "contactId", "order": "ASCENDING" },
+        { "fieldPath": "clasificado", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "contact_files",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "allowedUserIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "contactId", "order": "ASCENDING" },
+        { "fieldPath": "clasificado", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "doc_files",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "allowedUserIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "clasificado", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "doc_slots",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "allowedUserIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "clasificado", "order": "ASCENDING" }
       ]
     },
     {

@@ -25,7 +25,9 @@ export const appConfig: ApplicationConfig = {
       return auth;
     }),
     provideFirestore(() => {
-      const firestore = getFirestore();
+      const firestore = environment.firebase.databaseId
+        ? getFirestore(getApp(), environment.firebase.databaseId)
+        : getFirestore();
       if (environment.useEmulators) {
         connectFirestoreEmulator(firestore, 'localhost', 8080);
       }

@@ -6,7 +6,6 @@ import {
   getDocs,
   addDoc,
   updateDoc,
-  deleteDoc,
   query,
   where,
   serverTimestamp,
@@ -14,6 +13,7 @@ import {
 import { Auth } from '@angular/fire/auth';
 import { CompanyService } from './company.service';
 import { stripUndefinedDeep } from '../firebase/sanitize';
+import { isVisibleDoc } from '../docs/doc-versioning';
 import { PlantillaFolder } from '../../interfaces';
 
 @Injectable({ providedIn: 'root' })
@@ -43,6 +43,7 @@ export class PlantillaFolderService {
       const snapshot = await getDocs(q);
       const items = snapshot.docs
         .map((d) => ({ id: d.id, ...d.data() }) as PlantillaFolder)
+        .filter(isVisibleDoc)
         .sort((a, b) => a.name.localeCompare(b.name));
       this.folders.set(items);
     } finally {
@@ -74,8 +75,13 @@ export class PlantillaFolderService {
     await this.loadFolders(plantillaId);
   }
 
+  /** Soft delete: la carpeta deja de mostrarse pero el doc se conserva. */
   async deleteFolder(id: string): Promise<void> {
-    await deleteDoc(doc(this.firestore, 'plantilla_folders', id));
+    await updateDoc(doc(this.firestore, 'plantilla_folders', id), stripUndefinedDeep({
+      deleted: true,
+      deletedAt: serverTimestamp(),
+      deletedBy: this.auth.currentUser?.uid ?? '',
+    }));
     this.folders.update((list) => list.filter((f) => f.id !== id));
   }
 }

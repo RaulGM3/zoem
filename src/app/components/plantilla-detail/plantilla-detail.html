@@ -447,6 +447,9 @@
               <li class="group flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50">
                 <lucide-icon [img]="FileIcon" class="w-4 h-4 text-slate-600 shrink-0" />
                 <p class="flex-1 text-sm text-slate-700 truncate min-w-0">{{ file.name }}</p>
+                @if (file.visibleTo === 'restricted') {
+                  <lucide-icon [img]="LockIcon" class="w-3.5 h-3.5 text-amber-500 shrink-0" aria-label="Visibilidad restringida" />
+                }
                 @if (file.docTemplateId) {
                   <span class="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-600">
                     <lucide-icon [img]="Link2Icon" class="w-3 h-3" />
@@ -471,6 +474,11 @@
                     } @else {
                       <button (click)="openLinkPicker(file)" class="p-1 rounded hover:bg-violet-50" title="Vincular plantilla de documento">
                         <lucide-icon [img]="Link2Icon" class="w-3 h-3 text-violet-400" />
+                      </button>
+                    }
+                    @if (isAdmin()) {
+                      <button (click)="openVisibility(file)" class="p-1 rounded hover:bg-amber-50" title="Quién puede ver esta plantilla">
+                        <lucide-icon [img]="LockIcon" class="w-3 h-3 text-amber-500" />
                       </button>
                     }
                     <button (click)="deletingFileId.set(file.id)" class="p-1 rounded hover:bg-red-50" title="Eliminar">
@@ -666,3 +674,16 @@
   }
 
 }
+
+@let visTarget = visibilityTarget();
+<app-doc-access-drawer
+  [visible]="visTarget !== null"
+  mode="visibilidad"
+  [title]="visTarget?.name ?? ''"
+  [saving]="visibilitySaving()"
+  [initialRestricted]="visTarget?.visibleTo === 'restricted'"
+  [initialUserIds]="visTarget?.visibleUserIds ?? []"
+  [initialRoles]="visTarget?.visibleRoles ?? []"
+  (saved)="onVisibilitySaved($event)"
+  (closed)="visibilityTarget.set(null)"
+/>

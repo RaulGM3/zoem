@@ -5,14 +5,24 @@
     <p class="mt-0.5 text-sm" style="color:var(--text-muted)">Gestiona tu CRM de clientes y contactos</p>
   </div>
   @if (perm.can('Contactos', 'crear')) {
-    <button (click)="openNew()"
-      class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150"
-      style="background:var(--brand)"
-      (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-      (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
-      <span class="material-symbols-outlined" style="font-size:16px">add</span>
-      Nuevo Contacto
-    </button>
+    <div class="flex items-center gap-2">
+      <button (click)="showImportDrawer.set(true)"
+        class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-150"
+        style="background:var(--surface-2);color:var(--text-muted);border:1px solid var(--border)"
+        (mouseenter)="$any($event.currentTarget).style.background='var(--border)'"
+        (mouseleave)="$any($event.currentTarget).style.background='var(--surface-2)'">
+        <span class="material-symbols-outlined" style="font-size:16px">upload_file</span>
+        Importar Excel
+      </button>
+      <button (click)="openNew()"
+        class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150"
+        style="background:var(--brand)"
+        (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+        (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+        <span class="material-symbols-outlined" style="font-size:16px">add</span>
+        Nuevo Contacto
+      </button>
+    </div>
   }
 </div>
 
@@ -64,10 +74,9 @@
           class="form-select" style="width:auto;min-width:160px"
           aria-label="Filtrar por estado">
           <option value="">Todos los estados</option>
-          <option value="activo">Activo</option>
-          <option value="potencial">Potencial</option>
-          <option value="inactivo">Inactivo</option>
-          <option value="archivado">Archivado</option>
+          @for (s of contactStatuses; track s.value) {
+            <option [value]="s.value">{{ s.label }}</option>
+          }
         </select>
         <select (change)="filterType.set($any($event.target).value)"
           class="form-select" style="width:auto;min-width:160px"
@@ -512,16 +521,41 @@
             <div>
               <label for="status" class="form-label">Estado *</label>
               <select id="status" formControlName="status" class="form-select">
-                <option value="activo">Activo</option>
-                <option value="potencial">Potencial</option>
-                <option value="inactivo">Inactivo</option>
-                <option value="archivado">Archivado</option>
+                @for (s of contactStatuses; track s.value) {
+                  <option [value]="s.value">{{ s.label }}</option>
+                }
               </select>
             </div>
             <div>
               <label for="notes" class="form-label">Notas internas</label>
               <textarea id="notes" formControlName="notes" rows="3"
                 class="form-input resize-none"></textarea>
+            </div>
+            <div>
+              <label for="asunto" class="form-label">Asunto</label>
+              <input id="asunto" formControlName="asunto" type="text"
+                placeholder="Ej. Divorcio, herencia, consulta laboral…"
+                class="form-input" />
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label for="canalEntrada" class="form-label">Canal de entrada</label>
+                <select id="canalEntrada" formControlName="canalEntrada" class="form-select">
+                  <option value="">— Sin especificar —</option>
+                  @for (c of canalesEntrada; track c.value) {
+                    <option [value]="c.value">{{ c.label }}</option>
+                  }
+                </select>
+              </div>
+              <div>
+                <label for="assignedTo" class="form-label">Asignado a</label>
+                <select id="assignedTo" formControlName="assignedTo" class="form-select">
+                  <option value="">Sin asignar</option>
+                  @for (m of usersService.members(); track m.id) {
+                    <option [value]="m.userId">{{ m.nombre }}{{ m.apellido ? ' ' + m.apellido : '' }}</option>
+                  }
+                </select>
+              </div>
             </div>
           </div>
         }
@@ -580,3 +614,9 @@
     </aside>
   </div>
 }
+
+<!-- Importar contactos desde Excel -->
+<app-importar-contactos
+  [visible]="showImportDrawer()"
+  (closed)="showImportDrawer.set(false); reloadContacts()"
+/>

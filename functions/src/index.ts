@@ -210,3 +210,7 @@ export { generateDocx } from './htmlToDocx';
 
 // ─── Push Notifications ──────────────────────────────────────────────────────
 export { sendPushNotification } from './notifications';
+
+// ─── Documentos clasificados ─────────────────────────────────────────────────
+// URL firmada de corta vida + auditoría server-side (no falsificable).
+export { getClassifiedDocUrl } from './classifiedDocUrl';

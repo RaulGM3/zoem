@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { Firestore } from '@angular/fire/firestore';
 import { Functions } from '@angular/fire/functions';
+import { Storage } from '@angular/fire/storage';
 import { InvoiceService, InvoiceLinea } from './invoice.service';
 import { CompanyService, Company } from './company.service';
 import { VerifactuClientService } from './verifactu-client.service';
@@ -44,8 +45,8 @@ function makeCompany(override: { id?: string; nif?: string; verifactuEnabled?: b
     name: 'Test SL',
     slug: 'test-sl',
     isActive: true,
-    nif,
-    verifactu: verifactuEnabled ? { enabled: true } : undefined,
+    cif: nif,
+    verifactu: verifactuEnabled ? { enabled: true, sandbox: true } : undefined,
   };
 }
 
@@ -71,6 +72,7 @@ function setupService(
       InvoiceService,
       { provide: Firestore, useValue: {} },
       { provide: Functions, useValue: {} },
+      { provide: Storage, useValue: {} },
       { provide: CompanyService, useValue: buildCompanyService(companyOverride) },
       { provide: VerifactuClientService, useValue: verifactuClient },
     ],
@@ -229,6 +231,7 @@ describe('InvoiceService.createInvoiceForCaso() — cálculos', () => {
         InvoiceService,
         { provide: Firestore, useValue: {} },
         { provide: Functions, useValue: {} },
+        { provide: Storage, useValue: {} },
         { provide: CompanyService, useValue: { activeCompany: signal<Company | null>(null) } },
         { provide: VerifactuClientService, useValue: buildVerifactuClient() },
       ],

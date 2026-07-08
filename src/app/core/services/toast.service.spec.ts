@@ -1,12 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { TestBed } from '@angular/core/testing';
 import { ToastService } from './toast.service';
+import { ErrorService } from './error.service';
 
 describe('ToastService.run (envoltura con reintento)', () => {
   let toast: ToastService;
 
   beforeEach(() => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    toast = new ToastService();
+    // ToastService inyecta ErrorService → hay que construirlo vía DI.
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [ToastService, { provide: ErrorService, useValue: { log: vi.fn() } }],
+    });
+    toast = TestBed.inject(ToastService);
   });
 
   it('acción OK → devuelve el resultado y NO crea toast de error', async () => {

@@ -33,16 +33,19 @@ export class InvitationService {
     email: string,
     role: InvitationRole,
     createdBy: string,
+    customRole?: { id: string; nombre: string },
   ): Promise<string> {
     const token = crypto.randomUUID();
     const sevenDays = 7 * 24 * 60 * 60 * 1000;
     const expiresAt = Timestamp.fromDate(new Date(Date.now() + sevenDays));
     // El doc id ES el token: las security rules lo resuelven con get() (no se puede query en rules).
+    // `role` SIEMPRE es el rol base (lo que validan las rules); el custom viaja aparte.
     await setDoc(doc(this.firestore, 'companyInvitations', token), stripUndefinedDeep({
       companyId,
       companyName,
       email: email.toLowerCase().trim(),
       role,
+      ...(customRole ? { customRoleId: customRole.id, customRoleNombre: customRole.nombre } : {}),
       token,
       expiresAt,
       status: 'pending',
@@ -97,6 +100,7 @@ export class InvitationService {
       apellido: profile?.apellido ?? '',
       telefono: profile?.telefono ?? '',
       role: invitation.role,
+      ...(invitation.customRoleId ? { customRoleId: invitation.customRoleId } : {}),
       departamento: '',
       estado: 'activo',
       inviteId: token,

@@ -73,6 +73,7 @@
 
       @if (activeTab() === 'documentos') {
         <app-caso-documentos-tab
+          [casoId]="caso()?.id ?? ''"
           [folders]="casoDocService.folders()"
           [slots]="casoDocService.slots()"
           [files]="casoDocService.files()"
@@ -84,6 +85,7 @@
           (uploadSlot)="onUploadSlot($event)"
           (removeSlot)="onRemoveSlot($event)"
           (uploadFile)="onUploadFile($event)"
+          (reuploadFile)="onReuploadFile($event)"
           (deleteFile)="onDeleteFile($event)"
           (createFolder)="onCreateFolder($event)"
           (deleteFolder)="onDeleteFolder($event)"

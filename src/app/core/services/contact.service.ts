@@ -13,6 +13,7 @@ import {
   serverTimestamp,
   arrayUnion,
   arrayRemove,
+  Timestamp,
 } from '@angular/fire/firestore';
 import { CompanyService } from './company.service';
 import { ActividadService } from './actividad.service';
@@ -57,12 +58,14 @@ export class ContactService {
   }
 
   async createContact(
-    data: Omit<Contact, 'id' | 'companyId' | 'createdAt' | 'updatedAt'>
+    data: Omit<Contact, 'id' | 'companyId' | 'updatedAt'>
   ): Promise<void> {
+    const payload = data as Record<string, unknown>;
+    const providedCreatedAt = payload['createdAt'] as Timestamp | undefined;
     const ref = await addDoc(collection(this.firestore, 'contacts'), stripUndefinedDeep({
-      ...(data as Record<string, unknown>),
+      ...payload,
       companyId: this.companyId,
-      createdAt: serverTimestamp(),
+      createdAt: providedCreatedAt ?? serverTimestamp(),
       updatedAt: serverTimestamp(),
     }));
     await this.loadContacts();

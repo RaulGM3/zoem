@@ -10,13 +10,16 @@ import {
 } from 'lucide-angular';
 // import { PIPELINE_DEALS } from '../../data/dummy-data'; // dummy data — tab oculto
 import { ContactService } from '../../core/services/contact.service';
+import { UsersService } from '../../core/services/users';
 import { SearchService } from '../../core/services/search.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { ToastService } from '../../core/services/toast.service';
 import {
-  Contact, PersonaFisica, PersonaJuridica, ContactStatus,
+  Contact, PersonaFisica, PersonaJuridica, ContactStatus, CanalEntrada,
+  CONTACT_STATUS_LABELS, CANAL_ENTRADA_LABELS,
   getContactDisplayName, getContactInitials,
 } from '../../interfaces';
+import { ImportarContactosComponent } from './components/importar-contactos/importar-contactos';
 
 type ContactPayload =
   | Omit<PersonaFisica, 'id' | 'companyId' | 'createdAt' | 'updatedAt'>
@@ -24,19 +27,10 @@ type ContactPayload =
 
 type ContactosTab = 'contactos' | 'pipeline' | 'rgpd' | 'herramientas';
 
-// Dummy data — tab RGPD oculto hasta tener fuente real
-// const RGPD_CONSENTIMIENTOS = [
-//   { id: 'CON-001', nombre: 'Innovatech Industries S.L.', marketing: true, perfilado: true, terceros: false },
-//   { id: 'CON-002', nombre: 'María García López', marketing: true, perfilado: false, terceros: false },
-//   { id: 'CON-003', nombre: 'Consultora Global S.L.', marketing: true, perfilado: true, terceros: true },
-//   { id: 'CON-004', nombre: 'StartUp Ventures S.L.', marketing: false, perfilado: false, terceros: false },
-//   { id: 'CON-005', nombre: 'Carlos Rodríguez Fernández', marketing: false, perfilado: false, terceros: false },
-// ];
-
 @Component({
   selector: 'app-contactos',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, LucideAngularModule, DecimalPipe, ReactiveFormsModule],
+  imports: [RouterLink, LucideAngularModule, DecimalPipe, ReactiveFormsModule, ImportarContactosComponent],
   templateUrl: './contactos.html',
 })
 export class ContactosComponent {
@@ -62,6 +56,7 @@ export class ContactosComponent {
   readonly BriefcaseIcon = Briefcase;
 
   readonly contactService = inject(ContactService);
+  readonly usersService = inject(UsersService);
   readonly perm = inject(PermissionService);
   private readonly toast = inject(ToastService);
   private readonly fb = inject(FormBuilder);
@@ -69,12 +64,21 @@ export class ContactosComponent {
   private readonly router = inject(Router);
   private readonly searchSvc = inject(SearchService);
 
+  readonly contactStatuses: readonly { value: ContactStatus; label: string }[] = (
+    Object.entries(CONTACT_STATUS_LABELS) as [ContactStatus, string][]
+  ).map(([value, label]) => ({ value, label }));
+
+  readonly canalesEntrada: readonly { value: CanalEntrada; label: string }[] = (
+    Object.entries(CANAL_ENTRADA_LABELS) as [CanalEntrada, string][]
+  ).map(([value, label]) => ({ value, label }));
+
   activeTab = signal<ContactosTab>('contactos');
   /** Búsqueda centralizada en el header — scopeada a "contactos". */
   readonly search = this.searchSvc.termFor('contactos');
   filterStatus = signal('');
   filterType = signal('');
   showDrawer = signal(false);
+  showImportDrawer = signal(false);
   editingId = signal<string | null>(null);
   formType = signal<'persona_fisica' | 'persona_juridica'>('persona_fisica');
   isSaving = signal(false);
@@ -91,6 +95,9 @@ export class ContactosComponent {
     mobile: [''],
     status: ['activo', Validators.required],
     notes: [''],
+    asunto: [''],
+    canalEntrada: ['' as CanalEntrada | ''],
+    assignedTo: [''],
     // Persona Física
     nombre: [''],
     apellidos: [''],
@@ -119,6 +126,7 @@ export class ContactosComponent {
 
   constructor() {
     this.reloadContacts();
+    this.usersService.loadMembers();
     const p = this.route.snapshot.queryParamMap;
     if (p.get('newContact') === '1') {
       this.formType.set('persona_fisica');
@@ -202,19 +210,20 @@ export class ContactosComponent {
   }
 
   statusLabel(status: string): string {
-    const map: Record<string, string> = {
-      activo: 'Activo', inactivo: 'Inactivo', potencial: 'Potencial', archivado: 'Archivado',
-    };
-    return map[status] ?? status;
+    return CONTACT_STATUS_LABELS[status as ContactStatus] ?? status;
   }
 
   getStatusStyle(status: string): { background: string; color: string } {
     const mix = (v: string) => `color-mix(in srgb,${v} 12%,transparent)`;
     const map: Record<string, { background: string; color: string }> = {
-      activo:    { background: mix('var(--success)'),   color: 'var(--success)' },
-      potencial: { background: mix('var(--accent-ia)'), color: 'var(--accent-ia)' },
-      inactivo:  { background: 'var(--surface-2)',       color: 'var(--text-muted)' },
-      archivado: { background: mix('var(--warning)'),   color: 'var(--warning)' },
+      activo:                       { background: mix('var(--success)'),   color: 'var(--success)' },
+      potencial:                    { background: mix('var(--accent-ia)'), color: 'var(--accent-ia)' },
+      inactivo:                     { background: 'var(--surface-2)',       color: 'var(--text-muted)' },
+      cerrado_finalizado:           { background: 'var(--surface-2)',       color: 'var(--text-muted)' },
+      pendiente_presupuesto:        { background: mix('var(--warning)'),   color: 'var(--warning)' },
+      pendiente_firma_hoja_encargo: { background: mix('var(--warning)'),   color: 'var(--warning)' },
+      pendiente_pago:               { background: mix('var(--danger)'),    color: 'var(--danger)' },
+      integracion_plantillas:       { background: mix('var(--brand)'),     color: 'var(--brand)' },
     };
     return map[status] ?? { background: 'var(--surface-2)', color: 'var(--text-muted)' };
   }
@@ -309,6 +318,9 @@ export class ContactosComponent {
       mobile: contact.mobile ?? '',
       status: contact.status,
       notes: contact.notes ?? '',
+      asunto: contact.asunto ?? '',
+      canalEntrada: (contact.canalEntrada ?? '') as CanalEntrada | '',
+      assignedTo: contact.assignedTo ?? '',
       calle: dir?.calle ?? '',
       numero: dir?.numero ?? '',
       codigoPostal: dir?.codigoPostal ?? '',
@@ -358,6 +370,9 @@ export class ContactosComponent {
         mobile: v.mobile || '',
         status: v.status as ContactStatus,
         notes: v.notes || '',
+        asunto: v.asunto || undefined,
+        canalEntrada: (v.canalEntrada || undefined) as CanalEntrada | undefined,
+        assignedTo: v.assignedTo || undefined,
       };
       const direccion = {
         calle: v.calle || '',

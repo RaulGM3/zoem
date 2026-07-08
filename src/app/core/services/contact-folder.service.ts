@@ -6,7 +6,6 @@ import {
   getDocs,
   addDoc,
   updateDoc,
-  deleteDoc,
   query,
   where,
   orderBy,
@@ -15,6 +14,7 @@ import {
 import { Auth } from '@angular/fire/auth';
 import { CompanyService } from './company.service';
 import { stripUndefinedDeep } from '../firebase/sanitize';
+import { isVisibleDoc } from '../docs/doc-versioning';
 import { ContactFolder } from '../../interfaces';
 
 @Injectable({ providedIn: 'root' })
@@ -43,7 +43,11 @@ export class ContactFolderService {
         orderBy('name')
       );
       const snapshot = await getDocs(q);
-      this.folders.set(snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as ContactFolder));
+      this.folders.set(
+        snapshot.docs
+          .map((d) => ({ id: d.id, ...d.data() }) as ContactFolder)
+          .filter(isVisibleDoc)
+      );
     } finally {
       // El error se propaga al llamador (lo muestra ToastService).
       this.isLoading.set(false);
@@ -73,8 +77,13 @@ export class ContactFolderService {
     await this.loadFolders(contactId);
   }
 
+  /** Soft delete: la carpeta deja de mostrarse pero el doc se conserva. */
   async deleteFolder(id: string): Promise<void> {
-    await deleteDoc(doc(this.firestore, 'contact_folders', id));
+    await updateDoc(doc(this.firestore, 'contact_folders', id), stripUndefinedDeep({
+      deleted: true,
+      deletedAt: serverTimestamp(),
+      deletedBy: this.auth.currentUser?.uid ?? '',
+    }));
     this.folders.update((list) => list.filter((f) => f.id !== id));
   }
 }

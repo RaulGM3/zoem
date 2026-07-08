@@ -133,17 +133,98 @@ service cloud.firestore {
         match /gestoria/{doc=**}       { allow read, write: if isSuper() || isManager(cid); }
         match /gestoria_slots/{doc=**} { allow read, write: if isSuper() || isManager(cid); }
 
-        // documentos del caso → cualquier miembro activo no-Viewer
-        match /doc_folders/{doc=**} { allow read: if isSuper() || isMember(cid); allow write: if isSuper() || canWrite(cid); }
-        match /doc_slots/{doc=**}   { allow read: if isSuper() || isMember(cid); allow write: if isSuper() || canWrite(cid); }
-        match /doc_files/{doc=**}   { allow read: if isSuper() || isMember(cid); allow write: if isSuper() || canWrite(cid); }
+        // documentos del caso → escritura no-Viewer, pero SIN eliminaciones
+        // reales (solo soft delete vía update) y con auditoría append-only.
+        // Un doc ya borrado solo lo toca el Admin (restaurar).
+        match /doc_folders/{folderId} {
+          allow read:   if isSuper() || isMember(cid);
+          allow create: if isSuper() || canWrite(cid);
+          allow update: if isSuper() || isCompanyAdmin(cid)
+                        || (canWrite(cid) && resource.data.deleted != true);
+          allow delete: if isSuper();
+
+          match /doc_audit/{eventId} {
+            allow read:   if isSuper() || isMember(cid);
+            allow create: if isSuper()
+                          || (isActiveMember(cid) && request.resource.data.userId == request.auth.uid);
+            allow update, delete: if false;   // inmutable: la auditoría no se toca
+          }
+        }
+        // Clasificados: solo Admin o la allowlist pueden leerlos. `!= true`
+        // cubre docs legacy sin el campo. En `list`, las rules exigen queries
+        // demostrables → los servicios usan doble query para no-admins.
+        function canReadClassified(cid) {
+          return resource.data.clasificado != true
+            || isCompanyAdmin(cid)
+            || (request.auth.uid in resource.data.get('allowedUserIds', []));
+        }
+        // Solo el Admin marca/desmarca clasificado o toca la allowlist.
+        function classificationUntouched() {
+          return !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['clasificado', 'allowedUserIds']);
+        }
+        match /doc_slots/{slotId} {
+          allow read:   if isSuper() || (isMember(cid) && canReadClassified(cid));
+          allow create: if isSuper() || isCompanyAdmin(cid)
+                        || (canWrite(cid) && request.resource.data.clasificado != true);
+          allow update: if isSuper() || isCompanyAdmin(cid)
+                        || (canWrite(cid) && resource.data.deleted != true
+                            && resource.data.clasificado != true
+                            && classificationUntouched());
+          allow delete: if isSuper();
+
+          match /doc_audit/{eventId} {
+            allow read:   if isSuper() || isMember(cid);
+            allow create: if isSuper()
+                          || (isActiveMember(cid) && request.resource.data.userId == request.auth.uid);
+            allow update, delete: if false;
+          }
+        }
+        match /doc_files/{fileId} {
+          allow read:   if isSuper() || (isMember(cid) && canReadClassified(cid));
+          allow create: if isSuper() || isCompanyAdmin(cid)
+                        || (canWrite(cid) && request.resource.data.clasificado != true);
+          allow update: if isSuper() || isCompanyAdmin(cid)
+                        || (canWrite(cid) && resource.data.deleted != true
+                            && resource.data.clasificado != true
+                            && classificationUntouched());
+          allow delete: if isSuper();
+
+          match /doc_audit/{eventId} {
+            allow read:   if isSuper() || isMember(cid);
+            allow create: if isSuper()
+                          || (isActiveMember(cid) && request.resource.data.userId == request.auth.uid);
+            allow update, delete: if false;
+          }
+        }
       }
 
       // ---- Resto operativo -------------------------------------------
       match /hitos/{doc=**}          { allow read: if isSuper() || isMember(cid); allow write: if isSuper() || canWrite(cid); }
       match /hito_actividad/{doc=**} { allow read: if isSuper() || isMember(cid); allow write: if isSuper() || canWrite(cid); }
       match /eventos/{doc=**}        { allow read: if isSuper() || isMember(cid); allow write: if isSuper() || canWrite(cid); }
-      match /docTemplates/{doc=**}   { allow read: if isSuper() || isMember(cid); allow write: if isSuper() || canWrite(cid); }
+      // Plantillas de documento: sin delete real + auditoría append-only +
+      // visibilidad configurable (el html vive aquí → get protegido).
+      match /docTemplates/{templateId} {
+        allow get:    if isSuper()
+                      || (isMember(cid)
+                          && (resource.data.get('visibleTo', 'all') != 'restricted'
+                              || isCompanyAdmin(cid)
+                              || (request.auth.uid in resource.data.get('visibleUserIds', []))
+                              || (memberData(cid).role in resource.data.get('visibleRoles', []))));
+        allow list:   if isSuper() || isMember(cid);
+        allow create: if isSuper() || canWrite(cid);
+        allow update: if isSuper() || isCompanyAdmin(cid)
+                      || (canWrite(cid) && resource.data.deleted != true);
+        allow delete: if isSuper();
+
+        match /doc_audit/{eventId} {
+          allow read:   if isSuper() || isMember(cid);
+          allow create: if isSuper()
+                        || (isActiveMember(cid) && request.resource.data.userId == request.auth.uid);
+          allow update, delete: if false;
+        }
+      }
       match /casoPlantillas/{doc=**} { allow read: if isSuper() || isMember(cid); allow write: if isSuper() || canWrite(cid); }
 
       // Feed de actividad: cualquier miembro activo agrega; editar/borrar = Admin/Gestor
@@ -151,6 +232,30 @@ service cloud.firestore {
         allow read:   if isSuper() || isMember(cid);
         allow create: if isSuper() || isActiveMember(cid);
         allow update, delete: if isSuper() || isManager(cid);
+      }
+
+      // ---- Configuración de la empresa (matriz de permisos, etc.) ------
+      // La matriz solo refina DENTRO del envelope de estas rules: el
+      // enforcement grueso (Viewer read-only, finanzas Admin/Gestor) no
+      // depende de este doc, así que no hace falta leerlo con get() aquí.
+      match /settings/{settingId} {
+        allow read:  if isSuper() || isMember(cid);
+        allow write: if isSuper() || isCompanyAdmin(cid);
+      }
+
+      // ---- Solicitudes de permiso al admin -----------------------------
+      // Cada miembro crea las suyas (siempre 'pendiente'); solo el admin
+      // resuelve. Nunca se borran: la resolución queda como registro.
+      match /permission_requests/{reqId} {
+        allow read:   if isSuper() || isCompanyAdmin(cid)
+                      || (isActiveMember(cid) && resource.data.userId == request.auth.uid);
+        allow create: if isSuper()
+                      || (isActiveMember(cid)
+                          && request.resource.data.userId == request.auth.uid
+                          && request.resource.data.companyId == cid
+                          && request.resource.data.estado == 'pendiente');
+        allow update: if isSuper() || isCompanyAdmin(cid);
+        allow delete: if false;
       }
     }
 
@@ -185,19 +290,48 @@ service cloud.firestore {
                       && request.resource.data.companyId == resource.data.companyId);
       allow delete: if isSuper() || canWrite(resource.data.companyId);
     }
-    match /contact_files/{id} {
-      allow read:   if isSuper() || isMember(resource.data.companyId);
-      allow create: if isSuper() || canWrite(request.resource.data.companyId);
-      allow update: if isSuper() || (canWrite(resource.data.companyId)
-                      && request.resource.data.companyId == resource.data.companyId);
-      allow delete: if isSuper() || canWrite(resource.data.companyId);
+    // Archivos de contacto: soft delete + auditoría inmutable + clasificados
+    // (solo Admin o allowlist los leen; solo Admin gestiona la clasificación).
+    match /contact_files/{fileId} {
+      allow read:   if isSuper()
+                    || (isMember(resource.data.companyId)
+                        && (resource.data.clasificado != true
+                            || isCompanyAdmin(resource.data.companyId)
+                            || (request.auth.uid in resource.data.get('allowedUserIds', []))));
+      allow create: if isSuper() || isCompanyAdmin(request.resource.data.companyId)
+                    || (canWrite(request.resource.data.companyId)
+                        && request.resource.data.clasificado != true);
+      allow update: if isSuper()
+                    || ((request.resource.data.companyId == resource.data.companyId)
+                        && (isCompanyAdmin(resource.data.companyId)
+                            || (canWrite(resource.data.companyId)
+                                && resource.data.deleted != true
+                                && resource.data.clasificado != true
+                                && !request.resource.data.diff(resource.data).affectedKeys()
+                                    .hasAny(['clasificado', 'allowedUserIds']))));
+      allow delete: if isSuper();
+
+      match /doc_audit/{eventId} {
+        // El tenant se valida contra el doc padre (+1 lectura, dedupeada).
+        function parentCompany() {
+          return get(/databases/$(database)/documents/contact_files/$(fileId)).data.companyId;
+        }
+        allow read:   if isSuper() || isMember(parentCompany());
+        allow create: if isSuper()
+                      || (isActiveMember(parentCompany())
+                          && request.resource.data.userId == request.auth.uid
+                          && request.resource.data.companyId == parentCompany());
+        allow update, delete: if false;
+      }
     }
     match /contact_folders/{id} {
       allow read:   if isSuper() || isMember(resource.data.companyId);
       allow create: if isSuper() || canWrite(request.resource.data.companyId);
-      allow update: if isSuper() || (canWrite(resource.data.companyId)
-                      && request.resource.data.companyId == resource.data.companyId);
-      allow delete: if isSuper() || canWrite(resource.data.companyId);
+      allow update: if isSuper()
+                    || ((request.resource.data.companyId == resource.data.companyId)
+                        && (isCompanyAdmin(resource.data.companyId)
+                            || (canWrite(resource.data.companyId) && resource.data.deleted != true)));
+      allow delete: if isSuper();
     }
     match /documents/{id} {
       allow read:   if isSuper() || isMember(resource.data.companyId);
@@ -220,19 +354,45 @@ service cloud.firestore {
                       && request.resource.data.companyId == resource.data.companyId);
       allow delete: if isSuper() || canWrite(resource.data.companyId);
     }
-    match /plantilla_files/{id} {
-      allow read:   if isSuper() || isMember(resource.data.companyId);
+    // Plantillas: soft delete + auditoría inmutable + visibilidad configurable.
+    // El CONTENIDO se protege en `get`; el `list` sigue abierto a miembros
+    // (metadatos) y el cliente filtra con canSeePlantilla() — tradeoff documentado.
+    match /plantilla_files/{fileId} {
+      allow get:    if isSuper()
+                    || (isMember(resource.data.companyId)
+                        && (resource.data.get('visibleTo', 'all') != 'restricted'
+                            || isCompanyAdmin(resource.data.companyId)
+                            || (request.auth.uid in resource.data.get('visibleUserIds', []))
+                            || (memberData(resource.data.companyId).role
+                                in resource.data.get('visibleRoles', []))));
+      allow list:   if isSuper() || isMember(resource.data.companyId);
       allow create: if isSuper() || canWrite(request.resource.data.companyId);
-      allow update: if isSuper() || (canWrite(resource.data.companyId)
-                      && request.resource.data.companyId == resource.data.companyId);
-      allow delete: if isSuper() || canWrite(resource.data.companyId);
+      allow update: if isSuper()
+                    || ((request.resource.data.companyId == resource.data.companyId)
+                        && (isCompanyAdmin(resource.data.companyId)
+                            || (canWrite(resource.data.companyId) && resource.data.deleted != true)));
+      allow delete: if isSuper();
+
+      match /doc_audit/{eventId} {
+        function parentCompany() {
+          return get(/databases/$(database)/documents/plantilla_files/$(fileId)).data.companyId;
+        }
+        allow read:   if isSuper() || isMember(parentCompany());
+        allow create: if isSuper()
+                      || (isActiveMember(parentCompany())
+                          && request.resource.data.userId == request.auth.uid
+                          && request.resource.data.companyId == parentCompany());
+        allow update, delete: if false;
+      }
     }
     match /plantilla_folders/{id} {
       allow read:   if isSuper() || isMember(resource.data.companyId);
       allow create: if isSuper() || canWrite(request.resource.data.companyId);
-      allow update: if isSuper() || (canWrite(resource.data.companyId)
-                      && request.resource.data.companyId == resource.data.companyId);
-      allow delete: if isSuper() || canWrite(resource.data.companyId);
+      allow update: if isSuper()
+                    || ((request.resource.data.companyId == resource.data.companyId)
+                        && (isCompanyAdmin(resource.data.companyId)
+                            || (canWrite(resource.data.companyId) && resource.data.deleted != true)));
+      allow delete: if isSuper();
     }
     match /projects/{id} {
       allow read:   if isSuper() || isMember(resource.data.companyId);

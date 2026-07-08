@@ -7,7 +7,6 @@ import {
   getDocs,
   setDoc,
   updateDoc,
-  deleteDoc,
   query,
   orderBy,
   serverTimestamp,
@@ -18,12 +17,17 @@ import {
   uploadBytes,
   uploadString,
   getDownloadURL,
-  deleteObject,
 } from '@angular/fire/storage';
 import { Auth } from '@angular/fire/auth';
 import { CompanyService } from './company.service';
+import { DocAuditService } from './doc-audit.service';
+import { PermissionService } from './permission.service';
 import { stripUndefinedDeep } from '../firebase/sanitize';
+import { isVisibleDoc } from '../docs/doc-versioning';
+import { canSeePlantilla } from '../permissions/doc-access';
 import { DocTemplate, TemplateVariable } from '../../interfaces';
+import type { FirmRole } from '../../interfaces/member';
+import type { PlantillaVisibility } from '../../interfaces/plantilla-file.interface';
 
 export interface DocTemplateCreate {
   name: string;
@@ -42,9 +46,15 @@ export class DocTemplateService {
   private readonly storage = inject(Storage);
   private readonly auth = inject(Auth);
   private readonly companyService = inject(CompanyService);
+  private readonly docAudit = inject(DocAuditService);
+  private readonly permissionService = inject(PermissionService);
 
   readonly templates = signal<DocTemplate[]>([]);
   readonly loading = signal(false);
+
+  templatePath(id: string): string {
+    return `companies/${this.companyId}/docTemplates/${id}`;
+  }
 
   private get companyId(): string {
     const id = this.companyService.activeCompany()?.id;
@@ -60,7 +70,15 @@ export class DocTemplateService {
     this.loading.set(true);
     try {
       const snapshot = await getDocs(query(this.templatesRef, orderBy('name')));
-      this.templates.set(snapshot.docs.map(d => ({ id: d.id, ...d.data() }) as DocTemplate));
+      const uid = this.auth.currentUser?.uid ?? '';
+      const role = this.permissionService.userRole();
+      const isSuper = this.permissionService.isSuperUser();
+      this.templates.set(
+        snapshot.docs
+          .map(d => ({ id: d.id, ...d.data() }) as DocTemplate)
+          .filter(isVisibleDoc)
+          .filter(t => canSeePlantilla(t, uid, role, isSuper))
+      );
     } finally {
       // El error se propaga al llamador (lo muestra ToastService).
       this.loading.set(false);
@@ -106,9 +124,13 @@ export class DocTemplateService {
       sourceStoragePath,
       sourceDownloadUrl,
       createdBy: this.auth.currentUser?.uid ?? '',
+      deleted: false,
+      visibleTo: 'all',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }));
+
+    this.docAudit.log(this.templatePath(docRef.id), 'create', { detail: input.name });
 
     await this.loadTemplates();
     return docRef.id;
@@ -127,23 +149,40 @@ export class DocTemplateService {
       ...updateData,
       updatedAt: serverTimestamp(),
     }));
+    this.docAudit.log(this.templatePath(id), 'update');
     this.templates.update(list => list.map(t => (t.id === id ? { ...t, ...data } : t)));
   }
 
+  /** Define quién puede ver esta plantilla de documento (rules protegen el get). */
+  async setVisibility(
+    id: string,
+    visibleTo: PlantillaVisibility,
+    visibleRoles: FirmRole[] = [],
+    visibleUserIds: string[] = [],
+  ): Promise<void> {
+    await updateDoc(doc(this.templatesRef, id), stripUndefinedDeep({
+      visibleTo,
+      visibleRoles,
+      visibleUserIds,
+      updatedAt: serverTimestamp(),
+    }));
+    this.docAudit.log(this.templatePath(id), 'permission_change', {
+      detail: visibleTo === 'all' ? 'Visible para todos' : 'Visibilidad restringida',
+    });
+    this.templates.update(list =>
+      list.map(t => (t.id === id ? { ...t, visibleTo, visibleRoles, visibleUserIds } : t))
+    );
+  }
+
+  /** Soft delete: la plantilla y sus blobs (fuente/HTML) se conservan. */
   async deleteTemplate(id: string): Promise<void> {
-    const template = this.templates().find(t => t.id === id)
-      ?? ({ id, ...(await getDoc(doc(this.templatesRef, id))).data() } as DocTemplate);
-
-    for (const path of [template.sourceStoragePath, template.htmlStoragePath]) {
-      if (!path) continue;
-      try {
-        await deleteObject(ref(this.storage, path));
-      } catch {
-        // El objeto puede no existir en Storage — continuar
-      }
-    }
-
-    await deleteDoc(doc(this.templatesRef, id));
+    await updateDoc(doc(this.templatesRef, id), stripUndefinedDeep({
+      deleted: true,
+      deletedAt: serverTimestamp(),
+      deletedBy: this.auth.currentUser?.uid ?? '',
+      deletedByNombre: this.permissionService.currentMember()?.nombre ?? '',
+    }));
+    this.docAudit.log(this.templatePath(id), 'delete');
     this.templates.update(list => list.filter(t => t.id !== id));
   }
 

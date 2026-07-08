@@ -98,6 +98,7 @@ export interface Caso {
   cierreConfirmadoAt?: string;
   /** Saldo bancario corroborado al cerrar (snapshot de auditoría). */
   cierreSaldoBancario?: number;
+  encargadoId?: string;
   vencimiento?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -133,4 +134,5 @@ export interface CreateCasoData {
   vencimiento?: string;
   contactoIds: string[];
   plantillaId?: string;
+  encargadoId?: string;
 }

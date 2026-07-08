@@ -57,6 +57,19 @@
       </nav>
 
       <div class="flex items-center gap-2 shrink-0">
+        @if (isAdmin()) {
+          <button
+            (click)="uploadClassified.set(!uploadClassified())"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors duration-150"
+            [style.border]="'1px solid ' + (uploadClassified() ? 'var(--warning)' : 'var(--border)')"
+            [style.color]="uploadClassified() ? 'var(--warning)' : 'var(--text-muted)'"
+            [attr.aria-pressed]="uploadClassified()"
+            title="La próxima subida se marcará como clasificada: solo administradores y usuarios autorizados podrán verla"
+          >
+            <lucide-icon [img]="LockIcon" class="w-3.5 h-3.5" />
+            {{ uploadClassified() ? 'Subida clasificada' : 'Clasificado' }}
+          </button>
+        }
         <button
           (click)="startCreateFolder()"
           [disabled]="busy()"
@@ -218,9 +231,12 @@
               }
             } @else if (slot.status === 'subido') {
               <span class="px-2 py-0.5 text-xs rounded-full font-medium" style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">Subido</span>
-              @if (slot.downloadUrl) {
+              @if ((slot.version ?? 1) > 1) {
+                <span class="px-1.5 py-0.5 text-[10px] font-bold rounded" style="background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand)">v{{ slot.version }}</span>
+              }
+              @if (slot.downloadUrl || (slot.clasificado && slot.storagePath)) {
                 <button
-                  (click)="openPreview({ name: slot.name, downloadUrl: slot.downloadUrl!, mimeType: slot.mimeType })"
+                  (click)="previewSlot(slot)"
                   class="p-1.5 rounded-lg transition-colors duration-150"
                   style="color:var(--text-faint)"
                   (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-muted)'"
@@ -228,6 +244,28 @@
                   aria-label="Previsualizar"
                 >
                   <lucide-icon [img]="EyeIcon" class="w-4 h-4" />
+                </button>
+              }
+              <button
+                (click)="openSlotHistory(slot)"
+                class="p-1.5 rounded-lg transition-colors duration-150"
+                style="color:var(--text-faint)"
+                (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-muted)'"
+                (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+                aria-label="Ver historial"
+              >
+                <lucide-icon [img]="HistoryIcon" class="w-4 h-4" />
+              </button>
+              @if (isAdmin()) {
+                <button
+                  (click)="openSlotAccess(slot)"
+                  class="p-1.5 rounded-lg transition-colors duration-150"
+                  [style.color]="slot.clasificado ? 'var(--warning)' : 'var(--text-faint)'"
+                  (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                  (mouseleave)="$any($event.currentTarget).style.background=''"
+                  aria-label="Gestionar acceso"
+                >
+                  <lucide-icon [img]="LockIcon" class="w-4 h-4" />
                 </button>
               }
               <button
@@ -280,14 +318,22 @@
         <div class="flex items-center gap-3 px-4 py-3 group" style="border-bottom:1px solid var(--border-soft)">
           <lucide-icon [img]="FileTextIcon" class="w-5 h-5 shrink-0" style="color:var(--brand)" />
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium truncate" style="color:var(--text-body)">{{ file.name }}</p>
+            <p class="text-sm font-medium truncate flex items-center gap-1.5" style="color:var(--text-body)">
+              @if (file.clasificado) {
+                <lucide-icon [img]="LockIcon" class="w-3.5 h-3.5 shrink-0" style="color:var(--warning)" aria-label="Documento clasificado" />
+              }
+              <span class="truncate">{{ file.name }}</span>
+              @if ((file.version ?? 1) > 1) {
+                <span class="px-1.5 py-0.5 text-[10px] font-bold rounded shrink-0" style="background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand)">v{{ file.version }}</span>
+              }
+            </p>
             @if (file.sizeBytes) {
               <p class="text-xs" style="color:var(--text-faint)">{{ formatFileSize(file.sizeBytes) }}</p>
             }
           </div>
           <div class="flex items-center gap-2 shrink-0">
             <button
-              (click)="openPreview({ name: file.name, downloadUrl: file.downloadUrl, mimeType: file.mimeType })"
+              (click)="previewFile(file)"
               class="p-1.5 rounded-lg transition-colors duration-150"
               style="color:var(--text-faint)"
               (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-muted)'"
@@ -296,19 +342,72 @@
             >
               <lucide-icon [img]="EyeIcon" class="w-4 h-4" />
             </button>
-            <a
-              [href]="file.downloadUrl"
-              target="_blank"
-              rel="noopener"
-              download
+            @if (file.clasificado) {
+              <button
+                (click)="downloadClassifiedFile(file)"
+                class="p-1.5 rounded-lg transition-colors duration-150"
+                style="color:var(--text-faint)"
+                (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-muted)'"
+                (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+                aria-label="Descargar (documento clasificado)"
+              >
+                <lucide-icon [img]="DownloadIcon" class="w-4 h-4" />
+              </button>
+            } @else {
+              <a
+                [href]="file.downloadUrl"
+                target="_blank"
+                rel="noopener"
+                download
+                (click)="logFileDownload(file)"
+                class="p-1.5 rounded-lg transition-colors duration-150"
+                style="color:var(--text-faint)"
+                (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-muted)'"
+                (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+                aria-label="Descargar"
+              >
+                <lucide-icon [img]="DownloadIcon" class="w-4 h-4" />
+              </a>
+            }
+            <button
+              (click)="triggerReupload(file.id)"
               class="p-1.5 rounded-lg transition-colors duration-150"
               style="color:var(--text-faint)"
               (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-muted)'"
               (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
-              aria-label="Descargar"
+              aria-label="Subir nueva versión"
             >
-              <lucide-icon [img]="DownloadIcon" class="w-4 h-4" />
-            </a>
+              <lucide-icon [img]="RefreshCwIcon" class="w-4 h-4" />
+            </button>
+            <input
+              type="file"
+              [id]="'reupload-file-' + file.id"
+              class="hidden"
+              (change)="onReuploadSelected($event, file)"
+              aria-hidden="true"
+            />
+            <button
+              (click)="openFileHistory(file)"
+              class="p-1.5 rounded-lg transition-colors duration-150"
+              style="color:var(--text-faint)"
+              (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-muted)'"
+              (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+              aria-label="Ver historial"
+            >
+              <lucide-icon [img]="HistoryIcon" class="w-4 h-4" />
+            </button>
+            @if (isAdmin()) {
+              <button
+                (click)="openFileAccess(file)"
+                class="p-1.5 rounded-lg transition-colors duration-150"
+                [style.color]="file.clasificado ? 'var(--warning)' : 'var(--text-faint)'"
+                (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                (mouseleave)="$any($event.currentTarget).style.background=''"
+                aria-label="Gestionar acceso"
+              >
+                <lucide-icon [img]="LockIcon" class="w-4 h-4" />
+              </button>
+            }
             @if (confirmingDeleteFileId() === file.id) {
               <button (click)="confirmDeleteFile(file)"
                 class="p-1.5 rounded-lg transition-colors duration-150"
@@ -418,3 +517,24 @@
     (close)="closeGenerador()"
   />
 }
+
+@let hist = historyTarget();
+<app-doc-history-panel
+  [visible]="hist !== null"
+  [title]="hist?.title ?? ''"
+  [versions]="hist?.versions ?? []"
+  [parentPath]="hist?.parentPath ?? null"
+  (closed)="closeHistory()"
+/>
+
+@let access = accessTarget();
+<app-doc-access-drawer
+  [visible]="access !== null"
+  mode="clasificado"
+  [title]="access?.title ?? ''"
+  [saving]="accessSaving()"
+  [initialRestricted]="access?.clasificado ?? false"
+  [initialUserIds]="access?.allowedUserIds ?? []"
+  (saved)="onAccessSaved($event)"
+  (closed)="accessTarget.set(null)"
+/>

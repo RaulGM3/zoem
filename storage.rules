@@ -41,10 +41,13 @@ service firebase.storage {
       return request.resource == null || request.resource.size < 50 * 1024 * 1024;
     }
 
-    // Todo el almacenamiento del tenant
+    // Todo el almacenamiento del tenant.
+    // Sin `delete`: los blobs nunca se borran desde cliente — el "borrado" es
+    // soft delete en Firestore y el archivo se conserva para auditoría.
     match /companies/{cid}/{allPaths=**} {
-      allow read:  if isSuper() || isMember(cid);
-      allow write: if isSuper() || (canWrite(cid) && withinSizeLimit());
+      allow read:           if isSuper() || isMember(cid);
+      allow create, update: if isSuper() || (canWrite(cid) && withinSizeLimit());
+      allow delete:         if isSuper();
     }
 
     // Default fail-closed: nada fuera de companies/ es accesible.

@@ -16,8 +16,10 @@ import { ToastService } from '../../core/services/toast.service';
 import { ContactFileService } from '../../core/services/contact-file.service';
 import { UploadQueueService } from '../../core/services/upload-queue.service';
 import { CasosService } from '../../core/services/casos.service';
+import { UsersService } from '../../core/services/users';
 import {
   Contact, ContactFolder, ContactFile, Caso,
+  CONTACT_STATUS_LABELS, CANAL_ENTRADA_LABELS, ContactStatus, CanalEntrada,
   getContactDisplayName, getContactInitials,
 } from '../../interfaces';
 
@@ -55,6 +57,7 @@ export class ContactoDetailComponent {
   private readonly uploadQueue = inject(UploadQueueService);
   private readonly contactService = inject(ContactService);
   private readonly casosService = inject(CasosService);
+  readonly usersService = inject(UsersService);
 
   // Document browser state
   currentFolderId = signal<string | null>(null);
@@ -76,6 +79,7 @@ export class ContactoDetailComponent {
       this.folderService.loadFolders(contactId);
       this.fileService.loadFiles(contactId);
       this.casosService.loadCasos();
+      if (this.usersService.members().length === 0) this.usersService.loadMembers();
       // Reset browser state when contact changes
       this.currentFolderId.set(null);
       this.folderPath.set([]);
@@ -97,6 +101,13 @@ export class ContactoDetailComponent {
   );
 
   totalDocumentos = computed(() => this.fileService.files().length);
+
+  encargadoNombre = computed(() => {
+    const c = this.contacto();
+    if (!c?.assignedTo) return null;
+    const m = this.usersService.members().find(m => m.userId === c.assignedTo);
+    return m ? `${m.nombre}${m.apellido ? ' ' + m.apellido : ''}` : null;
+  });
 
   currentFolders = computed(() =>
     this.folderService.folders().filter((f) => f.parentId === this.currentFolderId())
@@ -152,19 +163,24 @@ export class ContactoDetailComponent {
   getStatusStyle(status: string): { background: string; color: string } {
     const mix = (v: string) => `color-mix(in srgb,${v} 12%,transparent)`;
     const map: Record<string, { background: string; color: string }> = {
-      activo:    { background: mix('var(--success)'),   color: 'var(--success)' },
-      potencial: { background: mix('var(--accent-ia)'), color: 'var(--accent-ia)' },
-      inactivo:  { background: 'var(--surface-2)',       color: 'var(--text-muted)' },
-      archivado: { background: mix('var(--warning)'),   color: 'var(--warning)' },
+      activo:                       { background: mix('var(--success)'),   color: 'var(--success)' },
+      potencial:                    { background: mix('var(--accent-ia)'), color: 'var(--accent-ia)' },
+      inactivo:                     { background: 'var(--surface-2)',       color: 'var(--text-muted)' },
+      cerrado_finalizado:           { background: 'var(--surface-2)',       color: 'var(--text-muted)' },
+      pendiente_presupuesto:        { background: mix('var(--warning)'),   color: 'var(--warning)' },
+      pendiente_firma_hoja_encargo: { background: mix('var(--warning)'),   color: 'var(--warning)' },
+      pendiente_pago:               { background: mix('var(--danger)'),    color: 'var(--danger)' },
+      integracion_plantillas:       { background: mix('var(--brand)'),     color: 'var(--brand)' },
     };
     return map[status] ?? { background: 'var(--surface-2)', color: 'var(--text-muted)' };
   }
 
   getStatusLabel(status: string): string {
-    const map: Record<string, string> = {
-      activo: 'Activo', potencial: 'Potencial', inactivo: 'Inactivo', archivado: 'Archivado',
-    };
-    return map[status] ?? status;
+    return CONTACT_STATUS_LABELS[status as ContactStatus] ?? status;
+  }
+
+  getCanalEntradaLabel(canal: string): string {
+    return CANAL_ENTRADA_LABELS[canal as CanalEntrada] ?? canal;
   }
 
   getAvatarStyle(type: string): { background: string; color: string } {

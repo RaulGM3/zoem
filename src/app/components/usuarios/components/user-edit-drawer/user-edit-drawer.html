@@ -96,11 +96,23 @@
           <lucide-icon [img]="ShieldIcon" class="absolute left-3 top-2.5 w-4 h-4 text-slate-600 pointer-events-none" />
           <select
             id="user-role"
-            formControlName="role"
+            [value]="roleKey()"
+            (change)="onRoleKeyChange($any($event.target).value)"
             class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 bg-white appearance-none"
           >
-            @for (rol of roles; track rol) {
-              <option [value]="rol">{{ rol }}</option>
+            <optgroup label="Roles del sistema">
+              @for (rol of roles; track rol) {
+                <option [value]="rol" [selected]="roleKey() === rol">{{ rol }}</option>
+              }
+            </optgroup>
+            @if (customRoles().length > 0) {
+              <optgroup label="Roles de la empresa">
+                @for (cr of customRoles(); track cr.id) {
+                  <option [value]="'custom:' + cr.id" [selected]="roleKey() === 'custom:' + cr.id">
+                    {{ cr.nombre }} ({{ cr.baseRole }})
+                  </option>
+                }
+              </optgroup>
             }
           </select>
         </div>
@@ -132,6 +144,70 @@
           class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
         />
       </div>
+
+      @if (showOverrides()) {
+        <div class="space-y-2 pt-2 border-t border-slate-100">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-slate-700">Permisos individuales</p>
+              <p class="text-xs text-slate-500">
+                Excepciones sobre su rol. Toca una celda para alternar:
+                <span class="font-medium">—</span> hereda ·
+                <span class="font-medium text-emerald-700">✓</span> permitir ·
+                <span class="font-medium text-red-600">✗</span> denegar
+              </p>
+            </div>
+            @if (overridesCount() > 0) {
+              <button
+                type="button"
+                (click)="clearOverrides()"
+                class="text-xs text-violet-600 font-medium hover:underline shrink-0"
+              >
+                Quitar todas ({{ overridesCount() }})
+              </button>
+            }
+          </div>
+          <table class="w-full text-xs">
+            <thead>
+              <tr class="text-slate-500 border-b border-slate-100">
+                <th class="pb-1.5 text-left font-medium">Módulo</th>
+                @for (cap of capabilities; track cap) {
+                  <th class="pb-1.5 font-medium text-center capitalize">{{ cap }}</th>
+                }
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-50">
+              @for (modulo of modulos; track modulo) {
+                <tr>
+                  <td class="py-1.5 text-slate-700 font-medium">{{ modulo }}</td>
+                  @for (cap of capabilities; track cap) {
+                    <td class="py-1.5 text-center">
+                      <button
+                        type="button"
+                        (click)="cycle(modulo, cap)"
+                        class="w-7 h-6 rounded text-[11px] font-semibold transition-colors"
+                        [class]="stateOf(modulo, cap) === 'permitir'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : stateOf(modulo, cap) === 'denegar'
+                            ? 'bg-red-100 text-red-600'
+                            : inheritedValue(modulo, cap)
+                              ? 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                              : 'bg-slate-50 text-slate-300 hover:bg-slate-200'"
+                        [attr.aria-label]="modulo + ' · ' + cap + ': ' + stateOf(modulo, cap)"
+                        [attr.title]="'Hereda: ' + (inheritedValue(modulo, cap) ? 'permitido' : 'denegado')"
+                      >
+                        @if (stateOf(modulo, cap) === 'permitir') { ✓ }
+                        @else if (stateOf(modulo, cap) === 'denegar') { ✗ }
+                        @else { — }
+                      </button>
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
 
       <button
         type="submit"

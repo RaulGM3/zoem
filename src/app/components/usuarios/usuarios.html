@@ -48,6 +48,14 @@
         <button (click)="activeTab.set('usuarios')" [class]="activeTab() === 'usuarios' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600' : 'px-5 py-3 text-sm font-medium text-slate-700 hover:text-slate-700'">Usuarios</button>
         <button (click)="activeTab.set('roles')" [class]="activeTab() === 'roles' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600' : 'px-5 py-3 text-sm font-medium text-slate-700 hover:text-slate-700'">Roles</button>
         <button (click)="activeTab.set('permisos')" [class]="activeTab() === 'permisos' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600' : 'px-5 py-3 text-sm font-medium text-slate-700 hover:text-slate-700'">Permisos</button>
+        @if (isAdmin()) {
+          <button (click)="activeTab.set('solicitudes')" [class]="(activeTab() === 'solicitudes' ? 'px-5 py-3 text-sm font-medium text-violet-600 border-b-2 border-violet-600' : 'px-5 py-3 text-sm font-medium text-slate-700 hover:text-slate-700') + ' flex items-center gap-1.5'">
+            Solicitudes
+            @if (solicitudesPendientes().length > 0) {
+              <span class="px-1.5 py-0.5 text-xs bg-amber-100 text-amber-700 rounded-full font-medium">{{ solicitudesPendientes().length }}</span>
+            }
+          </button>
+        }
       </div>
 
       @if (activeTab() === 'usuarios') {
@@ -91,7 +99,8 @@
                         </div>
                       </td>
                       <td class="py-3">
-                        <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + getRolClass(usr.role)">{{ usr.role }}</span>
+                        @let badge = roleBadge(usr);
+                        <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + badge.colorClass">{{ badge.label }}</span>
                       </td>
                       <td class="py-3 text-slate-700">{{ usr.departamento || '—' }}</td>
                       <td class="py-3 text-center">
@@ -171,31 +180,99 @@
       }
 
       @if (activeTab() === 'roles') {
-        <div class="p-4 grid md:grid-cols-2 gap-4">
-          @for (rol of roles(); track rol.id) {
-            <div class="border border-slate-200 rounded-xl p-4">
-              <div class="flex items-start justify-between mb-2">
-                <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + rol.color">{{ rol.nombre }}</span>
-                <span class="text-xs text-slate-600">{{ rol.usuarios }} usuarios</span>
-              </div>
-              <p class="text-sm text-slate-600">{{ rol.descripcion }}</p>
-              <button (click)="activeTab.set('permisos')" class="mt-3 text-xs text-violet-600 font-medium hover:underline">Ver permisos</button>
+        <div class="p-4 space-y-4">
+          @if (isAdmin()) {
+            <div class="flex justify-end">
+              <button
+                (click)="openCreateRole()"
+                class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-violet-600 text-white rounded-lg hover:bg-violet-700"
+              >
+                <lucide-icon [img]="PlusIcon" class="w-3.5 h-3.5" />
+                Crear rol
+              </button>
             </div>
           }
+          <div class="grid md:grid-cols-2 gap-4">
+            @for (rol of roles(); track rol.id) {
+              <div class="border border-slate-200 rounded-xl p-4">
+                <div class="flex items-start justify-between mb-2">
+                  <span [class]="'px-2 py-0.5 text-xs rounded-full font-medium ' + rol.color">{{ rol.nombre }}</span>
+                  <span class="text-xs text-slate-600">{{ rol.usuarios }} usuarios</span>
+                </div>
+                <p class="text-sm text-slate-600">{{ rol.descripcion }}</p>
+                <button (click)="activeTab.set('permisos')" class="mt-3 text-xs text-violet-600 font-medium hover:underline">Ver permisos</button>
+              </div>
+            }
+            @for (rol of customRoles(); track rol.id) {
+              <div class="border border-teal-200 rounded-xl p-4 bg-teal-50/40">
+                <div class="flex items-start justify-between mb-2">
+                  <span class="px-2 py-0.5 text-xs rounded-full font-medium bg-teal-100 text-teal-700">{{ rol.nombre }}</span>
+                  <span class="text-xs text-slate-600">{{ countForCustomRole(rol.id) }} usuarios</span>
+                </div>
+                <p class="text-sm text-slate-600">{{ rol.descripcion || 'Rol personalizado de la empresa' }}</p>
+                <p class="text-xs text-slate-500 mt-1">
+                  Rol base: <span [class]="'px-1.5 py-0.5 rounded-full font-medium ' + getRolClass(rol.baseRole)">{{ rol.baseRole }}</span>
+                </p>
+                @if (isAdmin()) {
+                  <button (click)="openEditRole(rol)" class="mt-3 text-xs text-violet-600 font-medium hover:underline">Editar rol</button>
+                }
+              </div>
+            }
+          </div>
         </div>
       }
 
       @if (activeTab() === 'permisos') {
         <div class="p-4 overflow-x-auto">
-          <p class="text-xs text-slate-600 font-medium mb-3">
-            Capacidades por rol: <span class="font-medium">V</span> ver · <span class="font-medium">C</span> crear · <span class="font-medium">E</span> editar · <span class="font-medium">B</span> borrar
-          </p>
+          <div class="flex items-start justify-between gap-4 mb-3">
+            <p class="text-xs text-slate-600 font-medium">
+              Capacidades por rol: <span class="font-medium">V</span> ver · <span class="font-medium">C</span> crear · <span class="font-medium">E</span> editar · <span class="font-medium">B</span> borrar
+              @if (isAdmin()) {
+                <span class="block mt-1 text-slate-500">Toca una celda para cambiarla. La columna Admin no se puede modificar.</span>
+              }
+            </p>
+            @if (isAdmin()) {
+              <div class="flex items-center gap-2 shrink-0">
+                @if (matrixDirty()) {
+                  <button
+                    (click)="cancelMatrixEdit()"
+                    [disabled]="matrixSaving()"
+                    class="px-3 py-1.5 text-xs font-medium border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    Descartar
+                  </button>
+                  <button
+                    (click)="saveMatrix()"
+                    [disabled]="matrixSaving()"
+                    class="px-3 py-1.5 text-xs font-medium bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50"
+                  >
+                    {{ matrixSaving() ? 'Guardando...' : 'Guardar cambios' }}
+                  </button>
+                } @else if (matrixCustomized()) {
+                  <button
+                    (click)="resetMatrix()"
+                    [disabled]="matrixSaving()"
+                    class="px-3 py-1.5 text-xs font-medium border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    Restaurar valores por defecto
+                  </button>
+                }
+              </div>
+            }
+          </div>
           <table class="w-full text-sm">
             <thead>
               <tr class="text-center text-slate-600 border-b border-slate-100">
                 <th class="pb-3 text-left font-medium text-slate-700">Módulo</th>
                 @for (rol of rolesCols; track rol) {
-                  <th class="pb-3 font-medium">{{ rol }}</th>
+                  <th class="pb-3 font-medium">
+                    <span class="inline-flex items-center gap-1">
+                      {{ rol }}
+                      @if (rol === 'Admin') {
+                        <lucide-icon [img]="LockIcon" class="w-3 h-3 text-slate-400" aria-hidden="true" />
+                      }
+                    </span>
+                  </th>
                 }
               </tr>
             </thead>
@@ -207,11 +284,23 @@
                     <td class="py-3">
                       <div class="flex items-center justify-center gap-1">
                         @for (cap of capabilities; track cap) {
-                          <span
-                            class="w-5 h-5 rounded text-[10px] font-semibold flex items-center justify-center"
-                            [class]="capsFor(modulo, rol)[cap] ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-300'"
-                            [attr.title]="cap"
-                          >{{ capInitial(cap) }}</span>
+                          @if (cellEditable(modulo, rol, cap)) {
+                            <button
+                              type="button"
+                              (click)="toggleCell(modulo, rol, cap)"
+                              class="w-5 h-5 rounded text-[10px] font-semibold flex items-center justify-center transition-colors cursor-pointer hover:ring-2 hover:ring-violet-300"
+                              [class]="capsFor(modulo, rol)[cap] ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-300'"
+                              [attr.title]="cap + ' (' + rol + ' · ' + modulo + ')'"
+                              [attr.aria-label]="cap + ' para ' + rol + ' en ' + modulo + ': ' + (capsFor(modulo, rol)[cap] ? 'permitido' : 'denegado')"
+                              [attr.aria-pressed]="capsFor(modulo, rol)[cap]"
+                            >{{ capInitial(cap) }}</button>
+                          } @else {
+                            <span
+                              class="w-5 h-5 rounded text-[10px] font-semibold flex items-center justify-center"
+                              [class]="capsFor(modulo, rol)[cap] ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-300'"
+                              [attr.title]="rol === 'Admin' ? 'Admin siempre tiene control total' : (capsFor(modulo, rol)[cap] ? cap : 'No configurable: la seguridad del servidor no lo permite para este rol')"
+                            >{{ capInitial(cap) }}</span>
+                          }
                         }
                       </div>
                     </td>
@@ -220,6 +309,51 @@
               }
             </tbody>
           </table>
+        </div>
+      }
+
+      @if (activeTab() === 'solicitudes' && isAdmin()) {
+        <div class="p-4 space-y-3">
+          @for (req of solicitudesPendientes(); track req.id) {
+            <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center font-semibold text-violet-700 text-sm shrink-0">
+                  {{ req.userNombre.charAt(0) }}
+                </div>
+                <div class="min-w-0">
+                  <p class="text-sm font-medium text-slate-800 truncate">{{ req.userNombre }}</p>
+                  <p class="text-xs text-slate-600 font-medium">
+                    Pide <span class="font-semibold">{{ req.capability }}</span> en <span class="font-semibold">{{ req.modulo }}</span>
+                    · {{ formatLogin(req.createdAt) }}
+                  </p>
+                  @if (req.motivo) {
+                    <p class="text-xs text-slate-500 mt-0.5 truncate">"{{ req.motivo }}"</p>
+                  }
+                </div>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <button
+                  (click)="rejectRequest(req)"
+                  [disabled]="resolvingRequestId() === req.id"
+                  class="px-3 py-1.5 text-xs font-medium border border-slate-200 text-slate-600 rounded-lg hover:bg-red-50 hover:text-red-600 hover:border-red-200 disabled:opacity-50"
+                >
+                  Rechazar
+                </button>
+                <button
+                  (click)="approveRequest(req)"
+                  [disabled]="resolvingRequestId() === req.id"
+                  class="px-3 py-1.5 text-xs font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  Aprobar
+                </button>
+              </div>
+            </div>
+          } @empty {
+            <div class="flex flex-col items-center justify-center py-10 text-center">
+              <lucide-icon [img]="InboxIcon" class="w-8 h-8 text-slate-300 mb-2" aria-hidden="true" />
+              <p class="text-sm text-slate-600">No hay solicitudes de permiso pendientes</p>
+            </div>
+          }
         </div>
       }
     </div>
@@ -259,12 +393,23 @@
   (closed)="closeInviteDrawer()"
 />
 
+<!-- Role editor drawer -->
+<app-role-editor-drawer
+  [visible]="showRoleEditor()"
+  [saving]="roleSaving()"
+  [role]="editingRole()"
+  (saved)="onRoleSaved($event)"
+  (deleted)="onRoleDeleted($event)"
+  (closed)="showRoleEditor.set(false)"
+/>
+
 <!-- Edit user drawer -->
 <app-user-edit-drawer
   [member]="editingMember()"
   [visible]="showEditDrawer()"
   [saving]="memberSaving()"
   [canDelete]="!isEditingOwnProfile()"
+  [canEditOverrides]="isAdmin()"
   (saved)="onSaveMember($event)"
   (deleted)="onDeleteMember($event)"
   (closed)="closeEditDrawer()"

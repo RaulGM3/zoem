@@ -1,6 +1,11 @@
 import { Timestamp } from '@angular/fire/firestore';
+import type { FirmRole } from './member';
+import type { SoftDeletable } from './doc-lifecycle.interface';
 
-export interface PlantillaFile {
+/** Visibilidad de plantillas: ausente == 'all' (docs legacy). */
+export type PlantillaVisibility = 'all' | 'restricted';
+
+export interface PlantillaFile extends SoftDeletable {
   id: string;
   plantillaId: string;
   companyId: string;
@@ -10,4 +15,8 @@ export interface PlantillaFile {
   docTemplateId?: string | null;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
+  createdBy?: string;
+  visibleTo?: PlantillaVisibility;
+  visibleRoles?: FirmRole[];
+  visibleUserIds?: string[];
 }

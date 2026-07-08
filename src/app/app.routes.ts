@@ -23,6 +23,11 @@ export const routes: Routes = [
           import('./components/dashboard/dashboard').then((m) => m.DashboardComponent),
       },
       {
+        path: 'sin-acceso/:modulo',
+        loadComponent: () =>
+          import('./components/sin-acceso/sin-acceso').then((m) => m.SinAccesoComponent),
+      },
+      {
         path: 'proyectos',
         loadComponent: () =>
           import('./components/proyectos/proyectos').then((m) => m.ProyectosComponent),

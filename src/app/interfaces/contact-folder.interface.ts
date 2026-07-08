@@ -1,6 +1,7 @@
 import { Timestamp } from '@angular/fire/firestore';
+import type { SoftDeletable } from './doc-lifecycle.interface';
 
-export interface ContactFolder {
+export interface ContactFolder extends SoftDeletable {
   id: string;
   contactId: string;
   companyId: string;

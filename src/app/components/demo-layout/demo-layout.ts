@@ -27,6 +27,7 @@ import {
   UserCog,
   Briefcase,
   User,
+  ShieldCheck,
   ArrowLeft,
   Bell,
   Search,
@@ -50,6 +51,7 @@ export interface NavItem {
 export interface NavCategory {
   category: string;
   items: NavItem[];
+  superuserOnly?: boolean;
 }
 
 @Component({
@@ -68,6 +70,7 @@ export class DemoLayoutComponent {
   readonly XIcon = X;
   readonly SettingsIcon = Settings;
   readonly LogOutIcon = LogOut;
+  readonly ShieldCheckIcon = ShieldCheck;
 
   readonly searchSvc = inject(SearchService);
   readonly themeSvc = inject(ThemeService);
@@ -162,20 +165,12 @@ export class DemoLayoutComponent {
     {
       category: 'Gestión',
       items: [
-        // { name: 'Expedientes', href: '/proyectos', icon: FolderKanban },
         { name: 'Contactos', href: '/contactos', icon: Users, modulo: 'Contactos' },
         { name: 'Casos', href: '/casos', icon: Briefcase, modulo: 'Casos' },
         { name: 'Calendario', href: '/calendario', icon: Calendar, modulo: 'Calendario' },
-        // { name: 'Eventos', href: '/eventos', icon: CalendarPlus },
         { name: 'Documentos', href: '/documentos', icon: FileText, modulo: 'Documentos' },
       ],
     },
-    // {
-    //   category: 'Comunicaciones',
-    //   items: [
-    //     { name: 'Centro de Mensajes', href: '/comunicaciones', icon: Send, badge: 'Nuevo' },
-    //   ],
-    // },
     {
       category: 'Finanzas',
       items: [
@@ -190,6 +185,13 @@ export class DemoLayoutComponent {
         { name: 'Mi Perfil', href: '/perfil', icon: User },
       ],
     },
+    {
+      category: 'Superuser',
+      superuserOnly: true,
+      items: [
+        { name: 'Superuser', href: '/superuser', icon: ShieldCheck },
+      ],
+    },
   ];
 
   /**
@@ -199,7 +201,9 @@ export class DemoLayoutComponent {
   readonly visibleCategories = computed<NavCategory[]>(() => {
     // Leer la lista de miembros mantiene este computed reactivo cuando el rol llega tras el login.
     this.perm.userRole();
+    const isSuperUser = this.perm.isSuperUser();
     return this.navCategories
+      .filter(cat => !cat.superuserOnly || isSuperUser)
       .map(cat => ({
         ...cat,
         items: cat.items.filter(item => !item.modulo || this.perm.can(item.modulo, 'ver')),

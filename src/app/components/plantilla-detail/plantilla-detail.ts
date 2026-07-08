@@ -7,18 +7,20 @@ import {
   LucideAngularModule,
   ArrowLeft, Save, GripVertical, X, Trash2, Pencil,
   FolderPlus, FilePlus, Folder, FolderOpen, Check, File, ArrowLeft as ArrowLeftSmall,
-  Link2, Search,
+  Link2, Search, Lock,
 } from 'lucide-angular';
 import { PlantillasService } from '../../core/services/plantillas.service';
 import { ToastService } from '../../core/services/toast.service';
 import { PlantillaFolderService } from '../../core/services/plantilla-folder.service';
 import { PlantillaFileService } from '../../core/services/plantilla-file.service';
 import { DocTemplateService } from '../../core/services/doc-template.service';
+import { PermissionService } from '../../core/services/permission.service';
 import { UsersService } from '../../core/services/users';
 import {
   CasoPlantilla, CasoTipo, HitoPlantilla, PartidaCosto, TipoCosto,
   PlantillaFolder, PlantillaFile,
 } from '../../interfaces';
+import { DocAccessDrawerComponent, type DocAccessState } from '../../shared/components/doc-access-drawer/doc-access-drawer';
 
 type Tab = 'datos' | 'hitos' | 'costos' | 'documentos';
 
@@ -36,7 +38,7 @@ const TIPOS_CASO: CasoTipo[] = ['Legal', 'Fiscal', 'Laboral', 'Mercantil', 'Civi
 
 @Component({
   selector: 'app-plantilla-detail',
-  imports: [LucideAngularModule, RouterLink],
+  imports: [LucideAngularModule, RouterLink, DocAccessDrawerComponent],
   templateUrl: './plantilla-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -48,7 +50,10 @@ export class PlantillaDetailComponent implements OnInit {
   readonly folderService = inject(PlantillaFolderService);
   readonly fileService = inject(PlantillaFileService);
   readonly docTemplateService = inject(DocTemplateService);
+  private readonly permissionService = inject(PermissionService);
   private readonly usersService = inject(UsersService);
+
+  readonly isAdmin = this.permissionService.isAdmin;
 
   readonly ArrowLeftIcon = ArrowLeft;
   readonly SaveIcon = Save;
@@ -65,6 +70,7 @@ export class PlantillaDetailComponent implements OnInit {
   readonly ArrowLeftSmallIcon = ArrowLeftSmall;
   readonly Link2Icon = Link2;
   readonly SearchIcon = Search;
+  readonly LockIcon = Lock;
 
   readonly tipos = TIPOS_CASO;
   readonly tiposCosto = TIPOS_COSTO;
@@ -533,6 +539,37 @@ export class PlantillaDetailComponent implements OnInit {
       errorTitle: 'No se pudo vincular la plantilla',
       onSuccess: () => this.linkingFileId.set(null),
     });
+  }
+
+  // ── Visibilidad de plantillas (solo Admin) ─────────────
+  readonly visibilityTarget = signal<PlantillaFile | null>(null);
+  readonly visibilitySaving = signal(false);
+
+  openVisibility(file: PlantillaFile): void {
+    this.visibilityTarget.set(file);
+  }
+
+  async onVisibilitySaved(state: DocAccessState): Promise<void> {
+    const file = this.visibilityTarget();
+    if (!file) return;
+    this.visibilitySaving.set(true);
+    try {
+      await this.toast.run(
+        () => this.fileService.setVisibility(
+          file.id,
+          state.restricted ? 'restricted' : 'all',
+          state.allowedRoles,
+          state.allowedUserIds,
+        ),
+        {
+          successMessage: 'Visibilidad actualizada',
+          errorTitle: 'No se pudo actualizar la visibilidad',
+          onSuccess: () => this.visibilityTarget.set(null),
+        },
+      );
+    } finally {
+      this.visibilitySaving.set(false);
+    }
   }
 
   async unlinkTemplate(file: PlantillaFile): Promise<void> {

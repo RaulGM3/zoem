@@ -11,10 +11,14 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { inject } from '@angular/core';
 import { FIRM_ROLES } from '../../../../interfaces/member';
 import type { InvitationRole } from '../../../../interfaces/invitation';
+import { CustomRolesService } from '../../../../core/services/custom-roles.service';
 
 export interface InviteFormData {
   email: string;
+  /** Rol BASE (lo que validan las security rules). */
   role: InvitationRole;
+  /** Rol custom asignado en la invitación (opcional). */
+  customRole?: { id: string; nombre: string };
 }
 
 @Component({
@@ -25,6 +29,9 @@ export interface InviteFormData {
 })
 export class InviteDrawerComponent {
   private readonly fb = inject(FormBuilder);
+  private readonly customRolesService = inject(CustomRolesService);
+
+  readonly customRoles = this.customRolesService.roles;
 
   readonly visible = input.required<boolean>();
   readonly saving = input.required<boolean>();
@@ -42,6 +49,8 @@ export class InviteDrawerComponent {
 
   readonly roles = FIRM_ROLES;
   readonly copied = signal(false);
+  /** Rol elegido: un FirmRole base o `custom:{id}`. */
+  readonly roleKey = signal<string>('Usuario');
 
   readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
@@ -50,11 +59,29 @@ export class InviteDrawerComponent {
 
   readonly isValid = computed(() => this.form.valid);
 
+  onRoleKeyChange(key: string): void {
+    this.roleKey.set(key);
+    if (key.startsWith('custom:')) {
+      const custom = this.customRolesService.byId(key.slice('custom:'.length));
+      this.form.controls.role.setValue(custom?.baseRole ?? 'Usuario');
+    } else {
+      this.form.controls.role.setValue(key as InvitationRole);
+    }
+  }
+
   onSubmit(): void {
     this.form.markAllAsTouched();
     if (this.form.invalid) return;
     const { email, role } = this.form.getRawValue();
-    this.submitted.emit({ email, role });
+    const key = this.roleKey();
+    const custom = key.startsWith('custom:')
+      ? this.customRolesService.byId(key.slice('custom:'.length))
+      : null;
+    this.submitted.emit({
+      email,
+      role,
+      ...(custom ? { customRole: { id: custom.id, nombre: custom.nombre } } : {}),
+    });
   }
 
   async copyLink(): Promise<void> {
@@ -67,6 +94,7 @@ export class InviteDrawerComponent {
 
   close(): void {
     this.form.reset({ email: '', role: 'Usuario' });
+    this.roleKey.set('Usuario');
     this.closed.emit();
   }
 }

@@ -1,10 +1,11 @@
 import { Timestamp } from '@angular/fire/firestore';
+import type { SoftDeletable, Versioned } from './doc-lifecycle.interface';
 
 // 'subido' = se subió un archivo manual. 'generado' = se rellenó una plantilla
 // de documento (docTemplate) y quedó congelada en `generatedHtml`.
 export type CasoDocSlotStatus = 'pendiente' | 'subido' | 'generado';
 
-export interface CasoDocSlot {
+export interface CasoDocSlot extends SoftDeletable, Versioned {
   id: string;
   folderId: string | null;
   name: string;
@@ -27,7 +28,11 @@ export interface CasoDocSlot {
   mimeType?: string;
   sizeBytes?: number;
   uploadedBy?: string;
+  uploadedByNombre?: string;
   uploadedAt?: Timestamp;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
+  /** Documento sensible: solo Admin o usuarios de la allowlist lo ven. */
+  clasificado?: boolean;
+  allowedUserIds?: string[];
 }

@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "vertey-cf1b9"
+    "default": "vertey-b924b",
+    "production": "vertey-b924b",
+    "development": "vertey-cf1b9"
   }
 }

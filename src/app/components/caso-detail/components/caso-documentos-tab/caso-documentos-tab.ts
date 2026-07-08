@@ -1,13 +1,21 @@
 import {
-  Component, ChangeDetectionStrategy, input, output, signal, computed,
+  Component, ChangeDetectionStrategy, inject, input, output, signal, computed,
 } from '@angular/core';
 import {
   LucideAngularModule, CheckCircle2, FileText, FilePen, Folder, FolderOpen, FolderPlus,
-  Loader, Download, Upload, Trash2, ChevronRight, Eye, Check, X,
+  Loader, Download, Upload, Trash2, ChevronRight, Eye, Check, X, History, RefreshCw, Lock,
 } from 'lucide-angular';
 import type { CasoDocSlot, CasoDocFolder, CasoDocFile } from '../../../../interfaces';
+import type { DocVersionEntry } from '../../../../interfaces/doc-lifecycle.interface';
+import { CasoDocService } from '../../../../core/services/caso-doc.service';
+import { ClassifiedUrlService } from '../../../../core/services/classified-url.service';
+import { DocAuditService } from '../../../../core/services/doc-audit.service';
+import { PermissionService } from '../../../../core/services/permission.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { CasoDocPreviewComponent, PreviewDoc } from '../caso-doc-preview/caso-doc-preview';
 import { CasoDocGeneradorComponent, GeneratedDocEvent } from '../caso-doc-generador/caso-doc-generador';
+import { DocHistoryPanelComponent } from '../../../../shared/components/doc-history-panel/doc-history-panel';
+import { DocAccessDrawerComponent, type DocAccessState } from '../../../../shared/components/doc-access-drawer/doc-access-drawer';
 
 export interface DocUploadEvent {
   slot: CasoDocSlot;
@@ -17,6 +25,13 @@ export interface DocUploadEvent {
 export interface FreeUploadEvent {
   folderId: string | null;
   file: File;
+  /** Solo Admin puede marcarlo; las rules lo enforcen además en servidor. */
+  clasificado?: boolean;
+}
+
+export interface ReuploadEvent {
+  file: CasoDocFile;
+  newFile: File;
 }
 
 export interface CreateFolderEvent {
@@ -24,14 +39,39 @@ export interface CreateFolderEvent {
   name: string;
 }
 
+interface HistoryTarget {
+  title: string;
+  versions: DocVersionEntry[];
+  parentPath: string;
+}
+
+interface AccessTarget {
+  kind: 'file' | 'slot';
+  id: string;
+  title: string;
+  clasificado: boolean;
+  allowedUserIds: string[];
+}
+
 @Component({
   selector: 'app-caso-documentos-tab',
   host: { style: 'display: block' },
-  imports: [LucideAngularModule, CasoDocPreviewComponent, CasoDocGeneradorComponent],
+  imports: [LucideAngularModule, CasoDocPreviewComponent, CasoDocGeneradorComponent, DocHistoryPanelComponent, DocAccessDrawerComponent],
   templateUrl: './caso-documentos-tab.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CasoDocumentosTabComponent {
+  // Solo para construir paths de auditoría, registrar view/download y
+  // gestionar clasificados (acción admin directa, no pasa por el contenedor).
+  private readonly casoDocService = inject(CasoDocService);
+  private readonly classifiedUrl = inject(ClassifiedUrlService);
+  private readonly docAudit = inject(DocAuditService);
+  private readonly permissionService = inject(PermissionService);
+  private readonly toast = inject(ToastService);
+
+  readonly isAdmin = this.permissionService.isAdmin;
+
+  readonly casoId = input.required<string>();
   readonly folders = input.required<CasoDocFolder[]>();
   readonly slots = input.required<CasoDocSlot[]>();
   readonly files = input.required<CasoDocFile[]>();
@@ -45,6 +85,7 @@ export class CasoDocumentosTabComponent {
   readonly uploadSlot = output<DocUploadEvent>();
   readonly removeSlot = output<CasoDocSlot>();
   readonly uploadFile = output<FreeUploadEvent>();
+  readonly reuploadFile = output<ReuploadEvent>();
   readonly deleteFile = output<CasoDocFile>();
   readonly createFolder = output<CreateFolderEvent>();
   readonly deleteFolder = output<string>();
@@ -64,6 +105,9 @@ export class CasoDocumentosTabComponent {
   readonly EyeIcon = Eye;
   readonly CheckIcon = Check;
   readonly XIcon = X;
+  readonly HistoryIcon = History;
+  readonly RefreshCwIcon = RefreshCw;
+  readonly LockIcon = Lock;
 
   // ── Estado de navegación (UI local) ────────────────────
   readonly currentFolderId = signal<string | null>(null);
@@ -74,6 +118,11 @@ export class CasoDocumentosTabComponent {
   readonly confirmingDeleteFileId = signal<string | null>(null);
   readonly preview = signal<PreviewDoc | null>(null);
   readonly generatingSlot = signal<CasoDocSlot | null>(null);
+  readonly historyTarget = signal<HistoryTarget | null>(null);
+  readonly accessTarget = signal<AccessTarget | null>(null);
+  readonly accessSaving = signal(false);
+  /** Toggle admin: la próxima subida libre se marca como clasificada. */
+  readonly uploadClassified = signal(false);
 
   // ── Vistas derivadas del nivel actual ──────────────────
   readonly currentFolders = computed(() =>
@@ -173,8 +222,56 @@ export class CasoDocumentosTabComponent {
   onFreeFileSelected(event: Event): void {
     const target = event.target as HTMLInputElement;
     const file = target.files?.[0];
-    if (file) this.uploadFile.emit({ folderId: this.currentFolderId(), file });
+    if (file) {
+      this.uploadFile.emit({
+        folderId: this.currentFolderId(),
+        file,
+        clasificado: this.isAdmin() && this.uploadClassified(),
+      });
+      this.uploadClassified.set(false);
+    }
     target.value = '';
+  }
+
+  // ── Clasificados (solo Admin) ──────────────────────────
+  openFileAccess(file: CasoDocFile): void {
+    this.accessTarget.set({
+      kind: 'file',
+      id: file.id,
+      title: file.name,
+      clasificado: file.clasificado === true,
+      allowedUserIds: file.allowedUserIds ?? [],
+    });
+  }
+
+  openSlotAccess(slot: CasoDocSlot): void {
+    this.accessTarget.set({
+      kind: 'slot',
+      id: slot.id,
+      title: slot.name,
+      clasificado: slot.clasificado === true,
+      allowedUserIds: slot.allowedUserIds ?? [],
+    });
+  }
+
+  async onAccessSaved(state: DocAccessState): Promise<void> {
+    const target = this.accessTarget();
+    if (!target) return;
+    this.accessSaving.set(true);
+    try {
+      await this.toast.run(
+        () => target.kind === 'file'
+          ? this.casoDocService.setFileClassification(this.casoId(), target.id, state.restricted, state.allowedUserIds)
+          : this.casoDocService.setSlotClassification(this.casoId(), target.id, state.restricted, state.allowedUserIds),
+        {
+          successMessage: 'Acceso actualizado',
+          errorTitle: 'No se pudo actualizar el acceso',
+          onSuccess: () => this.accessTarget.set(null),
+        },
+      );
+    } finally {
+      this.accessSaving.set(false);
+    }
   }
 
   requestDeleteFile(fileId: string): void {
@@ -184,6 +281,95 @@ export class CasoDocumentosTabComponent {
   confirmDeleteFile(file: CasoDocFile): void {
     this.deleteFile.emit(file);
     this.confirmingDeleteFileId.set(null);
+  }
+
+  // ── Resubir (nueva versión) ────────────────────────────
+  triggerReupload(fileId: string): void {
+    const el = document.getElementById(`reupload-file-${fileId}`) as HTMLInputElement | null;
+    el?.click();
+  }
+
+  onReuploadSelected(event: Event, file: CasoDocFile): void {
+    const target = event.target as HTMLInputElement;
+    const newFile = target.files?.[0];
+    if (newFile) this.reuploadFile.emit({ file, newFile });
+    target.value = '';
+  }
+
+  // ── Historial y auditoría ──────────────────────────────
+  openFileHistory(file: CasoDocFile): void {
+    this.historyTarget.set({
+      title: file.name,
+      versions: file.versions ?? [],
+      parentPath: this.casoDocService.filePath(this.casoId(), file.id),
+    });
+  }
+
+  openSlotHistory(slot: CasoDocSlot): void {
+    this.historyTarget.set({
+      title: slot.name,
+      versions: slot.versions ?? [],
+      parentPath: this.casoDocService.slotPath(this.casoId(), slot.id),
+    });
+  }
+
+  closeHistory(): void {
+    this.historyTarget.set(null);
+  }
+
+  /**
+   * Preview de archivo libre, dejando rastro en la auditoría. Los clasificados
+   * no tienen downloadUrl: la callable valida el acceso, audita en servidor y
+   * devuelve una URL firmada de 5 minutos.
+   */
+  async previewFile(file: CasoDocFile): Promise<void> {
+    if (file.clasificado === true) {
+      const url = await this.toast.run(
+        () => this.classifiedUrl.getUrl(this.casoDocService.filePath(this.casoId(), file.id), 'view'),
+        { errorTitle: 'No se pudo abrir el documento clasificado' },
+      );
+      if (url) this.openPreview({ name: file.name, downloadUrl: url, mimeType: file.mimeType });
+      return;
+    }
+    this.docAudit.log(this.casoDocService.filePath(this.casoId(), file.id), 'view', {
+      version: file.version,
+      detail: file.name,
+    });
+    this.openPreview({ name: file.name, downloadUrl: file.downloadUrl, mimeType: file.mimeType });
+  }
+
+  /** Preview del archivo de un slot, dejando rastro en la auditoría. */
+  async previewSlot(slot: CasoDocSlot): Promise<void> {
+    if (slot.clasificado === true && slot.storagePath) {
+      const url = await this.toast.run(
+        () => this.classifiedUrl.getUrl(this.casoDocService.slotPath(this.casoId(), slot.id), 'view'),
+        { errorTitle: 'No se pudo abrir el documento clasificado' },
+      );
+      if (url) this.openPreview({ name: slot.name, downloadUrl: url, mimeType: slot.mimeType });
+      return;
+    }
+    if (!slot.downloadUrl) return;
+    this.docAudit.log(this.casoDocService.slotPath(this.casoId(), slot.id), 'view', {
+      version: slot.version,
+      detail: slot.name,
+    });
+    this.openPreview({ name: slot.name, downloadUrl: slot.downloadUrl, mimeType: slot.mimeType });
+  }
+
+  logFileDownload(file: CasoDocFile): void {
+    this.docAudit.log(this.casoDocService.filePath(this.casoId(), file.id), 'download', {
+      version: file.version,
+      detail: file.name,
+    });
+  }
+
+  /** Descarga de un clasificado: URL firmada vía callable (auditada en servidor). */
+  async downloadClassifiedFile(file: CasoDocFile): Promise<void> {
+    const url = await this.toast.run(
+      () => this.classifiedUrl.getUrl(this.casoDocService.filePath(this.casoId(), file.id), 'download'),
+      { errorTitle: 'No se pudo descargar el documento clasificado' },
+    );
+    if (url) window.open(url, '_blank', 'noopener');
   }
 
   // ── Preview ────────────────────────────────────────────

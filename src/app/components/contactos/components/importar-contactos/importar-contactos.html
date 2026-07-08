@@ -1,0 +1,357 @@
+@if (visible()) {
+  <!-- Backdrop -->
+  <div class="fixed inset-0 bg-black/40 z-40" (click)="close()" aria-hidden="true"></div>
+
+  <!-- Modal -->
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4" style="pointer-events:none">
+    <aside
+      class="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl shadow-2xl"
+      style="background:var(--surface);border:1px solid var(--border);pointer-events:auto"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Importar contactos desde Excel"
+    >
+      <!-- Header -->
+      <div class="flex items-center justify-between px-6 py-4 shrink-0"
+        style="border-bottom:1px solid var(--border)">
+        <h2 class="text-base font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">
+          Importar contactos desde Excel
+        </h2>
+        <button (click)="close()"
+          class="rounded-xl p-1.5 transition-colors duration-150"
+          style="color:var(--text-muted)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+          (mouseleave)="$any($event.currentTarget).style.background=''"
+          aria-label="Cerrar">
+          <lucide-icon [img]="XIcon" size="20" />
+        </button>
+      </div>
+
+      <!-- Step indicator -->
+      <div class="flex items-center px-6 py-3 shrink-0 gap-1" style="border-bottom:1px solid var(--border)">
+        @for (i of [1, 2, 3, 4]; track i) {
+          <div class="flex items-center gap-1.5 shrink-0">
+            <span class="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold transition-all"
+              [style.background]="step() > i ? 'var(--success)' : step() === i ? 'var(--brand)' : 'transparent'"
+              [style.color]="step() >= i ? 'white' : 'var(--text-muted)'"
+              [style.border]="step() < i ? '1.5px solid var(--border)' : 'none'">
+              @if (step() > i) {
+                <lucide-icon [img]="CheckIcon" size="10" />
+              } @else {
+                {{ i }}
+              }
+            </span>
+            <span class="text-xs font-medium hidden sm:block"
+              [style.color]="step() === i ? 'var(--brand)' : 'var(--text-faint)'">
+              {{ stepLabels[i - 1] }}
+            </span>
+          </div>
+          @if (i < 4) {
+            <div class="h-px flex-1 mx-1" style="background:var(--border)"></div>
+          }
+        }
+      </div>
+
+      <!-- Body -->
+      <div class="flex-1 overflow-y-auto px-6 py-5">
+
+        <!-- Step 1: Subir archivo -->
+        @if (step() === 1) {
+          <div class="flex flex-col gap-5">
+
+            <!-- Upload zone -->
+            <label for="excel-upload"
+              class="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed cursor-pointer py-10 transition-colors duration-150"
+              style="border-color:var(--border)"
+              (mouseenter)="$any($event.currentTarget).style.borderColor='var(--brand)'"
+              (mouseleave)="$any($event.currentTarget).style.borderColor='var(--border)'"
+              (dragover)="$event.preventDefault()"
+              (drop)="onDrop($any($event))">
+              <lucide-icon [img]="UploadIcon" size="32" style="color:var(--text-faint)" />
+              <div class="text-center pointer-events-none">
+                <p class="text-sm font-medium" style="color:var(--text-strong)">Arrastra tu Excel aquí o haz clic para seleccionar</p>
+                <p class="text-xs mt-1" style="color:var(--text-muted)">.xlsx, .xls o .csv · Primera fila = encabezados de columna</p>
+              </div>
+              <input id="excel-upload" type="file" accept=".xlsx,.xls,.csv" class="sr-only"
+                (change)="onFileChange($event)" />
+            </label>
+
+            <!-- File info -->
+            @if (fileName()) {
+              <div class="flex items-center gap-3 rounded-xl p-4"
+                style="background:var(--surface-2);border:1px solid var(--border)">
+                <lucide-icon [img]="FileIcon" size="20" style="color:var(--brand)" />
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium truncate" style="color:var(--text-strong)">{{ fileName() }}</p>
+                  <p class="text-xs mt-0.5" style="color:var(--text-muted)">
+                    {{ rawRows().length }} filas de datos · {{ rawHeaders().length }} columnas
+                  </p>
+                </div>
+              </div>
+            }
+
+            <!-- Preview table -->
+            @if (previewRows().length > 0) {
+              <div>
+                <p class="text-[11px] font-semibold mb-2 tracking-wide" style="color:var(--text-muted)">
+                  VISTA PREVIA (primeras {{ previewRows().length }} filas)
+                </p>
+                <div class="overflow-x-auto rounded-xl" style="border:1px solid var(--border)">
+                  <table class="w-full text-xs" style="border-collapse:collapse">
+                    <thead>
+                      <tr style="background:var(--surface-2)">
+                        @for (h of rawHeaders(); track h) {
+                          <th class="px-3 py-2 text-left font-semibold whitespace-nowrap"
+                            style="color:var(--text-muted);border-bottom:1px solid var(--border)">
+                            {{ h }}
+                          </th>
+                        }
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (row of previewRows(); track $index) {
+                        <tr>
+                          @for (cell of row; track $index) {
+                            <td class="px-3 py-2 whitespace-nowrap"
+                              style="color:var(--text-strong);border-bottom:1px solid var(--border)">
+                              {{ cell || '—' }}
+                            </td>
+                          }
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Step 2: Mapear columnas -->
+        @if (step() === 2) {
+          <div class="flex flex-col gap-5">
+
+            <!-- Column mapping: cada columna del Excel → campo del sistema -->
+            <div>
+              <div class="flex items-baseline gap-2 mb-2.5">
+                <p class="text-sm font-semibold" style="color:var(--text-strong)">Mapeo de columnas</p>
+                <p class="text-xs" style="color:var(--text-muted)">
+                  Los campos marcados con <span style="color:var(--danger)">*</span> son obligatorios
+                </p>
+              </div>
+              <div class="flex flex-col gap-1.5">
+                @for (col of rawHeaders(); track col) {
+                  <div class="flex items-center gap-3 rounded-lg px-3 py-2"
+                    [style.background]="columnMap()[col] ? 'color-mix(in srgb,var(--brand) 5%,var(--surface-2))' : 'var(--surface-2)'">
+                    <!-- Columna del Excel -->
+                    <span class="text-sm font-medium flex-1 min-w-0 truncate" style="color:var(--text-strong)">
+                      {{ col }}
+                    </span>
+                    <span class="text-xs shrink-0 px-1" style="color:var(--text-faint)">→</span>
+                    <!-- Campo destino en Zoem -->
+                    <select class="form-select shrink-0" style="width:auto;min-width:185px;font-size:12px"
+                      (change)="setColumnMap(col, $any($event.target).value)">
+                      <option value="" [selected]="!columnMap()[col]">— No importar —</option>
+                      @for (f of fieldDefs; track f.key) {
+                        <option [value]="f.key" [selected]="columnMap()[col] === f.key">
+                          {{ f.label }}{{ isRequired(f.requiredFor) ? ' *' : '' }}{{ f.tag ? ' (' + f.tag + ')' : '' }}
+                        </option>
+                      }
+                    </select>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- Validation warning -->
+            @if (!step2Valid()) {
+              <div class="flex items-start gap-2 rounded-lg p-3 text-sm"
+                style="background:color-mix(in srgb,var(--warning) 10%,transparent);color:var(--warning)">
+                <lucide-icon [img]="AlertIcon" size="16" class="shrink-0 mt-0.5" />
+                <span>
+                  Asigna un canal de contacto (Email o Teléfono) y al menos Nombre + Apellidos (personas físicas) o Razón Social (personas jurídicas).
+                </span>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Step 3: Mapear usuarios -->
+        @if (step() === 3) {
+          <div class="flex flex-col gap-4">
+            <div class="rounded-lg p-3 text-sm"
+              style="background:color-mix(in srgb,var(--accent-ia) 10%,transparent);border:1px solid color-mix(in srgb,var(--accent-ia) 20%,transparent);color:var(--accent-ia)">
+              Encontramos <strong>{{ uniqueAssignedNames().length }}</strong> nombre{{ uniqueAssignedNames().length !== 1 ? 's' : '' }} únicos en la columna "Responsable".
+              Asígnale a cada uno el usuario de Zoem correspondiente (o déjalo sin asignar).
+            </div>
+
+            <div class="flex flex-col gap-2">
+              @for (name of uniqueAssignedNames(); track name) {
+                <div class="flex items-center gap-3 rounded-lg px-3 py-2.5"
+                  style="background:var(--surface-2);border:1px solid var(--border)">
+                  <lucide-icon [img]="UsersIcon" size="14" style="color:var(--text-faint)" />
+                  <span class="text-sm font-medium flex-1 truncate" style="color:var(--text-strong)">
+                    {{ name }}
+                  </span>
+                  <span class="text-xs px-2" style="color:var(--text-faint)">→</span>
+                  <select class="form-select shrink-0" style="width:auto;min-width:170px;font-size:12px"
+                    (change)="setUserMap(name, $any($event.target).value)">
+                    <option value="" [selected]="!userMap()[name]">— No asignar —</option>
+                    @for (m of usersService.members(); track m.userId) {
+                      <option [value]="m.userId" [selected]="userMap()[name] === m.userId">
+                        {{ m.nombre }}{{ m.apellido ? ' ' + m.apellido : '' }}
+                      </option>
+                    }
+                  </select>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Step 4: Preview e importar -->
+        @if (step() === 4) {
+          <div class="flex flex-col gap-5">
+
+            <!-- Summary cards -->
+            <div class="grid grid-cols-2 gap-3">
+              <div class="rounded-xl p-4"
+                style="background:color-mix(in srgb,var(--success) 10%,transparent);border:1px solid color-mix(in srgb,var(--success) 20%,transparent)">
+                <p class="text-2xl font-bold" style="color:var(--success)">{{ validPayloads().length }}</p>
+                <p class="text-xs mt-0.5" style="color:var(--success)">
+                  contacto{{ validPayloads().length !== 1 ? 's' : '' }} listos para importar
+                </p>
+              </div>
+              @if (skippedCount() > 0) {
+                <div class="rounded-xl p-4"
+                  style="background:color-mix(in srgb,var(--warning) 10%,transparent);border:1px solid color-mix(in srgb,var(--warning) 20%,transparent)">
+                  <p class="text-2xl font-bold" style="color:var(--warning)">{{ skippedCount() }}</p>
+                  <p class="text-xs mt-0.5" style="color:var(--warning)">
+                    fila{{ skippedCount() !== 1 ? 's' : '' }} sin canal de contacto o campos requeridos vacíos (se saltarán)
+                  </p>
+                </div>
+              }
+            </div>
+
+            <!-- Preview table -->
+            @if (previewPayloads().length > 0) {
+              <div>
+                <p class="text-[11px] font-semibold mb-2 tracking-wide" style="color:var(--text-muted)">
+                  VISTA PREVIA (primeros {{ previewPayloads().length }} de {{ validPayloads().length }})
+                </p>
+                <div class="overflow-x-auto rounded-xl" style="border:1px solid var(--border)">
+                  <table class="w-full text-xs" style="border-collapse:collapse">
+                    <thead>
+                      <tr style="background:var(--surface-2)">
+                        @for (h of ['Nombre / Razón Social','Tipo','Email','Móvil','Responsable']; track h) {
+                          <th class="px-3 py-2 text-left font-semibold whitespace-nowrap"
+                            style="color:var(--text-muted);border-bottom:1px solid var(--border)">
+                            {{ h }}
+                          </th>
+                        }
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (p of previewPayloads(); track $index) {
+                        <tr>
+                          <td class="px-3 py-2 font-medium whitespace-nowrap"
+                            style="color:var(--text-strong);border-bottom:1px solid var(--border)">
+                            {{ getPreviewName(p) }}
+                          </td>
+                          <td class="px-3 py-2 whitespace-nowrap"
+                            style="color:var(--text-muted);border-bottom:1px solid var(--border)">
+                            {{ p.type === 'persona_fisica' ? 'Física' : 'Jurídica' }}
+                          </td>
+                          <td class="px-3 py-2 whitespace-nowrap"
+                            style="color:var(--text-muted);border-bottom:1px solid var(--border)">
+                            {{ p.email || '—' }}
+                          </td>
+                          <td class="px-3 py-2 whitespace-nowrap"
+                            style="color:var(--text-muted);border-bottom:1px solid var(--border)">
+                            {{ p.mobile || '—' }}
+                          </td>
+                          <td class="px-3 py-2 whitespace-nowrap"
+                            style="color:var(--text-muted);border-bottom:1px solid var(--border)">
+                            {{ getAssigneeName(p.assignedTo) }}
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            }
+
+            <!-- Progress bar -->
+            @if (importing()) {
+              <div class="flex flex-col gap-2">
+                <div class="flex justify-between text-xs" style="color:var(--text-muted)">
+                  <span>Importando contactos...</span>
+                  <span>{{ importProgress().done }} / {{ importProgress().total }}</span>
+                </div>
+                <div class="h-2 rounded-full overflow-hidden" style="background:var(--surface-2)">
+                  <div class="h-full rounded-full transition-all duration-200"
+                    style="background:var(--brand)"
+                    [style.width]="importProgress().total > 0
+                      ? (importProgress().done / importProgress().total * 100) + '%'
+                      : '0%'">
+                  </div>
+                </div>
+              </div>
+            }
+
+            @if (validPayloads().length === 0) {
+              <div class="flex items-start gap-2 rounded-lg p-3 text-sm"
+                style="background:color-mix(in srgb,var(--danger) 10%,transparent);color:var(--danger)">
+                <lucide-icon [img]="AlertIcon" size="16" class="shrink-0 mt-0.5" />
+                <span>No hay contactos válidos para importar. Revisa el mapeo de columnas.</span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Footer -->
+      <div class="shrink-0 flex items-center gap-3 px-6 py-4" style="border-top:1px solid var(--border)">
+        @if (step() > 1) {
+          <button (click)="prevStep()"
+            [disabled]="importing()"
+            class="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors duration-150"
+            style="background:var(--surface-2);color:var(--text-muted)"
+            (mouseenter)="$any($event.currentTarget).style.background='var(--border)'"
+            (mouseleave)="$any($event.currentTarget).style.background='var(--surface-2)'">
+            <lucide-icon [img]="ChevronLeftIcon" size="14" />
+            Atrás
+          </button>
+        }
+
+        <div class="flex-1"></div>
+
+        @if (step() < 4) {
+          <button (click)="nextStep()"
+            [disabled]="!canNext()"
+            class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+            style="background:var(--brand)"
+            (mouseenter)="canNext() && ($any($event.currentTarget).style.background='var(--brand-hover)')"
+            (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+            Siguiente
+          </button>
+        } @else {
+          <button (click)="runImport()"
+            [disabled]="importing() || validPayloads().length === 0"
+            class="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+            style="background:var(--brand)"
+            (mouseenter)="!importing() && ($any($event.currentTarget).style.background='var(--brand-hover)')"
+            (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+            @if (importing()) {
+              <lucide-icon [img]="LoaderIcon" size="14" class="animate-spin" />
+              Importando...
+            } @else {
+              Importar {{ validPayloads().length }} contacto{{ validPayloads().length !== 1 ? 's' : '' }}
+            }
+          </button>
+        }
+      </div>
+    </aside>
+  </div>
+}

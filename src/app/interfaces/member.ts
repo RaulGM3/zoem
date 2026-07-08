@@ -1,4 +1,5 @@
 import { Timestamp } from '@angular/fire/firestore';
+import type { UserPermissionOverrides } from '../core/permissions/permissions';
 
 export type FirmRole = 'Admin' | 'Gestor' | 'Usuario' | 'Viewer';
 export type MemberEstado = 'activo' | 'inactivo' | 'pendiente';
@@ -40,6 +41,13 @@ export interface CompanyMember {
   estado: MemberEstado;
   /** Fee por hora del miembro (opcional). Solo el admin del despacho lo edita. */
   tarifaHoraria?: number;
+  /** Excepciones individuales sobre su rol: true concede, false revoca, ausente hereda. */
+  permissionOverrides?: UserPermissionOverrides;
+  /**
+   * Rol custom de la empresa (definido en settings/roles). `role` guarda su
+   * rol BASE — lo único que ven las security rules; el custom refina en cliente.
+   */
+  customRoleId?: string | null;
   ultimoLogin: Timestamp | null;
   createdAt: Timestamp;
 }

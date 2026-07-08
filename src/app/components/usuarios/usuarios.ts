@@ -1,12 +1,15 @@
 import { Component, signal, computed, ChangeDetectionStrategy, inject, OnInit, OnDestroy } from '@angular/core';
 import {
   LucideAngularModule, UserCog, Plus,
-  Mail, Clock, Trash2, Copy, Check,
+  Mail, Clock, Trash2, Copy, Check, Lock, Inbox,
 } from 'lucide-angular';
 import { Timestamp } from '@angular/fire/firestore';
 import { Subscription } from 'rxjs';
 import { UsersService } from '../../core/services/users';
 import { PermissionService } from '../../core/services/permission.service';
+import { CompanyPermissionsService } from '../../core/services/company-permissions.service';
+import { CustomRolesService } from '../../core/services/custom-roles.service';
+import { PermissionRequestService } from '../../core/services/permission-request.service';
 import { InvitationService } from '../../core/services/invitation.service';
 import { ToastService } from '../../core/services/toast.service';
 import { CompanyService } from '../../core/services/company.service';
@@ -15,15 +18,26 @@ import { ActividadService } from '../../core/services/actividad.service';
 import { FIRM_ROLE_COLORS, type CompanyMember, type FirmRole } from '../../interfaces/member';
 import type { CompanyInvitation } from '../../interfaces/invitation';
 import type { Actividad } from '../../interfaces/actividad';
-import type { Capability, Modulo, RoleCaps } from '../../core/permissions/permissions';
+import {
+  diffMatrix,
+  effectiveMatrix,
+  isCellGrantable,
+  type Capability,
+  type CustomRoleDef,
+  type Modulo,
+  type RoleCaps,
+} from '../../core/permissions/permissions';
+import type { PermissionRequest } from '../../interfaces/permission-request.interface';
 import { InviteDrawerComponent, type InviteFormData } from './components/invite-drawer/invite-drawer';
 import { UserEditDrawerComponent, type UserEditPatch } from './components/user-edit-drawer/user-edit-drawer';
+import { RoleEditorDrawerComponent } from './components/role-editor-drawer/role-editor-drawer';
 
-type UsuariosTab = 'usuarios' | 'roles' | 'permisos';
+type UsuariosTab = 'usuarios' | 'roles' | 'permisos' | 'solicitudes';
+type EditableMatrix = Record<Modulo, Record<FirmRole, RoleCaps>>;
 
 @Component({
   selector: 'app-usuarios',
-  imports: [LucideAngularModule, InviteDrawerComponent, UserEditDrawerComponent],
+  imports: [LucideAngularModule, InviteDrawerComponent, UserEditDrawerComponent, RoleEditorDrawerComponent],
   templateUrl: './usuarios.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -35,9 +49,14 @@ export class UsuariosComponent implements OnInit, OnDestroy {
   readonly Trash2Icon = Trash2;
   readonly CopyIcon = Copy;
   readonly CheckIcon = Check;
+  readonly LockIcon = Lock;
+  readonly InboxIcon = Inbox;
 
   private readonly usersService = inject(UsersService);
   private readonly permissionService = inject(PermissionService);
+  private readonly companyPermsService = inject(CompanyPermissionsService);
+  private readonly customRolesService = inject(CustomRolesService);
+  private readonly requestService = inject(PermissionRequestService);
   private readonly invitationService = inject(InvitationService);
   private readonly toast = inject(ToastService);
   private readonly companyService = inject(CompanyService);
@@ -62,6 +81,34 @@ export class UsuariosComponent implements OnInit, OnDestroy {
 
   readonly roles = computed(() => this.usersService.getRoles());
   readonly totalMiembros = computed(() => this.usersService.members().length);
+
+  // --- Editor de la matriz de permisos (tab "Permisos") ---
+  /** Copia editable; null = sin cambios pendientes, se muestra la matriz efectiva. */
+  readonly editedMatrix = signal<EditableMatrix | null>(null);
+  readonly matrixSaving = signal(false);
+  readonly matrixDirty = computed(() => this.editedMatrix() !== null);
+  readonly displayMatrix = computed<EditableMatrix>(
+    () => this.editedMatrix() ?? this.permissionService.effectivePermisos(),
+  );
+  /** ¿La empresa tiene personalizaciones guardadas sobre la matriz base? */
+  readonly matrixCustomized = computed(
+    () => Object.keys(diffMatrix(this.permissionService.effectivePermisos())).length > 0,
+  );
+
+  // --- Solicitudes de permiso (tab "Solicitudes") ---
+  readonly solicitudesPendientes = this.requestService.pendientes;
+  readonly resolvingRequestId = signal<string | null>(null);
+
+  // --- Roles custom (tab "Roles") ---
+  readonly customRoles = this.customRolesService.roles;
+  readonly showRoleEditor = signal(false);
+  readonly editingRole = signal<CustomRoleDef | null>(null);
+  readonly roleSaving = signal(false);
+
+  /** Cuántos miembros usan cada rol custom (para las cards). */
+  countForCustomRole(id: string): number {
+    return this.usersService.members().filter(m => m.customRoleId === id).length;
+  }
 
   // Edit drawer
   readonly showEditDrawer = signal(false);
@@ -269,13 +316,152 @@ export class UsuariosComponent implements OnInit, OnDestroy {
     return FIRM_ROLE_COLORS[rol as keyof typeof FIRM_ROLE_COLORS] ?? 'bg-slate-100 text-slate-600';
   }
 
-  /** Capacidades (ver/crear/editar/eliminar) de un rol en un módulo, para el tab "Permisos". */
+  /** Capacidades de un rol en un módulo — matriz efectiva (o la edición en curso). */
   capsFor(modulo: Modulo, rol: FirmRole): RoleCaps {
-    return this.permissionService.PERMISOS[modulo][rol];
+    return this.displayMatrix()[modulo][rol];
   }
 
   /** Inicial de una capacidad para el badge compacto (V/C/E/B). */
   capInitial(cap: Capability): string {
     return cap === 'ver' ? 'V' : cap === 'crear' ? 'C' : cap === 'editar' ? 'E' : 'B';
+  }
+
+  // --- Editor de la matriz (solo admin) ---
+
+  /** ¿Se puede togglear esta celda? Admin nunca; conceder fuera del envelope de rules tampoco. */
+  cellEditable(modulo: Modulo, rol: FirmRole, cap: Capability): boolean {
+    if (!this.isAdmin() || rol === 'Admin') return false;
+    // Si está activa siempre se puede revocar; si está inactiva solo si las rules lo permiten.
+    return this.capsFor(modulo, rol)[cap] || isCellGrantable(modulo, rol, cap);
+  }
+
+  toggleCell(modulo: Modulo, rol: FirmRole, cap: Capability): void {
+    if (!this.cellEditable(modulo, rol, cap)) return;
+    const base = this.editedMatrix() ?? structuredClone(this.permissionService.effectivePermisos());
+    const copy = structuredClone(base);
+    copy[modulo][rol] = { ...copy[modulo][rol], [cap]: !copy[modulo][rol][cap] };
+    this.editedMatrix.set(copy);
+  }
+
+  cancelMatrixEdit(): void {
+    this.editedMatrix.set(null);
+  }
+
+  async saveMatrix(): Promise<void> {
+    const edited = this.editedMatrix();
+    if (!edited) return;
+    this.matrixSaving.set(true);
+    try {
+      await this.toast.run(() => this.companyPermsService.saveMatrix(diffMatrix(edited)), {
+        successMessage: 'Permisos de la empresa actualizados',
+        errorTitle: 'No se pudieron guardar los permisos',
+        onSuccess: () => {
+          this.editedMatrix.set(null);
+          void this.actividadService.log('Configuración', 'Actualizó la matriz de permisos de la empresa');
+        },
+      });
+    } finally {
+      this.matrixSaving.set(false);
+    }
+  }
+
+  async resetMatrix(): Promise<void> {
+    this.matrixSaving.set(true);
+    try {
+      await this.toast.run(() => this.companyPermsService.resetDefaults(), {
+        successMessage: 'Permisos restaurados a los valores por defecto',
+        errorTitle: 'No se pudieron restaurar los permisos',
+        onSuccess: () => {
+          this.editedMatrix.set(null);
+          void this.actividadService.log('Configuración', 'Restauró la matriz de permisos por defecto');
+        },
+      });
+    } finally {
+      this.matrixSaving.set(false);
+    }
+  }
+
+  // --- Roles custom ---
+
+  /** Badge de rol a mostrar: el nombre del rol custom si el miembro tiene uno. */
+  roleBadge(member: CompanyMember): { label: string; colorClass: string } {
+    return this.permissionService.displayRole(member);
+  }
+
+  openCreateRole(): void {
+    this.editingRole.set(null);
+    this.showRoleEditor.set(true);
+  }
+
+  openEditRole(role: CustomRoleDef): void {
+    this.editingRole.set(role);
+    this.showRoleEditor.set(true);
+  }
+
+  async onRoleSaved(role: CustomRoleDef): Promise<void> {
+    this.roleSaving.set(true);
+    try {
+      await this.toast.run(() => this.customRolesService.saveRole(role), {
+        successMessage: `Rol "${role.nombre}" guardado`,
+        errorTitle: 'No se pudo guardar el rol',
+        onSuccess: () => {
+          this.showRoleEditor.set(false);
+          this.editingRole.set(null);
+          void this.actividadService.log('Configuración', `Guardó el rol custom: ${role.nombre}`);
+        },
+      });
+    } finally {
+      this.roleSaving.set(false);
+    }
+  }
+
+  async onRoleDeleted(id: string): Promise<void> {
+    const role = this.customRolesService.byId(id);
+    this.roleSaving.set(true);
+    try {
+      await this.toast.run(() => this.customRolesService.deleteRole(id), {
+        successMessage: 'Rol eliminado — sus usuarios conservan el rol base',
+        errorTitle: 'No se pudo eliminar el rol',
+        onSuccess: () => {
+          this.showRoleEditor.set(false);
+          this.editingRole.set(null);
+          if (role) void this.actividadService.log('Configuración', `Eliminó el rol custom: ${role.nombre}`);
+        },
+      });
+    } finally {
+      this.roleSaving.set(false);
+    }
+  }
+
+  // --- Solicitudes de permiso ---
+
+  async approveRequest(req: PermissionRequest): Promise<void> {
+    this.resolvingRequestId.set(req.id);
+    try {
+      await this.toast.run(() => this.requestService.approve(req), {
+        successMessage: `Permiso concedido a ${req.userNombre}`,
+        errorTitle: 'No se pudo aprobar la solicitud',
+        onSuccess: () => {
+          void this.actividadService.log(
+            'Configuración',
+            `Aprobó permiso ${req.capability}/${req.modulo} a ${req.userNombre}`,
+          );
+        },
+      });
+    } finally {
+      this.resolvingRequestId.set(null);
+    }
+  }
+
+  async rejectRequest(req: PermissionRequest): Promise<void> {
+    this.resolvingRequestId.set(req.id);
+    try {
+      await this.toast.run(() => this.requestService.reject(req), {
+        successMessage: 'Solicitud rechazada',
+        errorTitle: 'No se pudo rechazar la solicitud',
+      });
+    } finally {
+      this.resolvingRequestId.set(null);
+    }
   }
 }

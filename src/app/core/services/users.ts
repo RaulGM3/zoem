@@ -60,6 +60,10 @@ export class UsersService {
             departamento: data['departamento'] ?? '',
             estado: (data['estado'] ?? 'activo') as MemberEstado,
             ...(data['tarifaHoraria'] !== undefined ? { tarifaHoraria: data['tarifaHoraria'] } : {}),
+            ...(data['permissionOverrides'] !== undefined
+              ? { permissionOverrides: data['permissionOverrides'] }
+              : {}),
+            ...(data['customRoleId'] ? { customRoleId: data['customRoleId'] } : {}),
             ultimoLogin: data['ultimoLogin'] ?? null,
             createdAt: data['createdAt'],
           } as CompanyMember;
@@ -75,7 +79,15 @@ export class UsersService {
     patch: Partial<
       Pick<
         CompanyMember,
-        'role' | 'estado' | 'departamento' | 'tarifaHoraria' | 'nombre' | 'apellido' | 'telefono'
+        | 'role'
+        | 'estado'
+        | 'departamento'
+        | 'tarifaHoraria'
+        | 'nombre'
+        | 'apellido'
+        | 'telefono'
+        | 'permissionOverrides'
+        | 'customRoleId'
       >
     >
   ): Promise<void> {

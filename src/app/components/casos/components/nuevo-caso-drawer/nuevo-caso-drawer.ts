@@ -5,6 +5,7 @@ import type { CasoPlantilla } from '../../../../interfaces';
 import type { Contact } from '../../../../interfaces';
 import { getContactDisplayName } from '../../../../interfaces';
 import { ContactService } from '../../../../core/services/contact.service';
+import { UsersService } from '../../../../core/services/users';
 
 @Component({
   selector: 'app-nuevo-caso-drawer',
@@ -14,6 +15,7 @@ import { ContactService } from '../../../../core/services/contact.service';
 })
 export class NuevoCasoDrawerComponent {
   private readonly contactService = inject(ContactService);
+  readonly usersService = inject(UsersService);
 
   readonly visible = input.required<boolean>();
   readonly plantillas = input.required<CasoPlantilla[]>();
@@ -41,6 +43,7 @@ export class NuevoCasoDrawerComponent {
   readonly formVencimiento = signal('');
   readonly formSinVencimiento = signal(false);
   readonly formPlantillaId = signal('');
+  readonly formEncargadoId = signal('');
 
   readonly clienteSeleccionado = signal<Contact | null>(null);
   readonly buscadorQuery = signal('');
@@ -68,9 +71,13 @@ export class NuevoCasoDrawerComponent {
         if (this.contactService.contacts().length === 0) {
           this.contactService.loadContacts();
         }
+        if (this.usersService.members().length === 0) {
+          this.usersService.loadMembers();
+        }
         const preContact = this.initialContact();
         if (preContact) {
           this.clienteSeleccionado.set(preContact);
+          this.formEncargadoId.set(preContact.assignedTo ?? '');
         }
         const data = this.initialData();
         if (data?.titulo)      this.formTitulo.set(data.titulo);
@@ -91,6 +98,7 @@ export class NuevoCasoDrawerComponent {
     this.formVencimiento.set('');
     this.formSinVencimiento.set(false);
     this.formPlantillaId.set('');
+    this.formEncargadoId.set('');
     this.clienteSeleccionado.set(null);
     this.buscadorQuery.set('');
     this.showDropdown.set(false);
@@ -114,12 +122,14 @@ export class NuevoCasoDrawerComponent {
 
   selectCliente(c: Contact): void {
     this.clienteSeleccionado.set(c);
+    this.formEncargadoId.set(c.assignedTo ?? '');
     this.buscadorQuery.set('');
     this.showDropdown.set(false);
   }
 
   clearCliente(): void {
     this.clienteSeleccionado.set(null);
+    this.formEncargadoId.set('');
     this.buscadorQuery.set('');
   }
 
@@ -143,6 +153,7 @@ export class NuevoCasoDrawerComponent {
       vencimiento: this.formSinVencimiento() ? undefined : (this.formVencimiento() || undefined),
       contactoIds: [cliente.id],
       plantillaId: this.formPlantillaId() || undefined,
+      encargadoId: this.formEncargadoId() || undefined,
     });
   }
 }

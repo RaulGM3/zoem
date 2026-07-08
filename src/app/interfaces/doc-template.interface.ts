@@ -1,4 +1,7 @@
 import { Timestamp } from '@angular/fire/firestore';
+import type { FirmRole } from './member';
+import type { SoftDeletable, Versioned } from './doc-lifecycle.interface';
+import type { PlantillaVisibility } from './plantilla-file.interface';
 
 export type TemplateVariableType = 'text' | 'textarea' | 'date' | 'number' | 'currency' | 'email';
 
@@ -14,7 +17,7 @@ export interface TemplateVariable {
 
 export type DocTemplateStatus = 'procesando' | 'revision' | 'listo' | 'error';
 
-export interface DocTemplate {
+export interface DocTemplate extends SoftDeletable, Versioned {
   id: string;
   companyId: string;
   name: string;
@@ -32,4 +35,7 @@ export interface DocTemplate {
   createdBy?: string;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
+  visibleTo?: PlantillaVisibility;
+  visibleRoles?: FirmRole[];
+  visibleUserIds?: string[];
 }

@@ -1,7 +1,45 @@
 import { Timestamp } from '@angular/fire/firestore';
 
 export type ContactType = 'persona_fisica' | 'persona_juridica';
-export type ContactStatus = 'activo' | 'inactivo' | 'potencial' | 'archivado';
+export type ContactStatus =
+  | 'potencial'
+  | 'activo'
+  | 'inactivo'
+  | 'cerrado_finalizado'
+  | 'pendiente_presupuesto'
+  | 'pendiente_firma_hoja_encargo'
+  | 'pendiente_pago'
+  | 'integracion_plantillas';
+
+export type CanalEntrada =
+  | 'email'
+  | 'telefono'
+  | 'referido'
+  | 'web'
+  | 'presencial'
+  | 'redes_sociales'
+  | 'otro';
+
+export const CONTACT_STATUS_LABELS: Record<ContactStatus, string> = {
+  potencial: 'Potencial',
+  activo: 'Activo',
+  inactivo: 'Inactivo',
+  cerrado_finalizado: 'Cerrado / Finalizado',
+  pendiente_presupuesto: 'Pendiente de presupuesto',
+  pendiente_firma_hoja_encargo: 'Pendiente de firma de hoja de encargo',
+  pendiente_pago: 'Pendiente de pago',
+  integracion_plantillas: 'Integración plantillas de casos',
+};
+
+export const CANAL_ENTRADA_LABELS: Record<CanalEntrada, string> = {
+  email: 'Email',
+  telefono: 'Teléfono',
+  referido: 'Referido',
+  web: 'Web / Online',
+  presencial: 'Presencial',
+  redes_sociales: 'Redes Sociales',
+  otro: 'Otro',
+};
 
 export interface Direccion {
   calle?: string;
@@ -22,6 +60,8 @@ interface ContactBase {
   mobile?: string;
   status: ContactStatus;
   assignedTo?: string;
+  asunto?: string;
+  canalEntrada?: CanalEntrada;
   tags?: string[];
   notes?: string;
   language?: string; // ISO 639-1

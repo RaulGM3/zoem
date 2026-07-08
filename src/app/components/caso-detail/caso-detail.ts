@@ -27,7 +27,7 @@ import { CasoHitosTabComponent } from './components/caso-hitos-tab/caso-hitos-ta
 import { CasoGestoriaTabComponent } from './components/caso-gestoria-tab/caso-gestoria-tab';
 import {
   CasoDocumentosTabComponent, DocUploadEvent,
-  FreeUploadEvent, CreateFolderEvent,
+  FreeUploadEvent, CreateFolderEvent, ReuploadEvent,
 } from './components/caso-documentos-tab/caso-documentos-tab';
 import { HitoFormDrawerComponent, HitoFormData } from './components/hito-form-drawer/hito-form-drawer';
 import { MovimientoFormDrawerComponent, MovimientoFormData } from './components/movimiento-form-drawer/movimiento-form-drawer';
@@ -478,11 +478,26 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
     const casoId = this.caso()?.id;
     if (!casoId) return;
     this.uploadQueue.enqueue(
-      () => this.casoDocService.uploadFile(casoId, event.folderId, event.file),
+      () => this.casoDocService.uploadFile(casoId, event.folderId, event.file, {
+        clasificado: event.clasificado,
+      }),
       event.file.name,
       {
         successMessage: 'Archivo subido',
         errorTitle: 'No se pudo subir el archivo',
+      },
+    );
+  }
+
+  onReuploadFile(event: ReuploadEvent): void {
+    const casoId = this.caso()?.id;
+    if (!casoId) return;
+    this.uploadQueue.enqueue(
+      () => this.casoDocService.reuploadFile(casoId, event.file, event.newFile),
+      event.newFile.name,
+      {
+        successMessage: 'Nueva versión subida',
+        errorTitle: 'No se pudo subir la nueva versión',
       },
     );
   }

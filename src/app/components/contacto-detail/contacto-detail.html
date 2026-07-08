@@ -86,6 +86,27 @@
             <lucide-icon [img]="CalendarIcon" class="w-4 h-4 shrink-0" style="color:var(--text-faint)" />
             Último contacto: {{ getLastContact(c) }}
           </div>
+          @if (c.asunto) {
+            <div class="flex items-start gap-2 pt-1" style="border-top:1px solid var(--border)">
+              <lucide-icon [img]="TagIcon" class="w-4 h-4 shrink-0 mt-0.5" style="color:var(--text-faint)" />
+              <div>
+                <p class="text-xs mb-0.5" style="color:var(--text-faint)">Asunto</p>
+                <p style="color:var(--text-body)">{{ c.asunto }}</p>
+              </div>
+            </div>
+          }
+          @if (c.canalEntrada) {
+            <div class="flex items-center gap-2" style="color:var(--text-body)">
+              <lucide-icon [img]="Building2Icon" class="w-4 h-4 shrink-0" style="color:var(--text-faint)" />
+              <span>Canal: {{ getCanalEntradaLabel(c.canalEntrada) }}</span>
+            </div>
+          }
+          @if (encargadoNombre()) {
+            <div class="flex items-center gap-2" style="color:var(--text-body)">
+              <lucide-icon [img]="EditIcon" class="w-4 h-4 shrink-0" style="color:var(--text-faint)" />
+              <span>Encargado: {{ encargadoNombre() }}</span>
+            </div>
+          }
         </div>
       </div>
 
