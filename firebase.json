@@ -15,7 +15,7 @@
   },
   "firestore": [
     {
-      "database": "production-vertey",
+      "database": "(default)",
       "rules": "firestore.rules",
       "indexes": "firestore.indexes.json"
     }

@@ -1,16 +1,20 @@
 rules_version = '2';
 
 // ============================================================================
-// Zoem (vertey-cf1b9) — Cloud Storage Security Rules
+// Zoem (vertey-b924b) — Cloud Storage Security Rules
 //
-// Todos los objetos cuelgan de `companies/{companyId}/...`:
-//   companies/{cid}/casos/{casoId}/docs/{folderId}/{file}
-//   companies/{cid}/contacts/{contactId}/{folderId}/{file}
-//   companies/{cid}/docTemplates/{id}/...
-// → el aislamiento de tenant va por el PATH.
+// La membresía/rol ya NO se lee de Firestore (solo soporta la base (default)
+// y el proyecto usa 'production-vertey'). En su lugar se usan custom claims
+// escritos por las Cloud Functions syncMemberClaims y syncSuperuserClaim:
 //
-// La membresía/roles se leen desde Firestore (members/{uid}).
-// Enforcement: aislamiento de tenant + rol grueso (Viewer = solo lectura).
+//   request.auth.token.companyId  — empresa a la que pertenece el usuario
+//   request.auth.token.role       — Admin | Gestor | Usuario | Viewer
+//   request.auth.token.estado     — activo | pendiente | ...
+//   request.auth.token.isSuperUser — boolean
+//
+// Enforcement: aislamiento de tenant (companyId del token == cid del path)
+// + rol grueso (Viewer = solo lectura). Mismo contrato que antes pero sin
+// dependencia de la base de datos Firestore en las rules.
 // ============================================================================
 
 service firebase.storage {
@@ -20,21 +24,15 @@ service firebase.storage {
       return request.auth != null;
     }
     function isSuper() {
-      return isSignedIn()
-        && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
-        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isSuperUser == true;
-    }
-    function memberPath(cid) {
-      return /databases/(default)/documents/companies/$(cid)/members/$(request.auth.uid);
-    }
-    function isMember(cid) {
-      return isSignedIn() && firestore.exists(memberPath(cid));
+      return isSignedIn() && request.auth.token.isSuperUser == true;
     }
     function isActiveMember(cid) {
-      return isMember(cid) && firestore.get(memberPath(cid)).data.estado == 'activo';
+      return isSignedIn()
+        && request.auth.token.companyId == cid
+        && request.auth.token.estado == 'activo';
     }
     function canWrite(cid) {
-      return isActiveMember(cid) && firestore.get(memberPath(cid)).data.role != 'Viewer';
+      return isActiveMember(cid) && request.auth.token.role != 'Viewer';
     }
     // Límite de tamaño defensivo (50 MB) en subidas.
     function withinSizeLimit() {
@@ -45,7 +43,7 @@ service firebase.storage {
     // Sin `delete`: los blobs nunca se borran desde cliente — el "borrado" es
     // soft delete en Firestore y el archivo se conserva para auditoría.
     match /companies/{cid}/{allPaths=**} {
-      allow read:           if isSuper() || isMember(cid);
+      allow read:           if isSuper() || isActiveMember(cid);
       allow create, update: if isSuper() || (canWrite(cid) && withinSizeLimit());
       allow delete:         if isSuper();
     }

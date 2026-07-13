@@ -214,3 +214,8 @@ export { sendPushNotification } from './notifications';
 // ─── Documentos clasificados ─────────────────────────────────────────────────
 // URL firmada de corta vida + auditoría server-side (no falsificable).
 export { getClassifiedDocUrl } from './classifiedDocUrl';
+
+// ─── Custom claims (Storage rules) ───────────────────────────────────────────
+// Sincroniza companyId/role/estado/isSuperUser en el JWT para que las Storage
+// rules puedan verificar membresía sin firestore.get() (que solo lee (default)).
+export { syncMemberClaims, syncSuperuserClaim, backfillMemberClaims } from './customClaims';

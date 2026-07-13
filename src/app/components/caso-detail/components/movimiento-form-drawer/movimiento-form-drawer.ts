@@ -11,7 +11,7 @@ export interface MovimientoFormData {
   esEntrada: boolean;
   fecha: string;
   notas?: string;
-  cuentaId: string;
+  cuentaId?: string;
   tipoIva: TipoIva;
   ivaExento: boolean;
   baseImponible: number;
@@ -147,7 +147,8 @@ export class MovimientoFormDrawerComponent {
 
   submit(): void {
     const concepto = this.formConcepto().trim();
-    if (!concepto || !this.formImporte() || !this.formCuentaId()) return;
+    if (!concepto || !this.formImporte()) return;
+    if (this.cuentas().length > 0 && !this.formCuentaId()) return;
     const { tipoIva, exento } = this.ivaResuelto();
     const { baseImponible, cuotaIva, total } = this.desglose();
     this.saved.emit({
@@ -157,7 +158,7 @@ export class MovimientoFormDrawerComponent {
       esEntrada: this.formEsEntrada(),
       fecha: this.formFecha(),
       notas: this.formNotas().trim() || undefined,
-      cuentaId: this.formCuentaId(),
+      cuentaId: this.formCuentaId() || undefined,
       tipoIva,
       ivaExento: exento,
       baseImponible,

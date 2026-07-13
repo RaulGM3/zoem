@@ -102,7 +102,7 @@
         (mouseleave)="$any($event.currentTarget).style.background=''">
         Cancelar
       </button>
-      <button (click)="submit()" [disabled]="saving() || !formConcepto().trim() || !formImporte() || !formCuentaId()"
+      <button (click)="submit()" [disabled]="saving() || !formConcepto().trim() || !formImporte() || (cuentas().length > 0 && !formCuentaId())"
         class="px-4 py-2 text-sm text-white rounded-lg transition-colors duration-150 disabled:opacity-50"
         style="background:var(--brand)"
         (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
