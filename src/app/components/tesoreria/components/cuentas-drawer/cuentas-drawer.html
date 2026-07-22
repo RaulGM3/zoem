@@ -2,7 +2,8 @@
   <div class="absolute inset-0 bg-black/40" (click)="closed.emit()" aria-hidden="true"></div>
   <div class="relative flex flex-col w-full max-w-md shadow-2xl overflow-y-auto"
     style="background:var(--surface);border-left:1px solid var(--border)"
-    role="dialog" aria-label="Cuentas bancarias">
+    role="dialog" aria-label="Cuentas bancarias" aria-modal="true"
+    appFocusTrap (escapeKey)="closed.emit()">
     <!-- Header -->
     <div class="flex items-center justify-between px-6 py-4 shrink-0" style="border-bottom:1px solid var(--border)">
       <h2 class="text-base font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Cuentas bancarias</h2>
@@ -42,20 +43,41 @@
                 </div>
               </div>
               <div class="flex items-center gap-1 shrink-0">
-                <button type="button" (click)="openEdit(cuenta)"
-                  class="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors duration-150"
-                  style="color:var(--text-body)"
-                  (mouseenter)="$any($event.currentTarget).style.background='var(--surface)'"
-                  (mouseleave)="$any($event.currentTarget).style.background=''">
-                  Editar
-                </button>
-                <button type="button" (click)="delete(cuenta.id)" [disabled]="deletingId() === cuenta.id"
-                  class="rounded-lg p-1.5 disabled:opacity-40 transition-colors duration-150"
-                  style="color:var(--danger)"
-                  (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)'"
-                  (mouseleave)="$any($event.currentTarget).style.background=''">
-                  <lucide-icon [img]="Trash2Icon" class="size-4"></lucide-icon>
-                </button>
+                @if (confirmingDeleteId() === cuenta.id) {
+                  <span class="text-xs mr-1" style="color:var(--danger)">¿Seguro?</span>
+                  <button type="button" (click)="delete(cuenta.id)" [disabled]="deletingId() === cuenta.id"
+                    class="rounded-lg p-1.5 disabled:opacity-40 transition-colors duration-150"
+                    style="color:var(--danger)"
+                    (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)'"
+                    (mouseleave)="$any($event.currentTarget).style.background=''"
+                    aria-label="Confirmar eliminación de la cuenta">
+                    <lucide-icon [img]="CheckIcon" class="size-4"></lucide-icon>
+                  </button>
+                  <button type="button" (click)="cancelDelete()"
+                    class="rounded-lg p-1.5 transition-colors duration-150"
+                    style="color:var(--text-muted)"
+                    (mouseenter)="$any($event.currentTarget).style.background='var(--surface)'"
+                    (mouseleave)="$any($event.currentTarget).style.background=''"
+                    aria-label="Cancelar">
+                    <lucide-icon [img]="XIcon" class="size-4"></lucide-icon>
+                  </button>
+                } @else {
+                  <button type="button" (click)="openEdit(cuenta)"
+                    class="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors duration-150"
+                    style="color:var(--text-body)"
+                    (mouseenter)="$any($event.currentTarget).style.background='var(--surface)'"
+                    (mouseleave)="$any($event.currentTarget).style.background=''">
+                    Editar
+                  </button>
+                  <button type="button" (click)="requestDelete(cuenta.id)"
+                    class="rounded-lg p-1.5 disabled:opacity-40 transition-colors duration-150"
+                    style="color:var(--danger)"
+                    (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)'"
+                    (mouseleave)="$any($event.currentTarget).style.background=''"
+                    aria-label="Eliminar cuenta">
+                    <lucide-icon [img]="Trash2Icon" class="size-4"></lucide-icon>
+                  </button>
+                }
               </div>
             </li>
           }

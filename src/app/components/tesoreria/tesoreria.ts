@@ -18,6 +18,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { parseExtractoCsv, autoMatch } from '../../core/conciliacion/conciliacion';
 import { saldoAprobado, balancePorCuenta } from '../../core/tesoreria/saldos';
 import { Caso, CierreCuenta, TesoreriaResumen } from '../../interfaces';
+import type { MovimientoTipo } from '../../interfaces';
 import { TesoresriaCasoDrawerComponent } from './components/tesoreria-caso-drawer/tesoreria-caso-drawer';
 import { RevisionMovimientosComponent } from './components/revision-movimientos/revision-movimientos';
 import { CuentasDrawerComponent } from './components/cuentas-drawer/cuentas-drawer';
@@ -32,6 +33,27 @@ import { MovimientoGestoria } from '../../interfaces';
 const COTEJO_TOLERANCIA = 0.01;
 
 export type TabTesoreria = 'resumen' | 'movimientos' | 'conciliacion' | 'reportes' | 'casos';
+
+/** Redondea a 2 decimales para evitar drift de coma flotante en acumulaciones de dinero. */
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+/** Fecha local (no UTC) en formato YYYY-MM-DD — evita el desfase de `toISOString().slice(0, 10)`. */
+function localDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// Record exhaustivo sobre el union completo de MovimientoTipo: si se añade un
+// tipo nuevo (como pasó con 'ajuste'), TypeScript obliga a declararlo aquí,
+// así el reporte no puede volver a crashear por un tipo no contemplado.
+const TIPOS_REPORTE_EXHAUSTIVO: Record<MovimientoTipo, true> = {
+  ingreso: true, suplido: true, honorario: true, gasto: true, otro: true, ajuste: true,
+};
+const TIPOS_REPORTE: readonly MovimientoTipo[] = Object.keys(TIPOS_REPORTE_EXHAUSTIVO) as MovimientoTipo[];
 
 @Component({
   selector: 'app-tesoreria',
@@ -145,40 +167,54 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
 
   readonly saldoBancarioInput = signal('');
 
-  readonly balanceGeneral = computed(() =>
-    this.casos().reduce(
+  // ── Casos (Bloque "Casos") ──────────────────────────────────────────────
+  // Única fuente de verdad para el tab de casos: `resumenPorCaso` (más abajo)
+  // ya separa honorarios de ingresos igual que `casos.service.ts#recalcularResumen`,
+  // y filtra por `casoId` real (excluye movimientos_generales sin caso). Tanto
+  // las filas como el pie de tabla derivan de ese mismo mapa para que
+  // Total Ingresos − Total Egresos siempre cuadre con lo mostrado por caso.
+  readonly casosContables = computed(() => {
+    const resumen = this.resumenPorCaso();
+    return this.casos()
+      .filter(c => {
+        const r = resumen.get(c.id);
+        return !!r && (r.ingresos || r.honorarios || r.egresos);
+      })
+      .sort((a, b) => {
+        const ra = resumen.get(a.id);
+        const rb = resumen.get(b.id);
+        const saldoA = (ra?.ingresos ?? 0) + (ra?.honorarios ?? 0) - (ra?.egresos ?? 0);
+        const saldoB = (rb?.ingresos ?? 0) + (rb?.honorarios ?? 0) - (rb?.egresos ?? 0);
+        return saldoB - saldoA;
+      });
+  });
+
+  /** Totales del pie de tabla del tab "Casos": suma de las mismas filas visibles. */
+  readonly casosFooterTotales = computed(() => {
+    const resumen = this.resumenPorCaso();
+    return this.casosContables().reduce(
       (acc, c) => {
-        const r = c.resumenFinanciero;
-        acc.totalIngresos += r?.totalIngresos ?? 0;
-        acc.totalSuplidos += r?.totalSuplidos ?? 0;
-        acc.totalHonorarios += r?.totalHonorarios ?? 0;
-        acc.saldo += r?.saldo ?? 0;
+        const r = resumen.get(c.id);
+        if (!r) return acc;
+        acc.ingresos = round2(acc.ingresos + r.ingresos);
+        acc.honorarios = round2(acc.honorarios + r.honorarios);
+        acc.egresos = round2(acc.egresos + r.egresos);
+        acc.saldoAprobado = round2(acc.saldoAprobado + r.saldoAprobado);
+        acc.saldoProyectado = round2(acc.saldoProyectado + r.saldoProyectado);
         return acc;
       },
-      { totalIngresos: 0, totalSuplidos: 0, totalHonorarios: 0, saldo: 0 }
-    )
-  );
-
-  readonly casosContables = computed(() =>
-    this.casos()
-      .filter(c => {
-        const r = c.resumenFinanciero;
-        return (r?.totalIngresos || r?.totalSuplidos || r?.totalHonorarios);
-      })
-      .sort((a, b) => (b.resumenFinanciero?.saldo ?? 0) - (a.resumenFinanciero?.saldo ?? 0))
-  );
+      { ingresos: 0, honorarios: 0, egresos: 0, saldoAprobado: 0, saldoProyectado: 0 },
+    );
+  });
 
   readonly saldoBancario = computed(() => this.companyService.activeCompany()?.saldoBancario ?? null);
   readonly saldoBancarioFecha = computed(() => this.companyService.activeCompany()?.saldoBancarioFecha ?? null);
 
+  // Saldo aprobado global (todas las cuentas, todos los movimientos) — usado
+  // sólo para el cotejo bancario de la pestaña "Resumen" cuando no hay cuentas
+  // configuradas. No confundir con los totales del tab "Casos" (ver arriba).
   readonly saldoAprobado = computed(() =>
     saldoAprobado(this.gestoriaService.todosMovimientos())
-  );
-
-  readonly totalEgresos = computed(() =>
-    this.gestoriaService.todosMovimientos()
-      .filter(m => !m.esEntrada)
-      .reduce((acc, m) => acc + m.importe, 0)
   );
 
   readonly cotejo = computed(() => {
@@ -236,35 +272,33 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
     return map;
   });
 
-  readonly proyeccionBancaria = computed(() => {
-    const aprobado = this.saldoAprobado();
-    const impacto = this.gestoriaService.todosMovimientos()
-      .filter(m => m.aprobado == null)
-      .reduce((acc, m) => acc + (m.esEntrada ? m.importe : -m.importe), 0);
-    return { aprobado, impacto, proyeccion: aprobado + impacto };
-  });
-
   readonly resumenPorCaso = computed(() => {
-    const map = new Map<string, { ingresos: number; egresos: number; saldoAprobado: number; saldoProyectado: number }>();
+    const map = new Map<string, { ingresos: number; honorarios: number; egresos: number; saldoAprobado: number; saldoProyectado: number }>();
 
     for (const m of this.gestoriaService.todosMovimientos()) {
       const key = m.casoId ?? '__general__';
-      const entry = map.get(key) ?? { ingresos: 0, egresos: 0, saldoAprobado: 0, saldoProyectado: 0 };
+      const entry = map.get(key) ?? { ingresos: 0, honorarios: 0, egresos: 0, saldoAprobado: 0, saldoProyectado: 0 };
 
-      if (m.esEntrada) entry.ingresos += m.importe;
-      else entry.egresos += m.importe;
+      if (m.esEntrada) {
+        // Honorarios cobrados van a `honorarios`, no a `ingresos` — igual que
+        // casos.service.ts#recalcularResumen, para que fila y pie de tabla cuadren.
+        if (m.tipo === 'honorario') entry.honorarios = round2(entry.honorarios + m.importe);
+        else entry.ingresos = round2(entry.ingresos + m.importe);
+      } else {
+        entry.egresos = round2(entry.egresos + m.importe);
+      }
 
       if (m.aprobado === true) {
-        entry.saldoAprobado += m.esEntrada ? m.importe : -m.importe;
+        entry.saldoAprobado = round2(entry.saldoAprobado + (m.esEntrada ? m.importe : -m.importe));
       } else if (m.aprobado == null) {
-        entry.saldoProyectado += m.esEntrada ? m.importe : -m.importe;
+        entry.saldoProyectado = round2(entry.saldoProyectado + (m.esEntrada ? m.importe : -m.importe));
       }
 
       map.set(key, entry);
     }
 
     for (const entry of map.values()) {
-      entry.saldoProyectado += entry.saldoAprobado;
+      entry.saldoProyectado = round2(entry.saldoProyectado + entry.saldoAprobado);
     }
 
     return map;
@@ -273,8 +307,6 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
   // ── Reportes (Bloque 3) ────────────────────────────────────────────────
   readonly rangoDesde = signal('');
   readonly rangoHasta = signal('');
-
-  private static readonly TIPOS_REPORTE = ['ingreso', 'suplido', 'honorario', 'gasto', 'otro'] as const;
 
   readonly movimientosEnRango = computed(() => {
     const desde = this.rangoDesde();
@@ -287,23 +319,26 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
   });
 
   readonly reporte = computed(() => {
-    const porTipo = new Map<string, { importe: number; base: number; cuota: number; count: number }>();
-    for (const t of TesoreriaComponent.TIPOS_REPORTE) porTipo.set(t, { importe: 0, base: 0, cuota: 0, count: 0 });
+    const porTipo = new Map<MovimientoTipo, { importe: number; base: number; cuota: number; count: number }>();
+    for (const t of TIPOS_REPORTE) porTipo.set(t, { importe: 0, base: 0, cuota: 0, count: 0 });
 
     let ingresos = 0, egresos = 0, ivaRepercutido = 0, ivaSoportado = 0;
     for (const m of this.movimientosEnRango()) {
       const cuota = m.cuotaIva ?? 0;
       const base = m.baseImponible ?? m.importe;
-      const t = porTipo.get(m.tipo)!;
-      t.importe += m.importe; t.base += base; t.cuota += cuota; t.count++;
-      if (m.esEntrada) { ingresos += m.importe; ivaRepercutido += cuota; }
-      else { egresos += m.importe; ivaSoportado += cuota; }
+      // porTipo cubre todo el union MovimientoTipo (ver TIPOS_REPORTE_EXHAUSTIVO);
+      // el fallback sólo protege ante datos legacy con un `tipo` inválido en Firestore.
+      const t = porTipo.get(m.tipo) ?? { importe: 0, base: 0, cuota: 0, count: 0 };
+      t.importe = round2(t.importe + m.importe); t.base = round2(t.base + base); t.cuota = round2(t.cuota + cuota); t.count++;
+      porTipo.set(m.tipo, t);
+      if (m.esEntrada) { ingresos = round2(ingresos + m.importe); ivaRepercutido = round2(ivaRepercutido + cuota); }
+      else { egresos = round2(egresos + m.importe); ivaSoportado = round2(ivaSoportado + cuota); }
     }
 
     return {
-      porTipo: TesoreriaComponent.TIPOS_REPORTE.map(t => ({ tipo: t, ...porTipo.get(t)! })),
-      ingresos, egresos, saldo: ingresos - egresos,
-      ivaRepercutido, ivaSoportado, liquidacionIva: ivaRepercutido - ivaSoportado,
+      porTipo: TIPOS_REPORTE.map(t => ({ tipo: t, ...(porTipo.get(t) ?? { importe: 0, base: 0, cuota: 0, count: 0 }) })),
+      ingresos, egresos, saldo: round2(ingresos - egresos),
+      ivaRepercutido, ivaSoportado, liquidacionIva: round2(ivaRepercutido - ivaSoportado),
       totalMovimientos: this.movimientosEnRango().length,
     };
   });
@@ -454,7 +489,7 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
 
     this.savingSaldo.set(true);
     try {
-      const hoy = new Date().toISOString().slice(0, 10);
+      const hoy = localDateStr(new Date());
       await this.toast.run(() => this.companyService.updateSaldoBancario(company.id, saldo, hoy), {
         successMessage: 'Saldo bancario guardado',
         errorTitle: 'No se pudo guardar el saldo bancario',

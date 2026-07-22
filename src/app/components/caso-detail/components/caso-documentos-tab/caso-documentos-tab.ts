@@ -81,6 +81,9 @@ export class CasoDocumentosTabComponent {
   readonly progress = input.required<{ subidos: number; total: number } | null>();
   /** Datos del caso para pre-rellenar las variables del documento. */
   readonly casoContext = input<Record<string, string>>({});
+  /** Gating de permisos (`Casos.editar`/`Casos.eliminar`): oculta subir/generar/crear vs. borrar. */
+  readonly canEdit = input(true);
+  readonly canDelete = input(true);
 
   readonly uploadSlot = output<DocUploadEvent>();
   readonly removeSlot = output<CasoDocSlot>();
@@ -117,7 +120,15 @@ export class CasoDocumentosTabComponent {
   readonly confirmingDeleteFolderId = signal<string | null>(null);
   readonly confirmingDeleteFileId = signal<string | null>(null);
   readonly preview = signal<PreviewDoc | null>(null);
-  readonly generatingSlot = signal<CasoDocSlot | null>(null);
+  // Solo guardamos el id: el slot en sí se deriva en vivo de `slots()` (input
+  // reactivo) más abajo, para no quedarnos con una copia estática mientras el
+  // diálogo está abierto. Si otro usuario edita el mismo slot mientras tanto,
+  // `generatingSlot` refleja el cambio en lugar de perderlo al guardar (lost update).
+  readonly generatingSlotId = signal<string | null>(null);
+  readonly generatingSlot = computed(() => {
+    const id = this.generatingSlotId();
+    return id ? (this.slots().find(s => s.id === id) ?? null) : null;
+  });
   readonly historyTarget = signal<HistoryTarget | null>(null);
   readonly accessTarget = signal<AccessTarget | null>(null);
   readonly accessSaving = signal(false);
@@ -383,16 +394,16 @@ export class CasoDocumentosTabComponent {
 
   // ── Documento generado desde plantilla ─────────────────
   openGenerador(slot: CasoDocSlot): void {
-    this.generatingSlot.set(slot);
+    this.generatingSlotId.set(slot.id);
   }
 
   closeGenerador(): void {
-    this.generatingSlot.set(null);
+    this.generatingSlotId.set(null);
   }
 
   onGenerated(event: GeneratedDocEvent): void {
     this.generateDoc.emit(event);
-    this.generatingSlot.set(null);
+    this.generatingSlotId.set(null);
   }
 
   // ── Panel lateral ──────────────────────────────────────
@@ -406,7 +417,7 @@ export class CasoDocumentosTabComponent {
       this.resetTransient();
     }
     if (slot.docTemplateId) {
-      this.generatingSlot.set(slot);
+      this.generatingSlotId.set(slot.id);
     } else {
       setTimeout(() => this.triggerSlotUpload(slot.id), 50);
     }

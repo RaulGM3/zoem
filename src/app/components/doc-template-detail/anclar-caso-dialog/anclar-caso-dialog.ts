@@ -9,13 +9,14 @@ import { CasosService } from '../../../core/services/casos.service';
 import { CasoDocService } from '../../../core/services/caso-doc.service';
 import { DocGenerationService } from '../../../core/services/doc-generation.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { FocusTrapDirective } from '../../../shared/directives/focus-trap.directive';
 import type { Caso, CasoDocFolder, DocTemplate } from '../../../interfaces';
 
 type Step = 'search' | 'folder';
 
 @Component({
   selector: 'app-anclar-caso-dialog',
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, FocusTrapDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: 'fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4',
@@ -29,6 +30,8 @@ type Step = 'search' | 'folder';
       role="dialog"
       aria-modal="true"
       aria-labelledby="anclar-dialog-title"
+      appFocusTrap
+      (escapeKey)="close.emit()"
     >
       <!-- Header -->
       <div class="flex items-center gap-3 px-5 py-4 border-b border-slate-200 shrink-0">

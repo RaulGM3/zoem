@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output, signal, inject, DestroyRef } from '@angular/core';
 import {
   LucideAngularModule, LucideIconData,
   Calendar, Phone, Users, FileText, Bell,
@@ -36,10 +36,21 @@ export class CalendarEventListComponent {
 
   readonly CalendarIcon = Calendar;
 
-  private readonly today = todayStr();
+  private readonly destroyRef = inject(DestroyRef);
+  /**
+   * Fecha de "hoy" reactiva — se recalcula periódicamente para que
+   * `isHitoOverdue` no quede congelado en el día de montaje del componente si
+   * la pestaña se deja abierta durante la medianoche.
+   */
+  private readonly today = signal(todayStr());
+
+  constructor() {
+    const intervalId = setInterval(() => this.today.set(todayStr()), 60_000);
+    this.destroyRef.onDestroy(() => clearInterval(intervalId));
+  }
 
   isOverdue(event: CalendarItem): boolean {
-    return isHitoOverdue(event.hitoEstado, event.date, this.today);
+    return isHitoOverdue(event.hitoEstado, event.date, this.today());
   }
 
   getHitoEstadoLabel(event: CalendarItem): string {

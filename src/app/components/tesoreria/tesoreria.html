@@ -107,10 +107,11 @@
       <app-tesoreria-casos-tab
         [casosContables]="casosContables()"
         [resumenPorCaso]="resumenPorCaso()"
-        [balanceGeneral]="balanceGeneral()"
-        [totalEgresos]="totalEgresos()"
-        [saldoAprobado]="saldoAprobado()"
-        [proyeccionBancaria]="proyeccionBancaria()"
+        [totalIngresos]="casosFooterTotales().ingresos"
+        [totalHonorarios]="casosFooterTotales().honorarios"
+        [totalEgresos]="casosFooterTotales().egresos"
+        [saldoAprobado]="casosFooterTotales().saldoAprobado"
+        [saldoProyectado]="casosFooterTotales().saldoProyectado"
         [loading]="loading()"
         (casoSeleccionado)="selectedCaso.set($event)"
       />

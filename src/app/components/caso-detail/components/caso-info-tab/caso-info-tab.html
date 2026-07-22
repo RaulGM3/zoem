@@ -114,14 +114,16 @@
                   </div>
                   <span class="text-sm font-medium truncate" style="color:var(--text-strong)">{{ displayName(c) }}</span>
                 </div>
-                <button (click)="askRemoveContact(c)"
-                  class="p-1 rounded transition-colors duration-150 shrink-0"
-                  style="color:var(--text-faint)"
-                  (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)';$any($event.currentTarget).style.color='var(--danger)'"
-                  (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
-                  [attr.aria-label]="'Quitar ' + displayName(c)">
-                  <lucide-icon [img]="XIcon" class="w-3.5 h-3.5" />
-                </button>
+                @if (canEdit()) {
+                  <button (click)="askRemoveContact(c)"
+                    class="p-1 rounded transition-colors duration-150 shrink-0"
+                    style="color:var(--text-faint)"
+                    (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)';$any($event.currentTarget).style.color='var(--danger)'"
+                    (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+                    [attr.aria-label]="'Quitar ' + displayName(c)">
+                    <lucide-icon [img]="XIcon" class="w-3.5 h-3.5" />
+                  </button>
+                }
               </div>
               <dl class="mt-2 space-y-1 pl-10">
                 @if (getContactId(c)) {
@@ -155,6 +157,7 @@
         <p class="text-sm" style="color:var(--text-faint)">No hay clientes vinculados</p>
       }
 
+      @if (canEdit()) {
       <div class="relative">
         <input
           type="text"
@@ -184,6 +187,7 @@
           </p>
         }
       </div>
+      }
     </div>
   </div>
 }

@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy, input, output, computed, signal } from '@angular/core';
-import { LucideAngularModule, LucideIconData, Plus, Edit2, Trash2, Activity, X, Clock, Euro } from 'lucide-angular';
+import { LucideAngularModule, LucideIconData, Plus, Edit2, Trash2, Activity, X, Clock, Euro, Check } from 'lucide-angular';
 import type { CompanyMember, Hito, HitoActividad, HitoEstado } from '../../../../interfaces';
 import {
   HITO_ESTADO_ICON_COLOR,
@@ -21,6 +21,9 @@ export class CasoHitosTabComponent {
   readonly actividad = input.required<HitoActividad[]>();
   readonly members = input.required<CompanyMember[]>();
   readonly isAdmin = input(false);
+  /** Gating de permisos (mirroring de `Casos.editar`/`Casos.eliminar`); oculta acciones si no aplica. */
+  readonly canEdit = input(true);
+  readonly canDelete = input(true);
 
   readonly toggle = output<Hito>();
   readonly editHito = output<Hito>();
@@ -33,10 +36,13 @@ export class CasoHitosTabComponent {
   readonly Trash2Icon = Trash2;
   readonly ActivityIcon = Activity;
   readonly XIcon = X;
+  readonly CheckIcon = Check;
   readonly ClockIcon = Clock;
   readonly EuroIcon = Euro;
 
   readonly actividadVisible = signal(false);
+  /** Id del hito con la confirmación de borrado abierta. */
+  readonly confirmingDeleteId = signal<string | null>(null);
 
   readonly completados = computed(() => this.hitos().filter(h => h.estado === 'completado').length);
 
@@ -84,6 +90,20 @@ export class CasoHitosTabComponent {
 
   getHitoEstadoLabel(estado: HitoEstado): string {
     return HITO_ESTADO_LABEL[estado];
+  }
+
+  // ── Confirmación de borrado ─────────────────────────────
+  requestDelete(hitoId: string): void {
+    this.confirmingDeleteId.set(hitoId);
+  }
+
+  cancelDelete(): void {
+    this.confirmingDeleteId.set(null);
+  }
+
+  confirmDelete(hitoId: string): void {
+    this.deleteHito.emit(hitoId);
+    this.confirmingDeleteId.set(null);
   }
 
   // ── Feed de actividad ──────────────────────────────────

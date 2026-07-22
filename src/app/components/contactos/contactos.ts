@@ -1,4 +1,4 @@
-import { Component, signal, computed, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, computed, inject, effect, ChangeDetectionStrategy } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
@@ -20,6 +20,7 @@ import {
   getContactDisplayName, getContactInitials,
 } from '../../interfaces';
 import { ImportarContactosComponent } from './components/importar-contactos/importar-contactos';
+import { FocusTrapDirective } from '../../shared/directives/focus-trap.directive';
 
 type ContactPayload =
   | Omit<PersonaFisica, 'id' | 'companyId' | 'createdAt' | 'updatedAt'>
@@ -30,7 +31,7 @@ type ContactosTab = 'contactos' | 'pipeline' | 'rgpd' | 'herramientas';
 @Component({
   selector: 'app-contactos',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, LucideAngularModule, DecimalPipe, ReactiveFormsModule, ImportarContactosComponent],
+  imports: [RouterLink, LucideAngularModule, DecimalPipe, ReactiveFormsModule, ImportarContactosComponent, FocusTrapDirective],
   templateUrl: './contactos.html',
 })
 export class ContactosComponent {
@@ -80,6 +81,10 @@ export class ContactosComponent {
   showDrawer = signal(false);
   showImportDrawer = signal(false);
   editingId = signal<string | null>(null);
+  /** Tipo original del contacto al abrir edición — necesario para limpiar los
+   * campos exclusivos del tipo anterior si el usuario cambia de tipo a mitad
+   * de la edición (ver saveContact). */
+  private editingOriginalType: 'persona_fisica' | 'persona_juridica' | null = null;
   formType = signal<'persona_fisica' | 'persona_juridica'>('persona_fisica');
   isSaving = signal(false);
   deleteConfirmId = signal<string | null>(null);
@@ -140,6 +145,22 @@ export class ContactosComponent {
         notes: p.get('notes') ?? '',
       });
       this.showDrawer.set(true);
+    }
+
+    // Intención de edición llegada desde contacto-detail.ts (botón "Editar"):
+    // esperamos a que la lista termine de cargar para poder localizar el
+    // contacto y abrir el drawer de edición con sus datos.
+    const editContactId = p.get('editContact');
+    if (editContactId) {
+      const stopEffect = effect(() => {
+        const contacts = this.contactService.contacts();
+        if (this.contactService.isLoading() || contacts.length === 0) return;
+        const contact = contacts.find((c) => c.id === editContactId);
+        if (contact) this.openEdit(contact);
+        // Limpia el query param para que un refresh/back no reabra el drawer.
+        this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
+        stopEffect.destroy();
+      });
     }
   }
 
@@ -299,6 +320,7 @@ export class ContactosComponent {
 
   openNew() {
     this.editingId.set(null);
+    this.editingOriginalType = null;
     this.formType.set('persona_fisica');
     this.formStep.set(1);
     this.showErrors.set(false);
@@ -310,6 +332,7 @@ export class ContactosComponent {
 
   openEdit(contact: Contact) {
     this.editingId.set(contact.id);
+    this.editingOriginalType = contact.type;
     this.formType.set(contact.type);
     const dir =
       contact.type === 'persona_fisica' ? contact.direccion : contact.direccionSocial;
@@ -413,10 +436,13 @@ export class ContactosComponent {
       }
 
       const editId = this.editingId();
+      const updatePayload: Record<string, unknown> = editId
+        ? this.withClearedPreviousTypeFields(data as Record<string, unknown>)
+        : (data as Record<string, unknown>);
       await this.toast.run(
         () =>
           editId
-            ? this.contactService.updateContact(editId, data as Record<string, unknown>)
+            ? this.contactService.updateContact(editId, updatePayload)
             : this.contactService.createContact(data),
         {
           successMessage: editId ? 'Contacto actualizado' : 'Contacto creado',
@@ -434,13 +460,48 @@ export class ContactosComponent {
   closeDrawer() {
     this.showDrawer.set(false);
     this.editingId.set(null);
+    this.editingOriginalType = null;
     this.formStep.set(1);
     this.showErrors.set(false);
     this.form.reset({ status: 'activo', nifType: 'dni', cifType: 'cif', pais: 'ES', nacionalidad: 'ES', estadoCivil: 'casado' });
   }
 
+  /**
+   * `updateContact` hace un merge-update en Firestore: si el usuario cambia
+   * el tipo de contacto (Persona Física ↔ Jurídica) a mitad de una edición,
+   * los campos del tipo ANTERIOR (p.ej. `nombre`/`apellidos`/`nif` al pasar a
+   * jurídica) nunca se limpiaban y quedaban conviviendo con los nuevos —
+   * documento híbrido/corrupto. Aquí los ponemos explícitamente a `null`
+   * antes de enviar el update, solo cuando el tipo realmente cambió.
+   */
+  private withClearedPreviousTypeFields(data: Record<string, unknown>): Record<string, unknown> {
+    if (!this.editingOriginalType || this.editingOriginalType === this.formType()) {
+      return data;
+    }
+    const personaFisicaFields = {
+      nombre: null, apellidos: null, nifType: null, nif: null,
+      nacionalidad: null, estadoCivil: null, profesion: null, direccion: null,
+      lugarNacimiento: null,
+    };
+    const personaJuridicaFields = {
+      razonSocial: null, nombreComercial: null, formaJuridica: null, cifType: null,
+      cif: null, fechaConstitucion: null, registroMercantil: null, sectorActividad: null,
+      website: null, direccionSocial: null, direccionFiscal: null,
+      representanteLegalNombre: null, representanteLegalId: null,
+    };
+    const clearedFields = this.editingOriginalType === 'persona_fisica' ? personaFisicaFields : personaJuridicaFields;
+    return { ...clearedFields, ...data };
+  }
+
   abrirCaso(contactId: string): void {
     this.router.navigate(['/casos'], { queryParams: { newCaso: '1', contactId } });
+  }
+
+  /** La tarjeta usa `routerLink` sobre un `div` (navega con click/mouse), lo
+   * que la deja inalcanzable por teclado. Este método replica esa navegación
+   * para los handlers de teclado (Enter/Espacio) del template. */
+  openContact(contactId: string): void {
+    this.router.navigate(['/contactos', contactId]);
   }
 
   async confirmDelete(id: string) {

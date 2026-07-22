@@ -1,6 +1,6 @@
 import {
   Component, signal, computed,
-  ChangeDetectionStrategy, inject, viewChild,
+  ChangeDetectionStrategy, inject, viewChild, DestroyRef,
 } from '@angular/core';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { combineLatest, filter, map, switchMap } from 'rxjs';
@@ -12,7 +12,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { UserSyncService } from '../../core/services/user-sync.service';
 import { UsersService } from '../../core/services/users';
 import { HITO_ESTADO_CALENDAR_STATUS, stampEstadoChange } from '../../core/hitos/hito-estado';
-import type { CreateEventoData, Evento, EventoColor, EventoEstado, Hito, HitoEstado, RegistroHoraHito } from '../../interfaces';
+import type { Anotacion, CreateEventoData, Evento, EventoColor, EventoEstado, Hito, HitoEstado, RegistroHoraHito } from '../../interfaces';
 import type { CalendarItem, EventGroup, ViewMode, WeekDay } from './calendario.types';
 import { CalendarNavComponent } from './components/calendar-nav/calendar-nav';
 import { DayScheduleComponent, type ItemTimeChange } from './components/day-schedule/day-schedule';
@@ -90,16 +90,25 @@ export class CalendarioComponent {
   /** Miembros del despacho — para asignar y registrar horas en los hitos. */
   readonly members = this.usersService.members;
 
-  constructor() {
-    this.usersService.loadMembers();
-  }
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly PlusIcon = Plus;
   readonly dayNames = DAY_NAMES;
-  readonly today = localDateStr(new Date());
+  /**
+   * Fecha de "hoy" reactiva — se recalcula periódicamente para que "isToday" y
+   * `isHitoOverdue` no queden congelados en el día en que se montó el
+   * componente si la pestaña se deja abierta durante la medianoche.
+   */
+  readonly today = signal(localDateStr(new Date()));
 
   readonly showDrawer = signal(false);
   readonly saving = signal(false);
+
+  constructor() {
+    this.usersService.loadMembers();
+    const intervalId = setInterval(() => this.today.set(localDateStr(new Date())), 60_000);
+    this.destroyRef.onDestroy(() => clearInterval(intervalId));
+  }
 
   /**
    * Read model único del calendario: stream real-time de Firestore (hitos +
@@ -152,7 +161,7 @@ export class CalendarioComponent {
         dayNum: d.getDate(),
         hasEvents: items.some(e => e.date === date),
         hasUnscheduledHitos: unscheduledDates.has(date),
-        isToday: date === this.today,
+        isToday: date === this.today(),
         isSelected: selected.has(date),
       };
     });
@@ -184,7 +193,7 @@ export class CalendarioComponent {
         dayNum: d.getDate(),
         hasEvents: items.some(e => e.date === date),
         hasUnscheduledHitos: unscheduledDates.has(date),
-        isToday: date === this.today,
+        isToday: date === this.today(),
         isSelected: selected.has(date),
         isCurrentMonth: d.getMonth() === currentMonth,
       };
@@ -240,7 +249,12 @@ export class CalendarioComponent {
       this.currentWeekStart.set(monday);
       this.visibleMonthDate.set(monday);
       this.stripDayCount.set(21);
+    } else {
+      this.stripDayCount.set(42);
     }
+    // Un día seleccionado en la vista anterior puede no existir/ser visible en
+    // la nueva vista — evita que siga contaminando groupedEvents/unscheduledItems.
+    this.selectedDates.set(new Set());
     this.viewMode.set(mode);
   }
 
@@ -250,6 +264,8 @@ export class CalendarioComponent {
       d.setDate(1);
       d.setMonth(d.getMonth() - 1);
       this.currentWeekStart.set(localDateStr(d));
+      this.stripDayCount.set(42);
+      this.selectedDates.set(new Set());
     } else {
       d.setDate(d.getDate() - 7);
       const newStart = localDateStr(d);
@@ -267,6 +283,8 @@ export class CalendarioComponent {
       d.setDate(1);
       d.setMonth(d.getMonth() + 1);
       this.currentWeekStart.set(localDateStr(d));
+      this.stripDayCount.set(42);
+      this.selectedDates.set(new Set());
     } else {
       d.setDate(d.getDate() + 7);
       const newStart = localDateStr(d);
@@ -396,6 +414,7 @@ export class CalendarioComponent {
       ...(!e.todoDia && e.horaInicio && e.horaFin
         ? { duracionMinutos: timeToMinutes(e.horaFin) - timeToMinutes(e.horaInicio) }
         : {}),
+      ...(e.anotaciones ? { anotaciones: e.anotaciones } : {}),
     };
   }
 
@@ -429,6 +448,7 @@ export class CalendarioComponent {
       ...(h.calendarColor ? { color: h.calendarColor as ItemColor } : {}),
       ...(h.asignadosA ? { asignadosA: h.asignadosA } : {}),
       ...(registrosHoras ? { registrosHoras } : {}),
+      ...(h.anotaciones ? { anotaciones: h.anotaciones } : {}),
     };
   }
 
@@ -439,8 +459,46 @@ export class CalendarioComponent {
     });
   }
 
+  /** Añade una anotación al hito/evento subyacente. El stream refleja el cambio. */
+  async onAnnotationAdded(event: { itemId: string; casoId?: string; texto: string }): Promise<void> {
+    await this.toast.run(
+      async () => {
+        const item = this.allItems().find(i => i.id === event.itemId);
+        const anotacion: Anotacion = {
+          id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          texto: event.texto,
+          ...(this.userSync.currentUser()?.id ? { autor: this.userSync.currentUser()!.id } : {}),
+          creadaEn: new Date().toISOString(),
+        };
+        const anotaciones = [...(item?.anotaciones ?? []), anotacion];
+        if (item?.hitoEstado !== undefined && event.casoId) {
+          await this.casosService.updateHito(event.casoId, event.itemId, { anotaciones });
+        } else {
+          await this.eventosService.updateEvento(event.itemId, { anotaciones });
+        }
+      },
+      { errorTitle: 'No se pudo añadir la anotación' }
+    );
+  }
+
+  /** Elimina una anotación del hito/evento subyacente. El stream refleja el cambio. */
+  async onAnnotationDeleted(event: { itemId: string; casoId?: string; anotacionId: string }): Promise<void> {
+    await this.toast.run(
+      async () => {
+        const item = this.allItems().find(i => i.id === event.itemId);
+        const anotaciones = (item?.anotaciones ?? []).filter(a => a.id !== event.anotacionId);
+        if (item?.hitoEstado !== undefined && event.casoId) {
+          await this.casosService.updateHito(event.casoId, event.itemId, { anotaciones });
+        } else {
+          await this.eventosService.updateEvento(event.itemId, { anotaciones });
+        }
+      },
+      { errorTitle: 'No se pudo eliminar la anotación' }
+    );
+  }
+
   private formatDateLabel(dateStr: string): string {
-    if (dateStr === this.today) return 'Hoy';
+    if (dateStr === this.today()) return 'Hoy';
     const d = new Date(dateStr + 'T00:00:00');
     const label = d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
     return label.charAt(0).toUpperCase() + label.slice(1);

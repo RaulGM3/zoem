@@ -8,6 +8,11 @@ import type { MovimientoGestoria } from '../../interfaces/gestoria.interface';
 
 const COTEJO_TOLERANCIA = 0.01;
 
+/** Redondea a 2 decimales para evitar drift de coma flotante en acumulaciones de dinero. */
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
 /** Campos mínimos que necesita el cálculo de saldos de un movimiento. */
 export type MovimientoSaldo = Pick<
   MovimientoGestoria,
@@ -36,12 +41,12 @@ export interface BalanceCuenta<C extends { id: string }> {
 export function saldoAprobado(movimientos: readonly MovimientoSaldo[]): number {
   return movimientos
     .filter(m => m.aprobado === true)
-    .reduce((acc, m) => acc + (m.esEntrada ? m.importe : -m.importe), 0);
+    .reduce((acc, m) => round2(acc + (m.esEntrada ? m.importe : -m.importe)), 0);
 }
 
 /** Saldo de sistema: todos los movimientos, entradas suman y salidas restan. */
 export function saldoSistema(movimientos: readonly MovimientoSaldo[]): number {
-  return movimientos.reduce((acc, m) => acc + (m.esEntrada ? m.importe : -m.importe), 0);
+  return movimientos.reduce((acc, m) => round2(acc + (m.esEntrada ? m.importe : -m.importe)), 0);
 }
 
 /**
@@ -58,12 +63,12 @@ export function balancePorCuenta<C extends { id: string; saldoBancario?: number 
 ): BalanceCuenta<C>[] {
   return cuentas.map(cuenta => {
     const movs = movimientos.filter(m => m.cuentaId === cuenta.id);
-    const ingresos = movs.filter(m => m.esEntrada).reduce((a, m) => a + m.importe, 0);
-    const egresos = movs.filter(m => !m.esEntrada).reduce((a, m) => a + m.importe, 0);
-    const sistema = ingresos - egresos;
+    const ingresos = movs.filter(m => m.esEntrada).reduce((a, m) => round2(a + m.importe), 0);
+    const egresos = movs.filter(m => !m.esEntrada).reduce((a, m) => round2(a + m.importe), 0);
+    const sistema = round2(ingresos - egresos);
     const proyeccion = saldoAprobado(movs);
     const banco = saldoRealPorCuenta?.get(cuenta.id) ?? cuenta.saldoBancario ?? null;
-    const diferencia = banco !== null ? banco - proyeccion : null;
+    const diferencia = banco !== null ? round2(banco - proyeccion) : null;
     return {
       cuenta,
       ingresos,

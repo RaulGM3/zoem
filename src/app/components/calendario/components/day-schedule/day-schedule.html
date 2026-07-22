@@ -126,6 +126,8 @@
                     [style.height.px]="isResizingItem(item) ? getResizeHeight() : getItemHeight(item)"
                     [style.cursor]="isDragging ? 'grabbing' : 'grab'"
                     (pointerdown)="onItemPointerDown($event, item)"
+                    (keydown.enter)="openItem(item)"
+                    (keydown.space)="$event.preventDefault(); openItem(item)"
                     role="button"
                     tabindex="0"
                     [attr.aria-label]="item.title + (item.horaInicio ? ' — ' + item.horaInicio : '')"
@@ -173,9 +175,14 @@
                     <div
                       class="resize-handle absolute inset-x-0 bottom-0 flex h-3 cursor-ns-resize items-center justify-center"
                       (pointerdown)="onResizePointerDown($event, item)"
+                      (keydown)="onResizeKeydown($event, item)"
                       role="slider"
+                      tabindex="0"
                       aria-orientation="vertical"
                       aria-label="Cambiar duración"
+                      [attr.aria-valuenow]="item.duracionMinutos ?? 60"
+                      aria-valuemin="15"
+                      aria-valuemax="1380"
                     >
                       <div class="h-0.5 w-6 rounded-full bg-current opacity-30"></div>
                     </div>
@@ -209,6 +216,8 @@
                     [style.height.px]="getRegHeight(gr.reg)"
                     [style.cursor]="regDragging ? 'grabbing' : 'grab'"
                     (pointerdown)="onRegistroPointerDown($event, gr)"
+                    (keydown.enter)="openItem(gr.item)"
+                    (keydown.space)="$event.preventDefault(); openItem(gr.item)"
                     role="button"
                     tabindex="0"
                     [attr.aria-label]="gr.title + ' — ' + getRegTimeLabel(gr.reg)"
@@ -271,9 +280,14 @@
                       <div
                         class="resize-handle absolute inset-x-0 bottom-0 flex h-3 cursor-ns-resize items-center justify-center"
                         (pointerdown)="onRegistroResizePointerDown($event, gr)"
+                        (keydown)="onRegistroResizeKeydown($event, gr)"
                         role="slider"
+                        tabindex="0"
                         aria-orientation="vertical"
                         aria-label="Cambiar duración de las horas"
+                        [attr.aria-valuenow]="gr.reg.minutos"
+                        aria-valuemin="15"
+                        aria-valuemax="1380"
                       >
                         <div class="h-0.5 w-6 rounded-full bg-current opacity-30"></div>
                       </div>
@@ -325,7 +339,8 @@
   <div
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm"
     (click)="closeModal()"
-    (keydown.escape)="closeModal()"
+    appFocusTrap
+    (escapeKey)="closeModal()"
     role="dialog"
     aria-modal="true"
     [attr.aria-label]="'Detalle de ' + item.title"
@@ -531,6 +546,7 @@
             <input
               type="text"
               placeholder="Añadir anotación..."
+              aria-label="Añadir anotación"
               [value]="newAnnotationText()"
               (input)="onAnnotationInput($event)"
               (keydown)="onAnnotationKeydown($event)"
@@ -625,7 +641,8 @@
   <div
     class="fixed inset-0 z-60 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
     (click)="cancelDelete()"
-    (keydown.escape)="cancelDelete()"
+    appFocusTrap
+    (escapeKey)="cancelDelete()"
     role="dialog"
     aria-modal="true"
     aria-label="Confirmar eliminación de evento"

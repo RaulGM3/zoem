@@ -5,6 +5,7 @@ import {
   Lock, ChevronDown,
 } from 'lucide-angular';
 import type { CierreCaja, CuentaBancaria, MovimientoGestoria, TesoreriaResumen } from '../../../../interfaces';
+import { FocusTrapDirective } from '../../../../shared/directives/focus-trap.directive';
 
 export type FiltroAprobado = 'pendientes' | 'aprobados' | 'todos';
 
@@ -31,7 +32,7 @@ export type MovimientoEnriquecido = MovimientoGestoria & { casoNombre: string };
 @Component({
   selector: 'app-tesoreria-resumen-tab',
   host: { class: 'block space-y-6' },
-  imports: [LucideAngularModule, DecimalPipe],
+  imports: [LucideAngularModule, DecimalPipe, FocusTrapDirective],
   templateUrl: './resumen-tab.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

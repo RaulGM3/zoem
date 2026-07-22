@@ -1,6 +1,6 @@
 import {
-  Component, input, computed, signal, inject, effect,
-  ChangeDetectionStrategy,
+  Component, input, computed, signal, inject, effect, untracked,
+  ChangeDetectionStrategy, DestroyRef,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
@@ -17,6 +17,7 @@ import { ContactFileService } from '../../core/services/contact-file.service';
 import { UploadQueueService } from '../../core/services/upload-queue.service';
 import { CasosService } from '../../core/services/casos.service';
 import { UsersService } from '../../core/services/users';
+import { PermissionService } from '../../core/services/permission.service';
 import {
   Contact, ContactFolder, ContactFile, Caso,
   CONTACT_STATUS_LABELS, CANAL_ENTRADA_LABELS, ContactStatus, CanalEntrada,
@@ -58,6 +59,7 @@ export class ContactoDetailComponent {
   private readonly contactService = inject(ContactService);
   private readonly casosService = inject(CasosService);
   readonly usersService = inject(UsersService);
+  readonly perm = inject(PermissionService);
 
   // Document browser state
   currentFolderId = signal<string | null>(null);
@@ -71,19 +73,59 @@ export class ContactoDetailComponent {
 
   contacto = signal<Contact | null>(null);
 
+  // Notas — borrador editable con autoguardado (ver onNotesInput).
+  notesDraft = signal('');
+  private notesSaveTimeout: ReturnType<typeof setTimeout> | null = null;
+
   constructor() {
     effect(() => {
       const contactId = this.id();
       if (!contactId) return;
-      this.contactService.getContact(contactId).then((c) => this.contacto.set(c));
-      this.folderService.loadFolders(contactId);
-      this.fileService.loadFiles(contactId);
-      this.casosService.loadCasos();
-      if (this.usersService.members().length === 0) this.usersService.loadMembers();
+      void this.loadContactData(contactId);
+      // `untracked` es necesario: si no, `members()` queda como dependencia
+      // reactiva de TODO el effect, y cuando `loadMembers()` resuelve y
+      // `members` cambia, se re-ejecuta el effect completo — recargando
+      // contacto/carpetas/archivos/casos y reseteando currentFolderId/
+      // folderPath a la raíz, perdiendo la navegación de carpetas en curso.
+      untracked(() => {
+        if (this.usersService.members().length === 0) this.usersService.loadMembers();
+      });
       // Reset browser state when contact changes
       this.currentFolderId.set(null);
       this.folderPath.set([]);
     });
+
+    // Mantiene el borrador de notas sincronizado cuando cambia el contacto.
+    effect(() => {
+      const c = this.contacto();
+      this.notesDraft.set(c?.notes ?? '');
+    });
+
+    // Cancela el autoguardado de notas pendiente si el usuario navega fuera
+    // antes de que dispare — evita escribir en un componente ya destruido.
+    inject(DestroyRef).onDestroy(() => {
+      if (this.notesSaveTimeout) clearTimeout(this.notesSaveTimeout);
+    });
+  }
+
+  /**
+   * Carga contacto + carpetas + archivos + casos envuelto en ToastService.run,
+   * igual que `reloadContacts()` en contactos.ts — antes un fallo de red aquí
+   * fallaba en silencio (sin toast) porque el `effect()` no capturaba errores.
+   */
+  private async loadContactData(contactId: string): Promise<void> {
+    await this.toast.run(
+      async () => {
+        const [c] = await Promise.all([
+          this.contactService.getContact(contactId),
+          this.folderService.loadFolders(contactId),
+          this.fileService.loadFiles(contactId),
+          this.casosService.loadCasos(),
+        ]);
+        this.contacto.set(c);
+      },
+      { errorTitle: 'No se pudo cargar la información del contacto' }
+    );
   }
 
   name = computed(() => {
@@ -223,6 +265,32 @@ export class ContactoDetailComponent {
     this.router.navigate(['/casos', caso.id]);
   }
 
+  /** Navega a la lista de contactos con intención de edición: abre el drawer
+   * de edición para este contacto ya que el formulario completo vive ahí
+   * (contactos.ts / contactos.html), evitando duplicar esa lógica aquí. */
+  onEditar(): void {
+    if (!this.perm.can('Contactos', 'editar')) return;
+    this.router.navigate(['/contactos'], { queryParams: { editContact: this.id() } });
+  }
+
+  // --- Notas (autoguardado) ---
+
+  onNotesInput(value: string): void {
+    if (!this.perm.can('Contactos', 'editar')) return;
+    this.notesDraft.set(value);
+    if (this.notesSaveTimeout) clearTimeout(this.notesSaveTimeout);
+    this.notesSaveTimeout = setTimeout(() => void this.saveNotes(), 800);
+  }
+
+  private async saveNotes(): Promise<void> {
+    const c = this.contacto();
+    if (!c) return;
+    await this.toast.run(
+      () => this.contactService.updateContact(c.id, { notes: this.notesDraft() }),
+      { errorTitle: 'No se pudieron guardar las notas' }
+    );
+  }
+
   getInvoiceStatusStyle(status: string): { background: string; color: string } {
     const mix = (v: string) => `color-mix(in srgb,${v} 12%,transparent)`;
     const map: Record<string, { background: string; color: string }> = {
@@ -253,6 +321,7 @@ export class ContactoDetailComponent {
   }
 
   async createFolder() {
+    if (!this.perm.can('Contactos', 'crear')) return;
     const name = this.newFolderName().trim();
     if (!name) return;
     await this.toast.run(
@@ -272,11 +341,13 @@ export class ContactoDetailComponent {
   }
 
   startRename(folder: ContactFolder) {
+    if (!this.perm.can('Contactos', 'editar')) return;
     this.renamingFolderId.set(folder.id);
     this.renameValue.set(folder.name);
   }
 
   async confirmRename(folderId: string) {
+    if (!this.perm.can('Contactos', 'editar')) return;
     const name = this.renameValue().trim();
     if (!name) return;
     await this.toast.run(() => this.folderService.updateFolder(folderId, { name }, this.id()), {
@@ -286,6 +357,7 @@ export class ContactoDetailComponent {
   }
 
   async deleteFolder(folderId: string) {
+    if (!this.perm.can('Contactos', 'eliminar')) return;
     await this.toast.run(() => this.deleteFolderRecursive(folderId), {
       successMessage: 'Carpeta eliminada',
       errorTitle: 'No se pudo eliminar la carpeta',
@@ -309,6 +381,7 @@ export class ContactoDetailComponent {
     const input = event.target as HTMLInputElement;
     const files = Array.from(input.files ?? []);
     input.value = '';
+    if (!this.perm.can('Contactos', 'crear')) return;
     for (const file of files) {
       this.uploadQueue.enqueue(
         () => this.fileService.uploadFile(this.id(), this.currentFolderId(), file),
@@ -319,6 +392,7 @@ export class ContactoDetailComponent {
   }
 
   async deleteFile(file: ContactFile) {
+    if (!this.perm.can('Contactos', 'eliminar')) return;
     await this.toast.run(() => this.fileService.deleteFile(file.id, file.storagePath, this.id()), {
       successMessage: 'Archivo eliminado',
       errorTitle: 'No se pudo eliminar el archivo',

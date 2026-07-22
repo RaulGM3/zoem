@@ -23,20 +23,24 @@
       <div class="flex items-center gap-2">
         @if (confirmingDelete()) {
           <span class="text-xs text-slate-700">¿Eliminar plantilla?</span>
-          <button (click)="deleteTemplate()" class="rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50">Sí, eliminar</button>
+          <button (click)="deleteTemplate()" [disabled]="!perm.can('Documentos', 'eliminar')" class="rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50">Sí, eliminar</button>
           <button (click)="confirmingDelete.set(false)" class="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">Cancelar</button>
         } @else {
-          <button (click)="toggleEditMode()" [attr.aria-pressed]="editMode()"
-            [class]="editMode()
-              ? 'inline-flex items-center gap-2 rounded-lg border border-violet-300 bg-violet-50 px-3 py-2.5 text-sm font-semibold text-violet-700'
-              : 'inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50'">
-            <lucide-icon [img]="PencilIcon" size="15"></lucide-icon>
-            {{ editMode() ? 'Editando' : 'Editar plantilla' }}
-          </button>
-          <button (click)="confirmingDelete.set(true)" aria-label="Eliminar plantilla"
-            class="rounded-lg p-2.5 text-slate-600 hover:bg-red-50 hover:text-red-500">
-            <lucide-icon [img]="Trash2Icon" size="16"></lucide-icon>
-          </button>
+          @if (perm.can('Documentos', 'editar')) {
+            <button (click)="toggleEditMode()" [attr.aria-pressed]="editMode()"
+              [class]="editMode()
+                ? 'inline-flex items-center gap-2 rounded-lg border border-violet-300 bg-violet-50 px-3 py-2.5 text-sm font-semibold text-violet-700'
+                : 'inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50'">
+              <lucide-icon [img]="PencilIcon" size="15"></lucide-icon>
+              {{ editMode() ? 'Editando' : 'Editar plantilla' }}
+            </button>
+          }
+          @if (perm.can('Documentos', 'eliminar')) {
+            <button (click)="confirmingDelete.set(true)" aria-label="Eliminar plantilla"
+              class="rounded-lg p-2.5 text-slate-600 hover:bg-red-50 hover:text-red-500">
+              <lucide-icon [img]="Trash2Icon" size="16"></lucide-icon>
+            </button>
+          }
           <button (click)="copy()"
             class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
             <lucide-icon [img]="copied() ? CheckIcon : CopyIcon" size="15" [class]="copied() ? 'text-green-600' : ''"></lucide-icon>
@@ -88,7 +92,7 @@
                     {{ v.label }}
                     @if (v.required) { <span class="text-red-500">*</span> }
                   </label>
-                  @if (editMode()) {
+                  @if (editMode() && perm.can('Documentos', 'editar')) {
                     @if (makeStaticFor() === v.key) {
                       <!-- inline demote form -->
                     } @else {
@@ -152,15 +156,17 @@
                 [value]="newVarKey()"
                 (input)="newVarKey.set($any($event.target).value)"
                 placeholder="clave_variable (ej: nombre_cliente)"
+                aria-label="Clave de la variable"
                 class="flex-1 rounded-lg border border-violet-300 bg-white px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-300" />
               <input type="text"
                 [value]="newVarLabel()"
                 (input)="newVarLabel.set($any($event.target).value)"
                 placeholder="Etiqueta (ej: Nombre del cliente)"
+                aria-label="Etiqueta de la variable"
                 class="flex-1 rounded-lg border border-violet-300 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
             </div>
             <div class="flex gap-2">
-              <button (click)="promoteToVariable()" [disabled]="saving() || !newVarKey().trim() || !newVarLabel().trim()"
+              <button (click)="promoteToVariable()" [disabled]="saving() || !newVarKey().trim() || !newVarLabel().trim() || !perm.can('Documentos', 'editar')"
                 class="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-500 disabled:opacity-50">
                 <lucide-icon [img]="TagIcon" size="12"></lucide-icon>
                 {{ saving() ? 'Guardando…' : 'Crear variable' }}
@@ -194,7 +200,7 @@
     <!-- Dialog: Hacer estático -->
     @if (makeStaticFor()) {
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" (click)="cancelDemote()">
-        <div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="dialog-static-title">
+        <div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="dialog-static-title" appFocusTrap (escapeKey)="cancelDemote()">
           <div class="mb-1 flex items-center gap-2">
             <lucide-icon [img]="LockIcon" size="16" class="text-amber-500"></lucide-icon>
             <h3 id="dialog-static-title" class="text-sm font-semibold text-slate-800">Hacer estático</h3>
@@ -206,9 +212,10 @@
             [value]="makeStaticValue()"
             (input)="makeStaticValue.set($any($event.target).value)"
             placeholder="Valor estático…"
+            aria-label="Valor estático"
             class="mb-4 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300" />
           <div class="flex gap-2">
-            <button (click)="demoteToStatic()" [disabled]="saving() || !makeStaticValue().trim()"
+            <button (click)="demoteToStatic()" [disabled]="saving() || !makeStaticValue().trim() || !perm.can('Documentos', 'editar')"
               class="flex-1 rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-500 disabled:opacity-50">
               {{ saving() ? 'Guardando…' : 'Confirmar' }}
             </button>

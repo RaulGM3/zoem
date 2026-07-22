@@ -69,6 +69,7 @@ export class DocumentosComponent implements OnInit {
   }
 
   async confirmDelete(template: DocTemplate): Promise<void> {
+    if (!this.perm.can('Documentos', 'eliminar')) return;
     await this.toast.run(() => this.templateService.deleteTemplate(template.id), {
       successMessage: 'Plantilla eliminada',
       errorTitle: 'No se pudo eliminar la plantilla',

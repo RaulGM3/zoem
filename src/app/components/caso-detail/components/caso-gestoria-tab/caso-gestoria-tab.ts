@@ -3,7 +3,7 @@ import {
 } from '@angular/core';
 import { DecimalPipe, TitleCasePipe } from '@angular/common';
 import {
-  LucideAngularModule, Plus, Trash2, X, CheckCircle2, CircleAlert, GripVertical, Eye, EyeOff,
+  LucideAngularModule, Plus, Trash2, X, CheckCircle2, CircleAlert, GripVertical, Eye, EyeOff, Check,
 } from 'lucide-angular';
 import type {
   CuentaBancaria, GestoriaSlot, MovimientoGestoria, MovimientoTipo, ResumenFinanciero,
@@ -23,6 +23,9 @@ export class CasoGestoriaTabComponent {
   readonly resumen = input.required<ResumenFinanciero>();
   readonly miembros = input<ReadonlyMap<string, string>>(new Map());
   readonly cuentas = input<CuentaBancaria[]>([]);
+  /** Gating de permisos (mirroring de `Casos.editar`/`Casos.eliminar`); oculta acciones si no aplica. */
+  readonly canEdit = input(true);
+  readonly canDelete = input(true);
 
   readonly registerSlot = output<GestoriaSlot>();
   readonly unregisterSlot = output<GestoriaSlot>();
@@ -33,6 +36,7 @@ export class CasoGestoriaTabComponent {
   readonly PlusIcon = Plus;
   readonly Trash2Icon = Trash2;
   readonly XIcon = X;
+  readonly CheckIcon = Check;
   readonly CheckCircle2Icon = CheckCircle2;
   readonly CircleAlertIcon = CircleAlert;
   readonly GripVerticalIcon = GripVertical;
@@ -40,6 +44,11 @@ export class CasoGestoriaTabComponent {
   readonly EyeOffIcon = EyeOff;
 
   readonly showRegistrados = signal(false);
+
+  /** Slot cuyo movimiento registrado se está a punto de ELIMINAR (irreversible: hace deleteDoc). */
+  readonly confirmingUnregisterId = signal<string | null>(null);
+  /** Movimiento pendiente de confirmar borrado. */
+  readonly confirmingDeleteMovId = signal<string | null>(null);
 
   readonly cuentaMap = computed(() => {
     const map = new Map<string, string>();
@@ -111,6 +120,34 @@ export class CasoGestoriaTabComponent {
   onSlotDragEnd(): void {
     this.dragFrom.set(null);
     this.dragOver.set(null);
+  }
+
+  // ── Confirmaciones de borrado ──────────────────────────
+
+  requestUnregister(slotId: string): void {
+    this.confirmingUnregisterId.set(slotId);
+  }
+
+  cancelUnregister(): void {
+    this.confirmingUnregisterId.set(null);
+  }
+
+  confirmUnregister(slot: GestoriaSlot): void {
+    this.unregisterSlot.emit(slot);
+    this.confirmingUnregisterId.set(null);
+  }
+
+  requestDeleteMov(movId: string): void {
+    this.confirmingDeleteMovId.set(movId);
+  }
+
+  cancelDeleteMov(): void {
+    this.confirmingDeleteMovId.set(null);
+  }
+
+  confirmDeleteMov(movId: string): void {
+    this.deleteMov.emit(movId);
+    this.confirmingDeleteMovId.set(null);
   }
 
   getMovTipoStyle(tipo: MovimientoTipo): { background: string; color: string } {

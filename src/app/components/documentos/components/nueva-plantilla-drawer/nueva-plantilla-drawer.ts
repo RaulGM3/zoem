@@ -13,13 +13,14 @@ import {
 } from 'lucide-angular';
 import { DocExtractionService } from '../../../../core/services/doc-extraction.service';
 import { DocTemplateService } from '../../../../core/services/doc-template.service';
+import { FocusTrapDirective } from '../../../../shared/directives/focus-trap.directive';
 import type { TemplateVariable, TemplateVariableType } from '../../../../interfaces';
 
 type DrawerStep = 'upload' | 'procesando' | 'revision' | 'error';
 
 @Component({
   selector: 'app-nueva-plantilla-drawer',
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, FocusTrapDirective],
   templateUrl: './nueva-plantilla-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

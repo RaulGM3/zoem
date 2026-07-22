@@ -5,7 +5,13 @@ import type { Caso } from '../../../../interfaces';
 
 @Component({
   selector: 'app-casos-table',
-  host: { style: 'display: block' },
+  host: {
+    style: 'display: block',
+    // Si la tabla se desplaza mientras el dropdown está abierto, el menú se
+    // queda anclado a una posición fija en pantalla y visualmente se separa de
+    // su trigger, aunque siga siendo clicable. Lo cerramos en cualquier scroll.
+    '(window:scroll)': 'closeDropdownOnScroll()',
+  },
   imports: [LucideAngularModule, DecimalPipe],
   templateUrl: './casos-table.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -15,6 +21,8 @@ export class CasosTableComponent {
   readonly loading = input.required<boolean>();
   /** Subtítulo por caso (casoId → texto): nombre del cliente o, en su defecto, descripción. */
   readonly subtitulos = input.required<Record<string, string>>();
+  /** Gating de permisos (`Casos.eliminar`): oculta la acción "Eliminar" del dropdown. */
+  readonly canDelete = input(true);
   readonly casoClick = output<Caso>();
   readonly deleteCaso = output<Caso>();
 
@@ -28,6 +36,14 @@ export class CasosTableComponent {
   readonly activeCaso = signal<Caso | null>(null);
   readonly dropdownPos = signal<{ top: number; right: number } | null>(null);
   readonly casoToDelete = signal<Caso | null>(null);
+
+  /** Cierra el dropdown contextual si la página se desplaza mientras está abierto (ver `host` listener). */
+  closeDropdownOnScroll(): void {
+    if (this.activeDropdown() === null) return;
+    this.activeDropdown.set(null);
+    this.activeCaso.set(null);
+    this.dropdownPos.set(null);
+  }
 
   toggleDropdown(caso: Caso, event: MouseEvent): void {
     event.stopPropagation();
@@ -74,10 +90,11 @@ export class CasosTableComponent {
   }
 
   getHitosProgress(caso: Caso): string {
-    const total = caso.hitos?.length ?? 0;
+    // `loadCasos()` no trae la subcolección de hitos: el progreso se lee del
+    // resumen denormalizado (`hitosResumen`), actualizado en cada mutación de hito.
+    const total = caso.hitosResumen?.total ?? 0;
     if (total === 0) return '—';
-    const completados = caso.hitos.filter(h => h.estado === 'completado').length;
-    return `${completados}/${total}`;
+    return `${caso.hitosResumen?.completados ?? 0}/${total}`;
   }
 
   getPriorityColor(prioridad: string): string {

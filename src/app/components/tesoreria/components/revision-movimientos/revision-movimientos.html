@@ -80,6 +80,7 @@
                   <select [value]="mov.cuentaId ?? ''"
                     (change)="cambiarCuenta(mov, $any($event.target).value)"
                     [disabled]="cambiandoCuenta()"
+                    [attr.aria-label]="'Cambiar cuenta del movimiento ' + mov.concepto"
                     class="form-select text-xs disabled:opacity-50" style="width:auto;padding:0.125rem 0.375rem;border-radius:0.375rem">
                     <option value="">Sin cuenta</option>
                     @for (c of cuentas(); track c.id) {

@@ -27,6 +27,8 @@ export class CasoInfoTabComponent {
   readonly searchResults = input.required<Contact[]>();
   readonly contactSearch = input.required<string>();
   readonly noResults = input(false);
+  /** Gating de permisos (`Casos.editar`): oculta añadir/quitar contactos si no aplica. */
+  readonly canEdit = input(true);
 
   readonly cancelEdit = output<void>();
   readonly saveInfo = output<CasoInfoFormData>();

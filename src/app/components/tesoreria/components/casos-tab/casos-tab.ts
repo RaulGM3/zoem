@@ -4,22 +4,10 @@ import type { Caso } from '../../../../interfaces';
 
 export interface ResumenCaso {
   ingresos: number;
+  honorarios: number;
   egresos: number;
   saldoAprobado: number;
   saldoProyectado: number;
-}
-
-export interface BalanceGeneral {
-  totalIngresos: number;
-  totalSuplidos: number;
-  totalHonorarios: number;
-  saldo: number;
-}
-
-export interface ProyeccionBancaria {
-  aprobado: number;
-  impacto: number;
-  proyeccion: number;
 }
 
 @Component({
@@ -32,10 +20,13 @@ export interface ProyeccionBancaria {
 export class TesoreriaCasosTabComponent {
   readonly casosContables = input.required<Caso[]>();
   readonly resumenPorCaso = input.required<Map<string, ResumenCaso>>();
-  readonly balanceGeneral = input.required<BalanceGeneral>();
+  // Totales del pie de tabla: siempre la suma de las mismas filas visibles
+  // arriba (ver `casosFooterTotales` en tesoreria.ts) — nunca una fuente distinta.
+  readonly totalIngresos = input.required<number>();
+  readonly totalHonorarios = input.required<number>();
   readonly totalEgresos = input.required<number>();
   readonly saldoAprobado = input.required<number>();
-  readonly proyeccionBancaria = input.required<ProyeccionBancaria>();
+  readonly saldoProyectado = input.required<number>();
   readonly loading = input.required<boolean>();
 
   readonly casoSeleccionado = output<Caso>();

@@ -1,11 +1,12 @@
 import {
   Component, ChangeDetectionStrategy, output, signal, inject, computed,
 } from '@angular/core';
-import { LucideAngularModule, X, Plus, Trash2, Building2, Wallet } from 'lucide-angular';
+import { LucideAngularModule, X, Plus, Trash2, Building2, Wallet, Check } from 'lucide-angular';
 import { FormsModule } from '@angular/forms';
 import { CuentasService } from '../../../../core/services/cuentas.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { CuentaBancaria, CuentaTipo } from '../../../../interfaces';
+import { FocusTrapDirective } from '../../../../shared/directives/focus-trap.directive';
 
 interface CuentaForm {
   nombre: string;
@@ -18,7 +19,7 @@ const EMPTY_FORM: CuentaForm = { nombre: '', tipo: 'banco', entidad: '', iban: '
 
 @Component({
   selector: 'app-cuentas-drawer',
-  imports: [LucideAngularModule, FormsModule],
+  imports: [LucideAngularModule, FormsModule, FocusTrapDirective],
   templateUrl: './cuentas-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -33,6 +34,7 @@ export class CuentasDrawerComponent {
   readonly Trash2Icon = Trash2;
   readonly Building2Icon = Building2;
   readonly WalletIcon = Wallet;
+  readonly CheckIcon = Check;
 
   readonly cuentas = this.cuentasService.cuentas;
   readonly loading = this.cuentasService.loading;
@@ -41,6 +43,7 @@ export class CuentasDrawerComponent {
   readonly editingId = signal<string | null>(null);
   readonly saving = signal(false);
   readonly deletingId = signal<string | null>(null);
+  readonly confirmingDeleteId = signal<string | null>(null);
 
   readonly form = signal<CuentaForm>({ ...EMPTY_FORM });
 
@@ -100,6 +103,14 @@ export class CuentasDrawerComponent {
     }
   }
 
+  requestDelete(id: string): void {
+    this.confirmingDeleteId.set(id);
+  }
+
+  cancelDelete(): void {
+    this.confirmingDeleteId.set(null);
+  }
+
   async delete(id: string): Promise<void> {
     this.deletingId.set(id);
     try {
@@ -109,6 +120,7 @@ export class CuentasDrawerComponent {
       });
     } finally {
       this.deletingId.set(null);
+      this.confirmingDeleteId.set(null);
     }
   }
 }

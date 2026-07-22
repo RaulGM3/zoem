@@ -140,10 +140,10 @@ export class GestoriaService {
       )
     );
 
-    await Promise.all([
-      this.loadMovimientos(casoId),
-      this.casosService.recalcularResumen(casoId),
-    ]);
+    // No hace falta refrescar `loadMovimientos`: el listener de onSnapshot ya
+    // está activo y reflejará este addDoc en tiempo real. Volver a llamarlo aquí
+    // solo tira el listener existente y lo vuelve a montar sin ganar nada.
+    await this.casosService.recalcularResumen(casoId);
   }
 
   async unregisterSlot(casoId: string, slot: GestoriaSlot): Promise<void> {

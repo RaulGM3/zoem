@@ -39,9 +39,11 @@
               style="border-bottom:1px solid var(--border)"
               (click)="casoClick.emit(caso)"
               (keydown.enter)="casoClick.emit(caso)"
+              (keydown.space)="$event.preventDefault(); casoClick.emit(caso)"
               (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
               (mouseleave)="$any($event.currentTarget).style.background=''"
               tabindex="0"
+              role="link"
               [attr.aria-label]="'Ver caso: ' + caso.titulo"
             >
               <!-- Título + subtítulo -->
@@ -98,6 +100,7 @@
                   style="color:var(--text-faint)"
                   aria-label="Más acciones"
                   (click)="toggleDropdown(caso, $event)"
+                  (keydown)="$event.stopPropagation()"
                   (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
                   (mouseleave)="$any($event.currentTarget).style.background=''"
                 >
@@ -121,17 +124,19 @@
     [style.top.px]="dropdownPos()!.top"
     [style.right.px]="dropdownPos()!.right"
   >
-    <button
-      class="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium transition-colors duration-150"
-      style="color:var(--danger)"
-      (click)="openDeleteDialog($event)"
-      (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 8%,transparent)'"
-      (mouseleave)="$any($event.currentTarget).style.background=''"
-      aria-label="Eliminar caso"
-    >
-      <lucide-icon [img]="TrashIcon" class="w-4 h-4" />
-      Eliminar
-    </button>
+    @if (canDelete()) {
+      <button
+        class="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium transition-colors duration-150"
+        style="color:var(--danger)"
+        (click)="openDeleteDialog($event)"
+        (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 8%,transparent)'"
+        (mouseleave)="$any($event.currentTarget).style.background=''"
+        aria-label="Eliminar caso"
+      >
+        <lucide-icon [img]="TrashIcon" class="w-4 h-4" />
+        Eliminar
+      </button>
+    }
   </div>
 }
 

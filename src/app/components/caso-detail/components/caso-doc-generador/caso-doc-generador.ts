@@ -1,5 +1,5 @@
 import {
-  Component, ChangeDetectionStrategy, input, output, signal, computed, inject, effect,
+  Component, ChangeDetectionStrategy, input, output, signal, computed, inject, effect, untracked,
 } from '@angular/core';
 import {
   LucideAngularModule, X, Copy, Check, Download, Loader, Save, Pencil, FileText,
@@ -155,27 +155,31 @@ function escapeHtml(value: string): string {
                 Cancelar
               </button>
             }
-            <button
-              (click)="save()"
-              [disabled]="requiredPending() > 0 || saving()"
-              class="flex items-center gap-1.5 px-4 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50"
-            >
-              <lucide-icon [img]="saving() ? LoaderIcon : SaveIcon" [class]="'w-4 h-4' + (saving() ? ' animate-spin' : '')" />
-              Guardar documento
-            </button>
+            @if (canEdit()) {
+              <button
+                (click)="save()"
+                [disabled]="requiredPending() > 0 || saving()"
+                class="flex items-center gap-1.5 px-4 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50"
+              >
+                <lucide-icon [img]="saving() ? LoaderIcon : SaveIcon" [class]="'w-4 h-4' + (saving() ? ' animate-spin' : '')" />
+                Guardar documento
+              </button>
+            }
           } @else {
             <span class="text-xs text-emerald-600 flex items-center gap-1.5">
               <lucide-icon [img]="CheckIcon" class="w-3.5 h-3.5" />
               Documento congelado
             </span>
             <div class="flex-1"></div>
-            <button
-              (click)="startEdit()"
-              class="flex items-center gap-1.5 px-4 py-2 text-sm border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50"
-            >
-              <lucide-icon [img]="PencilIcon" class="w-4 h-4" />
-              Editar / regenerar
-            </button>
+            @if (canEdit()) {
+              <button
+                (click)="startEdit()"
+                class="flex items-center gap-1.5 px-4 py-2 text-sm border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50"
+              >
+                <lucide-icon [img]="PencilIcon" class="w-4 h-4" />
+                Editar / regenerar
+              </button>
+            }
           }
         </div>
       }
@@ -189,6 +193,8 @@ export class CasoDocGeneradorComponent {
   readonly slot = input.required<CasoDocSlot>();
   /** Datos del caso para pre-rellenar variables por heurística. */
   readonly casoContext = input<Record<string, string>>({});
+  /** Gating de permisos (`Casos.editar`): oculta "Editar / regenerar" y "Guardar documento". */
+  readonly canEdit = input(true);
 
   readonly save_ = output<GeneratedDocEvent>({ alias: 'save' });
   readonly close = output<void>();
@@ -210,9 +216,21 @@ export class CasoDocGeneradorComponent {
   readonly downloading = signal(false);
   readonly saving = signal(false);
 
+  // Id del slot la última vez que se ejecutó el reset/reload de abajo. `slot()`
+  // es un input reactivo que puede recibir una nueva referencia del mismo slot
+  // (p.ej. `slots()` repoblado por motivos ajenos en el padre) sin que el
+  // documento haya cambiado realmente. Comparar por id evita que esas
+  // actualizaciones irrelevantes descarten una edición en curso del usuario.
+  private previousSlotId: string | null = null;
+
   constructor() {
     effect(() => {
       const slot = this.slot();
+      const idChanged = untracked(() => this.previousSlotId) !== slot.id;
+      // Mismo slot (mismo id): no re-sembrar el formulario ni resetear el modo,
+      // que descartaría una edición en curso del usuario sin motivo real.
+      if (!idChanged) return;
+      this.previousSlotId = slot.id;
       this.loading.set(true);
       // Un slot ya generado abre en modo lectura sobre su snapshot.
       this.editMode.set(slot.status !== 'generado');

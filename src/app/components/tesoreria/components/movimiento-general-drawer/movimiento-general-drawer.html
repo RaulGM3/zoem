@@ -5,7 +5,8 @@
   <!-- Drawer -->
   <aside role="dialog" aria-modal="true" [attr.aria-label]="modoEdicion() ? 'Editar movimiento general' : 'Nuevo movimiento general'"
     class="fixed right-0 top-0 bottom-0 z-50 flex flex-col w-full max-w-md shadow-2xl"
-    style="background:var(--surface);border-left:1px solid var(--border)">
+    style="background:var(--surface);border-left:1px solid var(--border)"
+    appFocusTrap (escapeKey)="closed.emit()">
 
     <!-- Header -->
     <div class="flex items-center justify-between gap-3 px-5 py-4" style="border-bottom:1px solid var(--border)">

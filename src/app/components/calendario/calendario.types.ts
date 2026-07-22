@@ -1,12 +1,8 @@
-import type { RegistroHoraHito } from '../../interfaces';
+import type { Anotacion, RegistroHoraHito } from '../../interfaces';
+
+export type { Anotacion };
 
 export type ItemColor = 'violet' | 'indigo' | 'blue' | 'green' | 'amber' | 'red' | 'pink' | 'slate';
-
-export interface Anotacion {
-  id: string;
-  texto: string;
-  creadaEn: string; // ISO date string
-}
 
 export interface CalendarItem {
   id: string;

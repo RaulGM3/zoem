@@ -21,9 +21,10 @@ import {
 import { Auth } from '@angular/fire/auth';
 import { CompanyService } from './company.service';
 import { DocAuditService } from './doc-audit.service';
+import { ErrorService } from './error.service';
 import { PermissionService } from './permission.service';
 import { stripUndefinedDeep } from '../firebase/sanitize';
-import { isVisibleDoc } from '../docs/doc-versioning';
+import { appendVersion, currentVersion, isVisibleDoc, type VersionedFile } from '../docs/doc-versioning';
 import { canSeePlantilla } from '../permissions/doc-access';
 import { DocTemplate, TemplateVariable } from '../../interfaces';
 import type { FirmRole } from '../../interfaces/member';
@@ -47,6 +48,7 @@ export class DocTemplateService {
   private readonly auth = inject(Auth);
   private readonly companyService = inject(CompanyService);
   private readonly docAudit = inject(DocAuditService);
+  private readonly errorService = inject(ErrorService);
   private readonly permissionService = inject(PermissionService);
 
   readonly templates = signal<DocTemplate[]>([]);
@@ -89,6 +91,9 @@ export class DocTemplateService {
     const snap = await getDoc(doc(this.templatesRef, id));
     if (!snap.exists()) return null;
     const template = { id: snap.id, ...snap.data() } as DocTemplate;
+    // Soft delete: una plantilla eliminada se trata como no encontrada para
+    // los llamadores normales (misma lógica que loadTemplates()/isVisibleDoc).
+    if (!isVisibleDoc(template)) return null;
     if (!template.html && template.htmlStoragePath) {
       const url = await getDownloadURL(ref(this.storage, template.htmlStoragePath));
       template.html = await (await fetch(url)).text();
@@ -102,33 +107,61 @@ export class DocTemplateService {
 
     let sourceStoragePath: string | undefined;
     let sourceDownloadUrl: string | undefined;
-    if (input.sourceFile) {
-      sourceStoragePath = `companies/${companyId}/docTemplates/${docRef.id}/source/${Date.now()}_${input.sourceFile.name}`;
-      const sourceRef = ref(this.storage, sourceStoragePath);
-      await uploadBytes(sourceRef, input.sourceFile);
-      sourceDownloadUrl = await getDownloadURL(sourceRef);
+    let html = input.html;
+    let htmlStoragePath: string | undefined;
+
+    try {
+      if (input.sourceFile) {
+        sourceStoragePath = `companies/${companyId}/docTemplates/${docRef.id}/source/${Date.now()}_${input.sourceFile.name}`;
+        const sourceRef = ref(this.storage, sourceStoragePath);
+        await uploadBytes(sourceRef, input.sourceFile);
+        sourceDownloadUrl = await getDownloadURL(sourceRef);
+      }
+
+      ({ html, htmlStoragePath } = await this.maybeOffloadHtml(docRef.id, input.html));
+
+      await setDoc(docRef, stripUndefinedDeep({
+        companyId,
+        name: input.name,
+        description: input.description,
+        status: 'listo',
+        html,
+        htmlStoragePath,
+        variables: input.variables,
+        sourceFileName: input.sourceFile?.name,
+        sourceMimeType: input.sourceFile?.type,
+        sourceStoragePath,
+        sourceDownloadUrl,
+        createdBy: this.auth.currentUser?.uid ?? '',
+        deleted: false,
+        visibleTo: 'all',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }));
+    } catch (err) {
+      // El Firestore write falló pero el/los blob(s) ya se subieron a Storage.
+      // NUNCA llamamos deleteObject() aquí: storage.rules restringe `delete` a
+      // isSuper(), así que para cualquier usuario real fallaría con
+      // permission-denied y quedaría silenciado. En su lugar dejamos
+      // constancia clara de que hay blobs huérfanos que requieren limpieza
+      // manual/admin (Cloud Function), y relanzamos el error original para
+      // que el ToastService del llamador siga mostrando el error.
+      const orphanStoragePaths = [sourceStoragePath, htmlStoragePath].filter(
+        (path): path is string => !!path
+      );
+      if (orphanStoragePaths.length) {
+        console.error(
+          `[DocTemplateService] createTemplate: setDoc falló y dejó blob(s) huérfano(s) en Storage que requieren limpieza manual/admin: ${orphanStoragePaths.join(', ')}`,
+          err
+        );
+        void this.errorService.log(err, {
+          serviceName: 'DocTemplateService',
+          methodName: 'createTemplate',
+          params: { orphanStoragePaths },
+        });
+      }
+      throw err;
     }
-
-    const { html, htmlStoragePath } = await this.maybeOffloadHtml(docRef.id, input.html);
-
-    await setDoc(docRef, stripUndefinedDeep({
-      companyId,
-      name: input.name,
-      description: input.description,
-      status: 'listo',
-      html,
-      htmlStoragePath,
-      variables: input.variables,
-      sourceFileName: input.sourceFile?.name,
-      sourceMimeType: input.sourceFile?.type,
-      sourceStoragePath,
-      sourceDownloadUrl,
-      createdBy: this.auth.currentUser?.uid ?? '',
-      deleted: false,
-      visibleTo: 'all',
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    }));
 
     this.docAudit.log(this.templatePath(docRef.id), 'create', { detail: input.name });
 
@@ -141,16 +174,80 @@ export class DocTemplateService {
     data: Partial<Omit<DocTemplate, 'id' | 'companyId' | 'createdAt' | 'updatedAt'>>
   ): Promise<void> {
     let updateData: Record<string, unknown> = { ...data };
-    if (typeof data.html === 'string') {
-      const { html, htmlStoragePath } = await this.maybeOffloadHtml(id, data.html);
-      updateData = { ...updateData, html, htmlStoragePath: htmlStoragePath ?? null };
+    let versionBump: { version: number; versions: DocTemplate['versions'] } | undefined;
+    const orphanStoragePaths: string[] = [];
+
+    try {
+      if (typeof data.html === 'string') {
+        const current = await this.getTemplate(id);
+        // Versionado: "nada se sobreescribe" — igual que CasoDocFile, archivamos
+        // tanto el contenido saliente como el entrante en Storage antes de tocar
+        // el doc, y hacemos crecer `versions` vía appendVersion().
+        if (current && current.html !== data.html) {
+          const basePath = `companies/${this.companyId}/docTemplates/${id}/versions`;
+          const oldVersionNumber = currentVersion(current);
+
+          let currentForVersioning: VersionedFile = current;
+          if (!current.versions || current.versions.length === 0) {
+            const oldPath = `${basePath}/v${oldVersionNumber}.html`;
+            await uploadString(ref(this.storage, oldPath), current.html, 'raw', { contentType: 'text/html' });
+            orphanStoragePaths.push(oldPath);
+            const oldDownloadUrl = await getDownloadURL(ref(this.storage, oldPath));
+            currentForVersioning = {
+              ...current,
+              storagePath: oldPath,
+              downloadUrl: oldDownloadUrl,
+              mimeType: 'text/html',
+              sizeBytes: new Blob([current.html]).size,
+            };
+          }
+
+          const newPath = `${basePath}/v${oldVersionNumber + 1}.html`;
+          await uploadString(ref(this.storage, newPath), data.html, 'raw', { contentType: 'text/html' });
+          orphanStoragePaths.push(newPath);
+          const newDownloadUrl = await getDownloadURL(ref(this.storage, newPath));
+
+          const versionPatch = appendVersion(currentForVersioning, {
+            name: data.name ?? current.name,
+            storagePath: newPath,
+            downloadUrl: newDownloadUrl,
+            mimeType: 'text/html',
+            sizeBytes: new Blob([data.html]).size,
+          });
+          versionBump = { version: versionPatch.version, versions: versionPatch.versions };
+          updateData = { ...updateData, ...versionBump };
+        }
+
+        const { html, htmlStoragePath } = await this.maybeOffloadHtml(id, data.html);
+        if (htmlStoragePath) orphanStoragePaths.push(htmlStoragePath);
+        updateData = { ...updateData, html, htmlStoragePath: htmlStoragePath ?? null };
+      }
+
+      await updateDoc(doc(this.templatesRef, id), stripUndefinedDeep({
+        ...updateData,
+        updatedAt: serverTimestamp(),
+      }));
+    } catch (err) {
+      // Igual que en createTemplate(): si el updateDoc falla después de subir
+      // snapshots de versión a Storage, esos blobs quedan huérfanos. NUNCA
+      // llamamos deleteObject() (storage.rules restringe `delete` a isSuper()),
+      // solo dejamos constancia para limpieza manual/admin y relanzamos.
+      if (orphanStoragePaths.length) {
+        console.error(
+          `[DocTemplateService] updateTemplate: falló y dejó blob(s) huérfano(s) en Storage que requieren limpieza manual/admin: ${orphanStoragePaths.join(', ')}`,
+          err
+        );
+        void this.errorService.log(err, {
+          serviceName: 'DocTemplateService',
+          methodName: 'updateTemplate',
+          params: { id, orphanStoragePaths },
+        });
+      }
+      throw err;
     }
-    await updateDoc(doc(this.templatesRef, id), stripUndefinedDeep({
-      ...updateData,
-      updatedAt: serverTimestamp(),
-    }));
-    this.docAudit.log(this.templatePath(id), 'update');
-    this.templates.update(list => list.map(t => (t.id === id ? { ...t, ...data } : t)));
+
+    this.docAudit.log(this.templatePath(id), 'update', versionBump ? { version: versionBump.version } : undefined);
+    this.templates.update(list => list.map(t => (t.id === id ? { ...t, ...data, ...versionBump } : t)));
   }
 
   /** Define quién puede ver esta plantilla de documento (rules protegen el get). */

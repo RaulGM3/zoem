@@ -20,6 +20,7 @@
     [casos]="filteredCasos()"
     [subtitulos]="subtitulos()"
     [loading]="loading()"
+    [canDelete]="perm.can('Casos', 'eliminar')"
     (casoClick)="navigateTo($event)"
     (deleteCaso)="onDeleteCaso($event)"
   />

@@ -80,6 +80,10 @@ const CODE_MAP: Record<string, CodeSpec> = {
     message: 'Error grave de datos. Inténtalo de nuevo y, si persiste, contacta con soporte.',
     retriable: true,
   },
+  'contact-classified-file-blocks-delete': {
+    message: 'No se puede eliminar el contacto: tiene un documento clasificado adjunto. Solo un administrador de la empresa puede eliminarlo.',
+    retriable: false,
+  },
 };
 
 const GENERIC: CodeSpec = {

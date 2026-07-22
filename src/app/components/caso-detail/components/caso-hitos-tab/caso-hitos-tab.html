@@ -32,11 +32,12 @@
         @for (hito of hitos(); track hito.id) {
           <li class="p-4 flex items-start gap-3 group" style="border-bottom:1px solid var(--border-soft)">
             <button
-              (click)="toggle.emit(hito)"
+              (click)="canEdit() && toggle.emit(hito)"
+              [disabled]="!canEdit()"
               [class]="getHitoEstadoColor(hito.estado)"
               [attr.aria-label]="'Cambiar estado del hito, actual: ' + getHitoEstadoLabel(hito.estado)"
               [attr.title]="getHitoEstadoLabel(hito.estado)"
-              class="mt-0.5 shrink-0"
+              class="mt-0.5 shrink-0 disabled:cursor-not-allowed disabled:opacity-70"
             >
               <lucide-icon [img]="getHitoEstadoIcon(hito.estado)" class="w-5 h-5" />
             </button>
@@ -67,8 +68,8 @@
                 }
               </div>
             </div>
-            <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              @if (tieneHorasPendientes(hito)) {
+            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              @if (tieneHorasPendientes(hito) && canEdit()) {
                 <button (click)="facturarHoras.emit(hito)"
                   class="p-1 rounded transition-colors duration-150"
                   (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 10%,transparent)'"
@@ -77,35 +78,59 @@
                   <lucide-icon [img]="EuroIcon" class="w-3.5 h-3.5" style="color:var(--brand)" />
                 </button>
               }
-              <button (click)="editHito.emit(hito)"
-                class="p-1 rounded transition-colors duration-150"
-                (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-                (mouseleave)="$any($event.currentTarget).style.background=''"
-                aria-label="Editar hito">
-                <lucide-icon [img]="Edit2Icon" class="w-3.5 h-3.5" style="color:var(--text-faint)" />
-              </button>
-              <button (click)="deleteHito.emit(hito.id)"
-                class="p-1 rounded transition-colors duration-150"
-                (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)'"
-                (mouseleave)="$any($event.currentTarget).style.background=''"
-                aria-label="Eliminar hito">
-                <lucide-icon [img]="Trash2Icon" class="w-3.5 h-3.5" style="color:color-mix(in srgb,var(--danger) 70%,transparent)" />
-              </button>
+              @if (canEdit()) {
+                <button (click)="editHito.emit(hito)"
+                  class="p-1 rounded transition-colors duration-150"
+                  (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                  (mouseleave)="$any($event.currentTarget).style.background=''"
+                  aria-label="Editar hito">
+                  <lucide-icon [img]="Edit2Icon" class="w-3.5 h-3.5" style="color:var(--text-faint)" />
+                </button>
+              }
+              @if (canDelete()) {
+                @if (confirmingDeleteId() === hito.id) {
+                  <span class="text-xs mr-1" style="color:var(--danger)">¿Seguro?</span>
+                  <button (click)="confirmDelete(hito.id)"
+                    class="p-1 rounded transition-colors duration-150"
+                    (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)'"
+                    (mouseleave)="$any($event.currentTarget).style.background=''"
+                    aria-label="Confirmar eliminación del hito">
+                    <lucide-icon [img]="CheckIcon" class="w-3.5 h-3.5" style="color:var(--danger)" />
+                  </button>
+                  <button (click)="cancelDelete()"
+                    class="p-1 rounded transition-colors duration-150"
+                    (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                    (mouseleave)="$any($event.currentTarget).style.background=''"
+                    aria-label="Cancelar">
+                    <lucide-icon [img]="XIcon" class="w-3.5 h-3.5" style="color:var(--text-faint)" />
+                  </button>
+                } @else {
+                  <button (click)="requestDelete(hito.id)"
+                    class="p-1 rounded transition-colors duration-150"
+                    (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)'"
+                    (mouseleave)="$any($event.currentTarget).style.background=''"
+                    aria-label="Eliminar hito">
+                    <lucide-icon [img]="Trash2Icon" class="w-3.5 h-3.5" style="color:color-mix(in srgb,var(--danger) 70%,transparent)" />
+                  </button>
+                }
+              }
             </div>
           </li>
         }
       </ul>
     }
-    <div class="p-3" style="border-top:1px solid var(--border-soft)">
-      <button (click)="addHito.emit()"
-        class="w-full flex items-center justify-center gap-2 py-2 text-sm rounded-lg transition-colors duration-150"
-        style="color:var(--text-muted)"
-        (mouseenter)="$any($event.currentTarget).style.color='var(--brand)';$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 8%,transparent)'"
-        (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)';$any($event.currentTarget).style.background=''">
-        <lucide-icon [img]="PlusIcon" class="w-4 h-4" />
-        Añadir hito
-      </button>
-    </div>
+    @if (canEdit()) {
+      <div class="p-3" style="border-top:1px solid var(--border-soft)">
+        <button (click)="addHito.emit()"
+          class="w-full flex items-center justify-center gap-2 py-2 text-sm rounded-lg transition-colors duration-150"
+          style="color:var(--text-muted)"
+          (mouseenter)="$any($event.currentTarget).style.color='var(--brand)';$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 8%,transparent)'"
+          (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)';$any($event.currentTarget).style.background=''">
+          <lucide-icon [img]="PlusIcon" class="w-4 h-4" />
+          Añadir hito
+        </button>
+      </div>
+    }
   </div>
 
   <!-- Actividad: solo para admin, bajo demanda en un dialog -->

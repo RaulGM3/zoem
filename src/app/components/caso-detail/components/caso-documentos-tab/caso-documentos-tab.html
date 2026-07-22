@@ -70,33 +70,35 @@
             {{ uploadClassified() ? 'Subida clasificada' : 'Clasificado' }}
           </button>
         }
-        <button
-          (click)="startCreateFolder()"
-          [disabled]="busy()"
-          class="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors duration-150 disabled:opacity-50"
-          style="border:1px solid var(--border);color:var(--text-muted)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-          (mouseleave)="$any($event.currentTarget).style.background=''"
-        >
-          <lucide-icon [img]="FolderPlusIcon" class="w-3.5 h-3.5" />
-          Carpeta
-        </button>
-        <button
-          (click)="triggerFreeUpload()"
-          [disabled]="busy()"
-          class="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white rounded-lg transition-colors duration-150 disabled:opacity-50"
-          style="background:var(--brand)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-          (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'"
-        >
-          @if (busy()) {
-            <lucide-icon [img]="LoaderIcon" class="w-3.5 h-3.5 animate-spin" />
-          } @else {
-            <lucide-icon [img]="UploadIcon" class="w-3.5 h-3.5" />
-          }
-          Subir archivo
-        </button>
-        <input type="file" id="upload-free" class="hidden" (change)="onFreeFileSelected($event)" aria-hidden="true" />
+        @if (canEdit()) {
+          <button
+            (click)="startCreateFolder()"
+            [disabled]="busy()"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors duration-150 disabled:opacity-50"
+            style="border:1px solid var(--border);color:var(--text-muted)"
+            (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+            (mouseleave)="$any($event.currentTarget).style.background=''"
+          >
+            <lucide-icon [img]="FolderPlusIcon" class="w-3.5 h-3.5" />
+            Carpeta
+          </button>
+          <button
+            (click)="triggerFreeUpload()"
+            [disabled]="busy()"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white rounded-lg transition-colors duration-150 disabled:opacity-50"
+            style="background:var(--brand)"
+            (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+            (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'"
+          >
+            @if (busy()) {
+              <lucide-icon [img]="LoaderIcon" class="w-3.5 h-3.5 animate-spin" />
+            } @else {
+              <lucide-icon [img]="UploadIcon" class="w-3.5 h-3.5" />
+            }
+            Subir archivo
+          </button>
+          <input type="file" id="upload-free" class="hidden" (change)="onFreeFileSelected($event)" aria-hidden="true" />
+        }
       </div>
     </div>
 
@@ -170,7 +172,7 @@
               aria-label="Cancelar">
               <lucide-icon [img]="XIcon" class="w-4 h-4" />
             </button>
-          } @else {
+          } @else if (canDelete()) {
             <button
               (click)="requestDeleteFolder(folder.id)"
               class="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-colors duration-150"
@@ -218,16 +220,18 @@
                 </button>
               } @else {
                 <span class="px-2 py-0.5 text-xs rounded-full font-medium" style="background:color-mix(in srgb,var(--warning) 12%,transparent);color:var(--warning)">Pendiente</span>
-                <button
-                  (click)="openGenerador(slot)"
-                  class="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white rounded-lg transition-colors duration-150"
-                  style="background:var(--brand)"
-                  (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-                  (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'"
-                >
-                  <lucide-icon [img]="FilePenIcon" class="w-3.5 h-3.5" />
-                  Rellenar
-                </button>
+                @if (canEdit()) {
+                  <button
+                    (click)="openGenerador(slot)"
+                    class="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white rounded-lg transition-colors duration-150"
+                    style="background:var(--brand)"
+                    (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+                    (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'"
+                  >
+                    <lucide-icon [img]="FilePenIcon" class="w-3.5 h-3.5" />
+                    Rellenar
+                  </button>
+                }
               }
             } @else if (slot.status === 'subido') {
               <span class="px-2 py-0.5 text-xs rounded-full font-medium" style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">Subido</span>
@@ -268,46 +272,50 @@
                   <lucide-icon [img]="LockIcon" class="w-4 h-4" />
                 </button>
               }
-              <button
-                (click)="removeSlot.emit(slot)"
-                [disabled]="uploadingSlotId() === slot.id"
-                class="p-1.5 rounded-lg transition-colors duration-150 disabled:opacity-50"
-                style="color:var(--text-faint)"
-                (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)';$any($event.currentTarget).style.color='var(--danger)'"
-                (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
-                aria-label="Quitar documento"
-              >
-                @if (uploadingSlotId() === slot.id) {
-                  <lucide-icon [img]="LoaderIcon" class="w-4 h-4 animate-spin" />
-                } @else {
-                  <lucide-icon [img]="Trash2Icon" class="w-4 h-4" />
-                }
-              </button>
+              @if (canDelete()) {
+                <button
+                  (click)="removeSlot.emit(slot)"
+                  [disabled]="uploadingSlotId() === slot.id"
+                  class="p-1.5 rounded-lg transition-colors duration-150 disabled:opacity-50"
+                  style="color:var(--text-faint)"
+                  (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)';$any($event.currentTarget).style.color='var(--danger)'"
+                  (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+                  aria-label="Quitar documento"
+                >
+                  @if (uploadingSlotId() === slot.id) {
+                    <lucide-icon [img]="LoaderIcon" class="w-4 h-4 animate-spin" />
+                  } @else {
+                    <lucide-icon [img]="Trash2Icon" class="w-4 h-4" />
+                  }
+                </button>
+              }
             } @else {
               <span class="px-2 py-0.5 text-xs rounded-full font-medium" style="background:color-mix(in srgb,var(--warning) 12%,transparent);color:var(--warning)">Pendiente</span>
-              <button
-                (click)="triggerSlotUpload(slot.id)"
-                [disabled]="uploadingSlotId() === slot.id"
-                class="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white rounded-lg transition-colors duration-150 disabled:opacity-50"
-                style="background:var(--brand)"
-                (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-                (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'"
-              >
-                @if (uploadingSlotId() === slot.id) {
-                  <lucide-icon [img]="LoaderIcon" class="w-3.5 h-3.5 animate-spin" />
-                  Subiendo...
-                } @else {
-                  <lucide-icon [img]="UploadIcon" class="w-3.5 h-3.5" />
-                  Subir
-                }
-              </button>
-              <input
-                type="file"
-                [id]="'upload-slot-' + slot.id"
-                class="hidden"
-                (change)="onSlotFileSelected($event, slot)"
-                aria-hidden="true"
-              />
+              @if (canEdit()) {
+                <button
+                  (click)="triggerSlotUpload(slot.id)"
+                  [disabled]="uploadingSlotId() === slot.id"
+                  class="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white rounded-lg transition-colors duration-150 disabled:opacity-50"
+                  style="background:var(--brand)"
+                  (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+                  (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'"
+                >
+                  @if (uploadingSlotId() === slot.id) {
+                    <lucide-icon [img]="LoaderIcon" class="w-3.5 h-3.5 animate-spin" />
+                    Subiendo...
+                  } @else {
+                    <lucide-icon [img]="UploadIcon" class="w-3.5 h-3.5" />
+                    Subir
+                  }
+                </button>
+                <input
+                  type="file"
+                  [id]="'upload-slot-' + slot.id"
+                  class="hidden"
+                  (change)="onSlotFileSelected($event, slot)"
+                  aria-hidden="true"
+                />
+              }
             }
           </div>
         </div>
@@ -369,23 +377,25 @@
                 <lucide-icon [img]="DownloadIcon" class="w-4 h-4" />
               </a>
             }
-            <button
-              (click)="triggerReupload(file.id)"
-              class="p-1.5 rounded-lg transition-colors duration-150"
-              style="color:var(--text-faint)"
-              (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-muted)'"
-              (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
-              aria-label="Subir nueva versión"
-            >
-              <lucide-icon [img]="RefreshCwIcon" class="w-4 h-4" />
-            </button>
-            <input
-              type="file"
-              [id]="'reupload-file-' + file.id"
-              class="hidden"
-              (change)="onReuploadSelected($event, file)"
-              aria-hidden="true"
-            />
+            @if (canEdit()) {
+              <button
+                (click)="triggerReupload(file.id)"
+                class="p-1.5 rounded-lg transition-colors duration-150"
+                style="color:var(--text-faint)"
+                (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-muted)'"
+                (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+                aria-label="Subir nueva versión"
+              >
+                <lucide-icon [img]="RefreshCwIcon" class="w-4 h-4" />
+              </button>
+              <input
+                type="file"
+                [id]="'reupload-file-' + file.id"
+                class="hidden"
+                (change)="onReuploadSelected($event, file)"
+                aria-hidden="true"
+              />
+            }
             <button
               (click)="openFileHistory(file)"
               class="p-1.5 rounded-lg transition-colors duration-150"
@@ -408,34 +418,36 @@
                 <lucide-icon [img]="LockIcon" class="w-4 h-4" />
               </button>
             }
-            @if (confirmingDeleteFileId() === file.id) {
-              <button (click)="confirmDeleteFile(file)"
-                class="p-1.5 rounded-lg transition-colors duration-150"
-                style="color:var(--danger)"
-                (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)'"
-                (mouseleave)="$any($event.currentTarget).style.background=''"
-                aria-label="Confirmar borrado">
-                <lucide-icon [img]="CheckIcon" class="w-4 h-4" />
-              </button>
-              <button (click)="confirmingDeleteFileId.set(null)"
-                class="p-1.5 rounded-lg transition-colors duration-150"
-                style="color:var(--text-faint)"
-                (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-                (mouseleave)="$any($event.currentTarget).style.background=''"
-                aria-label="Cancelar">
-                <lucide-icon [img]="XIcon" class="w-4 h-4" />
-              </button>
-            } @else {
-              <button
-                (click)="requestDeleteFile(file.id)"
-                class="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-colors duration-150"
-                style="color:var(--text-faint)"
-                (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)';$any($event.currentTarget).style.color='var(--danger)'"
-                (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
-                aria-label="Eliminar archivo"
-              >
-                <lucide-icon [img]="Trash2Icon" class="w-4 h-4" />
-              </button>
+            @if (canDelete()) {
+              @if (confirmingDeleteFileId() === file.id) {
+                <button (click)="confirmDeleteFile(file)"
+                  class="p-1.5 rounded-lg transition-colors duration-150"
+                  style="color:var(--danger)"
+                  (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)'"
+                  (mouseleave)="$any($event.currentTarget).style.background=''"
+                  aria-label="Confirmar borrado">
+                  <lucide-icon [img]="CheckIcon" class="w-4 h-4" />
+                </button>
+                <button (click)="confirmingDeleteFileId.set(null)"
+                  class="p-1.5 rounded-lg transition-colors duration-150"
+                  style="color:var(--text-faint)"
+                  (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                  (mouseleave)="$any($event.currentTarget).style.background=''"
+                  aria-label="Cancelar">
+                  <lucide-icon [img]="XIcon" class="w-4 h-4" />
+                </button>
+              } @else {
+                <button
+                  (click)="requestDeleteFile(file.id)"
+                  class="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-colors duration-150"
+                  style="color:var(--text-faint)"
+                  (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)';$any($event.currentTarget).style.color='var(--danger)'"
+                  (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+                  aria-label="Eliminar archivo"
+                >
+                  <lucide-icon [img]="Trash2Icon" class="w-4 h-4" />
+                </button>
+              }
             }
           </div>
         </div>
@@ -513,6 +525,7 @@
   <app-caso-doc-generador
     [slot]="gen"
     [casoContext]="casoContext()"
+    [canEdit]="canEdit()"
     (save)="onGenerated($event)"
     (close)="closeGenerador()"
   />

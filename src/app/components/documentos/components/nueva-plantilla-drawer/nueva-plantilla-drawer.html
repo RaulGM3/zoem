@@ -1,7 +1,7 @@
 <div class="fixed inset-0 z-40 bg-black/30" (click)="closed.emit()" aria-hidden="true"></div>
 <div class="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
   <aside class="pointer-events-auto bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
-    role="dialog" aria-modal="true" aria-labelledby="nueva-plantilla-title">
+    role="dialog" aria-modal="true" aria-labelledby="nueva-plantilla-title" appFocusTrap (escapeKey)="closed.emit()">
 
     <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
       <h2 id="nueva-plantilla-title" class="text-base font-semibold text-slate-800">

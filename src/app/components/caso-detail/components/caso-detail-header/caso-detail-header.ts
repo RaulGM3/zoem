@@ -21,6 +21,8 @@ export class CasoDetailHeaderComponent {
   readonly movimientosCount = input.required<number>();
   readonly gestoriaPending = input.required<number>();
   readonly docsPending = input.required<number>();
+  /** Oculta el botón "Editar" si el usuario no tiene permiso `Casos.editar`. */
+  readonly canEdit = input(true);
 
   readonly edit = output<void>();
   readonly tabChange = output<CasoTab>();

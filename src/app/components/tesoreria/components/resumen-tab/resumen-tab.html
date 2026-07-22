@@ -44,6 +44,10 @@
           @for (c of cotejos(); track c.cuenta.id) {
             <tr (click)="toggleCuenta(c.cuenta.id)" class="cursor-pointer transition-colors duration-150"
               style="border-bottom:1px solid var(--border)"
+              tabindex="0"
+              [attr.aria-label]="'Filtrar por cuenta ' + c.cuenta.nombre + (cuentaSeleccionada() === c.cuenta.id ? ' (seleccionada)' : '')"
+              (keydown.enter)="toggleCuenta(c.cuenta.id)"
+              (keydown.space)="$event.preventDefault(); toggleCuenta(c.cuenta.id)"
               [style.background]="cuentaSeleccionada() === c.cuenta.id ? 'color-mix(in srgb,var(--brand) 5%,transparent)' : ''"
               (mouseenter)="$any($event.currentTarget).style.background=cuentaSeleccionada()===c.cuenta.id?'color-mix(in srgb,var(--brand) 8%,transparent)':'var(--surface-2)'"
               (mouseleave)="$any($event.currentTarget).style.background=cuentaSeleccionada()===c.cuenta.id?'color-mix(in srgb,var(--brand) 5%,transparent)':''">
@@ -82,8 +86,10 @@
                 <div class="flex items-center justify-end gap-1">
                   <input type="number" step="0.01" [value]="c.banco ?? ''"
                     (click)="$event.stopPropagation()"
+                    (keydown)="$event.stopPropagation()"
                     (change)="actualizarSaldoCuenta.emit({ cuentaId: c.cuenta.id, valor: $any($event.target).value })"
                     placeholder="0.00"
+                    [attr.aria-label]="'Saldo real de ' + c.cuenta.nombre"
                     class="form-input text-right tabular-nums" style="width:7rem;padding:0.25rem 0.5rem;font-family:var(--font-mono)" />
                   <span class="text-xs" style="color:var(--text-faint)">€</span>
                 </div>
@@ -99,7 +105,8 @@
                   } @else {
                     <span class="relative inline-block">
                       @if (hoveredDiscrepancia() === c.cuenta.id) {
-                        <span class="absolute z-20 pointer-events-none rounded-lg px-2.5 py-2 text-xs text-center"
+                        <span [id]="'discrepancia-tip-' + c.cuenta.id"
+                          class="absolute z-20 pointer-events-none rounded-lg px-2.5 py-2 text-xs text-center"
                           style="bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);width:11rem;background:var(--surface);border:1px solid var(--border);color:var(--text-body);box-shadow:0 4px 16px rgba(0,0,0,0.18)">
                           Diferencia de {{ (c.diferencia < 0 ? -c.diferencia : c.diferencia) | number:'1.2-2' }} €. Haz clic para ver el desglose.
                           <span class="absolute" style="top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--border)"></span>
@@ -110,8 +117,12 @@
                         style="background:color-mix(in srgb,var(--warning) 12%,transparent);color:var(--warning)"
                         (mouseenter)="hoveredDiscrepancia.set(c.cuenta.id)"
                         (mouseleave)="hoveredDiscrepancia.set(null)"
+                        (focus)="hoveredDiscrepancia.set(c.cuenta.id)"
+                        (blur)="hoveredDiscrepancia.set(null)"
+                        (keydown)="$event.stopPropagation()"
                         (click)="dialogDiscrepancia.set(c); $event.stopPropagation()"
-                        [attr.aria-label]="'Ver desglose de discrepancia en ' + c.cuenta.nombre">
+                        [attr.aria-label]="'Ver desglose de discrepancia en ' + c.cuenta.nombre"
+                        [attr.aria-describedby]="hoveredDiscrepancia() === c.cuenta.id ? ('discrepancia-tip-' + c.cuenta.id) : null">
                         <lucide-icon [img]="AlertTriangleIcon" class="w-3 h-3" />
                         Discrepancia
                       </button>
@@ -362,7 +373,8 @@
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4"
     style="background:rgba(0,0,0,0.45)"
     (click)="dialogDiscrepancia.set(null)"
-    role="dialog" aria-modal="true" [attr.aria-label]="'Discrepancia en ' + dc.cuenta.nombre">
+    role="dialog" aria-modal="true" [attr.aria-label]="'Discrepancia en ' + dc.cuenta.nombre"
+    appFocusTrap (escapeKey)="dialogDiscrepancia.set(null)">
     <div class="relative w-full max-w-md rounded-2xl p-6 space-y-5"
       style="background:var(--surface);border:1px solid var(--border);box-shadow:0 20px 60px rgba(0,0,0,0.25)"
       (click)="$event.stopPropagation()">

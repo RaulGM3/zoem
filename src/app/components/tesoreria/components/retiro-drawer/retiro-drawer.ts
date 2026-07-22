@@ -15,6 +15,14 @@ interface RetiroForm {
   notas: string;
 }
 
+/** Fecha local (no UTC) en formato YYYY-MM-DD — evita el desfase de `toISOString().slice(0, 10)`. */
+function localDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 @Component({
   selector: 'app-retiro-drawer',
   imports: [LucideAngularModule, FormsModule],
@@ -34,7 +42,7 @@ export class RetiroDrawerComponent {
   readonly form = signal<RetiroForm>({
     concepto: '',
     importe: '',
-    fecha: new Date().toISOString().slice(0, 10),
+    fecha: localDateStr(new Date()),
     cuentaId: '',
     notas: '',
   });

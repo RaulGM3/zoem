@@ -20,6 +20,8 @@
             <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
               style="color:var(--text-muted);font-family:var(--font-mono)">Ingresos</th>
             <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
+              style="color:var(--text-muted);font-family:var(--font-mono)">Honorarios</th>
+            <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
               style="color:var(--text-muted);font-family:var(--font-mono)">Egresos</th>
             <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
               style="color:var(--text-muted);font-family:var(--font-mono)">Saldo aprobado</th>
@@ -38,6 +40,9 @@
               <td class="px-4 py-3 font-medium" style="color:var(--text-strong)">{{ caso.titulo }}</td>
               <td class="px-4 py-3 text-right font-medium tabular-nums" style="color:var(--success);font-family:var(--font-mono)">
                 {{ (r?.ingresos ?? 0) | number:'1.2-2' }} €
+              </td>
+              <td class="px-4 py-3 text-right font-medium tabular-nums" style="color:var(--success);font-family:var(--font-mono)">
+                {{ (r?.honorarios ?? 0) | number:'1.2-2' }} €
               </td>
               <td class="px-4 py-3 text-right font-medium tabular-nums" style="color:var(--danger);font-family:var(--font-mono)">
                 {{ (r?.egresos ?? 0) | number:'1.2-2' }} €
@@ -59,7 +64,10 @@
           <tr class="font-semibold" style="color:var(--text-strong)">
             <td class="px-4 py-3">Total</td>
             <td class="px-4 py-3 text-right tabular-nums" style="color:var(--success);font-family:var(--font-mono)">
-              {{ balanceGeneral().totalIngresos | number:'1.2-2' }} €
+              {{ totalIngresos() | number:'1.2-2' }} €
+            </td>
+            <td class="px-4 py-3 text-right tabular-nums" style="color:var(--success);font-family:var(--font-mono)">
+              {{ totalHonorarios() | number:'1.2-2' }} €
             </td>
             <td class="px-4 py-3 text-right tabular-nums" style="color:var(--danger);font-family:var(--font-mono)">
               {{ totalEgresos() | number:'1.2-2' }} €
@@ -70,9 +78,9 @@
               {{ saldoAprobado() | number:'1.2-2' }} €
             </td>
             <td class="px-4 py-3 text-right tabular-nums"
-              [style.color]="proyeccionBancaria().proyeccion >= 0 ? 'var(--text-body)' : 'var(--danger)'"
+              [style.color]="saldoProyectado() >= 0 ? 'var(--text-body)' : 'var(--danger)'"
               style="font-family:var(--font-mono)">
-              {{ proyeccionBancaria().proyeccion | number:'1.2-2' }} €
+              {{ saldoProyectado() | number:'1.2-2' }} €
             </td>
           </tr>
         </tfoot>

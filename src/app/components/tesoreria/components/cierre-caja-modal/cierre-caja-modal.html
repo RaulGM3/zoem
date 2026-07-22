@@ -1,6 +1,7 @@
 <!-- Overlay -->
 <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-  (click)="closed.emit()" role="dialog" aria-modal="true" aria-labelledby="cierre-title">
+  (click)="closed.emit()" role="dialog" aria-modal="true" aria-labelledby="cierre-title"
+  appFocusTrap (escapeKey)="closed.emit()">
 
   <!-- Dialog -->
   <div class="w-full max-w-lg rounded-2xl shadow-2xl" style="background:var(--surface);border:1px solid var(--border)"

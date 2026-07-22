@@ -18,16 +18,25 @@ import {
 import { AnclarCasoDialogComponent } from './anclar-caso-dialog/anclar-caso-dialog';
 import { DocTemplateService } from '../../core/services/doc-template.service';
 import { ToastService } from '../../core/services/toast.service';
+import { PermissionService } from '../../core/services/permission.service';
+import { FocusTrapDirective } from '../../shared/directives/focus-trap.directive';
 
 function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+const VAR_KEY_PATTERN = /^[a-zA-Z0-9_]+$/;
+
 import { DocGenerationService } from '../../core/services/doc-generation.service';
 import type { DocTemplate, TemplateVariable } from '../../interfaces';
 
 @Component({
   selector: 'app-doc-template-detail',
-  imports: [LucideAngularModule, AnclarCasoDialogComponent],
+  imports: [LucideAngularModule, AnclarCasoDialogComponent, FocusTrapDirective],
   templateUrl: './doc-template-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -35,6 +44,7 @@ export class DocTemplateDetailComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly templateService = inject(DocTemplateService);
   private readonly toast = inject(ToastService);
+  readonly perm = inject(PermissionService);
   protected readonly generationService = inject(DocGenerationService);
   @ViewChild('previewContent') private readonly previewContent?: ElementRef<HTMLElement>;
 
@@ -128,6 +138,12 @@ export class DocTemplateDetailComponent implements OnInit {
     try {
       const template = await this.templateService.getTemplate(this.id());
       this.template.set(template);
+    } catch {
+      // Los rules de Firestore niegan el `get` a usuarios no-super cuando la
+      // plantilla está soft-deleted, antes de que getTemplate() aplique su
+      // propio filtro. Tratamos cualquier error como "no encontrada" en vez
+      // de dejar la promesa rechazada sin manejar.
+      this.template.set(null);
     } finally {
       this.loading.set(false);
     }
@@ -174,7 +190,7 @@ export class DocTemplateDetailComponent implements OnInit {
 
   async deleteTemplate(): Promise<void> {
     const t = this.template();
-    if (!t) return;
+    if (!t || !this.perm.can('Documentos', 'eliminar')) return;
     await this.toast.run(() => this.templateService.deleteTemplate(t.id), {
       successMessage: 'Plantilla eliminada',
       errorTitle: 'No se pudo eliminar la plantilla',
@@ -183,6 +199,7 @@ export class DocTemplateDetailComponent implements OnInit {
   }
 
   toggleEditMode(): void {
+    if (!this.perm.can('Documentos', 'editar')) return;
     this.editMode.update(v => !v);
     if (!this.editMode()) {
       this.cancelNewVar();
@@ -213,8 +230,34 @@ export class DocTemplateDetailComponent implements OnInit {
     const key = this.newVarKey().trim();
     const label = this.newVarLabel().trim();
     if (!t || !text || !key || !label) return;
+    if (!this.perm.can('Documentos', 'editar')) return;
 
-    const newHtml = t.html.replace(text, `{{${key}}}`);
+    if (!VAR_KEY_PATTERN.test(key)) {
+      this.toast.fromError(new Error('La clave solo puede contener letras, números y guiones bajos.'), {
+        title: 'Clave de variable inválida',
+      });
+      return;
+    }
+    if (t.variables.some(v => v.key === key)) {
+      this.toast.fromError(new Error(`Ya existe una variable con la clave "${key}".`), {
+        title: 'Clave de variable duplicada',
+      });
+      return;
+    }
+    // window.getSelection() devuelve texto plano decodificado, pero el HTML
+    // guardado puede tener el mismo texto con entidades (&amp;, &lt;, etc.) si
+    // contiene caracteres especiales (ej: "Smith & Jones"). Si la comparación
+    // en crudo falla, reintentamos contra la versión HTML-encodeada.
+    const encodedText = escapeHtml(text);
+    const matchText = t.html.includes(text) ? text : t.html.includes(encodedText) ? encodedText : null;
+    if (matchText === null) {
+      this.toast.fromError(new Error('El texto seleccionado no se encontró en el documento. Vuelve a seleccionarlo.'), {
+        title: 'No se pudo crear la variable',
+      });
+      return;
+    }
+
+    const newHtml = t.html.split(matchText).join(`{{${key}}}`);
     const newVariables: TemplateVariable[] = [
       ...t.variables,
       { key, label, type: 'text', required: false },
@@ -252,8 +295,9 @@ export class DocTemplateDetailComponent implements OnInit {
     const key = this.makeStaticFor();
     const value = this.makeStaticValue().trim();
     if (!t || !key) return;
+    if (!this.perm.can('Documentos', 'editar')) return;
 
-    const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g');
+    const regex = new RegExp(`\\{\\{\\s*${escapeRegExp(key)}\\s*\\}\\}`, 'g');
     const newHtml = t.html.replace(regex, value);
     const newVariables = t.variables.filter(v => v.key !== key);
 

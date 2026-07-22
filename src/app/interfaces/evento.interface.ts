@@ -1,4 +1,5 @@
 import { Timestamp } from '@angular/fire/firestore';
+import type { Anotacion } from './caso.interface';
 
 export type EventoPrioridad = 'alta' | 'media' | 'baja' | 'ninguna';
 export type EventoRecurrencia = 'ninguna' | 'diaria' | 'semanal' | 'mensual' | 'anual';
@@ -72,6 +73,7 @@ export interface Evento {
   prioridad: EventoPrioridad;
   color: EventoColor;
   calendarColor?: string | null;
+  anotaciones?: Anotacion[]; // notas libres del calendario
   invitados: string[] | 'todos'; // userId[] or 'todos' for whole company
   creadoPor: string;
   createdAt: Timestamp;

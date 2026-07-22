@@ -1,10 +1,10 @@
 import {
-  Component, OnInit, OnDestroy, signal, computed,
+  Component, OnDestroy, signal, computed, effect, untracked,
   ChangeDetectionStrategy, inject,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
-import { debounceTime } from 'rxjs';
+import { combineLatest, debounceTime, map, of, switchMap } from 'rxjs';
 import { CasosService, ActividadInput } from '../../core/services/casos.service';
 import { ToastService } from '../../core/services/toast.service';
 import { GestoriaService } from '../../core/services/gestoria.service';
@@ -47,7 +47,7 @@ import { MovimientoFormDrawerComponent, MovimientoFormData } from './components/
   templateUrl: './caso-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class CasoDetailComponent implements OnInit, OnDestroy {
+export class CasoDetailComponent implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   readonly casosService = inject(CasosService);
@@ -68,11 +68,40 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
   readonly caso = signal<Caso | null>(null);
   readonly loading = signal(true);
 
+  // `casoId` deriva de `route.paramMap` (no de `route.snapshot`, capturado una
+  // sola vez): el RouteReuseStrategy por defecto de Angular reutiliza esta misma
+  // instancia de componente al navegar entre /casos/A → /casos/B (misma
+  // routeConfig), sin volver a ejecutar el constructor. Si `casoId` fuera un
+  // campo fijo, todo lo derivado (hitos, actividad, mutaciones) seguiría
+  // apuntando al caso anterior tras navegar a uno nuevo.
+  readonly casoId = toSignal(
+    this.route.paramMap.pipe(map(p => p.get('id')!)),
+    { initialValue: this.route.snapshot.paramMap.get('id')! }
+  );
+  private readonly casoId$ = toObservable(this.casoId);
+  private readonly isAdmin$ = toObservable(this.permissionService.isAdmin);
+
   // Los hitos y su feed de actividad son streams real-time (no estado a mano).
-  // La vista reacciona en vivo a cualquier cambio, propio o de otro usuario.
-  private readonly casoId = this.route.snapshot.paramMap.get('id')!;
-  readonly hitos = toSignal(this.casosService.hitosStream(this.casoId), { initialValue: [] as Hito[] });
-  readonly actividad = toSignal(this.casosService.actividadStream(this.casoId), { initialValue: [] as HitoActividad[] });
+  // La vista reacciona en vivo a cualquier cambio, propio o de otro usuario, y
+  // se re-suscriben automáticamente cuando cambia `casoId` (switchMap).
+  readonly hitos = toSignal(
+    this.casoId$.pipe(switchMap(id => this.casosService.hitosStream(id))),
+    { initialValue: [] as Hito[] }
+  );
+  // El feed de actividad solo se pide al servidor si el usuario es admin: para
+  // el resto ni siquiera se suscribe (antes solo se ocultaba el botón en el
+  // template, pero el feed completo ya viajaba al cliente para cualquier rol).
+  readonly actividad = toSignal(
+    combineLatest([this.casoId$, this.isAdmin$]).pipe(
+      switchMap(([id, isAdmin]) => isAdmin ? this.casosService.actividadStream(id) : of([] as HitoActividad[]))
+    ),
+    { initialValue: [] as HitoActividad[] }
+  );
+
+  /** Permiso de edición de Casos (info, hitos, gestoría, documentos). */
+  readonly canEditCasos = computed(() => this.permissionService.can('Casos', 'editar'));
+  /** Permiso de eliminación de Casos (hitos, movimientos, documentos, carpetas). */
+  readonly canDeleteCasos = computed(() => this.permissionService.can('Casos', 'eliminar'));
 
   // El tab activo es derivado de la URL (?tab=...), no de estado local.
   // La URL es la fuente de verdad: deep linking + back button gratis.
@@ -169,12 +198,36 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
   readonly gestoriaPending = computed(() => this.gestoriaService.slots().filter(s => s.status === 'pendiente').length);
   readonly docsPending = computed(() => this.casoDocService.slots().filter(s => s.status === 'pendiente').length);
 
+  constructor() {
+    // Recarga todo el estado del caso cada vez que `casoId` cambia (incluida la
+    // primera vez): cubre tanto la carga inicial como la navegación entre casos
+    // con la instancia de componente reutilizada.
+    effect(() => {
+      const id = this.casoId();
+      untracked(() => void this.loadCaso(id));
+    });
+
+    // Si el usuario cambia de tab con una edición de info a medias, se descarta
+    // el borrador: al volver a "info" el formulario se re-siembra desde el
+    // `caso()` actual (ver efecto del formulario en CasoInfoTabComponent), y
+    // dejar `editingInfo` en true resucitaría un formulario "editando" vacío o
+    // con datos obsoletos.
+    effect(() => {
+      if (this.activeTab() !== 'info') {
+        untracked(() => this.editingInfo.set(false));
+      }
+    });
+  }
+
   ngOnDestroy(): void {
     this.cuentasService.stopCuentas();
   }
 
-  async ngOnInit(): Promise<void> {
-    const id = this.casoId;
+  private async loadCaso(id: string): Promise<void> {
+    this.loading.set(true);
+    this.caso.set(null);
+    this.editingInfo.set(false);
+    this.cuentasService.stopCuentas();
     this.cuentasService.loadCuentas();
     await Promise.all([
       this.contactService.loadContacts(),
@@ -191,11 +244,13 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
   // ── Info ───────────────────────────────────────────────
 
   startEditInfo(): void {
+    if (!this.canEditCasos()) return;
     this.editingInfo.set(true);
     this.setTab('info');
   }
 
   async onSaveInfo(data: CasoInfoFormData): Promise<void> {
+    if (!this.canEditCasos()) return;
     const id = this.caso()?.id;
     if (!id) return;
     this.savingInfo.set(true);
@@ -219,6 +274,7 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
   // ── Contacts ───────────────────────────────────────────
 
   async addContact(contactId: string): Promise<void> {
+    if (!this.canEditCasos()) return;
     const c = this.caso();
     if (!c) return;
     const newIds = [...(c.contactoIds ?? []), contactId];
@@ -232,6 +288,7 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
   }
 
   async removeContact(contactId: string): Promise<void> {
+    if (!this.canEditCasos()) return;
     const c = this.caso();
     if (!c) return;
     const newIds = c.contactoIds.filter(id => id !== contactId);
@@ -244,16 +301,19 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
   // ── Hitos ──────────────────────────────────────────────
 
   openNewHitoForm(): void {
+    if (!this.canEditCasos()) return;
     this.editingHito.set(null);
     this.showHitoForm.set(true);
   }
 
   startEditHito(hito: Hito): void {
+    if (!this.canEditCasos()) return;
     this.editingHito.set(hito);
     this.showHitoForm.set(true);
   }
 
   async onSaveHito(data: HitoFormData): Promise<void> {
+    if (!this.canEditCasos()) return;
     const c = this.caso();
     if (!c) return;
     this.savingHito.set(true);
@@ -315,6 +375,7 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
   }
 
   async deleteHito(hitoId: string): Promise<void> {
+    if (!this.canDeleteCasos()) return;
     const c = this.caso();
     if (!c) return;
     const hito = this.hitos().find(h => h.id === hitoId);
@@ -328,6 +389,7 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
   }
 
   async toggleHitoEstado(hito: Hito): Promise<void> {
+    if (!this.canEditCasos()) return;
     const c = this.caso();
     if (!c) return;
     const autorId = this.userSync.currentUser()?.id;
@@ -351,16 +413,19 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
   // ── Gestoría ───────────────────────────────────────────
 
   openMovForm(): void {
+    if (!this.canEditCasos()) return;
     this.registeringSlot.set(null);
     this.showMovForm.set(true);
   }
 
   openRegistrarSlot(slot: GestoriaSlot): void {
+    if (!this.canEditCasos()) return;
     this.registeringSlot.set(slot);
     this.showMovForm.set(true);
   }
 
   async onSaveMov(data: MovimientoFormData): Promise<void> {
+    if (!this.canEditCasos()) return;
     const c = this.caso();
     if (!c) return;
     this.savingMov.set(true);
@@ -403,6 +468,7 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
   }
 
   async deleteMovimiento(movId: string): Promise<void> {
+    if (!this.canDeleteCasos()) return;
     const c = this.caso();
     if (!c) return;
     await this.toast.run(
@@ -415,14 +481,18 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
   }
 
   async unregisterSlot(slot: GestoriaSlot): Promise<void> {
+    // unregisterSlot borra permanentemente el movimiento vinculado (deleteDoc):
+    // exige el mismo permiso que cualquier otro borrado, no solo "editar".
+    if (!this.canDeleteCasos()) return;
     const c = this.caso();
     if (!c) return;
     await this.toast.run(() => this.gestoriaService.unregisterSlot(c.id, slot), {
-      errorTitle: 'No se pudo desregistrar el slot',
+      errorTitle: 'No se pudo eliminar el movimiento del slot',
     });
   }
 
   async reorderSlots(orderedSlots: GestoriaSlot[]): Promise<void> {
+    if (!this.canEditCasos()) return;
     const c = this.caso();
     if (!c) return;
     await this.toast.run(() => this.gestoriaService.reorderSlots(c.id, orderedSlots), {
@@ -438,6 +508,7 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
   // ── Documentos ─────────────────────────────────────────
 
   onUploadSlot(event: DocUploadEvent): void {
+    if (!this.canEditCasos()) return;
     const casoId = this.caso()?.id;
     if (!casoId || this.uploadingSlotId() === event.slot.id) return;
     this.uploadingSlotId.set(event.slot.id);
@@ -453,6 +524,7 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
   }
 
   async onRemoveSlot(slot: CasoDocSlot): Promise<void> {
+    if (!this.canDeleteCasos()) return;
     const casoId = this.caso()?.id;
     if (!casoId) return;
     this.uploadingSlotId.set(slot.id);
@@ -466,6 +538,7 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
   }
 
   async onGenerateDoc(event: { slot: CasoDocSlot; html: string; values: Record<string, string> }): Promise<void> {
+    if (!this.canEditCasos()) return;
     const casoId = this.caso()?.id;
     if (!casoId) return;
     await this.toast.run(
@@ -475,6 +548,7 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
   }
 
   onUploadFile(event: FreeUploadEvent): void {
+    if (!this.canEditCasos()) return;
     const casoId = this.caso()?.id;
     if (!casoId) return;
     this.uploadQueue.enqueue(
@@ -490,6 +564,7 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
   }
 
   onReuploadFile(event: ReuploadEvent): void {
+    if (!this.canEditCasos()) return;
     const casoId = this.caso()?.id;
     if (!casoId) return;
     this.uploadQueue.enqueue(
@@ -503,6 +578,7 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
   }
 
   async onDeleteFile(file: CasoDocFile): Promise<void> {
+    if (!this.canDeleteCasos()) return;
     const casoId = this.caso()?.id;
     if (!casoId) return;
     this.docsBusy.set(true);
@@ -517,6 +593,7 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
   }
 
   async onCreateFolder(event: CreateFolderEvent): Promise<void> {
+    if (!this.canEditCasos()) return;
     const casoId = this.caso()?.id;
     if (!casoId) return;
     this.docsBusy.set(true);
@@ -530,6 +607,7 @@ export class CasoDetailComponent implements OnInit, OnDestroy {
   }
 
   async onDeleteFolder(folderId: string): Promise<void> {
+    if (!this.canDeleteCasos()) return;
     const casoId = this.caso()?.id;
     if (!casoId) return;
     this.docsBusy.set(true);

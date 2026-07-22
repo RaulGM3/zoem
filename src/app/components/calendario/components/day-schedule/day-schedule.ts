@@ -1,9 +1,11 @@
 import {
   Component, ChangeDetectionStrategy, input, output,
-  signal, computed, viewChild, ElementRef, effect,
+  signal, computed, viewChild, ElementRef, effect, inject, DestroyRef,
 } from '@angular/core';
 import { LucideAngularModule, X, Clock, Trash2, Plus, Scissors, Euro, Flag, CalendarClock } from 'lucide-angular';
-import type { Anotacion, CalendarItem, EventGroup, ItemColor } from '../../calendario.types';
+import { FocusTrapDirective } from '../../../../shared/directives/focus-trap.directive';
+import { ToastService } from '../../../../core/services/toast.service';
+import type { CalendarItem, EventGroup, ItemColor } from '../../calendario.types';
 import type { CompanyMember, EventoEstado, HitoEstado, RegistroHoraHito } from '../../../../interfaces';
 import {
   HITO_ESTADOS,
@@ -235,7 +237,7 @@ function computeColumnLayout(items: CalendarItem[]): Map<string, ItemLayout> {
 
 @Component({
   selector: 'app-day-schedule',
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, FocusTrapDirective],
   templateUrl: './day-schedule.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -270,7 +272,15 @@ export class DayScheduleComponent {
   readonly EVENTO_ESTADOS = EVENTO_ESTADOS;
   readonly ALL_COLORS = ALL_COLORS;
 
-  private readonly today = todayStr();
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly toast = inject(ToastService);
+  /**
+   * Fecha de "hoy" reactiva (no un snapshot congelado al construir el
+   * componente) — se recalcula periódicamente para que `isHitoOverdue` no
+   * siga marcando/desmarcando hitos como vencidos con la fecha de ayer si la
+   * pestaña se deja abierta durante la medianoche.
+   */
+  private readonly today = signal(todayStr());
 
   readonly hours = HOURS;
   readonly hourHeight = HOUR_HEIGHT;
@@ -283,7 +293,17 @@ export class DayScheduleComponent {
   readonly resizing = signal<ResizeState | null>(null);
   readonly draggingReg = signal<RegistroDragState | null>(null);
   readonly resizingReg = signal<RegistroResizeState | null>(null);
-  readonly selectedItem = signal<CalendarItem | null>(null);
+  /**
+   * Solo se guarda el id del item seleccionado; el item mostrado se deriva
+   * SIEMPRE fresco desde `groupedEvents()` (que a su vez viene del stream de
+   * Firestore del calendario). Así el modal nunca muestra un snapshot
+   * congelado si otro miembro edita el mismo hito mientras está abierto.
+   */
+  readonly selectedItemId = signal<string | null>(null);
+  readonly selectedItem = computed<CalendarItem | null>(() => {
+    const id = this.selectedItemId();
+    return id ? this.findItemById(id) : null;
+  });
   readonly newAnnotationText = signal('');
   readonly confirmingDelete = signal(false);
 
@@ -359,6 +379,9 @@ export class DayScheduleComponent {
         area.scrollTop = minutesToPx(targetHour * 60);
       }
     });
+
+    const intervalId = setInterval(() => this.today.set(todayStr()), 60_000);
+    this.destroyRef.onDestroy(() => clearInterval(intervalId));
   }
 
   // ── consultas ────────────────────────────────────────────────────────
@@ -519,6 +542,26 @@ export class DayScheduleComponent {
     area.setPointerCapture(event.pointerId);
   }
 
+  /** Ajuste de duración por teclado (flechas) de un segmento de hito. */
+  onRegistroResizeKeydown(event: KeyboardEvent, gr: GridRegistro): void {
+    event.stopPropagation();
+    if (gr.reg.facturado) return;
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+    event.preventDefault();
+    const delta = event.key === 'ArrowUp' ? SNAP_MINUTES : -SNAP_MINUTES;
+    const next = clamp(gr.reg.minutos + delta, MIN_DURATION, 23 * 60);
+    if (next === gr.reg.minutos) return;
+    const item = this.findItemById(gr.hitoId);
+    if (!item) return;
+    const updated: RegistroHoraHito = {
+      ...gr.reg,
+      horaFin: minutesToTime(timeToMinutes(gr.reg.horaInicio) + next),
+      minutos: next,
+    };
+    const registros = (item.registrosHoras ?? []).map(r => r.id === gr.reg.id ? updated : r);
+    this.registrosChanged.emit({ hitoId: gr.hitoId, casoId: gr.casoId, registros });
+  }
+
   onRegistroResizePointerDown(event: PointerEvent, gr: GridRegistro): void {
     if (gr.reg.facturado) return;
     event.preventDefault();
@@ -564,7 +607,7 @@ export class DayScheduleComponent {
     const dateChanged = drag.currentDate !== drag.originalDate;
     if (!timeChanged && !dateChanged) {
       // Click sin arrastrar → abre el detalle del hito.
-      if (item) this.selectedItem.set(item);
+      if (item) this.selectedItemId.set(item.id);
       return;
     }
     if (!item) return;
@@ -671,7 +714,7 @@ export class DayScheduleComponent {
   // mapas locales — antes esto mostraba 'Pte.'/'✓' divergentes del resto de la app.
 
   isHitoOverdue(item: CalendarItem): boolean {
-    return isHitoOverdue(item.hitoEstado, item.date, this.today);
+    return isHitoOverdue(item.hitoEstado, item.date, this.today());
   }
 
   /** Etiqueta del badge de estado del hito en el bloque (incluye "Vencido"). */
@@ -723,6 +766,15 @@ export class DayScheduleComponent {
   }
 
   // ── acciones ─────────────────────────────────────────────────────────
+
+  /**
+   * Abre el detalle de un item. Es la vía independiente del drag por puntero
+   * para usuarios de teclado/lector de pantalla (Enter/Espacio sobre el
+   * bloque), que de otro modo no tendrían forma de abrir el modal.
+   */
+  openItem(item: CalendarItem): void {
+    this.selectedItemId.set(item.id);
+  }
 
   /** Encuentra el primer slot libre desde las 09:00 para no solapar eventos existentes */
   private findAvailableSlot(item: CalendarItem): number {
@@ -814,6 +866,24 @@ export class DayScheduleComponent {
 
   // ── drag: resize ─────────────────────────────────────────────────────
 
+  /** Ajuste de duración por teclado (flechas) para usuarios sin puntero. */
+  onResizeKeydown(event: KeyboardEvent, item: CalendarItem): void {
+    event.stopPropagation();
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+    event.preventDefault();
+    const delta = event.key === 'ArrowUp' ? SNAP_MINUTES : -SNAP_MINUTES;
+    const current = item.duracionMinutos ?? DEFAULT_DURATION;
+    const next = clamp(current + delta, MIN_DURATION, 23 * 60);
+    if (next === current) return;
+    this.itemTimeChanged.emit({
+      id: item.id,
+      casoId: item.casoId,
+      itemType: item.hitoEstado !== undefined ? 'hito' : 'evento',
+      horaInicio: item.horaInicio!,
+      duracionMinutos: next,
+    });
+  }
+
   onResizePointerDown(event: PointerEvent, item: CalendarItem): void {
     event.preventDefault();
     event.stopPropagation();
@@ -894,7 +964,7 @@ export class DayScheduleComponent {
     const timeChanged = drag.currentStartMinutes !== drag.originalStartMinutes;
     const dateChanged = drag.currentDate !== drag.originalDate;
     if (!timeChanged && !dateChanged) {
-      this.selectedItem.set(drag.item);
+      this.selectedItemId.set(drag.item.id);
       return;
     }
 
@@ -924,7 +994,7 @@ export class DayScheduleComponent {
   // ── modal ────────────────────────────────────────────────────────────
 
   closeModal(): void {
-    this.selectedItem.set(null);
+    this.selectedItemId.set(null);
     this.newAnnotationText.set('');
     this.horasEditor.set(null);
     this.confirmingDelete.set(false);
@@ -966,12 +1036,32 @@ export class DayScheduleComponent {
     };
   }
 
+  /**
+   * Copia (por id) de los registros TAL COMO estaban al abrir el editor. No solo
+   * los ids: se necesita el valor original para poder distinguir en `saveHoras`
+   * si un id que ya existía fue tocado por otro usuario mientras el editor
+   * estaba abierto (comparando baseline vs. estado más reciente del servidor).
+   */
+  private horasEditorBaseline = new Map<string, RegistroHoraHito>();
+
   /** Abre el editor de horas sembrando la copia de trabajo desde el hito. */
   openHorasEditor(): void {
     const item = this.selectedItem();
     if (!item) return;
     const existentes = (item.registrosHoras ?? []).map(r => ({ ...r }));
+    this.horasEditorBaseline = new Map(existentes.map(r => [r.id, { ...r }]));
     this.horasEditor.set(existentes.length > 0 ? existentes : [this.bloqueDefault(item, item.date)]);
+  }
+
+  /** Compara los campos relevantes de dos registros (ignora identidad de objeto). */
+  private registrosEqual(a: RegistroHoraHito, b: RegistroHoraHito): boolean {
+    return a.userId === b.userId
+      && a.fecha === b.fecha
+      && a.horaInicio === b.horaInicio
+      && a.horaFin === b.horaFin
+      && a.minutos === b.minutos
+      && !!a.facturado === !!b.facturado
+      && a.movimientoId === b.movimientoId;
   }
 
   cancelHorasEditor(): void {
@@ -992,7 +1082,10 @@ export class DayScheduleComponent {
       if (!src) return regs;
       const next = new Date(src.fecha + 'T00:00:00');
       next.setDate(next.getDate() + 1);
-      const fecha = next.toISOString().slice(0, 10);
+      // Construir la fecha con componentes locales — toISOString() convierte a
+      // UTC y en husos horarios positivos (p.ej. España) puede devolver el
+      // mismo día original, duplicando el bloque en vez de separarlo.
+      const fecha = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
       return [...regs, { ...src, id: this.newRegistroId(), fecha }];
     });
   }
@@ -1018,14 +1111,101 @@ export class DayScheduleComponent {
     });
   }
 
-  /** Persiste los registros (descarta los facturados, que son inmutables, conservándolos). */
+  /**
+   * Persiste los registros (descarta los facturados, que son inmutables, conservándolos).
+   * Fusiona contra el estado MÁS RECIENTE del hito (no el snapshot al abrir el
+   * editor): los segmentos que este usuario no tocó pero que un compañero pudo
+   * haber añadido/editado mientras el modal estaba abierto se conservan tal
+   * cual, en vez de perderse por un reemplazo ciego del array completo.
+   *
+   * Para los ids que YA existían al abrir el editor, no basta con saber que
+   * siguen existiendo: hay que detectar si el valor vivo en el servidor
+   * cambió respecto al baseline capturado al abrir (edición concurrente de un
+   * compañero). Si además el usuario actual también lo modificó, es un
+   * conflicto real — se prioriza la versión del servidor (last-write-wins) y
+   * se avisa con un toast, en vez de pisar silenciosamente el cambio ajeno con
+   * la copia local, ya obsoleta.
+   */
   saveHoras(): void {
     const item = this.selectedItem();
     const regs = this.horasEditor();
     if (!item || !regs) return;
     const limpios = regs.filter(r => r.minutos > 0 && r.userId);
-    this.registrosChanged.emit({ hitoId: item.id, casoId: item.casoId, registros: limpios });
-    this.selectedItem.update(i => i ? { ...i, registrosHoras: limpios } : null);
+    const latest = this.findItemById(item.id)?.registrosHoras ?? [];
+    const latestById = new Map(latest.map(r => [r.id, r]));
+    const editedIds = new Set(limpios.map(r => r.id));
+
+    let hayConflicto = false;
+    let borradoRemoto = false;
+    let borradoLocalPisoRemoto = false;
+
+    const resueltos: RegistroHoraHito[] = limpios.flatMap(local => {
+      const baseline = this.horasEditorBaseline.get(local.id);
+      const actual = latestById.get(local.id);
+      if (!baseline) return [local]; // nuevo: no existía al abrir el editor
+
+      if (!actual) {
+        // Existía al abrir el editor pero otro usuario lo borró en el servidor
+        // mientras tanto: respetar el borrado remoto, no resucitarlo.
+        borradoRemoto = true;
+        return [];
+      }
+
+      const cambioRemoto = !this.registrosEqual(baseline, actual);
+      if (!cambioRemoto) return [local]; // nadie más lo tocó → vale la edición local
+
+      const cambioLocal = !this.registrosEqual(baseline, local);
+      if (cambioLocal && !this.registrosEqual(actual, local)) {
+        // Editado por ambos a la vez con resultados distintos: conflicto real. Gana el servidor.
+        hayConflicto = true;
+      }
+      // Solo cambió en el servidor (o hay conflicto) → conservar la versión más reciente.
+      return [actual];
+    });
+
+    // Ids que existían al abrir el editor y el usuario borró localmente (no
+    // están en `limpios`): si alguien más los editó en el servidor mientras
+    // tanto, se respeta el borrado local como decisión explícita del usuario,
+    // pero se avisa de que se perdió una edición ajena.
+    for (const [id, baseline] of this.horasEditorBaseline) {
+      if (editedIds.has(id)) continue; // no fue borrado localmente
+      const actual = latestById.get(id);
+      if (actual && !this.registrosEqual(baseline, actual)) {
+        borradoLocalPisoRemoto = true;
+      }
+    }
+
+    const ajenos = latest.filter(r => !this.horasEditorBaseline.has(r.id) && !editedIds.has(r.id));
+
+    // Los registros facturados son inmutables: sea cual sea la decisión local
+    // (editar o borrar), si el servidor los tiene marcados como facturado=true
+    // se conservan tal cual — sin excepción, aunque el borrado/edición local
+    // no debería llegar a proponerlos porque la UI los deshabilita.
+    const registrosMap = new Map([...resueltos, ...ajenos].map(r => [r.id, r]));
+    for (const r of latest) {
+      if (r.facturado) registrosMap.set(r.id, r);
+    }
+    const registros = [...registrosMap.values()];
+
+    this.registrosChanged.emit({ hitoId: item.id, casoId: item.casoId, registros });
+    if (hayConflicto) {
+      this.toast.info(
+        'Alguien más editó alguno de estos bloques de horas mientras los modificabas; se ha conservado su versión.',
+        'Edición concurrente detectada',
+      );
+    }
+    if (borradoRemoto) {
+      this.toast.info(
+        'Un bloque fue eliminado por otro usuario y no se restauró.',
+        'Edición concurrente detectada',
+      );
+    }
+    if (borradoLocalPisoRemoto) {
+      this.toast.info(
+        'Se eliminó un bloque que otro usuario había modificado mientras tanto.',
+        'Edición concurrente detectada',
+      );
+    }
     this.horasEditor.set(null);
   }
 
@@ -1076,21 +1256,18 @@ export class DayScheduleComponent {
     const item = this.selectedItem();
     if (!item) return;
     this.itemColorChanged.emit({ id: item.id, color });
-    this.selectedItem.update(i => i ? { ...i, color: color ?? undefined } : null);
   }
 
   setHitoEstado(estado: HitoEstado): void {
     const item = this.selectedItem();
     if (!item?.casoId) return;
     this.hitoStatusChanged.emit({ id: item.id, casoId: item.casoId, estado });
-    this.selectedItem.update(i => i ? { ...i, hitoEstado: estado } : null);
   }
 
   setEventoEstado(estado: EventoEstado): void {
     const item = this.selectedItem();
     if (!item) return;
     this.eventoStatusChanged.emit({ id: item.id, estado });
-    this.selectedItem.update(i => i ? { ...i, eventoEstado: estado } : null);
   }
 
   addAnnotation(): void {
@@ -1098,8 +1275,6 @@ export class DayScheduleComponent {
     const item = this.selectedItem();
     if (!texto || !item) return;
     this.annotationAdded.emit({ itemId: item.id, casoId: item.casoId, texto });
-    const anotacion: Anotacion = { id: String(Date.now()), texto, creadaEn: new Date().toISOString() };
-    this.selectedItem.update(i => i ? { ...i, anotaciones: [...(i.anotaciones ?? []), anotacion] } : null);
     this.newAnnotationText.set('');
   }
 
@@ -1107,9 +1282,6 @@ export class DayScheduleComponent {
     const item = this.selectedItem();
     if (!item) return;
     this.annotationDeleted.emit({ itemId: item.id, casoId: item.casoId, anotacionId });
-    this.selectedItem.update(i =>
-      i ? { ...i, anotaciones: (i.anotaciones ?? []).filter(a => a.id !== anotacionId) } : null
-    );
   }
 
   onAnnotationInput(event: Event): void {

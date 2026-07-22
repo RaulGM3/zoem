@@ -97,7 +97,7 @@ export class CasosComponent implements OnInit {
     ]);
 
     const p = this.route.snapshot.queryParamMap;
-    if (p.get('newCaso') === '1') {
+    if (p.get('newCaso') === '1' && this.perm.can('Casos', 'crear')) {
       const contactId = p.get('contactId');
       if (contactId) {
         const contact = this.contactService.contacts().find(c => c.id === contactId) ?? null;
@@ -112,6 +112,7 @@ export class CasosComponent implements OnInit {
   }
 
   async saveNuevoCaso(data: CreateCasoData): Promise<void> {
+    if (!this.perm.can('Casos', 'crear')) return;
     if (this.saving()) return;
     this.saving.set(true);
     try {
@@ -147,6 +148,7 @@ export class CasosComponent implements OnInit {
   }
 
   async onDeleteCaso(caso: Caso): Promise<void> {
+    if (!this.perm.can('Casos', 'eliminar')) return;
     await this.toast.run(() => this.casosService.deleteCaso(caso.id), {
       successMessage: 'Caso eliminado',
       errorTitle: 'No se pudo eliminar el caso',

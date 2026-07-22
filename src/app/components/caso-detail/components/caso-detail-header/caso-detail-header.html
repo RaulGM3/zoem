@@ -28,7 +28,7 @@
         }
       </div>
     </div>
-    @if (!editing()) {
+    @if (!editing() && canEdit()) {
       <button
         (click)="edit.emit()"
         class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors duration-150"

@@ -99,7 +99,21 @@ export class CasosService {
     ]);
     if (!casoSnap.exists()) return null;
     const hitos = hitosSnap.docs.map(d => ({ id: d.id, ...d.data() }) as Hito);
-    return { id: casoSnap.id, ...casoSnap.data(), hitos } as Caso;
+    const caso = { id: casoSnap.id, ...casoSnap.data(), hitos } as Caso;
+
+    // Auto-sanación: los casos creados antes de que existiera `hitosResumen`
+    // (denormalizado) no lo tienen nunca, salvo que un hito vuelva a mutarse.
+    // Se recalcula una sola vez, de forma perezosa, cada vez que se abre el
+    // detalle de un caso así — no en `loadCasos()`, que dispararía N recálculos
+    // en cada carga de la lista.
+    if (caso.hitosResumen === undefined) {
+      await this.recalcularHitosResumen(id);
+      const total = hitos.length;
+      const completados = hitos.filter(h => h.estado === 'completado').length;
+      caso.hitosResumen = { total, completados };
+    }
+
+    return caso;
   }
 
   async createCaso(data: CasoCreate): Promise<string> {
@@ -130,6 +144,8 @@ export class CasosService {
       ...stripUndefinedDeep(data),
       companyId,
       resumenFinanciero: { ...RESUMEN_FINANCIERO_VACIO },
+      // Todos los hitos de plantilla nacen 'pendiente': completados siempre 0 aquí.
+      hitosResumen: { total: hitosToCreate.length, completados: 0 },
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
@@ -207,6 +223,7 @@ export class CasosService {
       autorId,
     }));
     await batch.commit();
+    await this.recalcularHitosResumen(casoId);
     return { id: hitoRef.id, ...hito };
   }
 
@@ -222,6 +239,11 @@ export class CasosService {
       batch.set(doc(this.actividadRef), this.buildActividad(casoId, hitoId, actividad));
     }
     await batch.commit();
+    // El estado es lo único que afecta al resumen denormalizado; evitamos el
+    // recálculo (lectura extra de la subcolección) para el resto de ediciones.
+    if (data.estado !== undefined) {
+      await this.recalcularHitosResumen(casoId);
+    }
   }
 
   async deleteHito(casoId: string, hitoId: string, info?: { hitoTitulo: string; autorId?: string }): Promise<void> {
@@ -235,6 +257,30 @@ export class CasosService {
       }));
     }
     await batch.commit();
+    await this.recalcularHitosResumen(casoId);
+  }
+
+  /**
+   * Denormaliza el conteo de hitos (total/completados) en el documento del caso,
+   * igual que `recalcularResumen` hace con `gestoriaResumenSlots`. La lista de
+   * casos (`loadCasos`) no trae la subcolección de hitos, así que sin este
+   * campo `casos-table` siempre mostraría "—" para el progreso de hitos.
+   */
+  async recalcularHitosResumen(casoId: string): Promise<void> {
+    const companyId = this.companyId;
+    const hitosSnap = await getDocs(query(this.hitosRef, where('casoId', '==', casoId)));
+    const total = hitosSnap.size;
+    const completados = hitosSnap.docs.filter(d => (d.data() as Hito).estado === 'completado').length;
+    const hitosResumen = { total, completados };
+
+    await updateDoc(doc(this.firestore, 'companies', companyId, 'casos', casoId), {
+      hitosResumen,
+      updatedAt: serverTimestamp(),
+    });
+
+    this.casos.update(list =>
+      list.map(c => (c.id === casoId ? { ...c, hitosResumen } : c))
+    );
   }
 
   async loadAllHitos(): Promise<Hito[]> {

@@ -21,6 +21,14 @@ export interface RegistroHoraHito {
   movimientoId?: string; // link al movimiento de honorario generado
 }
 
+/** Anotación libre sobre un hito o evento del calendario (nota de trabajo). */
+export interface Anotacion {
+  id: string;
+  texto: string;
+  autor?: string;   // userId de quien la creó
+  creadaEn: string; // ISO datetime
+}
+
 export interface Hito {
   id: string;
   casoId: string;
@@ -36,6 +44,7 @@ export interface Hito {
   horaAgenda?: string;   // HH:mm — slot asignado en la agenda
   duracionAgenda?: number; // minutos
   registrosHoras?: RegistroHoraHito[]; // horas reales declaradas (cobro por horas)
+  anotaciones?: Anotacion[]; // notas libres del calendario
   calendarColor?: string | null;
   estadoActualizadoPor?: string; // userId de quién cambió el estado por última vez
   estadoActualizadoEn?: string;  // ISO datetime del último cambio de estado
@@ -90,6 +99,8 @@ export interface Caso {
   resumenFinanciero: ResumenFinanciero;
   /** Conteo denormalizado de slots de gestoría para evaluar "ejecutado" sin leer subcolecciones. */
   gestoriaResumenSlots?: { total: number; registrados: number };
+  /** Conteo denormalizado de hitos (total/completados) para pintar el progreso en la lista sin leer la subcolección. */
+  hitosResumen?: { total: number; completados: number };
   /** Factura generada para este caso (id en la colección `invoices`). */
   facturaId?: string;
   /** ISO datetime en que se generó la factura. */

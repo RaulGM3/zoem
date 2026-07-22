@@ -13,6 +13,7 @@ const PDF_MIME = 'application/pdf';
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 const DOC_MIME = 'application/msword';
 const MAX_PDF_BYTES = 15 * 1024 * 1024; // límite request inline de Gemini: 20MB (base64 añade ~33%)
+const MAX_DOCX_BYTES = 15 * 1024 * 1024; // consistente con el límite anunciado en la UI de subida
 
 const VARIABLE_TYPES: readonly TemplateVariableType[] = ['text', 'textarea', 'date', 'number', 'currency', 'email'];
 
@@ -76,6 +77,9 @@ export class DocExtractionService {
   }
 
   private async extractFromDocx(file: File): Promise<ExtractionResult> {
+    if (file.size > MAX_DOCX_BYTES) {
+      throw new Error('El documento Word supera el límite de 15MB. Reduce el tamaño del archivo.');
+    }
     const arrayBuffer = await file.arrayBuffer();
     const { value: sourceHtml } = await mammoth.convertToHtml({ arrayBuffer });
     if (!sourceHtml.trim()) {

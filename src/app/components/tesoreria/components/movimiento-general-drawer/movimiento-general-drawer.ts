@@ -10,8 +10,17 @@ import type { TipoIva } from '../../../../interfaces/iva';
 import { GestoriaService } from '../../../../core/services/gestoria.service';
 import { CuentasService } from '../../../../core/services/cuentas.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { FocusTrapDirective } from '../../../../shared/directives/focus-trap.directive';
 
 type IvaSel = '21' | '10' | '4' | '0' | 'exento';
+
+/** Fecha local (no UTC) en formato YYYY-MM-DD — evita el desfase de `toISOString().slice(0, 10)`. */
+function localDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
 const TIPOS: { value: MovimientoTipo; label: string }[] = [
   { value: 'gasto',   label: 'Gasto general' },
@@ -37,7 +46,7 @@ const IVA_INCLUIDO_POR_TIPO: Record<MovimientoTipo, boolean> = {
 
 @Component({
   selector: 'app-movimiento-general-drawer',
-  imports: [LucideAngularModule, DecimalPipe],
+  imports: [LucideAngularModule, DecimalPipe, FocusTrapDirective],
   templateUrl: './movimiento-general-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -102,7 +111,7 @@ export class MovimientoGeneralDrawerComponent {
 
   private prefill(): void {
     const mov = this.editando();
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateStr(new Date());
     if (mov) {
       this.formTipo.set(mov.tipo);
       this.formConcepto.set(mov.concepto);

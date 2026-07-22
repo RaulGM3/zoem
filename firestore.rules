@@ -208,6 +208,7 @@ service cloud.firestore {
       match /docTemplates/{templateId} {
         allow get:    if isSuper()
                       || (isMember(cid)
+                          && resource.data.deleted != true
                           && (resource.data.get('visibleTo', 'all') != 'restricted'
                               || isCompanyAdmin(cid)
                               || (request.auth.uid in resource.data.get('visibleUserIds', []))

@@ -94,6 +94,11 @@
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           @for (c of filtered(); track c.id) {
             <div [routerLink]="['/contactos', c.id]"
+              tabindex="0"
+              role="group"
+              [attr.aria-label]="'Ficha de ' + displayName(c)"
+              (keydown.enter)="openContact(c.id)"
+              (keydown.space)="$event.preventDefault(); openContact(c.id)"
               class="kpi-card cursor-pointer rounded-xl p-5"
               style="background:var(--surface);border:1px solid var(--border)">
 
@@ -123,6 +128,7 @@
                 @if (c.email) {
                   <a [href]="'mailto:' + c.email"
                     (click)="$event.stopPropagation()"
+                    (keydown)="$event.stopPropagation()"
                     class="flex items-center gap-2 transition-colors duration-150"
                     style="color:var(--text-muted)"
                     (mouseenter)="$any($event.currentTarget).style.color='var(--brand)'"
@@ -135,6 +141,7 @@
                 @if (getPhone(c)) {
                   <a [href]="'tel:' + getPhone(c)"
                     (click)="$event.stopPropagation()"
+                    (keydown)="$event.stopPropagation()"
                     class="flex items-center gap-2 transition-colors duration-150"
                     style="color:var(--text-muted);font-family:var(--font-mono)"
                     (mouseenter)="$any($event.currentTarget).style.color='var(--brand)'"
@@ -181,6 +188,7 @@
                 </p>
                 <div class="flex gap-0.5 shrink-0">
                   <button (click)="abrirCaso(c.id); $event.stopPropagation()"
+                    (keydown)="$event.stopPropagation()"
                     class="rounded-lg p-1.5 transition-colors duration-150"
                     style="color:var(--text-faint)"
                     (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 10%,transparent)';$any($event.currentTarget).style.color='var(--brand)'"
@@ -253,6 +261,8 @@
       role="dialog"
       aria-modal="true"
       [attr.aria-label]="editingId() ? 'Editar contacto' : 'Nuevo contacto'"
+      appFocusTrap
+      (escapeKey)="closeDrawer()"
     >
       <!-- Header del drawer -->
       <div class="flex items-center justify-between px-6 py-4 shrink-0"
@@ -618,5 +628,5 @@
 <!-- Importar contactos desde Excel -->
 <app-importar-contactos
   [visible]="showImportDrawer()"
-  (closed)="showImportDrawer.set(false); reloadContacts()"
+  (closed)="showImportDrawer.set(false)"
 />

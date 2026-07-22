@@ -16,6 +16,14 @@ import { CompanyService } from './company.service';
 import { stripUndefinedDeep } from '../firebase/sanitize';
 import type { CierreCaja, CierreCuenta } from '../../interfaces';
 
+/** Fecha local (no UTC) en formato YYYY-MM-DD — evita el desfase de `toISOString().slice(0, 10)`. */
+function localDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 @Injectable({ providedIn: 'root' })
 export class CierreCajaService {
   private readonly firestore = inject(Firestore);
@@ -49,7 +57,7 @@ export class CierreCajaService {
   }
 
   async crearCierre(cuentas: CierreCuenta[], notas?: string): Promise<void> {
-    const fecha = new Date().toISOString().slice(0, 10);
+    const fecha = localDateStr(new Date());
     const totales = {
       ingresos: cuentas.reduce((a, c) => a + c.ingresos, 0),
       egresos: cuentas.reduce((a, c) => a + c.egresos, 0),
