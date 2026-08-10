@@ -40,15 +40,19 @@ export class ContactService {
     return id;
   }
 
+  private contactsCollection(companyId: string) {
+    return collection(this.firestore, 'companies', companyId, 'contactos');
+  }
+
+  private contactDoc(companyId: string, id: string) {
+    return doc(this.firestore, 'companies', companyId, 'contactos', id);
+  }
+
   async loadContacts(): Promise<void> {
     this.isLoading.set(true);
     try {
       const companyId = this.companyId;
-      const q = query(
-        collection(this.firestore, 'contacts'),
-        where('companyId', '==', companyId)
-      );
-      const snapshot = await getDocs(q);
+      const snapshot = await getDocs(this.contactsCollection(companyId));
       this.contacts.set(snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Contact));
     } finally {
       // El error se propaga al llamador para que lo muestre vía ToastService.
@@ -58,7 +62,7 @@ export class ContactService {
   }
 
   async getContact(id: string): Promise<Contact | null> {
-    const snapshot = await getDoc(doc(this.firestore, 'contacts', id));
+    const snapshot = await getDoc(this.contactDoc(this.companyId, id));
     return snapshot.exists() ? ({ id: snapshot.id, ...snapshot.data() } as Contact) : null;
   }
 
@@ -68,7 +72,7 @@ export class ContactService {
     const payload = data as Record<string, unknown>;
     const providedCreatedAt = payload['createdAt'] as Timestamp | undefined;
     const createdAt = providedCreatedAt ?? Timestamp.now();
-    const ref = await addDoc(collection(this.firestore, 'contacts'), stripUndefinedDeep({
+    const ref = await addDoc(this.contactsCollection(this.companyId), stripUndefinedDeep({
       ...payload,
       companyId: this.companyId,
       createdAt: providedCreatedAt ?? serverTimestamp(),
@@ -99,7 +103,7 @@ export class ContactService {
   }
 
   async updateContact(id: string, data: Record<string, unknown>): Promise<void> {
-    await updateDoc(doc(this.firestore, 'contacts', id), stripUndefinedDeep({
+    await updateDoc(this.contactDoc(this.companyId, id), stripUndefinedDeep({
       ...data,
       updatedAt: serverTimestamp(),
     }));
@@ -124,7 +128,7 @@ export class ContactService {
     const found = this.contacts().find(c => c.id === id);
     const nombre = found ? getContactDisplayName(found) : 'un contacto';
     await this.cascadeSoftDeleteRelated(id);
-    await deleteDoc(doc(this.firestore, 'contacts', id));
+    await deleteDoc(this.contactDoc(this.companyId, id));
     this.contacts.update((list) => list.filter((c) => c.id !== id));
     // Ver nota en createContact: el log de actividad no debe surgir como
     // error de la operación principal si esta ya tuvo éxito.
@@ -188,10 +192,10 @@ export class ContactService {
   }
 
   async addTag(contactId: string, tag: string): Promise<void> {
-    await updateDoc(doc(this.firestore, 'contacts', contactId), { tags: arrayUnion(tag) });
+    await updateDoc(this.contactDoc(this.companyId, contactId), { tags: arrayUnion(tag) });
   }
 
   async removeTag(contactId: string, tag: string): Promise<void> {
-    await updateDoc(doc(this.firestore, 'contacts', contactId), { tags: arrayRemove(tag) });
+    await updateDoc(this.contactDoc(this.companyId, contactId), { tags: arrayRemove(tag) });
   }
 }

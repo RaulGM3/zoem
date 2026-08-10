@@ -281,6 +281,14 @@ service cloud.firestore {
         allow write: if isSuper() || isCompanyAdmin(cid);
       }
 
+      // ---- Contactos (subcolección: path ya scopea el tenant) ---------
+      match /contactos/{id} {
+        allow read:   if isSuper() || isMember(cid);
+        allow create: if isSuper() || canWrite(cid);
+        allow update: if isSuper() || canWrite(cid);
+        allow delete: if isSuper() || canWrite(cid);
+      }
+
       // ---- Solicitudes de permiso al admin -----------------------------
       // Cada miembro crea las suyas (siempre 'pendiente'); solo el admin
       // resuelve. Nunca se borran: la resolución queda como registro.
@@ -321,13 +329,8 @@ service cloud.firestore {
     // ====================================================================
 
     // --- Operativos: lectura miembro / escritura no-Viewer --------------
-    match /contacts/{id} {
-      allow read:   if isSuper() || isMember(resource.data.companyId);
-      allow create: if isSuper() || canWrite(request.resource.data.companyId);
-      allow update: if isSuper() || (canWrite(resource.data.companyId)
-                      && request.resource.data.companyId == resource.data.companyId);
-      allow delete: if isSuper() || canWrite(resource.data.companyId);
-    }
+    // NOTA: `contacts` se migró a subcolección companies/{cid}/contactos
+    // (path ya scopea el tenant, ver regla dentro de companies/{cid}).
     // Archivos de contacto: soft delete + auditoría inmutable + clasificados
     // (solo Admin o allowlist los leen; solo Admin gestiona la clasificación).
     match /contact_files/{fileId} {

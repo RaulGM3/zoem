@@ -123,8 +123,9 @@ export class UsuariosComponent implements OnInit, OnDestroy {
 
   readonly filteredUsuarios = computed(() => {
     const q = this.search().toLowerCase();
-    if (!q) return this.usersService.members();
-    return this.usersService.members().filter(u =>
+    const visibles = this.usersService.members().filter(u => !u.email.toLowerCase().endsWith('@vertey.com'));
+    if (!q) return visibles;
+    return visibles.filter(u =>
       u.nombre.toLowerCase().includes(q)
       || u.email.toLowerCase().includes(q)
       || (u.telefono ?? '').toLowerCase().includes(q)
