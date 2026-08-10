@@ -51,6 +51,7 @@ export class ErrorService {
         params: context?.params !== undefined
           ? safeStringify(context.params).slice(0, 2000)
           : undefined,
+        expected: context?.expected ?? false,
         url: typeof window !== 'undefined' ? window.location.pathname : undefined,
         userAgent: typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 200) : undefined,
         createdAt: serverTimestamp(),

@@ -205,7 +205,44 @@ service cloud.firestore {
       match /eventos/{doc=**}        { allow read: if isSuper() || isMember(cid); allow write: if isSuper() || canWrite(cid); }
       // Plantillas de documento: sin delete real + auditoría append-only +
       // visibilidad configurable (el html vive aquí → get protegido).
+      //
+      // LIMITACIÓN CONOCIDA: la UI (doc-template-detail.ts) gatea
+      // "editar"/"eliminar" con PermissionService.can('Documentos', ...),
+      // que resuelve override individual > rol custom > matriz de empresa >
+      // base — una matriz FINA guardada en Firestore, no en custom claims.
+      // Las rules de abajo solo verifican canWrite(cid)/isCompanyAdmin(cid)
+      // (rol grueso vía custom claims: companyId/role/estado, ver
+      // functions/src/customClaims.ts), NO esa matriz fina. Un miembro activo
+      // no-Viewer puede editar/eliminar una plantilla vía devtools/llamada
+      // directa a Firestore aunque la UI se lo bloquee, si su matriz fina le
+      // niega 'Documentos'/'editar' o 'eliminar'. Igual que el resto del
+      // fichero (ver comentario de "Enforcement v1" arriba), esto es
+      // aceptado como surface de ataque no cubierta hasta que la matriz fina
+      // se sincronice a custom claims (como ya se hizo con companyId/role).
       match /docTemplates/{templateId} {
+        // NOTA (Judgment Day round 2 — revertido): un intento anterior quitó
+        // `resource.data.deleted != true` de este `get` para que un caso que
+        // ya ancló un doc_slot a esta plantilla pudiera seguir
+        // regenerando/viendo el HTML aunque se hubiera soft-deleted después
+        // (ver DocTemplateService.getTemplate(id, includeDeleted)). Eso
+        // convertía el soft delete en un filtro puramente cosmético: CUALQUIER
+        // miembro de la empresa que conociera/enumerara el templateId podía
+        // leer el HTML completo de una plantilla "eliminada" para siempre vía
+        // devtools/SDK directo, sin que hubiera forma de verificar en el
+        // servidor que la lectura viene de un caso realmente anclado — los
+        // doc_slots (companies/{cid}/casos/{casoId}/doc_slots/{slotId}) usan
+        // IDs autogenerados por addDoc() y solo tienen `docTemplateId` como
+        // campo, así que no hay un exists() de un único documento que pruebe
+        // "existe un slot anclado a este template" sin una collection-group
+        // query (que las rules no pueden expresar aquí sin restructurar datos:
+        // p.ej. un doc determinista `docTemplateAnchors/{templateId}` o una
+        // Cloud Function callable que sí pueda hacer esa query server-side).
+        // Hasta que se implemente uno de esos dos caminos, se prioriza cerrar
+        // el agujero de seguridad: se restaura el filtro `deleted != true` y
+        // regenerar un documento ya anclado cuya plantilla origen se eliminó
+        // después volverá a dar `permission-denied` (regresión de producto
+        // aceptada, ver DocTemplateService.getTemplate JSDoc — actualizar ese
+        // JSDoc/INCLUDE_DELETED en un fix de seguimiento).
         allow get:    if isSuper()
                       || (isMember(cid)
                           && resource.data.deleted != true

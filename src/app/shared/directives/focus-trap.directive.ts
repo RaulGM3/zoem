@@ -43,7 +43,7 @@ export class FocusTrapDirective implements AfterViewInit, OnDestroy {
     this.escapeKey.emit();
   }
 
-  onTab(event: KeyboardEvent): void {
+  onTab(event: Event): void {
     const focusables = this.getFocusable();
     if (focusables.length === 0) return;
     const last = focusables[focusables.length - 1];
@@ -53,7 +53,7 @@ export class FocusTrapDirective implements AfterViewInit, OnDestroy {
     }
   }
 
-  onShiftTab(event: KeyboardEvent): void {
+  onShiftTab(event: Event): void {
     const focusables = this.getFocusable();
     if (focusables.length === 0) return;
     const first = focusables[0];

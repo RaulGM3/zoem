@@ -107,7 +107,17 @@
             </td>
           </tr>
         }
-        @if (!loading() && filtered().length === 0) {
+        @if (!loading() && loadError()) {
+          <tr>
+            <td colspan="5" role="status" class="px-5 py-12 text-center text-sm text-slate-600">
+              <p class="mb-3">No se pudieron cargar las plantillas. Comprueba tu conexión.</p>
+              <button (click)="reload()"
+                class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
+                Reintentar
+              </button>
+            </td>
+          </tr>
+        } @else if (!loading() && filtered().length === 0) {
           <tr>
             <td colspan="5" class="px-5 py-12 text-center text-sm text-slate-600">
               No hay plantillas de documentos. Crea la primera subiendo un PDF o Word.

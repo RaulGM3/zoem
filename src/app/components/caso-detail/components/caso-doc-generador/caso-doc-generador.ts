@@ -6,7 +6,23 @@ import {
 } from 'lucide-angular';
 import { DocTemplateService } from '../../../../core/services/doc-template.service';
 import { DocGenerationService } from '../../../../core/services/doc-generation.service';
+import { ToastService } from '../../../../core/services/toast.service';
+import { ErrorService } from '../../../../core/services/error.service';
+import { translateFirebaseError } from '../../../../core/firebase/firebase-error';
 import type { CasoDocSlot, DocTemplate, TemplateVariable } from '../../../../interfaces';
+
+/**
+ * `getTemplate(id, includeDeleted)`: idealmente, si el slot ya está anclado a
+ * un caso, debería poder seguir regenerando/viendo el documento aunque la
+ * plantilla origen se eliminara (soft delete) después de anclarse. En la
+ * práctica, ver JSDoc de `getTemplate()`: las Firestore rules SÍ filtran por
+ * `deleted`, así que este flag ya no logra ese objetivo para plantillas
+ * eliminadas tras el anclaje — el `getDoc()` falla con `permission-denied`
+ * antes de llegar al filtro client-side. Ese caso (y el de visibilidad
+ * restringida, que igual podía dar `permission-denied` antes) se maneja en
+ * el catch de `loadTemplate()` de abajo.
+ */
+const INCLUDE_DELETED = true;
 
 export interface GeneratedDocEvent {
   slot: CasoDocSlot;
@@ -57,7 +73,7 @@ function escapeHtml(value: string): string {
 
         <button
           (click)="copy()"
-          [disabled]="!template()"
+          [disabled]="!cleanHtml()"
           class="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 disabled:opacity-50"
         >
           <lucide-icon [img]="copied() ? CheckIcon : CopyIcon" class="w-3.5 h-3.5" />
@@ -65,7 +81,7 @@ function escapeHtml(value: string): string {
         </button>
         <button
           (click)="download()"
-          [disabled]="!template() || downloading()"
+          [disabled]="!cleanHtml() || downloading()"
           class="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 disabled:opacity-50"
         >
           <lucide-icon [img]="downloading() ? LoaderIcon : DownloadIcon" [class]="'w-3.5 h-3.5' + (downloading() ? ' animate-spin' : '')" />
@@ -86,20 +102,42 @@ function escapeHtml(value: string): string {
           <lucide-icon [img]="LoaderIcon" class="w-4 h-4 mr-2 animate-spin" />
           Cargando plantilla...
         </div>
-      } @else if (!template()) {
-        <div class="flex-1 flex items-center justify-center text-slate-400 text-sm">
-          No se pudo cargar la plantilla de documento.
+      } @else if (!template() && slot().status !== 'generado') {
+        <!-- Sin snapshot congelado que mostrar Y sin plantilla viva: no hay
+             nada que renderizar (ni preview de solo lectura ni formulario de
+             variables), a diferencia del caso "generado" de abajo donde
+             slot().generatedHtml basta para el modo lectura aunque la
+             plantilla origen ya no cargue (soft-delete tras anclar, ver
+             JSDoc de INCLUDE_DELETED). Diferenciamos el mensaje según la causa
+             (loadErrorKind, fijado en el catch de loadTemplate()) para no dar
+             un callejón sin salida genérico: el caso permission-denied es
+             "esperado" (plantilla eliminada / sin acceso) y no tiene acción de
+             reintento con sentido; cualquier otro error sí ofrece Reintentar. -->
+        <div class="flex-1 flex flex-col items-center justify-center gap-3 text-slate-400 text-sm px-6 text-center">
+          @if (loadErrorKind() === 'permission-denied') {
+            <p>La plantilla de este documento ya no está disponible (fue eliminada o ya no tienes acceso a ella).</p>
+          } @else {
+            <p>No se pudo cargar la plantilla de documento. Intenta de nuevo.</p>
+            <button
+              (click)="retryLoadTemplate()"
+              class="px-3 py-1.5 text-xs border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50"
+            >
+              Reintentar
+            </button>
+          }
         </div>
       } @else {
         <div class="flex-1 min-h-0 flex">
 
-          <!-- Formulario de variables (solo en modo edición) -->
-          @if (editMode()) {
+          <!-- Formulario de variables: solo en modo edición y solo si hay
+               plantilla viva cargada (rellenar variables exige la plantilla
+               original, a diferencia del preview de solo lectura de abajo). -->
+          @if (editMode() && template(); as t) {
             <aside class="w-80 shrink-0 border-r border-slate-200 overflow-y-auto p-4 space-y-3 bg-slate-50">
               <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                 Rellenar variables
               </p>
-              @for (v of template()!.variables; track v.key) {
+              @for (v of t.variables; track v.key) {
                 <div class="space-y-1">
                   <label [for]="'var-' + v.key" class="block text-xs font-medium text-slate-600">
                     {{ v.label }}
@@ -171,7 +209,7 @@ function escapeHtml(value: string): string {
               Documento congelado
             </span>
             <div class="flex-1"></div>
-            @if (canEdit()) {
+            @if (canEdit() && template()) {
               <button
                 (click)="startEdit()"
                 class="flex items-center gap-1.5 px-4 py-2 text-sm border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50"
@@ -189,6 +227,8 @@ function escapeHtml(value: string): string {
 export class CasoDocGeneradorComponent {
   private readonly templateService = inject(DocTemplateService);
   private readonly generationService = inject(DocGenerationService);
+  private readonly toast = inject(ToastService);
+  private readonly errorService = inject(ErrorService);
 
   readonly slot = input.required<CasoDocSlot>();
   /** Datos del caso para pre-rellenar variables por heurística. */
@@ -215,6 +255,8 @@ export class CasoDocGeneradorComponent {
   readonly copied = signal(false);
   readonly downloading = signal(false);
   readonly saving = signal(false);
+  /** Causa del fallo cuando `!template()`, para diferenciar el mensaje/acción del fallback de abajo. */
+  readonly loadErrorKind = signal<'permission-denied' | 'error' | null>(null);
 
   // Id del slot la última vez que se ejecutó el reset/reload de abajo. `slot()`
   // es un input reactivo que puede recibir una nueva referencia del mismo slot
@@ -239,21 +281,58 @@ export class CasoDocGeneradorComponent {
   }
 
   private async loadTemplate(slot: CasoDocSlot): Promise<void> {
+    this.loadErrorKind.set(null);
     if (!slot.docTemplateId) {
       this.loading.set(false);
       return;
     }
     try {
-      const t = await this.templateService.getTemplate(slot.docTemplateId);
+      const t = await this.templateService.getTemplate(slot.docTemplateId, INCLUDE_DELETED);
       this.template.set(t);
       if (t) {
         this.values.set(
           slot.generatedValues ?? this.prefill(t.variables, this.casoContext())
         );
       }
+    } catch (err) {
+      // Sin este catch, un permission-denied (posible tanto si la plantilla
+      // se soft-eliminó como si su visibilidad se restringió DESPUÉS de que
+      // este slot la anclara — las Firestore rules filtran por ambos, ver
+      // JSDoc de getTemplate()) quedaba como unhandled rejection: this.template
+      // nunca se fijaba, `loading` igual bajaba a false en el finally, y el
+      // usuario veía un "sin plantilla" silencioso sin ningún error visible.
+      const info = translateFirebaseError(err);
+      if (info.code !== 'permission-denied') {
+        void this.errorService.log(err, {
+          serviceName: 'CasoDocGeneradorComponent',
+          methodName: 'loadTemplate',
+          params: { docTemplateId: slot.docTemplateId },
+        });
+        this.toast.fromError(err, { title: 'No se pudo cargar la plantilla del documento' });
+        this.loadErrorKind.set('error');
+      } else {
+        // Caso esperado (soft delete o visibilidad restringida tras anclar,
+        // ver JSDoc de INCLUDE_DELETED arriba): se registra igual, marcado
+        // como `expected`, para no perder observabilidad ante una regresión
+        // real de reglas, pero sin disparar un toast de error al usuario.
+        void this.errorService.log(err, {
+          serviceName: 'CasoDocGeneradorComponent',
+          methodName: 'loadTemplate',
+          expected: true,
+          params: { docTemplateId: slot.docTemplateId },
+        });
+        this.loadErrorKind.set('permission-denied');
+      }
+      this.template.set(null);
     } finally {
       this.loading.set(false);
     }
+  }
+
+  /** Reintenta cargar la plantilla tras un error no esperado (fallback branch del template, ver `loadErrorKind`). */
+  retryLoadTemplate(): void {
+    this.loading.set(true);
+    void this.loadTemplate(this.slot());
   }
 
   /** Pre-rellena por coincidencia laxa entre clave/etiqueta de la variable y el contexto del caso. */
@@ -319,16 +398,22 @@ export class CasoDocGeneradorComponent {
     this.editMode.set(false);
   }
 
-  /** HTML "limpio" (sin marcas de preview) para copiar/descargar. */
-  private currentCleanHtml(): string {
+  // HTML "limpio" (sin marcas de preview) para copiar/descargar. En modo
+  // lectura cae al snapshot congelado (slot().generatedHtml), que no depende
+  // de que `template()` haya cargado — así Copiar/Descargar siguen
+  // disponibles para un documento ya generado aunque la plantilla origen ya
+  // no cargue (ver JSDoc de INCLUDE_DELETED). Expuesto como computed (no
+  // método privado) para que los `[disabled]` de la cabecera reaccionen a
+  // si hay contenido real, no a si `template()` cargó.
+  readonly cleanHtml = computed(() => {
     if (!this.editMode()) {
       return this.slot().generatedHtml ?? this.renderedHtml();
     }
     return this.renderedHtml();
-  }
+  });
 
   async copy(): Promise<void> {
-    await this.generationService.copyToClipboard(this.currentCleanHtml());
+    await this.generationService.copyToClipboard(this.cleanHtml());
     this.copied.set(true);
     setTimeout(() => this.copied.set(false), 2000);
   }
@@ -337,7 +422,7 @@ export class CasoDocGeneradorComponent {
     if (this.downloading()) return;
     this.downloading.set(true);
     try {
-      await this.generationService.downloadAsDocx(this.currentCleanHtml(), this.slot().name);
+      await this.generationService.downloadAsDocx(this.cleanHtml(), this.slot().name);
     } finally {
       this.downloading.set(false);
     }

@@ -38,6 +38,7 @@ export class DocumentosComponent implements OnInit {
   readonly search = signal('');
   readonly showDrawer = signal(false);
   readonly deletingId = signal<string | null>(null);
+  readonly loadError = signal(false);
 
   readonly templates = this.templateService.templates;
   readonly loading = this.templateService.loading;
@@ -56,7 +57,26 @@ export class DocumentosComponent implements OnInit {
   );
 
   async ngOnInit(): Promise<void> {
-    await this.templateService.loadTemplates();
+    await this.reload();
+  }
+
+  async reload(): Promise<void> {
+    // `toast.run()` no expone `onError` y `loadTemplates()` devuelve `void`,
+    // así que su resultado (`undefined` tanto en éxito como en fallo) no
+    // sirve para distinguir el caso de error. En vez de asumir fallo por
+    // adelantado (lo que hacía parpadear la fila de error en CADA carga
+    // exitosa, incluida la primera en ngOnInit, durante el tick async hasta
+    // que onSuccess corría), se usa una bandera local que solo `onSuccess`
+    // enciende; si no se encendió, sí fue un fallo real.
+    let succeeded = false;
+    await this.toast.run(() => this.templateService.loadTemplates(), {
+      errorTitle: 'No se pudieron cargar las plantillas',
+      onSuccess: () => {
+        succeeded = true;
+        this.loadError.set(false);
+      },
+    });
+    if (!succeeded) this.loadError.set(true);
   }
 
   openTemplate(template: DocTemplate): void {

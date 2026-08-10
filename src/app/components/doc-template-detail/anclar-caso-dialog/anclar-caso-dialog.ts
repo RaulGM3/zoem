@@ -9,6 +9,7 @@ import { CasosService } from '../../../core/services/casos.service';
 import { CasoDocService } from '../../../core/services/caso-doc.service';
 import { DocGenerationService } from '../../../core/services/doc-generation.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { PermissionService } from '../../../core/services/permission.service';
 import { FocusTrapDirective } from '../../../shared/directives/focus-trap.directive';
 import type { Caso, CasoDocFolder, DocTemplate } from '../../../interfaces';
 
@@ -204,7 +205,7 @@ type Step = 'search' | 'folder';
           </div>
           <button
             (click)="anchor()"
-            [disabled]="anchoring()"
+            [disabled]="anchoring() || !perm.can('Documentos', 'crear')"
             class="flex items-center gap-1.5 px-4 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50"
           >
             <lucide-icon [img]="anchoring() ? LoaderIcon : LinkIcon" [class]="'w-4 h-4' + (anchoring() ? ' animate-spin' : '')" />
@@ -221,6 +222,7 @@ export class AnclarCasoDialogComponent implements OnInit {
   private readonly casoDocService = inject(CasoDocService);
   private readonly docGenerationService = inject(DocGenerationService);
   private readonly toast = inject(ToastService);
+  readonly perm = inject(PermissionService);
 
   readonly template = input.required<DocTemplate>();
   readonly values = input.required<Record<string, string>>();
@@ -328,6 +330,10 @@ export class AnclarCasoDialogComponent implements OnInit {
     const caso = this.selectedCaso();
     const t = this.template();
     if (!caso || !t || this.anchoring()) return;
+    // Igual que editar/eliminar la plantilla en doc-template-detail.ts: anclar
+    // un documento a un caso también requiere la capacidad 'Documentos'/'crear',
+    // no solo poder VER la plantilla.
+    if (!this.perm.can('Documentos', 'crear')) return;
 
     this.anchoring.set(true);
     try {

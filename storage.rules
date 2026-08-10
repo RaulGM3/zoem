@@ -42,6 +42,17 @@ service firebase.storage {
     // Todo el almacenamiento del tenant.
     // Sin `delete`: los blobs nunca se borran desde cliente — el "borrado" es
     // soft delete en Firestore y el archivo se conserva para auditoría.
+    //
+    // LIMITACIÓN CONOCIDA (docTemplates/*): la UI gatea "editar"/"eliminar"
+    // de plantillas de documento con PermissionService.can('Documentos', ...)
+    // (matriz fina: override individual > rol custom > matriz de empresa >
+    // base, persistida en Firestore). canWrite(cid) de abajo solo ve el rol
+    // grueso vía custom claims (companyId/role/estado). Un miembro activo
+    // no-Viewer puede subir/pisar el HTML de una plantilla vía llamada
+    // directa a Storage aunque la matriz fina se lo niegue. Aceptado como
+    // gap documentado hasta que esa matriz fina se sincronice a custom
+    // claims — ver el mismo comentario en firestore.rules junto a
+    // match /docTemplates/{templateId}.
     match /companies/{cid}/{allPaths=**} {
       allow read:           if isSuper() || isActiveMember(cid);
       allow create, update: if isSuper() || (canWrite(cid) && withinSizeLimit());
