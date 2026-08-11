@@ -282,11 +282,14 @@ service cloud.firestore {
       }
 
       // ---- Contactos (subcolección: path ya scopea el tenant) ---------
+      // Soft delete auditable (ContactService.deleteContact): el borrado real
+      // se restringe a Super para no perder el rastro deletedAt/deletedBy.
       match /contactos/{id} {
         allow read:   if isSuper() || isMember(cid);
         allow create: if isSuper() || canWrite(cid);
-        allow update: if isSuper() || canWrite(cid);
-        allow delete: if isSuper() || canWrite(cid);
+        allow update: if isSuper() || isCompanyAdmin(cid)
+                      || (canWrite(cid) && resource.data.get('deleted', false) != true);
+        allow delete: if isSuper();
       }
 
       // ---- Solicitudes de permiso al admin -----------------------------
@@ -371,7 +374,7 @@ service cloud.firestore {
       allow update: if isSuper()
                     || ((request.resource.data.companyId == resource.data.companyId)
                         && (isCompanyAdmin(resource.data.companyId)
-                            || (canWrite(resource.data.companyId) && resource.data.deleted != true)));
+                            || (canWrite(resource.data.companyId) && resource.data.get('deleted', false) != true)));
       allow delete: if isSuper();
     }
     match /documents/{id} {
@@ -432,7 +435,7 @@ service cloud.firestore {
       allow update: if isSuper()
                     || ((request.resource.data.companyId == resource.data.companyId)
                         && (isCompanyAdmin(resource.data.companyId)
-                            || (canWrite(resource.data.companyId) && resource.data.deleted != true)));
+                            || (canWrite(resource.data.companyId) && resource.data.get('deleted', false) != true)));
       allow delete: if isSuper();
     }
     match /projects/{id} {

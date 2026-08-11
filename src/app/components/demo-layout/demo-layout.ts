@@ -7,6 +7,7 @@ import { AuthService } from '../../auth/auth.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { ThemeService } from '../../core/services/theme.service';
 import type { Modulo } from '../../core/permissions/permissions';
+import type { FirmRole } from '../../interfaces/member';
 import {
   LucideAngularModule,
   LucideIconData,
@@ -216,4 +217,41 @@ export class DemoLayoutComponent {
     if (badge === 'Pro') return 'bg-violet-500/20 text-violet-400';
     return 'bg-blue-500/20 text-blue-400';
   }
+
+  private readonly roleBadgeClasses: Record<string, string> = {
+    Admin: 'bg-red-500/20 text-red-400',
+    Gestor: 'bg-violet-500/20 text-violet-400',
+    Usuario: 'bg-blue-500/20 text-blue-400',
+    Viewer: 'bg-slate-500/20 text-slate-400',
+    Superuser: 'bg-amber-500/20 text-amber-400',
+  };
+
+  getRoleBadgeClass(role: string): string {
+    return this.roleBadgeClasses[role] ?? this.roleBadgeClasses['Usuario'];
+  }
+
+  private getInitials(name: string): string {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+
+  /** Identidad visible del usuario actual: nombre completo, iniciales y rol (base o custom). */
+  readonly profile = computed(() => {
+    const member = this.perm.currentMember();
+    const authUser = this.authSvc.user();
+    const fullName = member
+      ? `${member.nombre} ${member.apellido ?? ''}`.trim()
+      : (authUser?.displayName ?? authUser?.email ?? 'Usuario');
+
+    let role: { label: string; badgeKey: FirmRole | 'Superuser' } | null = null;
+    if (member) {
+      role = { label: this.perm.displayRole(member).label, badgeKey: member.role };
+    } else if (this.perm.isSuperUser()) {
+      role = { label: 'Superuser', badgeKey: 'Superuser' };
+    }
+
+    return { fullName, initials: this.getInitials(fullName), role };
+  });
 }

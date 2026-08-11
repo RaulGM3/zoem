@@ -230,18 +230,32 @@ export class CasoDocumentosTabComponent {
     el?.click();
   }
 
+  triggerFolderUpload(): void {
+    const el = document.getElementById('upload-folder') as HTMLInputElement | null;
+    el?.click();
+  }
+
   onFreeFileSelected(event: Event): void {
     const target = event.target as HTMLInputElement;
-    const file = target.files?.[0];
-    if (file) {
-      this.uploadFile.emit({
-        folderId: this.currentFolderId(),
-        file,
-        clasificado: this.isAdmin() && this.uploadClassified(),
-      });
-      this.uploadClassified.set(false);
-    }
+    this.emitFreeUploads(target.files);
     target.value = '';
+  }
+
+  /** Todos los archivos de la carpeta elegida se suben planos a la carpeta actual del caso. */
+  onFolderSelected(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    this.emitFreeUploads(target.files);
+    target.value = '';
+  }
+
+  private emitFreeUploads(files: FileList | null): void {
+    if (!files || files.length === 0) return;
+    const clasificado = this.isAdmin() && this.uploadClassified();
+    const folderId = this.currentFolderId();
+    for (const file of Array.from(files)) {
+      this.uploadFile.emit({ folderId, file, clasificado });
+    }
+    this.uploadClassified.set(false);
   }
 
   // ── Clasificados (solo Admin) ──────────────────────────

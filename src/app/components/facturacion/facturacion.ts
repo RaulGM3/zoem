@@ -163,6 +163,7 @@ export class FacturacionComponent implements OnInit {
   });
 
   abrirFactura(caso: Caso): void {
+    console.log('[Facturación] abrirFactura', { casoId: caso.id, gestoriaCompleta: gestoriaCompleta(caso), canCreate: this.canCreateFactura() });
     const r = caso.resumenFinanciero;
     this.lineas.set([
       { concepto: 'Honorarios', base: r.totalHonorarios, aplicaIva: true },
@@ -193,6 +194,7 @@ export class FacturacionComponent implements OnInit {
   async confirmarFactura(): Promise<void> {
     const caso = this.facturaCaso();
     if (!caso || this.saving()) return;
+    console.log('[Facturación] confirmarFactura', { casoId: caso.id, lineas: this.lineas(), ivaRate: this.ivaRate() });
     this.saving.set(true);
     try {
       const contactoId = caso.contactoIds?.[0];
@@ -236,6 +238,15 @@ export class FacturacionComponent implements OnInit {
   });
 
   abrirCierre(caso: Caso): void {
+    if (!gestoriaCompleta(caso)) {
+      const r = caso.gestoriaResumenSlots;
+      const motivo = !r || r.total === 0
+        ? 'este caso no tiene costos de gestoría previstos'
+        : `faltan ${r.total - r.registrados} de ${r.total} costos de gestoría por registrar`;
+      console.warn('[Facturación] abrirCierre bloqueado', { casoId: caso.id, motivo });
+      this.toast.info(`No se puede cerrar el caso: ${motivo}.`, 'Cierre no disponible');
+      return;
+    }
     this.movimientosOk.set(false);
     this.bancoOk.set(false);
     this.cierreCaso.set(caso);

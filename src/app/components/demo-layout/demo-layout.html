@@ -71,6 +71,31 @@
 
     <!-- Bottom -->
     <div class="p-2 space-y-1" style="border-top:1px solid var(--border)">
+      @if (profile(); as p) {
+        <div
+          class="flex items-center gap-3 rounded-xl px-3 py-2.5"
+          [class.justify-center]="sidebarCollapsed()"
+          [title]="sidebarCollapsed() ? p.fullName + (p.role ? ' · ' + p.role.label : '') : ''"
+        >
+          <div
+            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+            style="background:var(--surface-2);color:var(--text-body)"
+            aria-hidden="true"
+          >
+            {{ p.initials }}
+          </div>
+          @if (!sidebarCollapsed()) {
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium" style="color:var(--text-strong)">{{ p.fullName }}</p>
+              @if (p.role) {
+                <span class="inline-block rounded-full px-1.5 py-0.5 text-[10px] font-bold" [class]="getRoleBadgeClass(p.role.badgeKey)">
+                  {{ p.role.label }}
+                </span>
+              }
+            </div>
+          }
+        </div>
+      }
       <button type="button"
         class="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors duration-150"
         style="color:var(--danger)"

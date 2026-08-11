@@ -385,6 +385,8 @@ export class ContactosComponent {
       this.formStep.set(1);
       return;
     }
+    console.log('[Firebase][saveContact] currentMember (full)', JSON.stringify(this.perm.currentMember(), null, 2));
+    console.log('[Firebase][saveContact] userRole', this.perm.userRole(), 'isSuperUser', this.perm.isSuperUser());
     this.isSaving.set(true);
     try {
       const v = this.form.getRawValue();

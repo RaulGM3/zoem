@@ -7,7 +7,6 @@ import {
   getDocs,
   addDoc,
   updateDoc,
-  deleteDoc,
   query,
   where,
   serverTimestamp,
@@ -53,7 +52,11 @@ export class ContactService {
     try {
       const companyId = this.companyId;
       const snapshot = await getDocs(this.contactsCollection(companyId));
-      this.contacts.set(snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Contact));
+      this.contacts.set(
+        snapshot.docs
+          .map((d) => ({ id: d.id, ...d.data() }) as Contact)
+          .filter((c) => c.deleted !== true)
+      );
     } finally {
       // El error se propaga al llamador para que lo muestre vía ToastService.
       // (Antes se tragaba en silencio y la lista quedaba vacía sin avisar.)
@@ -63,7 +66,9 @@ export class ContactService {
 
   async getContact(id: string): Promise<Contact | null> {
     const snapshot = await getDoc(this.contactDoc(this.companyId, id));
-    return snapshot.exists() ? ({ id: snapshot.id, ...snapshot.data() } as Contact) : null;
+    if (!snapshot.exists()) return null;
+    const contact = { id: snapshot.id, ...snapshot.data() } as Contact;
+    return contact.deleted === true ? null : contact;
   }
 
   async createContact(
@@ -103,10 +108,18 @@ export class ContactService {
   }
 
   async updateContact(id: string, data: Record<string, unknown>): Promise<void> {
-    await updateDoc(this.contactDoc(this.companyId, id), stripUndefinedDeep({
+    const payload = stripUndefinedDeep({
       ...data,
       updatedAt: serverTimestamp(),
-    }));
+    });
+    console.log('[Firebase][updateContact] → updateDoc companies/%s/contactos/%s', this.companyId, id, payload);
+    try {
+      await updateDoc(this.contactDoc(this.companyId, id), payload);
+      console.log('[Firebase][updateContact] ✓ updateDoc OK');
+    } catch (err) {
+      console.error('[Firebase][updateContact] ✗ updateDoc FAIL', err);
+      throw err;
+    }
     const found = this.contacts().find(c => c.id === id);
     const nombre = found ? getContactDisplayName(found) : 'un contacto';
     // Parcheo incremental en lugar de recargar toda la colección (ver nota
@@ -118,17 +131,33 @@ export class ContactService {
     // Ver nota en createContact: el log de actividad no debe surgir como
     // error de la operación principal si esta ya tuvo éxito.
     try {
+      console.log('[Firebase][updateContact] → actividad.log (addDoc companies/%s/actividad)', this.companyId);
       await this.actividad.log('Contactos', `Editó el contacto ${nombre}`, id);
+      console.log('[Firebase][updateContact] ✓ actividad.log OK');
     } catch (err) {
-      console.error('[ContactService] Error al registrar actividad de edición', err);
+      console.error('[Firebase][updateContact] ✗ actividad.log FAIL', err);
     }
   }
 
   async deleteContact(id: string): Promise<void> {
     const found = this.contacts().find(c => c.id === id);
     const nombre = found ? getContactDisplayName(found) : 'un contacto';
+    const uid = this.auth.currentUser?.uid ?? '';
+    const softDeletePayload = stripUndefinedDeep({
+      deleted: true,
+      deletedAt: serverTimestamp(),
+      deletedBy: uid,
+      deletedByNombre: this.permissionService.currentMember()?.nombre ?? '',
+    });
+    // Cascade ANTES que el contacto: cascadeSoftDeleteRelated puede rechazar
+    // el borrado (documento clasificado sin permisos de admin) y si el
+    // contacto ya estuviera soft-deleted quedaría en un estado inconsistente
+    // — soft-deleted pero con carpetas/archivos huérfanos sin marcar.
     await this.cascadeSoftDeleteRelated(id);
-    await deleteDoc(this.contactDoc(this.companyId, id));
+    // Soft delete auditable: el contacto queda en Firestore con su rastro de
+    // quién/cuándo lo eliminó (igual que contact_folders/contact_files) en
+    // vez de borrarse físicamente y perder esa trazabilidad.
+    await updateDoc(this.contactDoc(this.companyId, id), softDeletePayload);
     this.contacts.update((list) => list.filter((c) => c.id !== id));
     // Ver nota en createContact: el log de actividad no debe surgir como
     // error de la operación principal si esta ya tuvo éxito.
@@ -145,13 +174,30 @@ export class ContactService {
    * — igual que los blobs en Storage. Como esos módulos ya usan soft delete
    * (ver `SoftDeletable` en doc-lifecycle.interface.ts), aquí hacemos
    * cascade soft-delete para mantener la misma trazabilidad en vez de dejar
-   * basura sin limpiar.
+   * basura sin limpiar. El propio contacto se soft-elimina después de esta
+   * cascada (ver deleteContact).
    */
   private async cascadeSoftDeleteRelated(contactId: string): Promise<void> {
     const uid = this.auth.currentUser?.uid ?? '';
+    // Las rules de contact_folders/contact_files exigen `isMember(resource.data.companyId)`.
+    // Un `list()` filtrado SOLO por `contactId` no le prueba a Firestore que
+    // todo resultado cumple `companyId == this.companyId` (la query no
+    // menciona ese campo) y Firestore rechaza la query entera con
+    // permission-denied, sin evaluar rol/estado del usuario. Filtrar también
+    // por companyId (igual que ContactFileService.loadFiles) es lo que hace
+    // la query demostrable.
+    const companyId = this.companyId;
     const [folderSnap, fileSnap] = await Promise.all([
-      getDocs(query(collection(this.firestore, 'contact_folders'), where('contactId', '==', contactId))),
-      getDocs(query(collection(this.firestore, 'contact_files'), where('contactId', '==', contactId))),
+      getDocs(query(
+        collection(this.firestore, 'contact_folders'),
+        where('companyId', '==', companyId),
+        where('contactId', '==', contactId),
+      )),
+      getDocs(query(
+        collection(this.firestore, 'contact_files'),
+        where('companyId', '==', companyId),
+        where('contactId', '==', contactId),
+      )),
     ]);
 
     // Las reglas de Firestore solo permiten actualizar un `contact_files` con

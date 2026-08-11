@@ -95,9 +95,22 @@
             } @else {
               <lucide-icon [img]="UploadIcon" class="w-3.5 h-3.5" />
             }
-            Subir archivo
+            Subir archivos
           </button>
-          <input type="file" id="upload-free" class="hidden" (change)="onFreeFileSelected($event)" aria-hidden="true" />
+          <button
+            (click)="triggerFolderUpload()"
+            [disabled]="busy()"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors duration-150 disabled:opacity-50"
+            style="border:1px solid var(--border);color:var(--text-muted)"
+            (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+            (mouseleave)="$any($event.currentTarget).style.background=''"
+            title="Sube todos los archivos de una carpeta a esta ubicación"
+          >
+            <lucide-icon [img]="FolderOpenIcon" class="w-3.5 h-3.5" />
+            Subir carpeta
+          </button>
+          <input type="file" id="upload-free" class="hidden" multiple (change)="onFreeFileSelected($event)" aria-hidden="true" />
+          <input type="file" id="upload-folder" class="hidden" multiple webkitdirectory (change)="onFolderSelected($event)" aria-hidden="true" />
         }
       </div>
     </div>

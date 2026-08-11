@@ -1,4 +1,5 @@
 import { Timestamp } from '@angular/fire/firestore';
+import type { SoftDeletable } from './doc-lifecycle.interface';
 
 export type ContactType = 'persona_fisica' | 'persona_juridica';
 export type ContactStatus =
@@ -51,7 +52,7 @@ export interface Direccion {
   pais: string; // ISO 3166-1 alpha-2
 }
 
-interface ContactBase {
+interface ContactBase extends SoftDeletable {
   id: string;
   companyId: string;
   type: ContactType;

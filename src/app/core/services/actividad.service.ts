@@ -42,6 +42,7 @@ export class ActividadService {
     const autorId = member?.userId ?? user?.id ?? '';
     const autorNombre = member?.nombre ?? user?.displayName ?? user?.email ?? 'Alguien';
     try {
+      console.log('[Firebase][ActividadService.log] → addDoc companies/%s/actividad', companyId);
       await addDoc(this.actividadRef(companyId), stripUndefinedDeep({
         companyId,
         autorId,
@@ -51,7 +52,9 @@ export class ActividadService {
         ...(entidadId ? { entidadId } : {}),
         createdAt: serverTimestamp(),
       }));
+      console.log('[Firebase][ActividadService.log] ✓ addDoc OK');
     } catch (err) {
+      console.error('[Firebase][ActividadService.log] ✗ addDoc FAIL', err);
       void this.errorService.log(err, { serviceName: 'ActividadService', methodName: 'log' });
     }
   }
