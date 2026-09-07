@@ -103,7 +103,6 @@ export class ContactService {
     try {
       await this.actividad.log('Contactos', `Creó el contacto ${getContactDisplayName(data as Contact)}`, ref.id);
     } catch (err) {
-      console.error('[ContactService] Error al registrar actividad de creación', err);
     }
   }
 
@@ -112,12 +111,9 @@ export class ContactService {
       ...data,
       updatedAt: serverTimestamp(),
     });
-    console.log('[Firebase][updateContact] → updateDoc companies/%s/contactos/%s', this.companyId, id, payload);
     try {
       await updateDoc(this.contactDoc(this.companyId, id), payload);
-      console.log('[Firebase][updateContact] ✓ updateDoc OK');
     } catch (err) {
-      console.error('[Firebase][updateContact] ✗ updateDoc FAIL', err);
       throw err;
     }
     const found = this.contacts().find(c => c.id === id);
@@ -131,11 +127,8 @@ export class ContactService {
     // Ver nota en createContact: el log de actividad no debe surgir como
     // error de la operación principal si esta ya tuvo éxito.
     try {
-      console.log('[Firebase][updateContact] → actividad.log (addDoc companies/%s/actividad)', this.companyId);
       await this.actividad.log('Contactos', `Editó el contacto ${nombre}`, id);
-      console.log('[Firebase][updateContact] ✓ actividad.log OK');
     } catch (err) {
-      console.error('[Firebase][updateContact] ✗ actividad.log FAIL', err);
     }
   }
 
