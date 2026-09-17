@@ -4,19 +4,21 @@ import {
 } from '@angular/core';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { combineLatest, filter, map, switchMap } from 'rxjs';
-import { LucideAngularModule, Plus } from 'lucide-angular';
+import { LucideAngularModule, Plus, CalendarPlus } from 'lucide-angular';
 import { CasosService } from '../../core/services/casos.service';
 import { CompanyService } from '../../core/services/company.service';
 import { EventosService } from '../../core/services/eventos.service';
 import { ToastService } from '../../core/services/toast.service';
 import { UserSyncService } from '../../core/services/user-sync.service';
 import { UsersService } from '../../core/services/users';
+import { PermissionService } from '../../core/services/permission.service';
 import { HITO_ESTADO_CALENDAR_STATUS, stampEstadoChange } from '../../core/hitos/hito-estado';
 import type { Anotacion, CreateEventoData, Evento, EventoColor, EventoEstado, Hito, HitoEstado, RegistroHoraHito } from '../../interfaces';
 import type { CalendarItem, EventGroup, ViewMode, WeekDay } from './calendario.types';
 import { CalendarNavComponent } from './components/calendar-nav/calendar-nav';
 import { DayScheduleComponent, type ItemTimeChange } from './components/day-schedule/day-schedule';
 import { NuevoEventoDrawerComponent } from '../eventos/components/nuevo-evento-drawer/nuevo-evento-drawer';
+import { SuscribirseCalendarioDialogComponent } from './components/suscribirse-calendario-dialog/suscribirse-calendario-dialog';
 import type { ItemColor } from './calendario.types';
 
 function timeToMinutes(time: string): number {
@@ -73,7 +75,10 @@ function mondayOf(d: Date): string {
 
 @Component({
   selector: 'app-calendario',
-  imports: [CalendarNavComponent, DayScheduleComponent, NuevoEventoDrawerComponent, LucideAngularModule],
+  imports: [
+    CalendarNavComponent, DayScheduleComponent, NuevoEventoDrawerComponent,
+    SuscribirseCalendarioDialogComponent, LucideAngularModule,
+  ],
   templateUrl: './calendario.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block h-full' },
@@ -85,6 +90,7 @@ export class CalendarioComponent {
   private readonly eventosService = inject(EventosService);
   private readonly userSync = inject(UserSyncService);
   private readonly usersService = inject(UsersService);
+  readonly perm = inject(PermissionService);
   private readonly nav = viewChild(CalendarNavComponent);
 
   /** Miembros del despacho — para asignar y registrar horas en los hitos. */
@@ -93,6 +99,7 @@ export class CalendarioComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly PlusIcon = Plus;
+  readonly CalendarPlusIcon = CalendarPlus;
   readonly dayNames = DAY_NAMES;
   /**
    * Fecha de "hoy" reactiva — se recalcula periódicamente para que "isToday" y
@@ -103,6 +110,8 @@ export class CalendarioComponent {
 
   readonly showDrawer = signal(false);
   readonly saving = signal(false);
+  readonly showSuscribirseDialog = signal(false);
+  readonly companyId = computed(() => this.companyService.activeCompany()?.id ?? null);
 
   constructor() {
     this.usersService.loadMembers();

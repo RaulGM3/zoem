@@ -203,6 +203,17 @@ service cloud.firestore {
       match /hitos/{doc=**}          { allow read: if isSuper() || isMember(cid); allow write: if isSuper() || canWrite(cid); }
       match /hito_actividad/{doc=**} { allow read: if isSuper() || isMember(cid); allow write: if isSuper() || canWrite(cid); }
       match /eventos/{doc=**}        { allow read: if isSuper() || isMember(cid); allow write: if isSuper() || canWrite(cid); }
+
+      // Feed ICS del calendario (suscripción webcal de solo lectura). Solo
+      // las Cloud Functions (Admin SDK) crean/revocan estos docs — el
+      // cliente jamás escribe. Solo puede LEER su propio doc (uid ==
+      // auth.uid) para mostrar "feed activo desde…"; nunca el de otro
+      // miembro. El campo `tokenHash` es un SHA-256, no el token en claro,
+      // así que exponerlo en lectura no compromete el feed.
+      match /calendarFeeds/{feedId} {
+        allow read:  if isSuper() || (isMember(cid) && resource.data.uid == request.auth.uid);
+        allow write: if false;
+      }
       // Plantillas de documento: sin delete real + auditoría append-only +
       // visibilidad configurable (el html vive aquí → get protegido).
       //
@@ -378,13 +389,6 @@ service cloud.firestore {
       allow delete: if isSuper();
     }
     match /documents/{id} {
-      allow read:   if isSuper() || isMember(resource.data.companyId);
-      allow create: if isSuper() || canWrite(request.resource.data.companyId);
-      allow update: if isSuper() || (canWrite(resource.data.companyId)
-                      && request.resource.data.companyId == resource.data.companyId);
-      allow delete: if isSuper() || canWrite(resource.data.companyId);
-    }
-    match /calendarEvents/{id} {
       allow read:   if isSuper() || isMember(resource.data.companyId);
       allow create: if isSuper() || canWrite(request.resource.data.companyId);
       allow update: if isSuper() || (canWrite(resource.data.companyId)

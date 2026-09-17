@@ -118,6 +118,13 @@
       "indexes": [
         { "queryScope": "COLLECTION_GROUP", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "calendarFeeds",
+      "fieldPath": "tokenHash",
+      "indexes": [
+        { "queryScope": "COLLECTION_GROUP", "order": "ASCENDING" }
+      ]
     }
   ]
 }

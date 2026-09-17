@@ -1,16 +1,28 @@
 <div class="flex h-full flex-col gap-3">
   <div class="flex shrink-0 items-center justify-between">
     <h1 class="text-[22px] font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Calendario</h1>
-    <button
-      (click)="showDrawer.set(true)"
-      class="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors duration-150"
-      style="background:var(--brand)"
-      (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-      (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'"
-    >
-      <lucide-icon [img]="PlusIcon" size="16"></lucide-icon>
-      Nuevo evento
-    </button>
+    <div class="flex items-center gap-2">
+      @if (perm.can('Calendario', 'ver')) {
+        <button
+          (click)="showSuscribirseDialog.set(true)"
+          class="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors duration-150"
+          style="color:var(--text-strong);border:1px solid var(--border)"
+        >
+          <lucide-icon [img]="CalendarPlusIcon" size="16"></lucide-icon>
+          Suscribirse
+        </button>
+      }
+      <button
+        (click)="showDrawer.set(true)"
+        class="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors duration-150"
+        style="background:var(--brand)"
+        (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+        (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'"
+      >
+        <lucide-icon [img]="PlusIcon" size="16"></lucide-icon>
+        Nuevo evento
+      </button>
+    </div>
   </div>
 
   <app-calendar-nav
@@ -54,3 +66,10 @@
   (saved)="onSaveEvento($event)"
   (closed)="showDrawer.set(false)"
 />
+
+@if (showSuscribirseDialog() && companyId(); as cid) {
+  <app-suscribirse-calendario-dialog
+    [companyId]="cid"
+    (closed)="showSuscribirseDialog.set(false)"
+  />
+}

@@ -219,3 +219,7 @@ export { getClassifiedDocUrl } from './classifiedDocUrl';
 // Sincroniza companyId/role/estado/isSuperUser en el JWT para que las Storage
 // rules puedan verificar membresía sin firestore.get() (que solo lee (default)).
 export { syncMemberClaims, syncSuperuserClaim, backfillMemberClaims } from './customClaims';
+
+// ─── Feed ICS del calendario ──────────────────────────────────────────────────
+export { calendarFeed } from './calendarFeed/calendarFeedHttp';
+export { createCalendarFeedToken, revokeCalendarFeedToken } from './calendarFeed/tokens';
