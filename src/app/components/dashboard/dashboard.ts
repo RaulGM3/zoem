@@ -5,9 +5,8 @@ import { RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import { Subscription } from 'rxjs';
 import {
-  LucideAngularModule, type LucideIconData,
-  Euro, Briefcase, Bot, Wallet, Calendar, Activity, Landmark,
-  Receipt, FileText, Users,
+  LucideAngularModule,
+  Euro, Briefcase, Bot, Wallet, Landmark, CalendarClock,
 } from 'lucide-angular';
 
 import { PermissionService } from '../../core/services/permission.service';
@@ -18,15 +17,16 @@ import { CuentasService } from '../../core/services/cuentas.service';
 import { EventosService } from '../../core/services/eventos.service';
 import { ActividadService } from '../../core/services/actividad.service';
 import { balancePorCuenta } from '../../core/tesoreria/saldos';
+import { esSeguimiento, esVencido } from '../../core/contactos/seguimiento';
 
 import type { Caso, Evento, Hito, MovimientoTipo } from '../../interfaces';
 import { EVENTO_COLORS } from '../../interfaces/evento.interface';
 import type { Actividad } from '../../interfaces/actividad';
-import type { Modulo } from '../../core/permissions/permissions';
 
 import { StatCardComponent } from './components/stat-card/stat-card';
 import { BarChartComponent, type BarGroup } from './components/bar-chart/bar-chart';
 import { DonutChartComponent, type DonutItem } from './components/donut-chart/donut-chart';
+import { ActividadFeedComponent } from '../../shared/components/actividad-feed/actividad-feed';
 
 /** Estados que cuentan como "caso activo" en el dashboard. */
 const ESTADOS_ACTIVOS: ReadonlySet<Caso['estado']> = new Set(['pendiente', 'en_proceso', 'urgente']);
@@ -43,19 +43,24 @@ const TIPO_COLOR: Record<MovimientoTipo, string> = {
 const MES_CORTO = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 const MES_LARGO = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
-const MODULO_ICON: Record<Modulo, LucideIconData> = {
-  Casos: Briefcase, Contactos: Users, Calendario: Calendar, Documentos: FileText,
-  Facturación: Receipt, Tesorería: Wallet, RecepciónIA: Bot, Informes: Activity, Configuración: Users,
-};
-
 export interface AgendaItem {
   id: string;
-  tipo: 'evento' | 'hito';
+  tipo: 'evento' | 'hito' | 'seguimiento';
   titulo: string;
   subtitulo: string;
   fecha: string;
   hora?: string;
   dotClass: string;
+  link: string;
+}
+
+/** Compromiso abierto del usuario actual, listo para pintar. */
+export interface SeguimientoVista {
+  id: string;
+  entregable: string;
+  contactoNombre: string;
+  fecha: string;
+  vencido: boolean;
   link: string;
 }
 
@@ -71,7 +76,7 @@ export interface MovimientoVista {
 
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink, DecimalPipe, LucideAngularModule, StatCardComponent, BarChartComponent, DonutChartComponent],
+  imports: [RouterLink, DecimalPipe, LucideAngularModule, StatCardComponent, BarChartComponent, DonutChartComponent, ActividadFeedComponent],
   templateUrl: './dashboard.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -92,6 +97,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   readonly BotIcon = Bot;
   readonly WalletIcon = Wallet;
   readonly LandmarkIcon = Landmark;
+  readonly CalendarClockIcon = CalendarClock;
 
   // ── Fuentes de datos ──────────────────────────────────────────────────
   private readonly casos = this.casosService.casos;
@@ -164,15 +170,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     for (const e of this.eventos()) {
       if (!e.fecha || e.fecha < this.hoy || e.estado === 'cancelado') continue;
+      // Un seguimiento se resuelve en la ficha del contacto, no en el calendario.
+      const seg = esSeguimiento(e) ? e.origen : null;
       items.push({
         id: `e-${e.id}`,
-        tipo: 'evento',
+        tipo: seg ? 'seguimiento' : 'evento',
         titulo: e.titulo,
-        subtitulo: e.lugar || (e.todoDia ? 'Todo el día' : 'Evento'),
+        subtitulo: seg
+          ? `Seguimiento · ${seg.contactoNombre}`
+          : e.lugar || (e.todoDia ? 'Todo el día' : 'Evento'),
         fecha: e.fecha,
         hora: e.todoDia ? undefined : e.horaInicio,
-        dotClass: EVENTO_COLORS[e.color]?.dot ?? 'bg-slate-400',
-        link: '/calendario',
+        dotClass: seg ? 'bg-amber-500' : EVENTO_COLORS[e.color]?.dot ?? 'bg-slate-400',
+        link: seg ? `/contactos/${seg.contactoId}` : '/calendario',
       });
     }
 
@@ -205,6 +215,41 @@ export class DashboardComponent implements OnInit, OnDestroy {
       )
       .slice(0, 7);
   });
+
+  // ── (6 bis) Mis seguimientos pendientes ───────────────────────────────
+  /**
+   * Compromisos abiertos de los que soy responsable, vencidos primero:
+   * lo que el despacho debe entregar para que un contacto avance de fase.
+   */
+  readonly misSeguimientos = computed<SeguimientoVista[]>(() => {
+    const uid = this.perm.currentMember()?.userId;
+    if (!uid) return [];
+
+    return this.eventos()
+      .filter(e =>
+        esSeguimiento(e)
+        && e.responsableId === uid
+        && e.estado !== 'completado'
+        && e.estado !== 'cancelado'
+      )
+      .map(e => ({
+        id: e.id,
+        entregable: e.entregable ?? e.titulo,
+        contactoNombre: e.origen!.contactoNombre,
+        fecha: e.fecha,
+        vencido: esVencido(e, this.hoy),
+        link: `/contactos/${e.origen!.contactoId}`,
+      }))
+      .sort((a, b) =>
+        a.vencido === b.vencido
+          ? a.fecha.localeCompare(b.fecha)
+          : Number(b.vencido) - Number(a.vencido)
+      );
+  });
+
+  readonly seguimientosVencidosCount = computed(() =>
+    this.misSeguimientos().filter(s => s.vencido).length
+  );
 
   // ── (7) Estadística financiera ────────────────────────────────────────
   private readonly ultimosMeses = computed(() => {
@@ -258,24 +303,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }));
   });
 
-  // ── Feed de actividad ─────────────────────────────────────────────────
-  actividadIcon(modulo: Modulo): LucideIconData {
-    return MODULO_ICON[modulo] ?? Activity;
-  }
-
   /** 'YYYY-MM-DD' → '19 Jun'. */
   formatFecha(f: string): string {
     if (!f || f.length < 10) return f;
     return `${f.slice(8, 10)} ${MES_CORTO[Number(f.slice(5, 7)) - 1] ?? ''}`;
-  }
-
-  /** Timestamp de Firestore → '19 Jun 16:40' (vacío si aún no hay valor). */
-  fechaActividad(a: Actividad): string {
-    const d = a.createdAt?.toDate?.();
-    if (!d) return '';
-    const hh = String(d.getHours()).padStart(2, '0');
-    const mm = String(d.getMinutes()).padStart(2, '0');
-    return `${d.getDate()} ${MES_CORTO[d.getMonth()]} ${hh}:${mm}`;
   }
 
   async ngOnInit(): Promise<void> {
@@ -285,7 +316,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     void this.iaContactService.loadIaContacts();
     this.subs.add(this.eventosService.eventosStream().subscribe(e => this.eventos.set(e)));
     this.subs.add(this.casosService.hitosParaCalendarioStream().subscribe(h => this.hitos.set(h)));
-    this.subs.add(this.actividadService.recentStream(15).subscribe(a => this.actividades.set(a)));
+    this.subs.add(this.actividadService.recentStream(50).subscribe(a => this.actividades.set(a)));
   }
 
   ngOnDestroy(): void {

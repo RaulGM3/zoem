@@ -3,7 +3,8 @@ import { Storage, ref, uploadBytes, getDownloadURL } from '@angular/fire/storage
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import QRCode from 'qrcode';
-import type { Invoice } from './invoice.service';
+import type { Invoice, InvoiceLinea } from './invoice.service';
+import { normalizeLinea } from './invoice.service';
 import { CompanyService, getLabelIdentificacion } from './company.service';
 import type { Company } from './company.service';
 
@@ -58,19 +59,24 @@ export class InvoicePdfService {
     if (company.telefono) { doc.text(company.telefono, margin, y); }
 
     // ── Invoice block (right) ───────────────────────────────────────────────
-    doc.setFontSize(22);
+    const isRectificativa = invoice.tipoFactura === 'R1';
+    doc.setFontSize(isRectificativa ? 16 : 22);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(41, 98, 255);
-    doc.text('FACTURA', right, 22, { align: 'right' });
+    doc.setTextColor(isRectificativa ? 200 : 41, isRectificativa ? 100 : 98, isRectificativa ? 0 : 255);
+    doc.text(isRectificativa ? 'FACTURA RECTIFICATIVA' : 'FACTURA', right, 22, { align: 'right' });
 
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(90, 90, 90);
-    doc.text(`Nº: ${invoice.invoiceNumber}`, right, 32, { align: 'right' });
-    doc.text(`Emisión: ${this.formatDate(invoice.issueDate)}`, right, 38, { align: 'right' });
-    doc.text(`Vencimiento: ${this.formatDate(invoice.dueDate)}`, right, 44, { align: 'right' });
+    let infoY = 32;
+    doc.text(`Nº: ${invoice.invoiceNumber}`, right, infoY, { align: 'right' }); infoY += 6;
+    doc.text(`Emisión: ${this.formatDate(invoice.issueDate)}`, right, infoY, { align: 'right' }); infoY += 6;
+    doc.text(`Vencimiento: ${this.formatDate(invoice.dueDate)}`, right, infoY, { align: 'right' }); infoY += 6;
+    if (isRectificativa && invoice.facturaRectificadaNumero) {
+      doc.text(`Rectifica: ${invoice.facturaRectificadaNumero}`, right, infoY, { align: 'right' }); infoY += 6;
+    }
     if (invoice.casoTitulo) {
-      doc.text(`Caso: ${invoice.casoTitulo}`, right, 50, { align: 'right' });
+      doc.text(`Caso: ${invoice.casoTitulo}`, right, infoY, { align: 'right' });
     }
 
     // ── Cliente block (left, below company) ─────────────────────────────────
@@ -105,22 +111,30 @@ export class InvoicePdfService {
     doc.line(margin, dividerY, right, dividerY);
 
     // ── Lines table ─────────────────────────────────────────────────────────
-    const lineas = invoice.lineas ?? [];
-    const ivaRate = invoice.ivaRate ?? 0;
-    const ivaPct = `${Math.round(ivaRate * 100)}%`;
+    const lineas = (invoice.lineas ?? []).map(l => normalizeLinea(l));
+    const globalIvaRate = invoice.ivaRate ?? 0;
 
-    const rows = lineas.map(l => [
-      l.concepto,
-      this.formatMoney(l.base) + ' €',
-      l.aplicaIva ? ivaPct : '—',
-      this.formatMoney(l.base + (l.aplicaIva ? l.base * ivaRate : 0)) + ' €',
-    ]);
+    const rows: string[][] = [];
+    for (const l of lineas) {
+      const effectiveRate = l.aplicaIva ? (l.ivaRate ?? globalIvaRate) : 0;
+      const ivaPct = l.aplicaIva ? `${Math.round(effectiveRate * 100)}%` : '—';
+      const lineIva = l.base * effectiveRate;
+      const concepto = l.descripcion ? `${l.concepto}\n${l.descripcion}` : l.concepto;
+      rows.push([
+        concepto,
+        this.formatQty(l.cantidad),
+        this.formatMoney(l.precioUnitario) + ' €',
+        this.formatMoney(l.base) + ' €',
+        ivaPct,
+        this.formatMoney(l.base + lineIva) + ' €',
+      ]);
+    }
 
     let tableEndY = dividerY + 8;
 
     autoTable(doc, {
       startY: dividerY + 6,
-      head: [['Concepto', 'Base', 'IVA', 'Importe']],
+      head: [['Concepto', 'Cant.', 'Precio Ud.', 'Base', 'IVA', 'Importe']],
       body: rows,
       theme: 'striped',
       margin: { left: margin, right: margin },
@@ -133,15 +147,17 @@ export class InvoicePdfService {
       bodyStyles: { fontSize: 9, textColor: [40, 40, 40] },
       columnStyles: {
         0: { cellWidth: 'auto' },
-        1: { halign: 'right', cellWidth: 38 },
-        2: { halign: 'center', cellWidth: 22 },
-        3: { halign: 'right', cellWidth: 38 },
+        1: { halign: 'right', cellWidth: 18 },
+        2: { halign: 'right', cellWidth: 28 },
+        3: { halign: 'right', cellWidth: 28 },
+        4: { halign: 'center', cellWidth: 18 },
+        5: { halign: 'right', cellWidth: 30 },
       },
       didDrawPage: (data) => { tableEndY = data.cursor?.y ?? tableEndY; },
     });
 
     // ── Totals block ────────────────────────────────────────────────────────
-    const tY = tableEndY + 10;
+    let tY = tableEndY + 10;
     const labelX = right - 70;
 
     doc.setFontSize(9);
@@ -149,23 +165,46 @@ export class InvoicePdfService {
     doc.setTextColor(90, 90, 90);
     doc.text('Base imponible', labelX, tY);
     doc.text(this.formatMoney(invoice.amount) + ' €', right, tY, { align: 'right' });
+    tY += 6;
 
-    doc.text(`IVA (${ivaPct})`, labelX, tY + 6);
-    doc.text(this.formatMoney(invoice.vat) + ' €', right, tY + 6, { align: 'right' });
+    // Per-rate IVA breakdown
+    const ivaGroups = this.groupByIvaRate(lineas, globalIvaRate);
+    for (const [pct, { cuota }] of ivaGroups) {
+      doc.text(`IVA (${pct}%)`, labelX, tY);
+      doc.text(this.formatMoney(cuota) + ' €', right, tY, { align: 'right' });
+      tY += 6;
+    }
+    if (ivaGroups.size === 0) {
+      doc.text('IVA', labelX, tY);
+      doc.text(this.formatMoney(invoice.vat) + ' €', right, tY, { align: 'right' });
+      tY += 6;
+    }
 
     doc.setDrawColor(200, 200, 200);
-    doc.line(labelX, tY + 9, right, tY + 9);
+    doc.line(labelX, tY - 3, right, tY - 3);
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.setTextColor(30, 30, 30);
-    doc.text('TOTAL', labelX, tY + 16);
-    doc.text(this.formatMoney(invoice.total) + ' €', right, tY + 16, { align: 'right' });
+    doc.text('TOTAL', labelX, tY + 4);
+    doc.text(this.formatMoney(invoice.total) + ' €', right, tY + 4, { align: 'right' });
+
+    // Notes
+    if (invoice.notes) {
+      const notesY = tY + 14;
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(110, 110, 110);
+      const noteLines = doc.splitTextToSize(invoice.notes, right - margin) as string[];
+      doc.text(noteLines, margin, notesY);
+    }
 
     // ── Verifactu footer ────────────────────────────────────────────────────
     if (invoice.verifactu?.estado === 'enviado' && invoice.verifactu.csv) {
       const csv = invoice.verifactu.csv;
-      const qrUrl = `https://www2.agenciatributaria.gob.es/wlpl/TIKE-CONT/ws/SistemaVerifactu?csv=${encodeURIComponent(csv)}`;
+      // Usar la URL del portal de verificación ciudadano (generada por verifactu-client.generateQrUrl)
+      const qrUrl = invoice.verifactu.qrUrl
+        ?? `https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tikeV/cont/index.html?nif=&numserie=${encodeURIComponent(invoice.invoiceNumber)}&importe=${invoice.total.toFixed(2)}`;
       const qrDataUrl = await this.generateQrDataUrl(qrUrl);
       if (qrDataUrl) {
         doc.addImage(qrDataUrl, 'PNG', margin, 263, 22, 22);
@@ -202,5 +241,23 @@ export class InvoicePdfService {
 
   private formatMoney(n: number): string {
     return n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  private formatQty(n: number): string {
+    return n % 1 === 0 ? String(n) : n.toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+  }
+
+  private groupByIvaRate(lineas: InvoiceLinea[], globalRate: number): Map<number, { base: number; cuota: number }> {
+    const groups = new Map<number, { base: number; cuota: number }>();
+    for (const l of lineas) {
+      if (!l.aplicaIva) continue;
+      const rate = l.ivaRate ?? globalRate;
+      const pct = Math.round(rate * 100);
+      const existing = groups.get(pct) ?? { base: 0, cuota: 0 };
+      existing.base += l.base;
+      existing.cuota += l.base * rate;
+      groups.set(pct, existing);
+    }
+    return groups;
   }
 }

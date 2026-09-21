@@ -10,11 +10,13 @@ import {
 } from '@angular/fire/firestore';
 import { CompanyService, getIdentificacionFiscal } from './company.service';
 import type { Invoice } from './invoice.service';
+import { normalizeLinea } from './invoice.service';
 import type {
   VerifactuDesgloseIVA,
   VerifactuEstado,
   VerifactuIDFactura,
   VerifactuRegistro,
+  VerifactuRegistroBaja,
 } from '../../interfaces/verifactu.interface';
 
 @Injectable({ providedIn: 'root' })
@@ -45,15 +47,30 @@ export class VerifactuClientService {
       FechaExpedicionFactura: fechaAeat,
     };
 
-    // Desglose: una línea por tipo impositivo aplicado
+    // Desglose: una línea por tipo impositivo aplicado, agrupando por tasa
+    const globalRate = invoice.ivaRate ?? 0;
+    const lineas = (invoice.lineas ?? []).map(l => normalizeLinea(l));
+    const rateGroups = new Map<number, { base: number; cuota: number }>();
+
+    for (const l of lineas) {
+      if (!l.aplicaIva) continue;
+      const rate = l.ivaRate ?? globalRate;
+      const pct = Math.round(rate * 100);
+      const existing = rateGroups.get(pct) ?? { base: 0, cuota: 0 };
+      existing.base += l.base;
+      existing.cuota += l.base * rate;
+      rateGroups.set(pct, existing);
+    }
+
     const desglose: VerifactuDesgloseIVA[] = [];
-    if (invoice.vat > 0 && invoice.amount > 0) {
-      const tipoImpositivo = invoice.amount > 0 ? Math.round((invoice.vat / invoice.amount) * 100) : 21;
-      desglose.push({
-        BaseImponibleOImporteNoSujeto: invoice.amount,
-        TipoImpositivo: tipoImpositivo,
-        CuotaRepercutida: invoice.vat,
-      });
+    if (rateGroups.size > 0) {
+      for (const [pct, { base, cuota }] of rateGroups) {
+        desglose.push({
+          BaseImponibleOImporteNoSujeto: base,
+          TipoImpositivo: pct,
+          CuotaRepercutida: cuota,
+        });
+      }
     } else {
       // Operación exenta / sin IVA
       desglose.push({
@@ -63,13 +80,20 @@ export class VerifactuClientService {
       });
     }
 
-    const now = new Date().toISOString();
+    // Descripción derivada de los conceptos de la factura (max 500 chars per spec AEAT)
+    const descripcion = lineas.map(l => l.concepto).filter(Boolean).join(', ').slice(0, 500)
+      || 'Servicios profesionales';
+
+    // Timestamp en timezone española sin milisegundos
+    const now = this.madridTimestamp();
 
     return {
       IDFactura: idFactura,
       NombreRazonEmisor: company.name,
-      TipoFactura: 'F1',
-      DescripcionOperacion: 'Servicios profesionales',
+      TipoFactura: invoice.tipoFactura ?? 'F1',
+      DescripcionOperacion: descripcion,
+      NIF: invoice.clienteNif || undefined,
+      NombreDestinatario: invoice.clienteNombre || undefined,
       Desglose: desglose,
       CuotaTotal: invoice.vat,
       ImporteTotal: invoice.total,
@@ -167,5 +191,87 @@ export class VerifactuClientService {
     };
 
     return { registro, estadoInicial };
+  }
+
+  /** Construye un RegistroBaja para anular una factura ya registrada en Verifactu. */
+  buildRegistroBaja(invoice: Invoice, huellaAnterior: string): VerifactuRegistroBaja {
+    const company = this.companyService.activeCompany();
+    if (!company) throw new Error('No active company');
+    const identificacion = getIdentificacionFiscal(company);
+    if (!identificacion) throw new Error('La empresa no tiene NIF/CIF configurado');
+
+    const [year, month, day] = invoice.issueDate.split('-');
+    const fechaAeat = `${day}-${month}-${year}`;
+
+    return {
+      IDFactura: {
+        NIF: identificacion,
+        NumSerieFactura: invoice.invoiceNumber,
+        FechaExpedicionFactura: fechaAeat,
+      },
+      NombreRazonEmisor: company.name,
+      DescripcionOperacion: `Anulación de factura ${invoice.invoiceNumber}`,
+      HuellaAnterior: huellaAnterior,
+      FechaHoraHusoGenRegistro: this.madridTimestamp(),
+    };
+  }
+
+  /** Prepara un registro de baja para enviar a la Cloud Function. */
+  async prepareBaja(
+    invoice: Invoice,
+    companyId: string,
+  ): Promise<{ registro: VerifactuRegistroBaja; estadoInicial: VerifactuEstado }> {
+    const huellaAnterior = await this.getLastHuella(companyId);
+    const registro = this.buildRegistroBaja(invoice, huellaAnterior);
+
+    // Hash de baja: NIF&NumSerie&Fecha&"baja"&HuellaAnterior&FechaHoraGenRegistro
+    const input = [
+      registro.IDFactura.NIF,
+      registro.IDFactura.NumSerieFactura,
+      registro.IDFactura.FechaExpedicionFactura,
+      'baja',
+      registro.HuellaAnterior,
+      registro.FechaHoraHusoGenRegistro,
+    ].join('&');
+    const encoded = new TextEncoder().encode(input);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
+    const huella = Array.from(new Uint8Array(hashBuffer))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('')
+      .toUpperCase();
+
+    return {
+      registro,
+      estadoInicial: { estado: 'pendiente', huella, huellaAnterior },
+    };
+  }
+
+  /**
+   * Genera un timestamp ISO-8601 en timezone española (Europe/Madrid) sin milisegundos,
+   * con offset explícito. Ej: "2026-09-17T10:30:00+02:00"
+   */
+  private madridTimestamp(): string {
+    const now = new Date();
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Madrid',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false,
+    }).formatToParts(now);
+
+    const get = (type: string) => parts.find(p => p.type === type)?.value ?? '';
+    const dateStr = `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}:${get('second')}`;
+
+    // Calculate offset for Europe/Madrid
+    const utc = now.getTime();
+    const madridStr = now.toLocaleString('en-US', { timeZone: 'Europe/Madrid' });
+    const madridTime = new Date(madridStr).getTime();
+    const offsetMin = Math.round((madridTime - utc) / 60000);
+    const sign = offsetMin >= 0 ? '+' : '-';
+    const absMin = Math.abs(offsetMin);
+    const offH = String(Math.floor(absMin / 60)).padStart(2, '0');
+    const offM = String(absMin % 60).padStart(2, '0');
+
+    return `${dateStr}${sign}${offH}:${offM}`;
   }
 }

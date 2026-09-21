@@ -39,7 +39,21 @@ export interface VerifactuEstado {
   csv?: string;
   qrUrl?: string;
   enviadoAt?: string;
+  /** CSV devuelto por AEAT al aceptar el RegistroBaja (anulación). No pisa `csv`, que es el del alta. */
+  csvBaja?: string;
+  /** ISO datetime en que AEAT procesó la anulación. */
+  bajaAt?: string;
   error?: string;
+}
+
+/** Registro de baja (anulación) de factura según spec AEAT Verifactu v1.0 */
+export interface VerifactuRegistroBaja {
+  IDFactura: VerifactuIDFactura;
+  NombreRazonEmisor: string;
+  /** Motivo de la anulación */
+  DescripcionOperacion: string;
+  HuellaAnterior: string;
+  FechaHoraHusoGenRegistro: string;
 }
 
 /** Respuesta de la Cloud Function verifactuSubmit */

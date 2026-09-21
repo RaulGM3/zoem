@@ -2,7 +2,6 @@ export * from './project.interface';
 export * from './contact.interface';
 export * from './contact-folder.interface';
 export * from './contact-file.interface';
-export * from './invoice.interface';
 export * from './calendar-event.interface';
 export * from './ia-contact.interface';
 export * from './document.interface';

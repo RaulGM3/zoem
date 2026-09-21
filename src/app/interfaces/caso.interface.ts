@@ -101,9 +101,11 @@ export interface Caso {
   gestoriaResumenSlots?: { total: number; registrados: number };
   /** Conteo denormalizado de hitos (total/completados) para pintar el progreso en la lista sin leer la subcolección. */
   hitosResumen?: { total: number; completados: number };
-  /** Factura generada para este caso (id en la colección `invoices`). */
+  /** @deprecated Usa `facturaIds`. Se mantiene para backward compat con docs viejos de Firestore. */
   facturaId?: string;
-  /** ISO datetime en que se generó la factura. */
+  /** IDs de facturas generadas para este caso (colección `invoices`). */
+  facturaIds?: string[];
+  /** ISO datetime en que se generó la primera factura. */
   facturadoAt?: string;
   /** ISO datetime en que se confirmó el cierre financiero del caso. */
   cierreConfirmadoAt?: string;

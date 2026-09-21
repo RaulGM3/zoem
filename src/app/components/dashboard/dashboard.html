@@ -200,11 +200,48 @@
       </div>
     }
 
+    <!-- Mis seguimientos pendientes -->
+    @if (perm.can('Contactos', 'ver') && misSeguimientos().length > 0) {
+      <div class="rounded-xl" style="background:var(--surface);border:1px solid var(--border)">
+        <div class="flex items-center justify-between gap-3 px-5 py-4" style="border-bottom:1px solid var(--border)">
+          <h2 class="text-sm font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">
+            Mis seguimientos pendientes
+          </h2>
+          @if (seguimientosVencidosCount() > 0) {
+            <span class="shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-bold"
+              style="background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger)">
+              {{ seguimientosVencidosCount() }} vencido{{ seguimientosVencidosCount() === 1 ? '' : 's' }}
+            </span>
+          }
+        </div>
+        <div>
+          @for (s of misSeguimientos(); track s.id) {
+            <a [routerLink]="s.link"
+              class="flex items-start gap-3 px-5 py-3 transition-colors duration-150"
+              style="border-bottom:1px solid var(--border)"
+              (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+              (mouseleave)="$any($event.currentTarget).style.background=''">
+              <lucide-icon [img]="CalendarClockIcon" size="15" class="mt-0.5 shrink-0"
+                [style.color]="s.vencido ? 'var(--danger)' : 'var(--text-faint)'"></lucide-icon>
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-medium" style="color:var(--text-strong)">{{ s.entregable }}</p>
+                <p class="truncate text-xs" style="color:var(--text-muted)">{{ s.contactoNombre }}</p>
+              </div>
+              <p class="shrink-0 text-xs font-medium"
+                [style.color]="s.vencido ? 'var(--danger)' : 'var(--text-body)'">
+                @if (s.vencido) { Venció {{ formatFecha(s.fecha) }} } @else { {{ formatFecha(s.fecha) }} }
+              </p>
+            </a>
+          }
+        </div>
+      </div>
+    }
+
     <!-- Agenda próxima -->
     @if (perm.can('Calendario', 'ver')) {
       <div class="rounded-xl" style="background:var(--surface);border:1px solid var(--border)">
         <div class="flex items-center justify-between px-5 py-4" style="border-bottom:1px solid var(--border)">
-          <h2 class="text-sm font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Próximos eventos e hitos</h2>
+          <h2 class="text-sm font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Próxima agenda</h2>
           <a routerLink="/calendario" class="text-xs font-semibold transition-opacity duration-150 hover:opacity-70"
             style="color:var(--brand)">Calendario →</a>
         </div>
@@ -239,24 +276,7 @@
       <div class="px-5 py-4" style="border-bottom:1px solid var(--border)">
         <h2 class="text-sm font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Actividad reciente</h2>
       </div>
-      <div>
-        @for (a of actividades(); track a.id) {
-          <div class="flex items-start gap-3 px-5 py-3" style="border-bottom:1px solid var(--border)">
-            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-              style="background:var(--surface-2);color:var(--text-muted)">
-              <lucide-icon [img]="actividadIcon(a.modulo)" size="14" />
-            </div>
-            <div class="min-w-0 flex-1">
-              <p class="text-sm" style="color:var(--text)">
-                <span class="font-medium" style="color:var(--text-strong)">{{ a.autorNombre }}</span> {{ a.accion }}
-              </p>
-              <p class="text-xs" style="color:var(--text-faint)">{{ fechaActividad(a) }}</p>
-            </div>
-          </div>
-        } @empty {
-          <div class="px-5 py-6 text-center text-sm" style="color:var(--text-faint)">Sin actividad reciente</div>
-        }
-      </div>
+      <app-actividad-feed [items]="actividades()" />
     </div>
   </div>
 </div>

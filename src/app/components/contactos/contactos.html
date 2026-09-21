@@ -117,10 +117,21 @@
                     </span>
                   </div>
                 </div>
-                <span class="rounded-full px-2 py-0.5 text-[10.5px] font-bold shrink-0"
-                  [style]="getStatusStyle(c.status)">
-                  {{ statusLabel(c.status) }}
-                </span>
+                @if (perm.can('Contactos', 'editar')) {
+                  <button type="button"
+                    (click)="$event.stopPropagation(); abrirEstado(c)"
+                    (keydown)="$event.stopPropagation()"
+                    class="rounded-full px-2 py-0.5 text-[10.5px] font-bold shrink-0 transition-opacity duration-150 hover:opacity-75"
+                    [style]="getStatusStyle(c.status)"
+                    [attr.aria-label]="'Cambiar estado de ' + displayName(c) + '. Actual: ' + statusLabel(c.status)">
+                    {{ statusLabel(c.status) }}
+                  </button>
+                } @else {
+                  <span class="rounded-full px-2 py-0.5 text-[10.5px] font-bold shrink-0"
+                    [style]="getStatusStyle(c.status)">
+                    {{ statusLabel(c.status) }}
+                  </span>
+                }
               </div>
 
               <!-- Datos de contacto -->
@@ -630,3 +641,22 @@
   [visible]="showImportDrawer()"
   (closed)="showImportDrawer.set(false)"
 />
+
+<!-- Cambio rápido de estado -->
+@if (estadoContacto(); as c) {
+  <app-estado-contacto-dialog
+    [contacto]="c"
+    (closed)="estadoContacto.set(null)"
+    (saved)="onEstadoSaved($event)"
+  />
+}
+
+<!-- Primer compromiso tras dar de alta un contacto -->
+@if (seguimientoContacto(); as c) {
+  <app-estado-contacto-dialog
+    [contacto]="c"
+    [soloSeguimiento]="true"
+    (closed)="seguimientoContacto.set(null)"
+    (saved)="onSeguimientoInicialSaved($event)"
+  />
+}

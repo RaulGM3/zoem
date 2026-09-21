@@ -16,6 +16,7 @@ import {
   serverTimestamp,
   deleteField,
   increment,
+  arrayUnion,
 } from '@angular/fire/firestore';
 import type { Observable } from 'rxjs';
 import { Auth } from '@angular/fire/auth';
@@ -556,16 +557,22 @@ export class CasosService {
     );
   }
 
-  /** Marca el caso como facturado, enlazando la factura generada (auditoría). */
+  /** Enlaza una factura al caso. Soporta múltiples facturas (facturaIds array). */
   async marcarFacturado(casoId: string, facturaId: string): Promise<void> {
     const facturadoAt = new Date().toISOString();
     await updateDoc(doc(this.firestore, 'companies', this.companyId, 'casos', casoId), {
       facturaId,
+      facturaIds: arrayUnion(facturaId),
       facturadoAt,
       updatedAt: serverTimestamp(),
     });
     this.casos.update(list =>
-      list.map(c => (c.id === casoId ? { ...c, facturaId, facturadoAt } : c))
+      list.map(c => (c.id === casoId ? {
+        ...c,
+        facturaId,
+        facturaIds: [...(c.facturaIds ?? []).filter(id => id !== facturaId), facturaId],
+        facturadoAt,
+      } : c))
     );
   }
 

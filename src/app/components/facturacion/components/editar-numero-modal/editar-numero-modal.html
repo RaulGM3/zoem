@@ -1,0 +1,83 @@
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" (click)="closed.emit()">
+  <div class="w-full max-w-md rounded-xl shadow-2xl" style="background:var(--surface)"
+    role="dialog" aria-modal="true" aria-labelledby="editar-numero-title"
+    (click)="$event.stopPropagation()">
+
+    <div class="flex items-center justify-between px-5 py-4" style="border-bottom:1px solid var(--border)">
+      <h2 id="editar-numero-title" class="text-base font-semibold"
+        style="color:var(--text-strong);font-family:var(--font-display)">Cambiar número de factura</h2>
+      <button type="button" (click)="closed.emit()" class="rounded-xl p-1.5 transition-colors duration-150"
+        style="color:var(--text-muted)"
+        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+        (mouseleave)="$any($event.currentTarget).style.background=''"
+        aria-label="Cerrar">
+        <lucide-icon [img]="XIcon" size="18"></lucide-icon>
+      </button>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onConfirm()" class="space-y-4 p-5">
+
+      <!-- Qué hace esta acción -->
+      <p class="text-sm" style="color:var(--text-body)">
+        Vas a sobrescribir manualmente el número de la factura
+        <span class="font-semibold" style="color:var(--text-strong);font-family:var(--font-mono)">{{ invoice().invoiceNumber }}</span>.
+        Úsalo solo si esta factura ya se emitió fuera del sistema —a mano o con otro programa— y necesitas
+        que el número coincida con el documento que ya tiene el cliente.
+      </p>
+
+      <div>
+        <label for="nuevo-numero" class="form-label">Nuevo número</label>
+        <input id="nuevo-numero" type="text" formControlName="numero" class="form-input w-full"
+          style="font-family:var(--font-mono)" autocomplete="off"
+          [attr.aria-invalid]="error() !== null"
+          [attr.aria-describedby]="error() ? 'numero-error' : (fueraDeSerie() ? 'numero-warning' : null)" />
+
+        @if (error()) {
+          <p id="numero-error" class="mt-1.5 text-xs" style="color:var(--danger)" role="alert">{{ error() }}</p>
+        }
+      </div>
+
+      <!-- Consecuencias -->
+      <div class="rounded-lg p-3 text-xs" role="note"
+        style="background:color-mix(in srgb,var(--warning) 10%,transparent);border:1px solid color-mix(in srgb,var(--warning) 25%,transparent);color:var(--warning)">
+        <div class="mb-1.5 flex items-center gap-1.5 font-semibold">
+          <lucide-icon [img]="TriangleAlertIcon" size="13"></lucide-icon>
+          Qué implica este cambio
+        </div>
+        <ul class="list-disc space-y-1 pl-4">
+          <li>Se regenera el PDF de la factura con el número nuevo. El PDF anterior deja de estar disponible.</li>
+          <li>El cambio no altera importes, fechas ni líneas.</li>
+          <li>La factura queda marcada como <strong>numeración manual</strong> y sale de la serie automática.</li>
+          @if (fueraDeSerie()) {
+            <li id="numero-warning">
+              El formato no sigue la serie del sistema (<span style="font-family:var(--font-mono)">F-AAAA-NNNN</span>),
+              así que este número no contará para calcular el siguiente correlativo.
+            </li>
+          }
+          <li>La AEAT exige numeración correlativa y sin duplicados: asegúrate de que este número es el que
+            realmente figura en el documento emitido.</li>
+        </ul>
+      </div>
+
+      <label class="flex items-start gap-2 text-sm" style="color:var(--text-body)">
+        <input type="checkbox" formControlName="acepto" class="mt-0.5 rounded" style="accent-color:var(--brand)" />
+        Entiendo las implicaciones y confirmo que quiero cambiar el número de esta factura.
+      </label>
+
+      <div class="flex gap-3 pt-1">
+        <button type="button" (click)="closed.emit()"
+          class="flex-1 rounded-lg py-2.5 text-sm font-medium transition-colors duration-150"
+          style="border:1px solid var(--border);color:var(--text-body)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+          (mouseleave)="$any($event.currentTarget).style.background=''">Cancelar</button>
+        <button type="submit" [disabled]="!puedeConfirmar()"
+          class="flex-1 rounded-lg py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 transition-colors duration-150"
+          style="background:var(--brand)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+          (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+          {{ saving() ? 'Guardando…' : 'Cambiar número' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

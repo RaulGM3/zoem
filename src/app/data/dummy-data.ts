@@ -1,8 +1,23 @@
 import type {
-  Project, Contact, Invoice, CalendarEvent, IaContact, AppDocument,
+  Project, Contact, CalendarEvent, IaContact, AppDocument,
   Caso, PipelineDeal, RegistroHora, Tarea, HistorialEntry,
 } from '../interfaces';
-export type { Project, Contact, Invoice, CalendarEvent, IaContact, AppDocument, Caso, PipelineDeal, RegistroHora, Tarea, HistorialEntry };
+export type { Project, Contact, CalendarEvent, IaContact, AppDocument, Caso, PipelineDeal, RegistroHora, Tarea, HistorialEntry };
+
+/** Legacy dummy invoice type used only by static demo components (informes, contacto-detail). */
+export interface DummyInvoice {
+  id: string;
+  number: string;
+  client: string;
+  project?: string;
+  amount: number;
+  vat: number;
+  total: number;
+  status: 'pagada' | 'pendiente' | 'vencida' | 'borrador';
+  issueDate: string;
+  dueDate: string;
+  paidDate?: string;
+}
 
 // --- PROJECTS ---
 export const PROJECTS: Project[] = [
@@ -194,7 +209,7 @@ export const CONTACTS: Contact[] = [
 ];
 
 // --- INVOICES ---
-export const INVOICES: Invoice[] = [
+export const INVOICES: DummyInvoice[] = [
   {
     id: 'INV-001',
     number: '2026-089',

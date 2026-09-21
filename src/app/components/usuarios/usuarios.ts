@@ -31,13 +31,17 @@ import type { PermissionRequest } from '../../interfaces/permission-request.inte
 import { InviteDrawerComponent, type InviteFormData } from './components/invite-drawer/invite-drawer';
 import { UserEditDrawerComponent, type UserEditPatch } from './components/user-edit-drawer/user-edit-drawer';
 import { RoleEditorDrawerComponent } from './components/role-editor-drawer/role-editor-drawer';
+import { ActividadFeedComponent } from '../../shared/components/actividad-feed/actividad-feed';
 
 type UsuariosTab = 'usuarios' | 'roles' | 'permisos' | 'solicitudes';
 type EditableMatrix = Record<Modulo, Record<FirmRole, RoleCaps>>;
 
 @Component({
   selector: 'app-usuarios',
-  imports: [LucideAngularModule, InviteDrawerComponent, UserEditDrawerComponent, RoleEditorDrawerComponent],
+  imports: [
+    LucideAngularModule, InviteDrawerComponent, UserEditDrawerComponent, RoleEditorDrawerComponent,
+    ActividadFeedComponent,
+  ],
   templateUrl: './usuarios.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -154,7 +158,7 @@ export class UsuariosComponent implements OnInit, OnDestroy {
 
   private loadActividad(): void {
     this.actividadSub = this.actividadService
-      .recentStream(20)
+      .recentStream(50)
       .subscribe(items => this.actividad.set(items));
   }
 

@@ -38,35 +38,32 @@
           </td>
           <td class="px-4 py-4">
             <div class="flex items-center justify-end gap-2">
-              @if (caso.facturaId) {
+              @if (invoiceCount(caso) > 0) {
                 <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium"
                   style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">
-                  <lucide-icon [img]="FileCheckIcon" size="13"></lucide-icon> Facturado
+                  <lucide-icon [img]="FileCheckIcon" size="13"></lucide-icon>
+                  {{ invoiceCount(caso) === 1 ? '1 factura' : invoiceCount(caso) + ' facturas' }}
                 </span>
-                @if (pdfUrl(caso.facturaId)) {
-                  <button (click)="downloadPdf.emit(caso.facturaId)" title="Descargar PDF"
-                    class="inline-flex items-center justify-center rounded-lg p-1.5 transition-colors duration-150"
-                    style="border:1px solid var(--border);color:var(--text-muted)"
-                    (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-                    (mouseleave)="$any($event.currentTarget).style.background=''">
-                    <lucide-icon [img]="DownloadIcon" size="14"></lucide-icon>
-                  </button>
-                  <button (click)="copyPdfLink.emit(caso.facturaId)" title="Copiar link de descarga"
-                    class="inline-flex items-center justify-center rounded-lg p-1.5 transition-colors duration-150"
-                    style="border:1px solid var(--border);color:var(--text-muted)"
-                    (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-                    (mouseleave)="$any($event.currentTarget).style.background=''">
-                    <lucide-icon [img]="LinkIcon" size="14"></lucide-icon>
-                  </button>
+                @for (fId of invoiceIds(caso); track fId) {
+                  @if (pdfUrl(fId)) {
+                    <button (click)="downloadPdf.emit(fId)" [title]="'Descargar PDF ' + invoiceNumber(fId)"
+                      class="inline-flex items-center justify-center rounded-lg p-1.5 transition-colors duration-150"
+                      style="border:1px solid var(--border);color:var(--text-muted)"
+                      (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                      (mouseleave)="$any($event.currentTarget).style.background=''">
+                      <lucide-icon [img]="DownloadIcon" size="14"></lucide-icon>
+                    </button>
+                  }
                 }
-              } @else if (canCreate()) {
+              }
+              @if (canCreate()) {
                 <button (click)="abrirFactura.emit(caso)"
                   [title]="esEjecutado(caso) ? '' : 'Gestoría incompleta (' + slotsLabel(caso) + '). Podés generar la factura igual.'"
                   class="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150"
                   style="border:1px solid var(--border);color:var(--text-body)"
                   (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
                   (mouseleave)="$any($event.currentTarget).style.background=''">
-                  <lucide-icon [img]="ReceiptIcon" size="14"></lucide-icon> Generar factura
+                  <lucide-icon [img]="ReceiptIcon" size="14"></lucide-icon> {{ invoiceCount(caso) > 0 ? 'Nueva factura' : 'Generar factura' }}
                 </button>
               }
               @if (canCreate()) {

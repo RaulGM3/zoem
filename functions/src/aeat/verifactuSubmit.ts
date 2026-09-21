@@ -1,4 +1,5 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import * as admin from 'firebase-admin';
 import * as forge from 'node-forge';
 import * as https from 'https';
 import { certSecretName, getSecret } from './secretManager';
@@ -13,8 +14,8 @@ const AEAT_ENDPOINTS: Record<string, string> = {
 interface VerifactuSubmitRequest {
   companyId: string;
   registro: Record<string, unknown>;
-  /** Si true → endpoint sandbox AEAT (prewww1.aeat.es). Por defecto true si no se indica. */
-  sandbox?: boolean;
+  /** 'alta' (default) para registro de factura, 'baja' para anulación */
+  tipo?: 'alta' | 'baja';
 }
 
 interface VerifactuSubmitResponse {
@@ -35,7 +36,7 @@ function escapeXml(value: string): string {
 }
 
 function buildSoapEnvelope(registro: Record<string, unknown>): string {
-  const { IDFactura, NombreRazonEmisor, TipoFactura, DescripcionOperacion, Desglose, CuotaTotal, ImporteTotal, HuellaAnterior, FechaHoraHusoGenRegistro } = registro as {
+  const { IDFactura, NombreRazonEmisor, TipoFactura, DescripcionOperacion, Desglose, CuotaTotal, ImporteTotal, HuellaAnterior, FechaHoraHusoGenRegistro, NIF, NombreDestinatario } = registro as {
     IDFactura: { NIF: string; NumSerieFactura: string; FechaExpedicionFactura: string };
     NombreRazonEmisor: string;
     TipoFactura: string;
@@ -45,16 +46,37 @@ function buildSoapEnvelope(registro: Record<string, unknown>): string {
     ImporteTotal: number;
     HuellaAnterior: string;
     FechaHoraHusoGenRegistro: string;
+    NIF?: string;
+    NombreDestinatario?: string;
   };
 
   const desgloseXml = Desglose.map(
     (d) => `
-      <sfe:DetalleIVA>
-        <sfe:BaseImponibleOImporteNoSujeto>${d.BaseImponibleOImporteNoSujeto.toFixed(2)}</sfe:BaseImponibleOImporteNoSujeto>
-        <sfe:TipoImpositivo>${d.TipoImpositivo}</sfe:TipoImpositivo>
-        <sfe:CuotaRepercutida>${d.CuotaRepercutida.toFixed(2)}</sfe:CuotaRepercutida>
-      </sfe:DetalleIVA>`
+            <sfe:DetalleIVA>
+              <sfe:BaseImponibleOImporteNoSujeto>${d.BaseImponibleOImporteNoSujeto.toFixed(2)}</sfe:BaseImponibleOImporteNoSujeto>
+              <sfe:TipoImpositivo>${d.TipoImpositivo}</sfe:TipoImpositivo>
+              <sfe:CuotaRepercutida>${d.CuotaRepercutida.toFixed(2)}</sfe:CuotaRepercutida>
+            </sfe:DetalleIVA>`
   ).join('');
+
+  // Encadenamiento: RegistroAnterior con Huella si existe, PrimerRegistro si es la primera factura
+  const encadenamientoXml = HuellaAnterior
+    ? `<sfe:Encadenamiento>
+            <sfe:RegistroAnterior>
+              <sfe:Huella>${escapeXml(HuellaAnterior)}</sfe:Huella>
+            </sfe:RegistroAnterior>
+          </sfe:Encadenamiento>`
+    : `<sfe:Encadenamiento>
+            <sfe:PrimerRegistro>S</sfe:PrimerRegistro>
+          </sfe:Encadenamiento>`;
+
+  // Contraparte: datos del destinatario (obligatorio en B2B)
+  const contraparteXml = NIF && NombreDestinatario
+    ? `<sfe:Contraparte>
+            <sfe:NombreRazon>${escapeXml(NombreDestinatario)}</sfe:NombreRazon>
+            <sfe:NIF>${escapeXml(NIF)}</sfe:NIF>
+          </sfe:Contraparte>`
+    : '';
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
@@ -73,14 +95,62 @@ function buildSoapEnvelope(registro: Record<string, unknown>): string {
             <sfe:FechaExpedicionFactura>${escapeXml(IDFactura.FechaExpedicionFactura)}</sfe:FechaExpedicionFactura>
           </sfe:IDFactura>
           <sfe:NombreRazonEmisor>${escapeXml(NombreRazonEmisor)}</sfe:NombreRazonEmisor>
+          ${contraparteXml}
           <sfe:TipoFactura>${escapeXml(TipoFactura)}</sfe:TipoFactura>
           <sfe:DescripcionOperacion>${escapeXml(DescripcionOperacion)}</sfe:DescripcionOperacion>
-          <sfe:Desglose>${desgloseXml}</sfe:Desglose>
+          <sfe:Desglose>${desgloseXml}
+          </sfe:Desglose>
           <sfe:CuotaTotal>${CuotaTotal.toFixed(2)}</sfe:CuotaTotal>
           <sfe:ImporteTotal>${ImporteTotal.toFixed(2)}</sfe:ImporteTotal>
-          <sfe:Huella>${escapeXml(HuellaAnterior)}</sfe:Huella>
+          ${encadenamientoXml}
           <sfe:FechaHoraHusoGenRegistro>${escapeXml(FechaHoraHusoGenRegistro)}</sfe:FechaHoraHusoGenRegistro>
         </sfe:RegistroAlta>
+      </sfe:RegistroFactura>
+    </sfe:RegFactuSistemaFacturacion>
+  </soapenv:Body>
+</soapenv:Envelope>`;
+}
+
+function buildSoapBaja(registro: Record<string, unknown>): string {
+  const { IDFactura, NombreRazonEmisor, DescripcionOperacion, HuellaAnterior, FechaHoraHusoGenRegistro } = registro as {
+    IDFactura: { NIF: string; NumSerieFactura: string; FechaExpedicionFactura: string };
+    NombreRazonEmisor: string;
+    DescripcionOperacion: string;
+    HuellaAnterior: string;
+    FechaHoraHusoGenRegistro: string;
+  };
+
+  const encadenamientoXml = HuellaAnterior
+    ? `<sfe:Encadenamiento>
+            <sfe:RegistroAnterior>
+              <sfe:Huella>${escapeXml(HuellaAnterior)}</sfe:Huella>
+            </sfe:RegistroAnterior>
+          </sfe:Encadenamiento>`
+    : `<sfe:Encadenamiento>
+            <sfe:PrimerRegistro>S</sfe:PrimerRegistro>
+          </sfe:Encadenamiento>`;
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+                  xmlns:sfe="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tikeV/cont/ws/SistemaVerifactu.xsd">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <sfe:RegFactuSistemaFacturacion>
+      <sfe:Cabecera>
+        <sfe:IDVersion>1.0</sfe:IDVersion>
+      </sfe:Cabecera>
+      <sfe:RegistroFactura>
+        <sfe:RegistroBaja>
+          <sfe:IDFactura>
+            <sfe:IDEmisorFactura>${escapeXml(IDFactura.NIF)}</sfe:IDEmisorFactura>
+            <sfe:NumSerieFactura>${escapeXml(IDFactura.NumSerieFactura)}</sfe:NumSerieFactura>
+            <sfe:FechaExpedicionFactura>${escapeXml(IDFactura.FechaExpedicionFactura)}</sfe:FechaExpedicionFactura>
+          </sfe:IDFactura>
+          <sfe:NombreRazonEmisor>${escapeXml(NombreRazonEmisor)}</sfe:NombreRazonEmisor>
+          <sfe:DescripcionOperacion>${escapeXml(DescripcionOperacion)}</sfe:DescripcionOperacion>
+          ${encadenamientoXml}
+          <sfe:FechaHoraHusoGenRegistro>${escapeXml(FechaHoraHusoGenRegistro)}</sfe:FechaHoraHusoGenRegistro>
+        </sfe:RegistroBaja>
       </sfe:RegistroFactura>
     </sfe:RegFactuSistemaFacturacion>
   </soapenv:Body>
@@ -146,7 +216,7 @@ export const verifactuSubmit = onCall<VerifactuSubmitRequest, Promise<VerifactuS
       throw new HttpsError('unauthenticated', 'Autenticación requerida');
     }
 
-    const { companyId, registro, sandbox } = request.data;
+    const { companyId, registro } = request.data;
     if (!companyId || !registro) {
       throw new HttpsError('invalid-argument', 'Faltan parámetros requeridos');
     }
@@ -155,8 +225,9 @@ export const verifactuSubmit = onCall<VerifactuSubmitRequest, Promise<VerifactuS
     // puede emitir facturas a AEAT con su certificado. Las rules NO aplican acá.
     await assertCompanyAccess(request.auth.uid, companyId);
 
-    // sandbox=true (o undefined → safe default) → endpoint de preproducción AEAT
-    const useSandbox = sandbox !== false;
+    // Sandbox control server-side: leer de Firestore, NO del cliente
+    const companyDoc = await admin.firestore().doc(`companies/${companyId}`).get();
+    const useSandbox = companyDoc.data()?.verifactu?.sandbox !== false;
     const endpoint = useSandbox ? AEAT_ENDPOINTS['sandbox']! : AEAT_ENDPOINTS['production']!;
     console.log(`[Verifactu] Enviando a ${useSandbox ? 'SANDBOX' : 'PRODUCCIÓN'}: ${endpoint}`);
 
@@ -191,7 +262,8 @@ export const verifactuSubmit = onCall<VerifactuSubmitRequest, Promise<VerifactuS
       throw new HttpsError('internal', `Error al leer el certificado: ${(err as Error).message}`);
     }
 
-    const soapBody = buildSoapEnvelope(registro);
+    const tipo = request.data.tipo ?? 'alta';
+    const soapBody = tipo === 'baja' ? buildSoapBaja(registro) : buildSoapEnvelope(registro);
 
     let rawResponse: string;
     try {

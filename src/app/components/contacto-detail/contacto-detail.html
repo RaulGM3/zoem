@@ -12,9 +12,20 @@
         <lucide-icon [img]="ArrowLeftIcon" class="w-5 h-5" />
       </button>
       <h1 class="text-xl font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">{{ getDisplayName(c) }}</h1>
-      <span class="px-2 py-0.5 text-xs rounded-full font-medium" [style.background]="getStatusStyle(c.status).background" [style.color]="getStatusStyle(c.status).color">
-        {{ getStatusLabel(c.status) }}
-      </span>
+      @if (perm.can('Contactos', 'editar')) {
+        <button type="button"
+          (click)="$event.stopPropagation(); abrirEstado()"
+          class="px-2 py-0.5 text-xs rounded-full font-medium transition-opacity duration-150 hover:opacity-75"
+          [style.background]="getStatusStyle(c.status).background"
+          [style.color]="getStatusStyle(c.status).color"
+          [attr.aria-label]="'Cambiar estado. Actual: ' + getStatusLabel(c.status)">
+          {{ getStatusLabel(c.status) }}
+        </button>
+      } @else {
+        <span class="px-2 py-0.5 text-xs rounded-full font-medium" [style.background]="getStatusStyle(c.status).background" [style.color]="getStatusStyle(c.status).color">
+          {{ getStatusLabel(c.status) }}
+        </span>
+      }
     </div>
     @if (perm.can('Contactos', 'editar')) {
       <button (click)="onEditar()"
@@ -180,6 +191,63 @@
                 <p class="text-xs line-clamp-2" style="color:var(--text-muted)">{{ caso.descripcion }}</p>
               }
             </button>
+          }
+        </div>
+      </div>
+
+      <!-- Seguimientos -->
+      <div class="rounded-xl p-5" style="background:var(--surface);border:1px solid var(--border)">
+        <div class="flex items-center gap-2 mb-3">
+          <lucide-icon [img]="CalendarClockIcon" class="w-4 h-4" style="color:var(--brand)" />
+          <h3 class="text-sm font-semibold" style="color:var(--text-body)">Seguimientos ({{ seguimientos().length }})</h3>
+        </div>
+        @if (seguimientos().length === 0) {
+          <p class="text-sm text-center py-6" style="color:var(--text-faint)">
+            Sin compromisos registrados. Cambia el estado del contacto para programar uno.
+          </p>
+        }
+        <div class="space-y-2">
+          @for (s of seguimientos(); track s.id) {
+            <div class="flex items-start justify-between gap-3 p-3 rounded-lg"
+              [style.border]="seguimientoVencido(s)
+                ? '1px solid color-mix(in srgb,var(--danger) 35%,transparent)'
+                : '1px solid var(--border)'"
+              [style.background]="seguimientoVencido(s)
+                ? 'color-mix(in srgb,var(--danger) 6%,transparent)'
+                : ''">
+              <div class="min-w-0">
+                <p class="text-sm font-medium" style="color:var(--text-strong)"
+                  [style.text-decoration]="s.estado === 'completado' ? 'line-through' : ''">
+                  {{ s.entregable }}
+                </p>
+                <p class="text-xs flex items-center gap-1.5 mt-0.5"
+                  [style.color]="seguimientoVencido(s) ? 'var(--danger)' : 'var(--text-faint)'">
+                  @if (seguimientoVencido(s)) {
+                    <lucide-icon [img]="CircleAlertIcon" class="w-3 h-3 shrink-0" />
+                    <span>Vencido el {{ s.fecha }}</span>
+                  } @else {
+                    <span>Hasta el {{ s.fecha }}</span>
+                  }
+                  <span aria-hidden="true">·</span>
+                  <span>{{ responsableNombre(s) }}</span>
+                </p>
+              </div>
+              @if (s.estado === 'completado') {
+                <span class="px-2 py-0.5 text-xs rounded-full font-medium shrink-0"
+                  style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">
+                  Completado
+                </span>
+              } @else if (puedeGestionar(s)) {
+                <button type="button" (click)="completarSeguimiento(s)"
+                  class="shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors duration-150"
+                  style="border:1px solid var(--border);color:var(--success)"
+                  (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--success) 10%,transparent)'"
+                  (mouseleave)="$any($event.currentTarget).style.background=''"
+                  [attr.aria-label]="'Marcar como completado: ' + s.entregable">
+                  Completar
+                </button>
+              }
+            </div>
           }
         </div>
       </div>
@@ -438,6 +506,14 @@
 
     </div>
   </div>
+
+  @if (editandoEstado()) {
+    <app-estado-contacto-dialog
+      [contacto]="c"
+      (closed)="editandoEstado.set(false)"
+      (saved)="onEstadoSaved($event)"
+    />
+  }
 </div>
 } @else {
   <div class="p-6 text-center" style="color:var(--text-muted)">

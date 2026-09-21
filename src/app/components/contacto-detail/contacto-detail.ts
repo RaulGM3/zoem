@@ -7,7 +7,7 @@ import { DecimalPipe } from '@angular/common';
 import {
   LucideAngularModule, ArrowLeft, Edit, Phone, Mail, MapPin,
   Building2, Calendar, Tag, FolderPlus, Upload, Folder, FolderOpen,
-  Check, X, Pencil, Download, Trash2,
+  Check, X, Pencil, Download, Trash2, CalendarClock, CircleAlert,
 } from 'lucide-angular';
 import { INVOICES } from '../../data/dummy-data';
 import { ContactService } from '../../core/services/contact.service';
@@ -19,14 +19,22 @@ import { CasosService } from '../../core/services/casos.service';
 import { UsersService } from '../../core/services/users';
 import { PermissionService } from '../../core/services/permission.service';
 import {
-  Contact, ContactFolder, ContactFile, Caso,
+  Contact, ContactFolder, ContactFile, Caso, Evento,
   CONTACT_STATUS_LABELS, CANAL_ENTRADA_LABELS, ContactStatus, CanalEntrada,
-  getContactDisplayName, getContactInitials,
+  getContactDisplayName, getContactInitials, getContactStatusStyle,
 } from '../../interfaces';
+import { EventosService } from '../../core/services/eventos.service';
+import { SeguimientoContactoService } from '../../core/services/seguimiento-contacto.service';
+import {
+  esSeguimiento, esVencido, puedeGestionarSeguimiento,
+} from '../../core/contactos/seguimiento';
+import {
+  EstadoContactoDialogComponent, type CambioEstadoResult,
+} from '../../shared/components/estado-contacto-dialog/estado-contacto-dialog';
 
 @Component({
   selector: 'app-contacto-detail',
-  imports: [LucideAngularModule, DecimalPipe],
+  imports: [LucideAngularModule, DecimalPipe, EstadoContactoDialogComponent],
   templateUrl: './contacto-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -48,6 +56,8 @@ export class ContactoDetailComponent {
   readonly PencilIcon = Pencil;
   readonly DownloadIcon = Download;
   readonly Trash2Icon = Trash2;
+  readonly CalendarClockIcon = CalendarClock;
+  readonly CircleAlertIcon = CircleAlert;
 
   id = input.required<string>();
 
@@ -58,6 +68,8 @@ export class ContactoDetailComponent {
   private readonly uploadQueue = inject(UploadQueueService);
   private readonly contactService = inject(ContactService);
   private readonly casosService = inject(CasosService);
+  private readonly eventosService = inject(EventosService);
+  private readonly seguimientosService = inject(SeguimientoContactoService);
   readonly usersService = inject(UsersService);
   readonly perm = inject(PermissionService);
 
@@ -121,6 +133,7 @@ export class ContactoDetailComponent {
           this.folderService.loadFolders(contactId),
           this.fileService.loadFiles(contactId),
           this.casosService.loadCasos(),
+          this.eventosService.loadEventos(),
         ]);
         this.contacto.set(c);
       },
@@ -143,6 +156,20 @@ export class ContactoDetailComponent {
   );
 
   totalDocumentos = computed(() => this.fileService.files().length);
+
+  /** Hoy en YYYY-MM-DD, para marcar seguimientos vencidos. */
+  private readonly hoy = new Date().toISOString().slice(0, 10);
+
+  /**
+   * Compromisos abiertos de este contacto. Se filtran en cliente sobre los
+   * eventos de la empresa (que ya se cargan enteros) para no exigir un índice
+   * compuesto nuevo en Firestore.
+   */
+  readonly seguimientos = computed(() =>
+    this.eventosService.eventos()
+      .filter(e => esSeguimiento(e) && e.origen.contactoId === this.id())
+      .sort((a, b) => a.fecha.localeCompare(b.fecha))
+  );
 
   encargadoNombre = computed(() => {
     const c = this.contacto();
@@ -203,18 +230,61 @@ export class ContactoDetailComponent {
   }
 
   getStatusStyle(status: string): { background: string; color: string } {
-    const mix = (v: string) => `color-mix(in srgb,${v} 12%,transparent)`;
-    const map: Record<string, { background: string; color: string }> = {
-      activo:                       { background: mix('var(--success)'),   color: 'var(--success)' },
-      potencial:                    { background: mix('var(--accent-ia)'), color: 'var(--accent-ia)' },
-      inactivo:                     { background: 'var(--surface-2)',       color: 'var(--text-muted)' },
-      cerrado_finalizado:           { background: 'var(--surface-2)',       color: 'var(--text-muted)' },
-      pendiente_presupuesto:        { background: mix('var(--warning)'),   color: 'var(--warning)' },
-      pendiente_firma_hoja_encargo: { background: mix('var(--warning)'),   color: 'var(--warning)' },
-      pendiente_pago:               { background: mix('var(--danger)'),    color: 'var(--danger)' },
-      integracion_plantillas:       { background: mix('var(--brand)'),     color: 'var(--brand)' },
-    };
-    return map[status] ?? { background: 'var(--surface-2)', color: 'var(--text-muted)' };
+    return getContactStatusStyle(status);
+  }
+
+  // ── Cambio de estado y seguimientos ───────────────────────────────────
+
+  /** Contacto en edición de estado (null = diálogo cerrado). */
+  readonly editandoEstado = signal(false);
+
+  abrirEstado(): void {
+    if (!this.perm.can('Contactos', 'editar')) return;
+    this.editandoEstado.set(true);
+  }
+
+  async onEstadoSaved(result: CambioEstadoResult): Promise<void> {
+    const c = this.contacto();
+    this.editandoEstado.set(false);
+    if (!c) return;
+
+    await this.toast.run(
+      () => this.seguimientosService.cambiarEstado(c, result.status, result.seguimiento),
+      {
+        successMessage: result.seguimiento ? 'Estado actualizado y seguimiento programado' : 'Estado actualizado',
+        errorTitle: 'No se pudo cambiar el estado',
+        // `contacto` es un signal local, independiente de contactService.contacts():
+        // hay que refrescarlo a mano o el chip seguiría mostrando el estado viejo.
+        onSuccess: () => this.contacto.update(prev => (prev ? { ...prev, status: result.status } : prev)),
+      }
+    );
+  }
+
+  /** Quién puede completar o descartar un compromiso: Admin, Gestor o su responsable. */
+  puedeGestionar(evento: Evento): boolean {
+    return puedeGestionarSeguimiento(
+      evento,
+      this.perm.currentMember()?.userId ?? null,
+      this.perm.userRole(),
+      this.perm.isSuperUser(),
+    );
+  }
+
+  seguimientoVencido(evento: Evento): boolean {
+    return esVencido(evento, this.hoy);
+  }
+
+  responsableNombre(evento: Evento): string {
+    const m = this.usersService.members().find(m => m.userId === evento.responsableId);
+    return m ? `${m.nombre}${m.apellido ? ' ' + m.apellido : ''}` : 'Sin asignar';
+  }
+
+  async completarSeguimiento(evento: Evento): Promise<void> {
+    if (!this.puedeGestionar(evento)) return;
+    await this.toast.run(
+      () => this.eventosService.updateEvento(evento.id, { estado: 'completado' }),
+      { successMessage: 'Seguimiento completado', errorTitle: 'No se pudo completar el seguimiento' }
+    );
   }
 
   getStatusLabel(status: string): string {

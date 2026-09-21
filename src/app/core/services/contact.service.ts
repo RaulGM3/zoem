@@ -71,9 +71,10 @@ export class ContactService {
     return contact.deleted === true ? null : contact;
   }
 
+  /** Devuelve el contacto creado para que el llamante pueda encadenar acciones. */
   async createContact(
     data: Omit<Contact, 'id' | 'companyId' | 'updatedAt'>
-  ): Promise<void> {
+  ): Promise<Contact> {
     const payload = data as Record<string, unknown>;
     const providedCreatedAt = payload['createdAt'] as Timestamp | undefined;
     const createdAt = providedCreatedAt ?? Timestamp.now();
@@ -104,6 +105,7 @@ export class ContactService {
       await this.actividad.log('Contactos', `Creó el contacto ${getContactDisplayName(data as Contact)}`, ref.id);
     } catch (err) {
     }
+    return newContact;
   }
 
   async updateContact(id: string, data: Record<string, unknown>): Promise<void> {

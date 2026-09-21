@@ -1,9 +1,16 @@
 <div class="fixed inset-0 z-50 flex justify-end bg-black/40" (click)="closed.emit()">
-  <div class="h-full w-full max-w-md overflow-y-auto shadow-2xl" style="background:var(--surface)" (click)="$event.stopPropagation()">
-    <div class="flex items-center justify-between px-5 py-4" style="border-bottom:1px solid var(--border)">
+  <div class="flex h-full w-full max-w-lg flex-col overflow-y-auto shadow-2xl"
+    style="background:var(--surface)" (click)="$event.stopPropagation()">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between px-5 py-4"
+      style="border-bottom:1px solid var(--border)">
       <div>
-        <h2 class="text-base font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Generar factura</h2>
-        <p class="text-xs" style="color:var(--text-faint)">{{ caso().titulo }}</p>
+        <h2 class="text-base font-semibold"
+          style="color:var(--text-strong);font-family:var(--font-display)">{{ headerTitle() }}</h2>
+        @if (caso()) {
+          <p class="text-xs" style="color:var(--text-faint)">{{ caso()!.titulo }}</p>
+        }
       </div>
       <button (click)="closed.emit()" class="rounded-xl p-1.5 transition-colors duration-150"
         style="color:var(--text-muted)"
@@ -14,42 +21,186 @@
       </button>
     </div>
 
-    <div class="space-y-4 p-5">
+    <!-- Body -->
+    <div class="flex-1 space-y-5 overflow-y-auto p-5" [formGroup]="form">
+
+      <!-- Dates -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label for="issueDate" class="form-label">Fecha emisión</label>
+          <input id="issueDate" type="date" formControlName="issueDate" class="form-input w-full" />
+        </div>
+        <div>
+          <label for="dueDate" class="form-label">Fecha vencimiento</label>
+          <input id="dueDate" type="date" formControlName="dueDate" class="form-input w-full" />
+        </div>
+      </div>
+
+      <!-- Global IVA rate -->
       <div class="flex items-center justify-between">
-        <label for="ivaRate" class="form-label mb-0!">Tasa de IVA (%)</label>
-        <input id="ivaRate" type="number" min="0" [value]="ivaRate()" (input)="ivaRateChanged.emit($any($event.target).value)"
+        <div>
+          <label for="ivaRate" class="form-label mb-0!">Tasa de IVA (%)</label>
+          <p class="text-[10px]" style="color:var(--text-faint)">Se aplica a líneas sin tasa propia</p>
+        </div>
+        <input id="ivaRate" type="number" min="0" formControlName="ivaRate"
           class="form-input w-24 text-right" />
       </div>
 
+      <!-- Line items -->
       <div class="space-y-2">
-        <p class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-faint);font-family:var(--font-mono)">Líneas</p>
-        @for (linea of lineas(); track linea.concepto; let i = $index) {
-          <div class="flex items-center gap-3 rounded-lg p-3" style="border:1px solid var(--border)">
-            <div class="flex-1">
-              <p class="text-sm font-medium" style="color:var(--text-strong)">{{ linea.concepto }}</p>
-              <label class="mt-1 flex items-center gap-1.5 text-xs" style="color:var(--text-muted)">
-                <input type="checkbox" [checked]="linea.aplicaIva" (change)="lineaIvaToggled.emit(i)" class="rounded" style="accent-color:var(--brand)" />
-                Aplicar IVA
-              </label>
+        <p class="text-xs font-semibold uppercase tracking-wider"
+          style="color:var(--text-faint);font-family:var(--font-mono)">Líneas</p>
+
+        @for (linea of lineasArray.controls; track linea; let i = $index) {
+          <div class="rounded-lg p-3 space-y-2" style="border:1px solid var(--border)"
+            [formGroup]="$any(linea)">
+
+            <!-- Row 1: Concepto + actions -->
+            <div class="flex items-start gap-2">
+              <input type="text" formControlName="concepto" placeholder="Concepto"
+                class="form-input flex-1 text-sm font-medium"
+                [attr.aria-label]="'Concepto línea ' + (i + 1)" />
+              <div class="flex items-center gap-0.5 shrink-0">
+                <button type="button" (click)="moveLinea(i, 'up')"
+                  [disabled]="i === 0"
+                  class="rounded p-1 disabled:opacity-30 transition-colors"
+                  style="color:var(--text-muted)"
+                  aria-label="Mover arriba">
+                  <lucide-icon [img]="ChevronUpIcon" size="14"></lucide-icon>
+                </button>
+                <button type="button" (click)="moveLinea(i, 'down')"
+                  [disabled]="i === lineasArray.length - 1"
+                  class="rounded p-1 disabled:opacity-30 transition-colors"
+                  style="color:var(--text-muted)"
+                  aria-label="Mover abajo">
+                  <lucide-icon [img]="ChevronDownIcon" size="14"></lucide-icon>
+                </button>
+                <button type="button" (click)="removeLinea(i)"
+                  [disabled]="lineasArray.length <= 1"
+                  class="rounded p-1 disabled:opacity-30 transition-colors"
+                  style="color:var(--text-muted)"
+                  (mouseenter)="lineasArray.length > 1 && ($any($event.currentTarget).style.color='var(--danger)')"
+                  (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)'"
+                  aria-label="Eliminar línea">
+                  <lucide-icon [img]="Trash2Icon" size="14"></lucide-icon>
+                </button>
+              </div>
             </div>
-            <div class="flex items-center gap-1">
-              <input type="number" [value]="linea.base" (input)="lineaBaseChanged.emit({ index: i, value: $any($event.target).value })"
-                class="form-input w-28 text-right"
-                [attr.aria-label]="'Base de ' + linea.concepto" />
-              <span class="text-sm" style="color:var(--text-faint)">€</span>
+
+            <!-- Row 2: Descripcion (optional, compact) -->
+            <textarea formControlName="descripcion" placeholder="Descripción (opcional)"
+              rows="1"
+              class="form-input w-full text-xs resize-none"
+              style="color:var(--text-muted)"></textarea>
+
+            <!-- Row 3: Cantidad, Precio unitario, Subtotal -->
+            <div class="grid grid-cols-[1fr_1fr_auto] items-center gap-2">
+              <div>
+                <label class="text-[10px] uppercase tracking-wider block mb-0.5"
+                  style="color:var(--text-faint)">Cantidad</label>
+                <input type="number" formControlName="cantidad" min="0.01" step="0.01"
+                  class="form-input w-full text-right text-sm"
+                  [attr.aria-label]="'Cantidad línea ' + (i + 1)" />
+              </div>
+              <div>
+                <label class="text-[10px] uppercase tracking-wider block mb-0.5"
+                  style="color:var(--text-faint)">Precio Ud.</label>
+                <input type="number" formControlName="precioUnitario" step="0.01"
+                  class="form-input w-full text-right text-sm"
+                  [attr.aria-label]="'Precio unitario línea ' + (i + 1)" />
+              </div>
+              <div class="text-right pt-3.5">
+                <span class="text-sm tabular-nums font-medium"
+                  style="color:var(--text-strong);font-family:var(--font-mono)">
+                  {{ lineSubtotal(i) | number:'1.2-2' }}&nbsp;€
+                </span>
+              </div>
+            </div>
+
+            <!-- Row 4: IVA toggle + optional per-line rate -->
+            <div class="flex items-center gap-3 pt-1">
+              <label class="flex items-center gap-1.5 text-xs cursor-pointer"
+                style="color:var(--text-muted)">
+                <input type="checkbox" formControlName="aplicaIva" class="rounded"
+                  style="accent-color:var(--brand)" />
+                IVA
+              </label>
+              @if (linea.value['aplicaIva']) {
+                <div class="flex items-center gap-1">
+                  <label class="text-[10px]" style="color:var(--text-faint)">Tasa:</label>
+                  <input type="number" formControlName="ivaRate" placeholder="Global"
+                    min="0" step="1"
+                    class="form-input w-16 text-right text-xs py-0.5"
+                    [attr.aria-label]="'Tasa IVA línea ' + (i + 1)" />
+                  <span class="text-[10px]" style="color:var(--text-faint)">%</span>
+                </div>
+              }
             </div>
           </div>
         }
+
+        <!-- Add line button -->
+        <button type="button" (click)="addLinea()"
+          class="flex w-full items-center justify-center gap-1.5 rounded-lg border-2 border-dashed py-2.5 text-xs font-medium transition-colors duration-150"
+          style="border-color:var(--border);color:var(--text-muted)"
+          (mouseenter)="$any($event.currentTarget).style.borderColor='var(--brand)';$any($event.currentTarget).style.color='var(--brand)'"
+          (mouseleave)="$any($event.currentTarget).style.borderColor='var(--border)';$any($event.currentTarget).style.color='var(--text-muted)'">
+          <lucide-icon [img]="PlusIcon" size="14"></lucide-icon>
+          Agregar línea
+        </button>
       </div>
 
+      <!-- Notes -->
+      <div>
+        <label for="invoiceNotes" class="form-label">Notas (opcional)</label>
+        <textarea id="invoiceNotes" formControlName="notes" rows="2"
+          placeholder="Observaciones, condiciones de pago…"
+          class="form-input w-full text-xs resize-none"></textarea>
+      </div>
+
+      <!-- Preview -->
       <div class="space-y-1 rounded-lg p-4 text-sm" style="background:var(--surface-2)">
-        <div class="flex justify-between" style="color:var(--text-body)"><span>Base imponible</span><span class="tabular-nums" style="font-family:var(--font-mono)">{{ facturaPreview().base | number:'1.2-2' }}€</span></div>
-        <div class="flex justify-between" style="color:var(--text-body)"><span>IVA</span><span class="tabular-nums" style="font-family:var(--font-mono)">{{ facturaPreview().iva | number:'1.2-2' }}€</span></div>
-        <div class="flex justify-between font-semibold pt-1" style="color:var(--text-strong);border-top:1px solid var(--border)"><span>Total</span><span class="tabular-nums" style="font-family:var(--font-mono)">{{ facturaPreview().total | number:'1.2-2' }}€</span></div>
+        <div class="flex justify-between" style="color:var(--text-body)">
+          <span>Base imponible</span>
+          <span class="tabular-nums" style="font-family:var(--font-mono)">
+            {{ preview().base | number:'1.2-2' }}&nbsp;€
+          </span>
+        </div>
+
+        @for (group of ivaBreakdown(); track group.rate) {
+          <div class="flex justify-between text-xs" style="color:var(--text-muted)">
+            <span>IVA {{ group.rate }}%</span>
+            <span class="tabular-nums" style="font-family:var(--font-mono)">
+              {{ group.cuota | number:'1.2-2' }}&nbsp;€
+            </span>
+          </div>
+        }
+
+        <div class="flex justify-between" style="color:var(--text-body)">
+          <span>IVA total</span>
+          <span class="tabular-nums" style="font-family:var(--font-mono)">
+            {{ preview().iva | number:'1.2-2' }}&nbsp;€
+          </span>
+        </div>
+
+        <div class="flex justify-between font-semibold pt-1"
+          style="color:var(--text-strong);border-top:1px solid var(--border)">
+          <span>Total</span>
+          <span class="tabular-nums" style="font-family:var(--font-mono)">
+            {{ preview().total | number:'1.2-2' }}&nbsp;€
+          </span>
+        </div>
       </div>
     </div>
 
-    @if (verifactuEnabled()) {
+    <!-- Verifactu banner -->
+    @if (verifactuLocked()) {
+      <div class="mx-5 mb-3 flex items-center gap-2 rounded-lg px-3 py-2 text-xs"
+        style="background:color-mix(in srgb,var(--danger) 8%,transparent);color:var(--danger)">
+        <lucide-icon [img]="ShieldCheckIcon" size="14" class="shrink-0"></lucide-icon>
+        Esta factura ya fue registrada en Verifactu y no puede editarse.
+      </div>
+    } @else if (verifactuEnabled()) {
       <div class="mx-5 mb-3 flex items-center gap-2 rounded-lg px-3 py-2 text-xs"
         style="background:color-mix(in srgb,var(--brand) 8%,transparent);color:var(--brand)">
         <lucide-icon [img]="ShieldCheckIcon" size="14" class="shrink-0"></lucide-icon>
@@ -57,17 +208,21 @@
       </div>
     }
 
+    <!-- Footer -->
     <div class="flex gap-3 px-5 py-4" style="border-top:1px solid var(--border)">
-      <button (click)="closed.emit()" class="flex-1 rounded-lg py-2.5 text-sm font-medium transition-colors duration-150"
+      <button (click)="closed.emit()"
+        class="flex-1 rounded-lg py-2.5 text-sm font-medium transition-colors duration-150"
         style="border:1px solid var(--border);color:var(--text-body)"
         (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-        (mouseleave)="$any($event.currentTarget).style.background=''">Cancelar</button>
-      <button (click)="confirmed.emit()" [disabled]="saving()"
+        (mouseleave)="$any($event.currentTarget).style.background=''">
+        Cancelar
+      </button>
+      <button (click)="onConfirm()" [disabled]="saving() || form.invalid || verifactuLocked()"
         class="flex-1 rounded-lg py-2.5 text-sm font-semibold text-white disabled:opacity-50 transition-colors duration-150"
         style="background:var(--brand)"
         (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
         (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
-        {{ saving() ? 'Generando…' : 'Generar factura' }}
+        {{ confirmLabel() }}
       </button>
     </div>
   </div>

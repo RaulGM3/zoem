@@ -32,6 +32,31 @@ export const CONTACT_STATUS_LABELS: Record<ContactStatus, string> = {
   integracion_plantillas: 'Integración plantillas de casos',
 };
 
+/** Catálogo ordenado de estados para selects y radiogroups. */
+export const CONTACT_STATUS_OPTIONS: readonly { value: ContactStatus; label: string }[] = (
+  Object.entries(CONTACT_STATUS_LABELS) as [ContactStatus, string][]
+).map(([value, label]) => ({ value, label }));
+
+const STATUS_NEUTRO = { background: 'var(--surface-2)', color: 'var(--text-muted)' } as const;
+
+const mixStatus = (token: string) => `color-mix(in srgb,${token} 12%,transparent)`;
+
+const CONTACT_STATUS_STYLES: Record<ContactStatus, { background: string; color: string }> = {
+  activo:                       { background: mixStatus('var(--success)'),   color: 'var(--success)' },
+  potencial:                    { background: mixStatus('var(--accent-ia)'), color: 'var(--accent-ia)' },
+  inactivo:                     { ...STATUS_NEUTRO },
+  cerrado_finalizado:           { ...STATUS_NEUTRO },
+  pendiente_presupuesto:        { background: mixStatus('var(--warning)'),   color: 'var(--warning)' },
+  pendiente_firma_hoja_encargo: { background: mixStatus('var(--warning)'),   color: 'var(--warning)' },
+  pendiente_pago:               { background: mixStatus('var(--danger)'),    color: 'var(--danger)' },
+  integracion_plantillas:       { background: mixStatus('var(--brand)'),     color: 'var(--brand)' },
+};
+
+/** Estilo del chip de estado. Fuente única: la usan el listado y la ficha. */
+export function getContactStatusStyle(status: string): { background: string; color: string } {
+  return CONTACT_STATUS_STYLES[status as ContactStatus] ?? { ...STATUS_NEUTRO };
+}
+
 export const CANAL_ENTRADA_LABELS: Record<CanalEntrada, string> = {
   email: 'Email',
   telefono: 'Teléfono',

@@ -1,0 +1,225 @@
+<div class="p-5 space-y-4">
+
+  <!-- Filters -->
+  <div class="flex flex-wrap items-end gap-3">
+    <div class="flex-1 min-w-[200px]">
+      <label class="form-label">Buscar</label>
+      <input type="text" placeholder="Número, cliente, caso…" class="form-input w-full"
+        [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" />
+    </div>
+    <div class="w-36">
+      <label class="form-label">Estado</label>
+      <select class="form-input w-full" [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
+        @for (opt of statusOptions; track opt.value) {
+          <option [value]="opt.value">{{ opt.label }}</option>
+        }
+      </select>
+    </div>
+    <div class="w-36">
+      <label class="form-label">Desde</label>
+      <input type="date" class="form-input w-full"
+        [ngModel]="dateFrom()" (ngModelChange)="dateFrom.set($event)" />
+    </div>
+    <div class="w-36">
+      <label class="form-label">Hasta</label>
+      <input type="date" class="form-input w-full"
+        [ngModel]="dateTo()" (ngModelChange)="dateTo.set($event)" />
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="flex items-center gap-4 text-xs" style="color:var(--text-muted)">
+    <span>{{ totals().count }} facturas</span>
+    <span>Base: <strong class="tabular-nums" style="font-family:var(--font-mono)">{{ totals().base | number:'1.2-2' }} €</strong></span>
+    <span>IVA: <strong class="tabular-nums" style="font-family:var(--font-mono)">{{ totals().iva | number:'1.2-2' }} €</strong></span>
+    <span>Total: <strong class="tabular-nums" style="font-family:var(--font-mono);color:var(--text-strong)">{{ totals().total | number:'1.2-2' }} €</strong></span>
+  </div>
+
+  <!-- Table -->
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm" style="border-collapse:separate;border-spacing:0">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border)">
+          <th class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-faint)">Número</th>
+          <th class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-faint)">Cliente</th>
+          <th class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-faint)">Emisión</th>
+          <th class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-faint)">Vencimiento</th>
+          <th class="px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-wider" style="color:var(--text-faint)">Total</th>
+          <th class="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wider" style="color:var(--text-faint)">Estado</th>
+          <th class="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wider" style="color:var(--text-faint)">Verifactu</th>
+          <th class="px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-wider" style="color:var(--text-faint)">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (inv of filteredInvoices(); track inv.id) {
+          <tr class="transition-colors duration-100"
+            style="border-bottom:1px solid var(--border)"
+            (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+            (mouseleave)="$any($event.currentTarget).style.background=''">
+
+            <!-- Número -->
+            <td class="px-3 py-2.5 font-medium tabular-nums" style="color:var(--text-strong);font-family:var(--font-mono)">
+              {{ inv.invoiceNumber }}
+              @if (inv.tipoFactura === 'R1') {
+                <span class="ml-1 rounded px-1 py-0.5 text-[9px] font-semibold uppercase"
+                  style="background:color-mix(in srgb,var(--warning) 12%,transparent);color:var(--warning)">Rect.</span>
+              }
+              @if (inv.numeroManual) {
+                <span class="ml-1 rounded px-1 py-0.5 text-[9px] font-semibold uppercase"
+                  style="background:color-mix(in srgb,var(--text-faint) 14%,transparent);color:var(--text-muted)"
+                  title="Número asignado manualmente, fuera de la serie automática">Manual</span>
+              }
+            </td>
+
+            <!-- Cliente -->
+            <td class="px-3 py-2.5 max-w-[180px] truncate" style="color:var(--text-body)">
+              {{ inv.clienteNombre ?? '—' }}
+              @if (inv.casoTitulo) {
+                <p class="text-[10px] truncate" style="color:var(--text-faint)">{{ inv.casoTitulo }}</p>
+              }
+            </td>
+
+            <!-- Emisión -->
+            <td class="px-3 py-2.5 tabular-nums" style="color:var(--text-muted)">
+              {{ inv.issueDate }}
+            </td>
+
+            <!-- Vencimiento -->
+            <td class="px-3 py-2.5 tabular-nums" style="color:var(--text-muted)">
+              {{ inv.dueDate }}
+            </td>
+
+            <!-- Total -->
+            <td class="px-3 py-2.5 text-right tabular-nums font-medium"
+              style="color:var(--text-strong);font-family:var(--font-mono)">
+              {{ inv.total | number:'1.2-2' }} €
+            </td>
+
+            <!-- Estado -->
+            <td class="px-3 py-2.5 text-center">
+              <span class="inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+                [style.background]="statusStyle(inv.status).background"
+                [style.color]="statusStyle(inv.status).color">
+                {{ statusLabel(inv.status) }}
+              </span>
+            </td>
+
+            <!-- Verifactu -->
+            <td class="px-3 py-2.5 text-center">
+              @if (inv.verifactu?.estado) {
+                <lucide-icon [img]="verifactuIcon(inv)" size="15"
+                  [style.color]="verifactuColor(inv)"
+                  [attr.aria-label]="'Verifactu: ' + inv.verifactu!.estado">
+                </lucide-icon>
+              } @else {
+                <span class="text-xs" style="color:var(--text-faint)">—</span>
+              }
+            </td>
+
+            <!-- Acciones -->
+            <td class="px-3 py-2.5 text-right">
+              <div class="flex items-center justify-end gap-1">
+                @if (canEdit(inv)) {
+                  <button (click)="editInvoice.emit(inv)" class="rounded p-1.5 transition-colors"
+                    style="color:var(--text-muted)"
+                    (mouseenter)="$any($event.currentTarget).style.color='var(--brand)'"
+                    (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)'"
+                    aria-label="Editar factura">
+                    <lucide-icon [img]="PencilIcon" size="14"></lucide-icon>
+                  </button>
+                }
+
+                @if (canEditNumber(inv)) {
+                  <button (click)="editNumber.emit(inv)" class="rounded p-1.5 transition-colors"
+                    style="color:var(--text-muted)"
+                    (mouseenter)="$any($event.currentTarget).style.color='var(--brand)'"
+                    (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)'"
+                    [attr.aria-label]="'Cambiar número de la factura ' + inv.invoiceNumber">
+                    <lucide-icon [img]="HashIcon" size="14"></lucide-icon>
+                  </button>
+                }
+
+                @if (inv.pdfUrl) {
+                  <button (click)="downloadPdf.emit(inv.id)" class="rounded p-1.5 transition-colors"
+                    style="color:var(--text-muted)"
+                    (mouseenter)="$any($event.currentTarget).style.color='var(--brand)'"
+                    (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)'"
+                    aria-label="Descargar PDF">
+                    <lucide-icon [img]="DownloadIcon" size="14"></lucide-icon>
+                  </button>
+                  <button (click)="copyPdfLink.emit(inv.id)" class="rounded p-1.5 transition-colors"
+                    style="color:var(--text-muted)"
+                    (mouseenter)="$any($event.currentTarget).style.color='var(--brand)'"
+                    (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)'"
+                    aria-label="Copiar enlace PDF">
+                    <lucide-icon [img]="LinkIcon" size="14"></lucide-icon>
+                  </button>
+                }
+
+                @if (canMarkPaid(inv)) {
+                  <button (click)="markPaid.emit(inv.id)" class="rounded p-1.5 transition-colors"
+                    style="color:var(--text-muted)"
+                    (mouseenter)="$any($event.currentTarget).style.color='var(--success)'"
+                    (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)'"
+                    aria-label="Marcar como pagada">
+                    <lucide-icon [img]="CircleDollarSignIcon" size="14"></lucide-icon>
+                  </button>
+                }
+
+                @if (canFinalize(inv)) {
+                  <button (click)="finalizeDraft.emit(inv.id)" class="rounded p-1.5 transition-colors"
+                    style="color:var(--text-muted)"
+                    (mouseenter)="$any($event.currentTarget).style.color='var(--brand)'"
+                    (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)'"
+                    aria-label="Finalizar borrador">
+                    <lucide-icon [img]="CheckCircle2Icon" size="14"></lucide-icon>
+                  </button>
+                }
+
+                @if (canRectify(inv)) {
+                  <button (click)="createRectificativa.emit(inv)" class="rounded p-1.5 transition-colors"
+                    style="color:var(--text-muted)"
+                    (mouseenter)="$any($event.currentTarget).style.color='var(--warning)'"
+                    (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)'"
+                    aria-label="Crear rectificativa">
+                    <lucide-icon [img]="RotateCcwIcon" size="14"></lucide-icon>
+                  </button>
+                }
+
+                @if (canRetryVerifactu(inv)) {
+                  <button (click)="retryVerifactu.emit(inv.id)" class="rounded p-1.5 transition-colors"
+                    style="color:var(--text-muted)"
+                    (mouseenter)="$any($event.currentTarget).style.color='var(--warning)'"
+                    (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)'"
+                    [attr.aria-label]="'Reintentar Verifactu: ' + (inv.verifactu?.error ?? '')">
+                    <lucide-icon [img]="RefreshCwIcon" size="14"></lucide-icon>
+                  </button>
+                }
+
+                @if (canAnular(inv)) {
+                  <button (click)="anularFactura.emit(inv.id)" class="rounded p-1.5 transition-colors"
+                    style="color:var(--text-muted)"
+                    (mouseenter)="$any($event.currentTarget).style.color='var(--danger)'"
+                    (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)'"
+                    aria-label="Anular factura">
+                    <lucide-icon [img]="BanIcon" size="14"></lucide-icon>
+                  </button>
+                }
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="8" class="px-3 py-10 text-center text-sm" style="color:var(--text-faint)">
+              @if (loading()) {
+                Cargando facturas…
+              } @else {
+                No hay facturas que coincidan con los filtros
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

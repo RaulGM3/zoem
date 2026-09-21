@@ -4,7 +4,8 @@ import { signal } from '@angular/core';
 import { Firestore } from '@angular/fire/firestore';
 import { Functions } from '@angular/fire/functions';
 import { Storage } from '@angular/fire/storage';
-import { InvoiceService, InvoiceLinea } from './invoice.service';
+import { InvoiceService, InvoiceLinea, Invoice } from './invoice.service';
+import { InvoicePdfService } from './invoice-pdf.service';
 import { CompanyService, Company } from './company.service';
 import { VerifactuClientService } from './verifactu-client.service';
 
@@ -12,10 +13,11 @@ import { VerifactuClientService } from './verifactu-client.service';
 // vi.hoisted: variables accesibles DENTRO de vi.mock (hoisting seguro)
 // ────────────────────────────────────────────────────
 
-const { mockAddDoc, mockGetDocs, mockUpdateDoc } = vi.hoisted(() => ({
+const { mockAddDoc, mockGetDocs, mockUpdateDoc, mockGetDoc } = vi.hoisted(() => ({
   mockAddDoc: vi.fn().mockResolvedValue({ id: 'invoice-123' }),
   mockGetDocs: vi.fn().mockResolvedValue({ docs: [] }),
   mockUpdateDoc: vi.fn().mockResolvedValue(undefined),
+  mockGetDoc: vi.fn().mockResolvedValue({ exists: () => false }),
 }));
 
 vi.mock('@angular/fire/firestore', () => ({
@@ -29,7 +31,7 @@ vi.mock('@angular/fire/firestore', () => ({
   doc: vi.fn().mockReturnValue('mock-doc-ref'),
   query: vi.fn().mockReturnValue('mock-query'),
   where: vi.fn().mockReturnValue('mock-where'),
-  getDoc: vi.fn().mockResolvedValue({ exists: () => false }),
+  getDoc: (...args: unknown[]) => mockGetDoc(...args),
   deleteDoc: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -75,6 +77,7 @@ function setupService(
       { provide: Storage, useValue: {} },
       { provide: CompanyService, useValue: buildCompanyService(companyOverride) },
       { provide: VerifactuClientService, useValue: verifactuClient },
+      { provide: InvoicePdfService, useValue: { generateAndUpload: vi.fn().mockResolvedValue('https://pdf.test/x.pdf') } },
     ],
   });
   return { svc: TestBed.inject(InvoiceService), verifactuClient };
@@ -142,30 +145,37 @@ describe('InvoiceService.createInvoiceForCaso() — cálculos', () => {
     mockGetDocs.mockResolvedValue({ docs: [] });
   });
 
+  const today = new Date().toISOString().slice(0, 10);
+  const due30 = (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().slice(0, 10); })();
+
+  function linea(overrides: Partial<InvoiceLinea> = {}): InvoiceLinea {
+    return { concepto: 'Test', cantidad: 1, precioUnitario: 0, base: 0, aplicaIva: false, ...overrides };
+  }
+
   it('base = suma de todas las líneas, IVA solo en las marcadas', async () => {
     const { svc } = setupService();
     const lineas: InvoiceLinea[] = [
-      { concepto: 'Honorarios', base: 1000, aplicaIva: true },
-      { concepto: 'Suplidos', base: 200, aplicaIva: false },
+      linea({ concepto: 'Honorarios', cantidad: 1, precioUnitario: 1000, base: 1000, aplicaIva: true }),
+      linea({ concepto: 'Suplidos', cantidad: 1, precioUnitario: 200, base: 200, aplicaIva: false }),
     ];
 
-    const id = await svc.createInvoiceForCaso('caso-1', lineas, 0.21);
+    const id = await svc.createInvoiceForCaso('caso-1', lineas, 0.21, today, due30);
 
     const [_collRef, invoiceData] = mockAddDoc.mock.calls[0];
     expect(id).toBe('invoice-gen');
-    expect(invoiceData.amount).toBe(1200);       // 1000 + 200
-    expect(invoiceData.vat).toBeCloseTo(210);    // solo 1000 * 0.21
-    expect(invoiceData.total).toBeCloseTo(1410); // 1200 + 210
+    expect(invoiceData.amount).toBe(1200);
+    expect(invoiceData.vat).toBeCloseTo(210);
+    expect(invoiceData.total).toBeCloseTo(1410);
   });
 
   it('ninguna línea con IVA → vat = 0', async () => {
     const { svc } = setupService();
     const lineas: InvoiceLinea[] = [
-      { concepto: 'Suplidos', base: 500, aplicaIva: false },
-      { concepto: 'Ingresos', base: 300, aplicaIva: false },
+      linea({ concepto: 'Suplidos', cantidad: 1, precioUnitario: 500, base: 500 }),
+      linea({ concepto: 'Ingresos', cantidad: 1, precioUnitario: 300, base: 300 }),
     ];
 
-    await svc.createInvoiceForCaso('caso-1', lineas, 0.21);
+    await svc.createInvoiceForCaso('caso-1', lineas, 0.21, today, due30);
 
     const [, invoiceData] = mockAddDoc.mock.calls[0];
     expect(invoiceData.vat).toBe(0);
@@ -175,10 +185,10 @@ describe('InvoiceService.createInvoiceForCaso() — cálculos', () => {
   it('todas las líneas con IVA → vat = base * rate', async () => {
     const { svc } = setupService();
     const lineas: InvoiceLinea[] = [
-      { concepto: 'Honorarios', base: 2000, aplicaIva: true },
+      linea({ concepto: 'Honorarios', cantidad: 1, precioUnitario: 2000, base: 2000, aplicaIva: true }),
     ];
 
-    await svc.createInvoiceForCaso('caso-1', lineas, 0.1);
+    await svc.createInvoiceForCaso('caso-1', lineas, 0.1, today, due30);
 
     const [, invoiceData] = mockAddDoc.mock.calls[0];
     expect(invoiceData.amount).toBe(2000);
@@ -186,41 +196,50 @@ describe('InvoiceService.createInvoiceForCaso() — cálculos', () => {
     expect(invoiceData.total).toBeCloseTo(2200);
   });
 
+  it('per-line IVA rate overrides global rate', async () => {
+    const { svc } = setupService();
+    const lineas: InvoiceLinea[] = [
+      linea({ concepto: 'Servicio al 10%', cantidad: 1, precioUnitario: 1000, base: 1000, aplicaIva: true, ivaRate: 0.10 }),
+      linea({ concepto: 'Servicio al 21%', cantidad: 1, precioUnitario: 1000, base: 1000, aplicaIva: true }),
+    ];
+
+    await svc.createInvoiceForCaso('caso-1', lineas, 0.21, today, due30);
+
+    const [, invoiceData] = mockAddDoc.mock.calls[0];
+    expect(invoiceData.vat).toBeCloseTo(310); // 1000*0.10 + 1000*0.21
+  });
+
   it('guarda casoId en el documento de Firestore', async () => {
     const { svc } = setupService();
-    await svc.createInvoiceForCaso('caso-xyz', [{ concepto: 'H', base: 100, aplicaIva: true }], 0.21);
+    await svc.createInvoiceForCaso('caso-xyz', [linea({ concepto: 'H', base: 100, precioUnitario: 100, aplicaIva: true })], 0.21, today, due30);
     const [, invoiceData] = mockAddDoc.mock.calls[0];
     expect(invoiceData.casoId).toBe('caso-xyz');
   });
 
   it('status inicial es "pendiente"', async () => {
     const { svc } = setupService();
-    await svc.createInvoiceForCaso('caso-1', [{ concepto: 'H', base: 500, aplicaIva: true }], 0.21);
+    await svc.createInvoiceForCaso('caso-1', [linea({ concepto: 'H', base: 500, precioUnitario: 500, aplicaIva: true })], 0.21, today, due30);
     const [, invoiceData] = mockAddDoc.mock.calls[0];
     expect(invoiceData.status).toBe('pendiente');
   });
 
-  it('issueDate hoy, dueDate = issueDate + 30 días', async () => {
+  it('uses provided issueDate and dueDate', async () => {
     const { svc } = setupService();
-    await svc.createInvoiceForCaso('caso-1', [{ concepto: 'H', base: 100, aplicaIva: true }], 0.21);
+    await svc.createInvoiceForCaso('caso-1', [linea({ concepto: 'H', base: 100, precioUnitario: 100, aplicaIva: true })], 0.21, '2026-01-15', '2026-02-14');
     const [, invoiceData] = mockAddDoc.mock.calls[0];
-
-    const today = new Date().toISOString().slice(0, 10);
-    const expected30 = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
-    expect(invoiceData.issueDate).toBe(today);
-    expect(invoiceData.dueDate).toBe(expected30);
+    expect(invoiceData.issueDate).toBe('2026-01-15');
+    expect(invoiceData.dueDate).toBe('2026-02-14');
   });
 
   it('NO dispara Verifactu si la empresa no lo tiene habilitado', async () => {
     const { svc, verifactuClient } = setupService({ verifactuEnabled: false });
-    await svc.createInvoiceForCaso('caso-1', [{ concepto: 'H', base: 100, aplicaIva: true }], 0.21);
+    await svc.createInvoiceForCaso('caso-1', [linea({ concepto: 'H', base: 100, precioUnitario: 100, aplicaIva: true })], 0.21, today, due30);
     expect(verifactuClient.prepareVerifactu).not.toHaveBeenCalled();
   });
 
   it('SÍ dispara Verifactu si la empresa tiene enabled=true y nif', async () => {
     const { svc, verifactuClient } = setupService({ verifactuEnabled: true, nif: 'B12345678' });
-    await svc.createInvoiceForCaso('caso-1', [{ concepto: 'H', base: 100, aplicaIva: true }], 0.21);
-    // Verifactu es fire-and-forget → esperamos un tick
+    await svc.createInvoiceForCaso('caso-1', [linea({ concepto: 'H', base: 100, precioUnitario: 100, aplicaIva: true })], 0.21, today, due30);
     await vi.waitFor(() => expect(verifactuClient.prepareVerifactu).toHaveBeenCalled());
   });
 
@@ -238,7 +257,115 @@ describe('InvoiceService.createInvoiceForCaso() — cálculos', () => {
     });
     const svc = TestBed.inject(InvoiceService);
     await expect(
-      svc.createInvoiceForCaso('caso-1', [{ concepto: 'H', base: 100, aplicaIva: true }], 0.21)
+      svc.createInvoiceForCaso('caso-1', [linea({ concepto: 'H', base: 100, precioUnitario: 100, aplicaIva: true })], 0.21, today, due30)
     ).rejects.toThrow('No active company');
+  });
+});
+
+// ────────────────────────────────────────────────────
+// Tests: updateInvoiceNumber — override manual del número de factura
+// ────────────────────────────────────────────────────
+
+describe('InvoiceService.updateInvoiceNumber()', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    TestBed.resetTestingModule();
+    mockGetDocs.mockResolvedValue({ docs: [] });
+  });
+
+  function makeInvoice(override: Partial<Invoice> = {}): Invoice {
+    return {
+      id: 'inv-1',
+      companyId: 'company-abc',
+      invoiceNumber: 'F-2026-0007',
+      amount: 100,
+      vat: 21,
+      total: 121,
+      status: 'pendiente',
+      issueDate: '2026-09-01',
+      dueDate: '2026-10-01',
+      ...override,
+    };
+  }
+
+  function stubGetInvoice(invoice: Invoice | null): void {
+    mockGetDoc.mockResolvedValue(
+      invoice
+        ? { exists: () => true, id: invoice.id, data: () => invoice }
+        : { exists: () => false },
+    );
+  }
+
+  it('actualiza el número cuando la factura no está registrada en Verifactu', async () => {
+    const { svc } = setupService();
+    stubGetInvoice(makeInvoice());
+
+    await svc.updateInvoiceNumber('inv-1', 'A/2026/000123');
+
+    const [, data] = mockUpdateDoc.mock.calls[0];
+    expect(data.invoiceNumber).toBe('A/2026/000123');
+    expect(data.numeroManual).toBe(true);
+  });
+
+  it('recorta espacios alrededor del número', async () => {
+    const { svc } = setupService();
+    stubGetInvoice(makeInvoice());
+
+    await svc.updateInvoiceNumber('inv-1', '  A/2026/000123  ');
+
+    const [, data] = mockUpdateDoc.mock.calls[0];
+    expect(data.invoiceNumber).toBe('A/2026/000123');
+  });
+
+  it('rechaza si la factura ya fue aceptada por Verifactu', async () => {
+    const { svc } = setupService();
+    stubGetInvoice(makeInvoice({ verifactu: { estado: 'enviado', huella: 'H', huellaAnterior: '' } }));
+
+    await expect(svc.updateInvoiceNumber('inv-1', 'A/2026/000123')).rejects.toThrow(/Verifactu/);
+    expect(mockUpdateDoc).not.toHaveBeenCalled();
+  });
+
+  it('rechaza si la factura está anulada', async () => {
+    const { svc } = setupService();
+    stubGetInvoice(makeInvoice({ status: 'anulada' }));
+
+    await expect(svc.updateInvoiceNumber('inv-1', 'A/2026/000123')).rejects.toThrow(/anulada/);
+    expect(mockUpdateDoc).not.toHaveBeenCalled();
+  });
+
+  it('rechaza un número vacío', async () => {
+    const { svc } = setupService();
+    stubGetInvoice(makeInvoice());
+
+    await expect(svc.updateInvoiceNumber('inv-1', '   ')).rejects.toThrow(/vacío/);
+    expect(mockUpdateDoc).not.toHaveBeenCalled();
+  });
+
+  it('rechaza un número ya usado por otra factura', async () => {
+    const { svc } = setupService();
+    stubGetInvoice(makeInvoice());
+    svc.invoices.set([
+      makeInvoice(),
+      makeInvoice({ id: 'inv-2', invoiceNumber: 'A/2026/000123' }),
+    ]);
+
+    await expect(svc.updateInvoiceNumber('inv-1', 'A/2026/000123')).rejects.toThrow(/ya está en uso/);
+    expect(mockUpdateDoc).not.toHaveBeenCalled();
+  });
+
+  it('no escribe nada si el número no cambió', async () => {
+    const { svc } = setupService();
+    stubGetInvoice(makeInvoice());
+
+    await svc.updateInvoiceNumber('inv-1', 'F-2026-0007');
+
+    expect(mockUpdateDoc).not.toHaveBeenCalled();
+  });
+
+  it('rechaza si la factura no existe', async () => {
+    const { svc } = setupService();
+    stubGetInvoice(null);
+
+    await expect(svc.updateInvoiceNumber('inv-1', 'A/2026/000123')).rejects.toThrow(/no encontrada/);
   });
 });

@@ -1,5 +1,6 @@
 import { Timestamp } from '@angular/fire/firestore';
 import type { Anotacion } from './caso.interface';
+import type { ContactStatus } from './contact.interface';
 
 export type EventoPrioridad = 'alta' | 'media' | 'baja' | 'ninguna';
 export type EventoRecurrencia = 'ninguna' | 'diaria' | 'semanal' | 'mensual' | 'anual';
@@ -55,6 +56,20 @@ export const RECURRENCIA_LABELS: Record<EventoRecurrencia, string> = {
 
 export type RecurrenciaFinTipo = 'fecha' | 'ocurrencias';
 
+/**
+ * Trazabilidad de un evento nacido de un cambio de estado de contacto.
+ * Un "seguimiento" es un Evento con este origen: así el calendario, el feed ICS
+ * y el dashboard lo pintan sin conocer el concepto.
+ */
+export interface EventoOrigenSeguimiento {
+  tipo: 'seguimiento_contacto';
+  contactoId: string;
+  /** Denormalizado para pintar el seguimiento sin cargar el contacto. */
+  contactoNombre: string;
+  statusOrigen: ContactStatus;
+  statusDestino: ContactStatus;
+}
+
 export interface Evento {
   id: string;
   companyId: string;
@@ -75,6 +90,12 @@ export interface Evento {
   calendarColor?: string | null;
   anotaciones?: Anotacion[]; // notas libres del calendario
   invitados: string[] | 'todos'; // userId[] or 'todos' for whole company
+  /** Miembro responsable de cumplir el compromiso (sólo en seguimientos). */
+  responsableId?: string;
+  /** Qué hay que entregar para que el compromiso se dé por cumplido. */
+  entregable?: string;
+  /** Presente sólo si el evento nació de un cambio de estado de contacto. */
+  origen?: EventoOrigenSeguimiento;
   creadoPor: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;

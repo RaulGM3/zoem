@@ -28,6 +28,20 @@ export class FacturacionCasosTabComponent {
   readonly DownloadIcon = Download;
   readonly LinkIcon = Link;
 
+  /** Devuelve los IDs de factura del caso (soporta facturaIds[] y legacy facturaId). */
+  invoiceIds(caso: Caso): string[] {
+    if (caso.facturaIds?.length) return caso.facturaIds;
+    return caso.facturaId ? [caso.facturaId] : [];
+  }
+
+  invoiceCount(caso: Caso): number {
+    return this.invoiceIds(caso).length;
+  }
+
+  invoiceNumber(facturaId: string): string {
+    return this.invoiceMap().get(facturaId)?.invoiceNumber ?? facturaId;
+  }
+
   pdfUrl(facturaId: string | undefined): string | undefined {
     if (!facturaId) return undefined;
     return this.invoiceMap().get(facturaId)?.pdfUrl;

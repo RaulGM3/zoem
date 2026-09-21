@@ -16,11 +16,15 @@ import { PermissionService } from '../../core/services/permission.service';
 import { ToastService } from '../../core/services/toast.service';
 import {
   Contact, PersonaFisica, PersonaJuridica, ContactStatus, CanalEntrada,
-  CONTACT_STATUS_LABELS, CANAL_ENTRADA_LABELS,
-  getContactDisplayName, getContactInitials,
+  CONTACT_STATUS_LABELS, CONTACT_STATUS_OPTIONS, CANAL_ENTRADA_LABELS,
+  getContactDisplayName, getContactInitials, getContactStatusStyle,
 } from '../../interfaces';
 import { ImportarContactosComponent } from './components/importar-contactos/importar-contactos';
 import { FocusTrapDirective } from '../../shared/directives/focus-trap.directive';
+import {
+  EstadoContactoDialogComponent, type CambioEstadoResult,
+} from '../../shared/components/estado-contacto-dialog/estado-contacto-dialog';
+import { SeguimientoContactoService } from '../../core/services/seguimiento-contacto.service';
 
 type ContactPayload =
   | Omit<PersonaFisica, 'id' | 'companyId' | 'createdAt' | 'updatedAt'>
@@ -31,7 +35,7 @@ type ContactosTab = 'contactos' | 'pipeline' | 'rgpd' | 'herramientas';
 @Component({
   selector: 'app-contactos',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, LucideAngularModule, DecimalPipe, ReactiveFormsModule, ImportarContactosComponent, FocusTrapDirective],
+  imports: [RouterLink, LucideAngularModule, DecimalPipe, ReactiveFormsModule, ImportarContactosComponent, FocusTrapDirective, EstadoContactoDialogComponent],
   templateUrl: './contactos.html',
 })
 export class ContactosComponent {
@@ -64,10 +68,9 @@ export class ContactosComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly searchSvc = inject(SearchService);
+  private readonly seguimientos = inject(SeguimientoContactoService);
 
-  readonly contactStatuses: readonly { value: ContactStatus; label: string }[] = (
-    Object.entries(CONTACT_STATUS_LABELS) as [ContactStatus, string][]
-  ).map(([value, label]) => ({ value, label }));
+  readonly contactStatuses = CONTACT_STATUS_OPTIONS;
 
   readonly canalesEntrada: readonly { value: CanalEntrada; label: string }[] = (
     Object.entries(CANAL_ENTRADA_LABELS) as [CanalEntrada, string][]
@@ -90,6 +93,11 @@ export class ContactosComponent {
   deleteConfirmId = signal<string | null>(null);
   formStep = signal<1 | 2>(1);
   showErrors = signal(false);
+
+  /** Contacto cuyo estado se está cambiando desde el chip (null = diálogo cerrado). */
+  readonly estadoContacto = signal<Contact | null>(null);
+  /** Contacto recién creado, al que se le propone el primer compromiso. */
+  readonly seguimientoContacto = signal<Contact | null>(null);
 
   // Dummy data — tabs Embudo CRM y RGPD ocultos hasta tener fuente real
   // pipelineDeals = PIPELINE_DEALS;
@@ -235,18 +243,38 @@ export class ContactosComponent {
   }
 
   getStatusStyle(status: string): { background: string; color: string } {
-    const mix = (v: string) => `color-mix(in srgb,${v} 12%,transparent)`;
-    const map: Record<string, { background: string; color: string }> = {
-      activo:                       { background: mix('var(--success)'),   color: 'var(--success)' },
-      potencial:                    { background: mix('var(--accent-ia)'), color: 'var(--accent-ia)' },
-      inactivo:                     { background: 'var(--surface-2)',       color: 'var(--text-muted)' },
-      cerrado_finalizado:           { background: 'var(--surface-2)',       color: 'var(--text-muted)' },
-      pendiente_presupuesto:        { background: mix('var(--warning)'),   color: 'var(--warning)' },
-      pendiente_firma_hoja_encargo: { background: mix('var(--warning)'),   color: 'var(--warning)' },
-      pendiente_pago:               { background: mix('var(--danger)'),    color: 'var(--danger)' },
-      integracion_plantillas:       { background: mix('var(--brand)'),     color: 'var(--brand)' },
-    };
-    return map[status] ?? { background: 'var(--surface-2)', color: 'var(--text-muted)' };
+    return getContactStatusStyle(status);
+  }
+
+  // ── Cambio rápido de estado ───────────────────────────────────────────
+  abrirEstado(c: Contact): void {
+    if (!this.perm.can('Contactos', 'editar')) return;
+    this.estadoContacto.set(c);
+  }
+
+  async onEstadoSaved(result: CambioEstadoResult): Promise<void> {
+    const c = this.estadoContacto();
+    if (!c) return;
+    this.estadoContacto.set(null);
+
+    await this.toast.run(
+      () => this.seguimientos.cambiarEstado(c, result.status, result.seguimiento),
+      {
+        successMessage: result.seguimiento ? 'Estado actualizado y seguimiento programado' : 'Estado actualizado',
+        errorTitle: 'No se pudo cambiar el estado',
+      }
+    );
+  }
+
+  async onSeguimientoInicialSaved(result: CambioEstadoResult): Promise<void> {
+    const c = this.seguimientoContacto();
+    this.seguimientoContacto.set(null);
+    if (!c || !result.seguimiento) return;
+
+    await this.toast.run(
+      () => this.seguimientos.programarSeguimiento(c, result.seguimiento!),
+      { successMessage: 'Seguimiento programado', errorTitle: 'No se pudo programar el seguimiento' }
+    );
   }
 
   getTypeStyle(type: string): { background: string; color: string } {
@@ -439,17 +467,25 @@ export class ContactosComponent {
       const updatePayload: Record<string, unknown> = editId
         ? this.withClearedPreviousTypeFields(data as Record<string, unknown>)
         : (data as Record<string, unknown>);
+      let creado: Contact | null = null;
       await this.toast.run(
-        () =>
-          editId
-            ? this.contactService.updateContact(editId, updatePayload)
-            : this.contactService.createContact(data),
+        async () => {
+          if (editId) {
+            await this.contactService.updateContact(editId, updatePayload);
+            return;
+          }
+          creado = await this.contactService.createContact(data);
+        },
         {
           successMessage: editId ? 'Contacto actualizado' : 'Contacto creado',
           errorTitle: 'No se pudo guardar el contacto',
           // El drawer se cierra SOLO si la escritura terminó bien. Si falla,
           // queda abierto con los datos para reintentar desde el toast.
-          onSuccess: () => this.closeDrawer(),
+          onSuccess: () => {
+            this.closeDrawer();
+            // Alta nueva: proponer el primer compromiso sobre el contacto creado.
+            if (creado && this.perm.can('Calendario', 'crear')) this.seguimientoContacto.set(creado);
+          },
         }
       );
     } finally {
