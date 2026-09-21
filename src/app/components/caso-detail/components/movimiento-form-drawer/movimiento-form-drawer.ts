@@ -1,7 +1,7 @@
 import { Component, ChangeDetectionStrategy, input, output, signal, computed, effect } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { LucideAngularModule, X } from 'lucide-angular';
-import type { CuentaBancaria, GestoriaSlot, MovimientoTipo, TipoIva } from '../../../../interfaces';
+import type { CuentaBancaria, GestoriaSlot, MovimientoGestoria, MovimientoTipo, TipoIva } from '../../../../interfaces';
 import { desglosarIva, calcularIvaDesdeBase } from '../../../../interfaces';
 
 export interface MovimientoFormData {
@@ -31,7 +31,12 @@ export class MovimientoFormDrawerComponent {
   readonly visible = input.required<boolean>();
   readonly saving = input.required<boolean>();
   readonly prefillSlot = input.required<GestoriaSlot | null>();
+  /** Movimiento en edición. `null` = alta. Tiene prioridad sobre `prefillSlot`. */
+  readonly movimientoEdit = input<MovimientoGestoria | null>(null);
   readonly cuentas = input<CuentaBancaria[]>([]);
+
+  /** true cuando el drawer edita un movimiento existente en lugar de crear uno. */
+  readonly editando = computed(() => this.movimientoEdit() !== null);
 
   readonly saved = output<MovimientoFormData>();
   readonly closed = output<void>();
@@ -114,6 +119,11 @@ export class MovimientoFormDrawerComponent {
   }
 
   private prefill(): void {
+    const editado = this.movimientoEdit();
+    if (editado) {
+      this.prefillDesdeMovimiento(editado);
+      return;
+    }
     const slot = this.prefillSlot();
     const today = new Date().toISOString().slice(0, 10);
     if (slot) {
@@ -131,6 +141,23 @@ export class MovimientoFormDrawerComponent {
     this.formFecha.set(today);
     this.formNotas.set('');
     this.formCuentaId.set('');
+  }
+
+  /**
+   * Carga el formulario desde un movimiento guardado. `importe` es SIEMPRE el
+   * total, así que el desglose entra en modo "IVA incluido" para que la base y
+   * la cuota recalculadas coincidan con las almacenadas.
+   */
+  private prefillDesdeMovimiento(mov: MovimientoGestoria): void {
+    this.formConcepto.set(mov.concepto);
+    this.formTipo.set(mov.tipo);
+    this.formEsEntrada.set(mov.esEntrada);
+    this.formImporte.set(String(mov.importe));
+    this.formFecha.set(mov.fecha);
+    this.formNotas.set(mov.notas ?? '');
+    this.formCuentaId.set(mov.cuentaId ?? '');
+    this.formIva.set(mov.ivaExento ? 'exento' : (String(mov.tipoIva ?? 21) as IvaSel));
+    this.formIvaIncluido.set(true);
   }
 
   private tipoCostoToMovTipo(tipoCosto: string): MovimientoTipo {

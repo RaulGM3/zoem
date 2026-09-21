@@ -19,6 +19,9 @@ export interface MovimientoGestoria {
   aprobadoAt?: Timestamp;
   aprobadoPor?: string;
   cuentaId?: string;
+  /** Auditoría de edición: ausentes mientras el movimiento no se haya modificado nunca. */
+  updatedAt?: Timestamp;
+  updatedBy?: string;
   /**
    * Desglose fiscal. `importe` es el total; `baseImponible + cuotaIva === importe`.
    * Movimientos legacy sin estos campos se interpretan como base = importe, cuota = 0.

@@ -167,34 +167,66 @@
       </p>
     </div>
 
-    <!-- Egresos con desglose -->
-    <div class="kpi-card">
-      <p class="text-xs uppercase tracking-wide" style="color:var(--text-faint)">Egresos</p>
+    <!-- Egresos: total limpio + desglose en popover (hover, foco o clic) -->
+    <div class="kpi-card relative" (mouseleave)="desgloseAbierto.set(false)">
+      <div class="flex items-center justify-between gap-2">
+        <p class="text-xs uppercase tracking-wide" style="color:var(--text-faint)">Egresos</p>
+        @if (desgloseEgresos().length > 0) {
+          <button
+            type="button"
+            id="egresos-desglose-trigger"
+            aria-controls="egresos-desglose"
+            [attr.aria-expanded]="desgloseAbierto()"
+            (click)="desgloseAbierto.set(!desgloseAbierto())"
+            (mouseenter)="desgloseAbierto.set(true)"
+            (focus)="desgloseAbierto.set(true)"
+            class="p-1 -m-1 rounded-md transition-colors duration-150"
+            [style.color]="desgloseAbierto() ? 'var(--text-body)' : 'var(--text-faint)'"
+          >
+            <lucide-icon [img]="InfoIcon" class="w-3.5 h-3.5" />
+            <span class="sr-only">Ver desglose de egresos por tipo</span>
+          </button>
+        }
+      </div>
+
       <p class="text-xl font-bold mt-1" style="color:var(--danger);font-family:var(--font-display)">
         {{ rm.totalEgresos | number:'1.2-2' }} €
       </p>
-      @if (rm.totalEgresos > 0) {
-        <div class="mt-2 space-y-0.5 pt-2" style="border-top:1px solid var(--border-soft)">
-          @if (rm.suplidos > 0) {
-            <div class="flex justify-between text-xs" style="color:var(--text-muted)">
-              <span>Suplidos</span><span>{{ rm.suplidos | number:'1.2-2' }} €</span>
-            </div>
+
+      @if (desgloseEgresos().length > 0) {
+        <!-- Barra proporcional: lectura instantánea del reparto, siempre visible -->
+        <div class="mt-2 flex h-1.5 gap-px rounded-full overflow-hidden" aria-hidden="true">
+          @for (t of desgloseEgresos(); track t.tipo) {
+            <span [style.background]="t.color" [style.width.%]="t.porcentaje"></span>
           }
-          @if (rm.honorarios > 0) {
-            <div class="flex justify-between text-xs" style="color:var(--text-muted)">
-              <span>Honorarios</span><span>{{ rm.honorarios | number:'1.2-2' }} €</span>
-            </div>
+        </div>
+
+        <div
+          id="egresos-desglose"
+          role="group"
+          aria-labelledby="egresos-desglose-trigger"
+          [hidden]="!desgloseAbierto()"
+          class="absolute left-0 right-0 top-full z-20 mt-1 rounded-xl p-3 shadow-lg space-y-1.5"
+          style="background:var(--surface);border:1px solid var(--border)"
+        >
+          @for (t of desgloseEgresos(); track t.tipo) {
+            <button
+              type="button"
+              (click)="filtrarPorTipo(t.tipo)"
+              class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors duration-150"
+              (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+              (mouseleave)="$any($event.currentTarget).style.background=''"
+              [attr.aria-label]="'Filtrar movimientos por ' + t.etiqueta"
+            >
+              <span class="h-2 w-2 shrink-0 rounded-full" [style.background]="t.color"></span>
+              <span class="flex-1 text-left text-xs" style="color:var(--text-body)">{{ t.etiqueta }}</span>
+              <span class="text-xs tabular-nums" style="color:var(--text-muted)">{{ t.importe | number:'1.2-2' }} €</span>
+              <span class="w-9 text-right text-xs tabular-nums" style="color:var(--text-faint)">{{ t.porcentaje | number:'1.0-0' }}%</span>
+            </button>
           }
-          @if (rm.gastos > 0) {
-            <div class="flex justify-between text-xs" style="color:var(--text-muted)">
-              <span>Gastos</span><span>{{ rm.gastos | number:'1.2-2' }} €</span>
-            </div>
-          }
-          @if (rm.otros > 0) {
-            <div class="flex justify-between text-xs" style="color:var(--text-muted)">
-              <span>Otros</span><span>{{ rm.otros | number:'1.2-2' }} €</span>
-            </div>
-          }
+          <p class="pt-1 text-xs" style="color:var(--text-faint);border-top:1px solid var(--border-soft)">
+            Pulsa un tipo para filtrar los movimientos
+          </p>
         </div>
       }
     </div>
@@ -234,17 +266,170 @@
 
   <!-- Movements table -->
   <div class="rounded-xl overflow-hidden" style="background:var(--surface);border:1px solid var(--border)">
-    <div class="flex items-center justify-between px-4 py-3" style="border-bottom:1px solid var(--border)">
-      <h3 class="text-sm font-medium" style="color:var(--text-body)">Movimientos</h3>
-      @if (canEdit()) {
-        <button (click)="addMov.emit()"
-          class="flex items-center gap-1.5 px-3 py-1.5 text-sm text-white rounded-lg transition-colors duration-150"
-          style="background:var(--brand)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-          (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
-          <lucide-icon [img]="PlusIcon" class="w-3.5 h-3.5" />
-          Añadir
-        </button>
+    <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3" style="border-bottom:1px solid var(--border)">
+      <div class="flex items-baseline gap-2">
+        <h3 class="text-sm font-medium" style="color:var(--text-body)">Movimientos</h3>
+        @if (hayFiltro()) {
+          <span class="text-xs tabular-nums" style="color:var(--text-faint)">
+            {{ movimientosVisibles().length }} de {{ movimientos().length }}
+          </span>
+        }
+      </div>
+
+      <div class="flex items-center gap-2">
+        @if (movimientos().length > 0) {
+          <!-- Búsqueda: siempre a la vista, es el filtro que más se usa -->
+          <div class="relative">
+            <lucide-icon [img]="SearchIcon" class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style="color:var(--text-faint)" />
+            <input
+              type="search"
+              [value]="filtroTexto()"
+              (input)="filtroTexto.set($any($event.target).value)"
+              placeholder="Buscar concepto o notas"
+              aria-label="Buscar en concepto y notas"
+              class="w-44 sm:w-56 pl-8 pr-2 py-1.5 text-sm rounded-lg transition-colors duration-150"
+              style="background:var(--surface-2);border:1px solid var(--border);color:var(--text-body)"
+            />
+          </div>
+
+          <button
+            type="button"
+            (click)="mostrarFiltros.set(!mostrarFiltros())"
+            [attr.aria-expanded]="mostrarFiltros()"
+            aria-controls="mov-filtros"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors duration-150"
+            [style.background]="hayFiltro() ? 'color-mix(in srgb,var(--brand) 12%,transparent)' : 'transparent'"
+            [style.color]="hayFiltro() ? 'var(--brand)' : 'var(--text-muted)'"
+            [style.border]="'1px solid ' + (hayFiltro() ? 'transparent' : 'var(--border)')"
+          >
+            <lucide-icon [img]="SlidersIcon" class="w-3.5 h-3.5" />
+            Filtros
+          </button>
+        }
+
+        @if (canEdit()) {
+          <button (click)="addMov.emit()"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-sm text-white rounded-lg transition-colors duration-150"
+            style="background:var(--brand)"
+            (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+            (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+            <lucide-icon [img]="PlusIcon" class="w-3.5 h-3.5" />
+            Añadir
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Panel de filtros -->
+    <div id="mov-filtros" [hidden]="!mostrarFiltros()" class="px-4 py-3 space-y-3" style="background:var(--surface-2);border-bottom:1px solid var(--border)">
+
+      <!-- Tipo -->
+      @if (tiposDisponibles().length > 1) {
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs uppercase tracking-wide w-20 shrink-0" style="color:var(--text-faint)">Tipo</span>
+          @for (t of tiposDisponibles(); track t) {
+            @let activo = filtroTipos().includes(t);
+            <button
+              type="button"
+              (click)="toggleTipo(t)"
+              [attr.aria-pressed]="activo"
+              class="px-2.5 py-1 text-xs rounded-full font-medium transition-colors duration-150"
+              [style.background]="activo ? getMovTipoStyle(t).background : 'transparent'"
+              [style.color]="activo ? getMovTipoStyle(t).color : 'var(--text-muted)'"
+              [style.border]="'1px solid ' + (activo ? 'transparent' : 'var(--border)')"
+            >
+              {{ t | titlecase }}
+              <span class="tabular-nums" style="opacity:.65">{{ conteoPorTipo().get(t) }}</span>
+            </button>
+          }
+        </div>
+      }
+
+      <!-- Dirección -->
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs uppercase tracking-wide w-20 shrink-0" style="color:var(--text-faint)">Dirección</span>
+        @for (d of direcciones; track d.valor) {
+          @let activa = filtroDireccion() === d.valor;
+          <button
+            type="button"
+            (click)="filtroDireccion.set(d.valor)"
+            [attr.aria-pressed]="activa"
+            class="px-2.5 py-1 text-xs rounded-full font-medium transition-colors duration-150"
+            [style.background]="activa ? 'color-mix(in srgb,var(--brand) 12%,transparent)' : 'transparent'"
+            [style.color]="activa ? 'var(--brand)' : 'var(--text-muted)'"
+            [style.border]="'1px solid ' + (activa ? 'transparent' : 'var(--border)')"
+          >
+            {{ d.etiqueta }}
+          </button>
+        }
+      </div>
+
+      <!-- Cuenta -->
+      @if (cuentas().length > 0) {
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs uppercase tracking-wide w-20 shrink-0" style="color:var(--text-faint)">Cuenta</span>
+          @for (c of cuentas(); track c.id) {
+            @let activa = filtroCuentas().includes(c.id);
+            <button
+              type="button"
+              (click)="toggleCuenta(c.id)"
+              [attr.aria-pressed]="activa"
+              class="px-2.5 py-1 text-xs rounded-full font-medium transition-colors duration-150"
+              [style.background]="activa ? 'color-mix(in srgb,var(--brand) 12%,transparent)' : 'transparent'"
+              [style.color]="activa ? 'var(--brand)' : 'var(--text-muted)'"
+              [style.border]="'1px solid ' + (activa ? 'transparent' : 'var(--border)')"
+            >
+              {{ c.nombre }}
+            </button>
+          }
+          @if (haySinCuenta()) {
+            @let sinCuenta = filtroCuentas().includes(SIN_CUENTA);
+            <button
+              type="button"
+              (click)="toggleCuenta(SIN_CUENTA)"
+              [attr.aria-pressed]="sinCuenta"
+              class="px-2.5 py-1 text-xs rounded-full font-medium transition-colors duration-150"
+              [style.background]="sinCuenta ? 'color-mix(in srgb,var(--brand) 12%,transparent)' : 'transparent'"
+              [style.color]="sinCuenta ? 'var(--brand)' : 'var(--text-muted)'"
+              [style.border]="'1px solid ' + (sinCuenta ? 'transparent' : 'var(--border)')"
+            >
+              Sin cuenta
+            </button>
+          }
+        </div>
+      }
+
+      <!-- Rango de fechas -->
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs uppercase tracking-wide w-20 shrink-0" style="color:var(--text-faint)">Fechas</span>
+        <label class="sr-only" for="filtro-desde">Fecha desde</label>
+        <input id="filtro-desde" type="date" [value]="filtroDesde()" (input)="filtroDesde.set($any($event.target).value)"
+          class="px-2 py-1 text-xs rounded-lg" style="background:var(--surface);border:1px solid var(--border);color:var(--text-body)" />
+        <span class="text-xs" style="color:var(--text-faint)">—</span>
+        <label class="sr-only" for="filtro-hasta">Fecha hasta</label>
+        <input id="filtro-hasta" type="date" [value]="filtroHasta()" (input)="filtroHasta.set($any($event.target).value)"
+          class="px-2 py-1 text-xs rounded-lg" style="background:var(--surface);border:1px solid var(--border);color:var(--text-body)" />
+        @for (p of presets; track p.valor) {
+          <button type="button" (click)="aplicarPreset(p.valor)"
+            class="px-2.5 py-1 text-xs rounded-full transition-colors duration-150"
+            style="color:var(--text-muted);border:1px solid var(--border)"
+            (mouseenter)="$any($event.currentTarget).style.background='var(--surface)'"
+            (mouseleave)="$any($event.currentTarget).style.background=''">
+            {{ p.etiqueta }}
+          </button>
+        }
+      </div>
+
+      @if (hayFiltro()) {
+        <div class="flex justify-end">
+          <button type="button" (click)="limpiarFiltros()"
+            class="flex items-center gap-1 text-xs transition-colors duration-150" style="color:var(--text-faint)"
+            (mouseenter)="$any($event.currentTarget).style.color='var(--danger)'"
+            (mouseleave)="$any($event.currentTarget).style.color='var(--text-faint)'">
+            <lucide-icon [img]="XIcon" class="w-3 h-3" />
+            Limpiar filtros
+          </button>
+        </div>
       }
     </div>
 
@@ -260,17 +445,29 @@
         <table class="w-full text-sm">
           <thead style="background:var(--surface-2)">
             <tr class="text-left uppercase tracking-wider" style="border-bottom:1px solid var(--border);color:var(--text-faint);font-family:var(--font-mono);font-size:11px">
-              <th class="px-4 py-2.5 font-medium">Concepto</th>
-              <th class="px-4 py-2.5 font-medium">Tipo</th>
+              @for (col of columnas; track col.campo) {
+                <th class="px-4 py-2.5 font-medium" [class.text-right]="col.alineaDerecha"
+                  [attr.aria-sort]="orden().campo === col.campo ? (orden().direccion === 'asc' ? 'ascending' : 'descending') : 'none'">
+                  <button type="button" (click)="toggleOrden(col.campo)"
+                    class="inline-flex items-center gap-1 uppercase tracking-wider transition-colors duration-150"
+                    [class.flex-row-reverse]="col.alineaDerecha"
+                    [style.color]="orden().campo === col.campo ? 'var(--text-body)' : 'inherit'"
+                    [attr.aria-label]="'Ordenar por ' + col.etiqueta">
+                    {{ col.etiqueta }}
+                    <lucide-icon
+                      [img]="orden().campo !== col.campo ? ChevronsUpDownIcon : (orden().direccion === 'asc' ? ArrowUpIcon : ArrowDownIcon)"
+                      class="w-3 h-3"
+                      [style.opacity]="orden().campo === col.campo ? 1 : 0.4" />
+                  </button>
+                </th>
+              }
               <th class="px-4 py-2.5 font-medium">Cuenta</th>
-              <th class="px-4 py-2.5 font-medium">Fecha</th>
               <th class="px-4 py-2.5 font-medium">Registrado por</th>
-              <th class="px-4 py-2.5 font-medium text-right">Importe</th>
               <th class="px-4 py-2.5"></th>
             </tr>
           </thead>
           <tbody>
-            @for (mov of movimientos(); track mov.id) {
+            @for (mov of movimientosVisibles(); track mov.id) {
               <tr class="group transition-colors duration-150"
                 (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
                 (mouseleave)="$any($event.currentTarget).style.background=''"
@@ -288,17 +485,7 @@
                     {{ mov.tipo }}
                   </span>
                 </td>
-                <td class="px-4 py-3 text-xs" style="color:var(--text-muted)">
-                  @if (mov.cuentaId && cuentaMap().get(mov.cuentaId); as nombre) {
-                    <span class="px-2 py-0.5 rounded-full font-medium" style="background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand)">{{ nombre }}</span>
-                  } @else {
-                    <span style="color:var(--text-faint)">—</span>
-                  }
-                </td>
                 <td class="px-4 py-3" style="color:var(--text-muted)">{{ mov.fecha }}</td>
-                <td class="px-4 py-3 text-xs" style="color:var(--text-muted)">
-                  {{ miembros().get(mov.createdBy) ?? '—' }}
-                </td>
                 <td class="px-4 py-3 text-right font-medium"
                   [style.color]="mov.esEntrada ? 'var(--success)' : 'var(--danger)'">
                   {{ mov.esEntrada ? '+' : '−' }}{{ mov.importe | number:'1.2-2' }} €
@@ -311,7 +498,32 @@
                     <p class="text-xs font-normal" style="color:var(--text-faint)">exento</p>
                   }
                 </td>
-                <td class="px-4 py-3 text-right">
+                <td class="px-4 py-3 text-xs" style="color:var(--text-muted)">
+                  @if (mov.cuentaId && cuentaMap().get(mov.cuentaId); as nombre) {
+                    <span class="px-2 py-0.5 rounded-full font-medium" style="background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand)">{{ nombre }}</span>
+                  } @else {
+                    <span style="color:var(--text-faint)">—</span>
+                  }
+                </td>
+                <td class="px-4 py-3 text-xs" style="color:var(--text-muted)">
+                  {{ miembros().get(mov.createdBy) ?? '—' }}
+                  @if (mov.updatedBy) {
+                    <span class="block" style="color:var(--text-faint)"
+                      [title]="'Editado por ' + (miembros().get(mov.updatedBy) ?? 'otro usuario')">
+                      editado · {{ miembros().get(mov.updatedBy) ?? '—' }}
+                    </span>
+                  }
+                </td>
+                <td class="px-4 py-3 text-right whitespace-nowrap">
+                  @if (canEdit()) {
+                    <button (click)="editMov.emit(mov)"
+                      class="p-1 rounded opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-colors duration-150"
+                      (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                      (mouseleave)="$any($event.currentTarget).style.background=''"
+                      [attr.aria-label]="'Editar el movimiento ' + mov.concepto">
+                      <lucide-icon [img]="PencilIcon" class="w-3.5 h-3.5" style="color:var(--text-faint)" />
+                    </button>
+                  }
                   @if (canDelete()) {
                     @if (confirmingDeleteMovId() === mov.id) {
                       <span class="text-xs mr-1" style="color:var(--danger)">¿Seguro?</span>
@@ -339,6 +551,15 @@
                       </button>
                     }
                   }
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7" class="px-4 py-10 text-center text-sm" style="color:var(--text-faint)">
+                  <p>Ningún movimiento coincide con los filtros</p>
+                  <button type="button" (click)="limpiarFiltros()" class="text-xs mt-1 underline" style="color:var(--brand)">
+                    Limpiar filtros
+                  </button>
                 </td>
               </tr>
             }

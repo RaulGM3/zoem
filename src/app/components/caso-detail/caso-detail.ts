@@ -18,7 +18,7 @@ import { CuentasService } from '../../core/services/cuentas.service';
 import { cycleHitoEstado, stampEstadoChange } from '../../core/hitos/hito-estado';
 import {
   Caso, CasoDocSlot, CasoDocFile,
-  GestoriaSlot, Hito, HitoActividad,
+  GestoriaSlot, Hito, HitoActividad, MovimientoGestoria,
   getContactDisplayName,
 } from '../../interfaces';
 import { CasoDetailHeaderComponent, CasoTab } from './components/caso-detail-header/caso-detail-header';
@@ -61,6 +61,10 @@ export class CasoDetailComponent implements OnDestroy {
   readonly permissionService = inject(PermissionService);
   readonly cuentasService = inject(CuentasService);
   readonly cuentas = this.cuentasService.cuentas;
+  /** id de cuenta → nombre, para que el feed de actividad no escupa ids opacos. */
+  readonly cuentaNombres = computed(
+    () => new Map(this.cuentas().map(c => [c.id, c.nombre] as const))
+  );
   readonly miembrosMap = computed(() =>
     new Map(this.usersService.members().map(m => [m.userId, m.nombre]))
   );
@@ -192,6 +196,8 @@ export class CasoDetailComponent implements OnDestroy {
   // Gestoría
   readonly showMovForm = signal(false);
   readonly registeringSlot = signal<GestoriaSlot | null>(null);
+  /** Movimiento abierto en el drawer para editar. `null` = alta. */
+  readonly editingMov = signal<MovimientoGestoria | null>(null);
   readonly savingMov = signal(false);
 
   // Header badge counts
@@ -415,11 +421,21 @@ export class CasoDetailComponent implements OnDestroy {
   openMovForm(): void {
     if (!this.canEditCasos()) return;
     this.registeringSlot.set(null);
+    this.editingMov.set(null);
+    this.showMovForm.set(true);
+  }
+
+  /** Abre el drawer sobre un movimiento existente (Admin y Gestor vía `Casos.editar`). */
+  openEditMov(mov: MovimientoGestoria): void {
+    if (!this.canEditCasos()) return;
+    this.registeringSlot.set(null);
+    this.editingMov.set(mov);
     this.showMovForm.set(true);
   }
 
   openRegistrarSlot(slot: GestoriaSlot): void {
     if (!this.canEditCasos()) return;
+    this.editingMov.set(null);
     this.registeringSlot.set(slot);
     this.showMovForm.set(true);
   }
@@ -444,9 +460,16 @@ export class CasoDetailComponent implements OnDestroy {
         cuotaIva: data.cuotaIva,
       };
       const slot = this.registeringSlot();
+      const editado = this.editingMov();
       await this.toast.run(
         async () => {
-          if (slot) {
+          if (editado) {
+            // El servicio calcula el diff, sella updatedAt/updatedBy y lo publica
+            // en el feed de actividad para que los admins vean qué se tocó.
+            await this.gestoriaService.updateMovimiento(
+              c.id, editado.id, movData, editado, this.cuentaNombres()
+            );
+          } else if (slot) {
             await this.gestoriaService.registerSlot(c.id, slot, movData);
           } else {
             await this.gestoriaService.addMovimiento(c.id, movData);
@@ -454,10 +477,11 @@ export class CasoDetailComponent implements OnDestroy {
           this.caso.set(await this.casosService.getCaso(c.id));
         },
         {
-          successMessage: 'Movimiento registrado',
-          errorTitle: 'No se pudo registrar el movimiento',
+          successMessage: editado ? 'Movimiento actualizado' : 'Movimiento registrado',
+          errorTitle: editado ? 'No se pudo actualizar el movimiento' : 'No se pudo registrar el movimiento',
           onSuccess: () => {
             this.registeringSlot.set(null);
+            this.editingMov.set(null);
             this.showMovForm.set(false);
           },
         }
@@ -502,6 +526,7 @@ export class CasoDetailComponent implements OnDestroy {
 
   closeMovForm(): void {
     this.registeringSlot.set(null);
+    this.editingMov.set(null);
     this.showMovForm.set(false);
   }
 

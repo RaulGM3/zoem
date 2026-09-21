@@ -74,6 +74,7 @@
           (reorderSlots)="reorderSlots($event)"
           (addMov)="openMovForm()"
           (deleteMov)="deleteMovimiento($event)"
+          (editMov)="openEditMov($event)"
         />
       }
 
@@ -118,6 +119,7 @@
   [visible]="showMovForm()"
   [saving]="savingMov()"
   [prefillSlot]="registeringSlot()"
+  [movimientoEdit]="editingMov()"
   [cuentas]="cuentas()"
   (saved)="onSaveMov($event)"
   (closed)="closeMovForm()"

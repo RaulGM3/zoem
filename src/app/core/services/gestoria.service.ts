@@ -21,6 +21,7 @@ import { CompanyService } from './company.service';
 import { CasosService } from './casos.service';
 import { ActividadService } from './actividad.service';
 import { stripUndefinedDeep } from '../firebase/sanitize';
+import { describirCambios, type MovimientoAuditable } from '../tesoreria/cambios-movimiento';
 import { GestoriaSlot, MovimientoGestoria, MovimientoTipo, Retiro } from '../../interfaces';
 import { Auth } from '@angular/fire/auth';
 
@@ -200,12 +201,40 @@ export class GestoriaService {
     await this.actividad.log('Tesorería', `Registró el movimiento "${data.concepto}" (${data.importe} €)`, casoId);
   }
 
-  async updateMovimiento(casoId: string, id: string, data: Partial<MovimientoCreate>): Promise<void> {
+  /**
+   * Edita un movimiento de caso dejando rastro: sella `updatedAt`/`updatedBy` y
+   * publica el diff legible en el feed de actividad, que es lo que miran los
+   * admins. Sin `anterior` no hay diff que publicar, solo el sellado.
+   */
+  async updateMovimiento(
+    casoId: string,
+    id: string,
+    data: Partial<MovimientoCreate>,
+    anterior?: MovimientoAuditable,
+    nombresCuenta?: ReadonlyMap<string, string>,
+  ): Promise<void> {
+    const cambios = anterior ? describirCambios(anterior, data, nombresCuenta) : [];
+    // Nada cambió realmente: no ensuciamos el feed ni tocamos el documento.
+    if (anterior && cambios.length === 0) return;
+
     await updateDoc(
       doc(this.firestore, 'companies', this.companyId, 'casos', casoId, 'gestoria', id),
-      stripUndefinedDeep(data)
+      {
+        ...stripUndefinedDeep(data),
+        updatedAt: serverTimestamp(),
+        updatedBy: this.auth.currentUser?.uid ?? '',
+      }
     );
     await this.casosService.recalcularResumen(casoId);
+
+    const concepto = data.concepto ?? anterior?.concepto ?? 'movimiento';
+    await this.actividad.log(
+      'Tesorería',
+      cambios.length > 0
+        ? `Modificó el movimiento "${concepto}" — ${cambios.join('; ')}`
+        : `Modificó el movimiento "${concepto}"`,
+      casoId,
+    );
   }
 
   async deleteMovimiento(casoId: string, id: string): Promise<void> {
