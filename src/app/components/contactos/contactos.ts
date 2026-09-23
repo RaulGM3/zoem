@@ -1,6 +1,7 @@
 import { Component, signal, computed, inject, effect, ChangeDetectionStrategy } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DecimalPipe } from '@angular/common';
-import { RouterLink, ActivatedRoute, Router } from '@angular/router';
+import { RouterLink, ActivatedRoute, Router, type ParamMap } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import {
   LucideAngularModule,
@@ -140,20 +141,15 @@ export class ContactosComponent {
   constructor() {
     this.reloadContacts();
     this.usersService.loadMembers();
+    // Se escucha el stream y NO el snapshot: si el usuario ya está en /contactos
+    // (por ejemplo, se lo pide al agente desde esta misma pantalla), Angular
+    // reutiliza el componente y el constructor no vuelve a correr. Con el
+    // snapshot, la intención de crear se perdía en silencio.
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed())
+      .subscribe(p => this.abrirDrawerSiLoPidenPorUrl(p));
+
     const p = this.route.snapshot.queryParamMap;
-    if (p.get('newContact') === '1') {
-      this.formType.set('persona_fisica');
-      this.formStep.set(1);
-      this.showErrors.set(false);
-      this.form.reset({ status: 'activo', nifType: 'dni', cifType: 'cif', pais: 'ES', nacionalidad: 'ES', estadoCivil: 'casado' });
-      this.form.patchValue({
-        nombre: p.get('nombre') ?? '',
-        apellidos: p.get('apellidos') ?? '',
-        mobile: p.get('mobile') ?? '',
-        notes: p.get('notes') ?? '',
-      });
-      this.showDrawer.set(true);
-    }
 
     // Intención de edición llegada desde contacto-detail.ts (botón "Editar"):
     // esperamos a que la lista termine de cargar para poder localizar el
@@ -170,6 +166,35 @@ export class ContactosComponent {
         stopEffect.destroy();
       });
     }
+  }
+
+  /**
+   * Consume la intención `newContact=1` que llega por URL (desde Recepción IA o
+   * desde el agente). Los datos vienen por `history.state`, nunca por la query
+   * string: son datos personales. Tras consumirla se limpia el param, porque si
+   * no una segunda petición idéntica no cambiaría la URL y el router no
+   * volvería a emitir.
+   */
+  private abrirDrawerSiLoPidenPorUrl(p: ParamMap): void {
+    if (p.get('newContact') !== '1') return;
+
+    const datos = (history.state ?? {}) as Partial<
+      Record<'nombre' | 'apellidos' | 'mobile' | 'notes', string>
+    >;
+
+    this.formType.set('persona_fisica');
+    this.formStep.set(1);
+    this.showErrors.set(false);
+    this.form.reset({ status: 'activo', nifType: 'dni', cifType: 'cif', pais: 'ES', nacionalidad: 'ES', estadoCivil: 'casado' });
+    this.form.patchValue({
+      nombre: datos.nombre ?? '',
+      apellidos: datos.apellidos ?? '',
+      mobile: datos.mobile ?? '',
+      notes: datos.notes ?? '',
+    });
+    this.showDrawer.set(true);
+
+    this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
   }
 
   /** Carga la lista mostrando un toast con reintento si la lectura falla. */

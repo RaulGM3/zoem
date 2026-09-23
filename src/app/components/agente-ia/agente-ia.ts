@@ -1,132 +1,223 @@
-import { Component, signal, computed, ChangeDetectionStrategy, afterNextRender, ElementRef, viewChild } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import {
-  LucideAngularModule, Bot, Send, ThumbsUp, ThumbsDown, Copy,
-  Sparkles, Search, Zap, RotateCcw,
+  ChangeDetectionStrategy, Component, ElementRef, computed, inject, signal, viewChild,
+} from '@angular/core';
+import { Router } from '@angular/router';
+import {
+  LucideAngularModule, Bot, Send, Sparkles, RotateCcw, Zap, TriangleAlert,
 } from 'lucide-angular';
+import { AgentChatService } from '../../core/agent/agent-chat.service';
+import { PermissionService } from '../../core/services/permission.service';
 
+/**
+ * Modo de conversación.
+ * `soporte` y `analisis` son de consulta: el registry esconde las herramientas
+ * que escriben, así el agente no puede abrir formularios sin que se lo pidan.
+ */
 type AgenteMode = 'soporte' | 'analisis' | 'acciones';
 
-interface Mensaje {
-  id: string;
-  texto: string;
-  entrante: boolean;
-  modo?: AgenteMode;
-  hora: string;
-}
-
-const RESPUESTAS: Record<AgenteMode, string[]> = {
+const SUGERENCIAS: Record<AgenteMode, string[]> = {
   soporte: [
-    'Entendido. Para gestionar esa solicitud, ve a **Proyectos** → selecciona el proyecto → pestaña "Tareas". Puedes añadir, editar y asignar tareas desde allí.',
-    'Claro que sí. Para emitir una factura, accede a **Facturación** → "Nueva factura". Rellena los datos del cliente, proyecto y líneas de concepto.',
-    'Para añadir un contacto nuevo, ve a **Contactos** → botón "Nuevo contacto". Completa el formulario con los datos de la empresa o persona.',
+    '¿Qué casos tengo en proceso?',
+    'Busca el contacto de NOMBRE',
+    'Llévame a Facturación',
   ],
   analisis: [
-    'Analizando tus datos...\n\n📊 **Resumen del mes:**\n- Ingresos: 21.300 € (+44%)\n- Proyectos activos: 3\n- Conversión de leads: 34%\n\nTu mejor servicio este mes ha sido **Desarrollo** con 42% de los ingresos.',
-    'He revisado tus facturas pendientes:\n\n⚠️ **3 facturas sin cobrar** por un total de **15.000 €**\n- StartUp Ventures: 5.000 € — 15 días vencida\n- Retail Pro: 3.200 € — 32 días vencida\n\nRecomiendo iniciar el proceso de cobro inmediatamente.',
-    'Comparando este trimestre con el anterior:\n\n📈 Ingresos +28% | 🤝 Clientes nuevos: +5 | ⏱ Tiempo medio proyecto: -3 días\n\nTendencia positiva en todos los indicadores clave.',
+    '¿Cuántos casos urgentes hay abiertos?',
+    'Resume mis casos de tipo Laboral abiertos',
+    '¿Qué contactos tengo como potenciales?',
   ],
   acciones: [
-    '✅ Entendido. ¿Quieres que cree un recordatorio de pago para la factura de StartUp Ventures? Necesito tu confirmación para proceder.',
-    '✅ Puedo preparar el resumen mensual para enviarlo a tus clientes. ¿Confirmas el envío a los 5 clientes activos?',
-    '✅ He detectado 2 tareas con fecha límite esta semana. ¿Quieres que las marque como urgentes y notifique a los responsables?',
+    'Abre el caso CASO',
+    'Crea un contacto llamado NOMBRE con DNI NUMERO y agrega a notas NOTAS',
+    'Prepárame un caso nuevo de tipo Civil para NOMBRE CLIENTE',
   ],
 };
 
-const SUGERENCIAS: Record<AgenteMode, string[]> = {
-  soporte: ['¿Cómo añado una tarea a un proyecto?', '¿Cómo emito una factura?', '¿Cómo invito a un usuario?'],
-  analisis: ['¿Cómo van los ingresos este mes?', 'Analiza mis facturas pendientes', 'Compara este trimestre con el anterior'],
-  acciones: ['Crea un recordatorio de pago', 'Prepara el resumen mensual', 'Marca las tareas urgentes'],
+/**
+ * Un "hueco" es una palabra en MAYÚSCULAS de 2+ letras dentro de una sugerencia.
+ * Las consecutivas se agrupan: "NOMBRE CLIENTE" es un solo hueco, no dos.
+ * Devolvemos una regex nueva en cada llamada porque el flag /g guarda estado
+ * en `lastIndex` y compartir la instancia entre llamadas da resultados fantasma.
+ */
+const huecoRegex = () => /[A-ZÑ]{2,}(?:\s+[A-ZÑ]{2,})*/g;
+
+interface Segmento {
+  readonly texto: string;
+  readonly hueco: boolean;
+}
+
+/** Parte la sugerencia en trozos para poder resaltar los huecos en el botón. */
+function dividirEnSegmentos(texto: string): Segmento[] {
+  const segmentos: Segmento[] = [];
+  let cursor = 0;
+
+  for (const m of texto.matchAll(huecoRegex())) {
+    const inicio = m.index ?? -1;
+    if (inicio < 0) continue;
+    if (inicio > cursor) segmentos.push({ texto: texto.slice(cursor, inicio), hueco: false });
+    segmentos.push({ texto: m[0], hueco: true });
+    cursor = inicio + m[0].length;
+  }
+  if (cursor < texto.length) segmentos.push({ texto: texto.slice(cursor), hueco: false });
+
+  return segmentos;
+}
+
+/** Primer hueco que empieza en `desde` o después. `null` si ya no quedan. */
+function siguienteHueco(texto: string, desde: number): { inicio: number; fin: number } | null {
+  for (const m of texto.matchAll(huecoRegex())) {
+    const inicio = m.index ?? -1;
+    if (inicio >= desde) return { inicio, fin: inicio + m[0].length };
+  }
+  return null;
+}
+
+const MODO_COLOR: Record<AgenteMode, { tab: string; punto: string }> = {
+  soporte: { tab: 'border-b-2 border-blue-600 text-blue-600', punto: 'bg-blue-600' },
+  analisis: { tab: 'border-b-2 border-emerald-600 text-emerald-600', punto: 'bg-emerald-600' },
+  acciones: { tab: 'border-b-2 border-violet-600 text-violet-600', punto: 'bg-violet-600' },
 };
 
 @Component({
   selector: 'app-agente-ia',
-  imports: [LucideAngularModule, FormsModule],
+  imports: [LucideAngularModule],
   templateUrl: './agente-ia.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AgenteIAComponent {
+  private readonly chat = inject(AgentChatService);
+  private readonly router = inject(Router);
+  private readonly perm = inject(PermissionService);
+
   readonly BotIcon = Bot;
   readonly SendIcon = Send;
-  readonly ThumbsUpIcon = ThumbsUp;
-  readonly ThumbsDownIcon = ThumbsDown;
-  readonly CopyIcon = Copy;
   readonly SparklesIcon = Sparkles;
-  readonly SearchIcon = Search;
-  readonly ZapIcon = Zap;
   readonly RotateCcwIcon = RotateCcw;
+  readonly ZapIcon = Zap;
+  readonly AlertIcon = TriangleAlert;
 
-  modo = signal<AgenteMode>('soporte');
-  mensajes = signal<Mensaje[]>([]);
-  inputText = signal('');
-  escribiendo = signal(false);
+  readonly modo = signal<AgenteMode>('acciones');
+  readonly inputText = signal('');
 
-  sugerencias = computed(() => SUGERENCIAS[this.modo()]);
-  hayMensajes = computed(() => this.mensajes().length > 0);
+  private readonly chatInput = viewChild<ElementRef<HTMLTextAreaElement>>('chatInput');
 
-  modos: { value: AgenteMode; label: string; color: string }[] = [
-    { value: 'soporte', label: 'Soporte', color: 'text-blue-600' },
-    { value: 'analisis', label: 'Análisis', color: 'text-emerald-600' },
-    { value: 'acciones', label: 'Acciones', color: 'text-violet-600' },
+  readonly mensajes = this.chat.mensajes;
+  readonly escribiendo = this.chat.pensando;
+  readonly error = this.chat.error;
+
+  readonly sugerencias = computed(() =>
+    SUGERENCIAS[this.modo()].map((texto) => ({ texto, segmentos: dividirEnSegmentos(texto) })),
+  );
+  readonly hayMensajes = computed(() => this.mensajes().length > 0);
+  readonly puedeEnviar = computed(() => !!this.inputText().trim() && !this.escribiendo());
+
+  readonly modos: { value: AgenteMode; label: string }[] = [
+    { value: 'soporte', label: 'Soporte' },
+    { value: 'analisis', label: 'Análisis' },
+    { value: 'acciones', label: 'Acciones' },
   ];
 
   getModoTabClass(m: AgenteMode): string {
-    const activo = this.modo() === m;
-    const colores: Record<AgenteMode, string> = {
-      soporte: activo ? 'border-b-2 border-blue-600 text-blue-600' : '',
-      analisis: activo ? 'border-b-2 border-emerald-600 text-emerald-600' : '',
-      acciones: activo ? 'border-b-2 border-violet-600 text-violet-600' : '',
-    };
-    return 'px-4 py-2 text-sm font-medium ' + (activo ? colores[m] : 'text-slate-500 hover:text-slate-700');
+    const base = 'px-4 py-2 text-sm font-medium ';
+    return base + (this.modo() === m ? MODO_COLOR[m].tab : 'text-slate-500 hover:text-slate-700');
   }
 
   getModoIndicator(m: AgenteMode): string {
-    const colores: Record<AgenteMode, string> = {
-      soporte: 'bg-blue-600',
-      analisis: 'bg-emerald-600',
-      acciones: 'bg-violet-600',
-    };
-    return colores[m];
+    return MODO_COLOR[m].punto;
   }
 
-  cambiarModo(m: AgenteMode) {
+  cambiarModo(m: AgenteMode): void {
     this.modo.set(m);
-    this.mensajes.set([]);
+    this.chat.limpiar();
   }
 
-  enviar(texto?: string) {
+  limpiar(): void {
+    this.chat.limpiar();
+  }
+
+  /**
+   * Las sugerencias son plantillas, no comandos. Rellenan el input y dejan el
+   * primer hueco SELECCIONADO, como un snippet del editor: la primera tecla que
+   * pulses lo reemplaza. Si no hay huecos, el cursor va al final.
+   */
+  usarSugerencia(texto: string): void {
+    this.inputText.set(texto);
+    const el = this.chatInput()?.nativeElement;
+    if (!el) return;
+    // El binding [value] se aplica tras la detección de cambios; escribimos el
+    // DOM aquí para que la selección caiga en la posición correcta ya mismo.
+    el.value = texto;
+    el.focus();
+    const hueco = siguienteHueco(texto, 0);
+    el.setSelectionRange(hueco?.inicio ?? texto.length, hueco?.fin ?? texto.length);
+    this.autoGrow(el);
+  }
+
+  /**
+   * Selecciona el siguiente hueco. Devuelve `false` cuando ya no quedan, y ahí
+   * dejamos pasar el Tab nativo: si lo capturáramos siempre tendríamos una
+   * trampa de teclado y se cae WCAG 2.1.2.
+   */
+  private saltarAlSiguienteHueco(): boolean {
+    const el = this.chatInput()?.nativeElement;
+    if (!el) return false;
+
+    const hueco = siguienteHueco(el.value, el.selectionEnd ?? 0);
+    if (!hueco) return false;
+
+    el.setSelectionRange(hueco.inicio, hueco.fin);
+    return true;
+  }
+
+  onInput(event: Event): void {
+    const el = event.target as HTMLTextAreaElement;
+    this.inputText.set(el.value);
+    this.autoGrow(el);
+  }
+
+  /**
+   * El textarea arranca en una línea y crece con el contenido. Resetear a 'auto'
+   * antes de leer scrollHeight es obligatorio: si no, nunca encoge al borrar.
+   * El tope lo pone `max-h-40` en la plantilla, que activa el scroll interno.
+   */
+  private autoGrow(el: HTMLTextAreaElement): void {
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }
+
+  enviar(texto?: string): void {
     const msg = (texto ?? this.inputText()).trim();
-    if (!msg) return;
+    if (!msg || this.escribiendo()) return;
 
-    const ahora = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-
-    this.mensajes.update(prev => [
-      ...prev,
-      { id: crypto.randomUUID(), texto: msg, entrante: false, hora: ahora },
-    ]);
     this.inputText.set('');
-    this.escribiendo.set(true);
-
-    const respuestas = RESPUESTAS[this.modo()];
-    const respuesta = respuestas[Math.floor(Math.random() * respuestas.length)];
-
-    setTimeout(() => {
-      this.escribiendo.set(false);
-      this.mensajes.update(prev => [
-        ...prev,
-        { id: crypto.randomUUID(), texto: respuesta, entrante: true, modo: this.modo(), hora: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) },
-      ]);
-    }, 1200);
+    const el = this.chatInput()?.nativeElement;
+    if (el) {
+      el.value = '';
+      this.autoGrow(el);
+    }
+    void this.chat.send(msg, {
+      soloLectura: this.modo() !== 'acciones',
+      contexto: this.contexto(),
+    });
   }
 
-  limpiar() {
-    this.mensajes.set([]);
-  }
-
-  onKeydown(event: KeyboardEvent) {
+  onKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Tab' && !event.shiftKey && this.saltarAlSiguienteHueco()) {
+      event.preventDefault();
+      return;
+    }
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       this.enviar();
     }
+  }
+
+  /**
+   * Contexto vivo para el system prompt. Saber en qué pantalla está el usuario
+   * es lo que permite que "créame un caso aquí" o "ábreme este" tengan sentido.
+   */
+  private contexto(): string {
+    const rol = this.perm.userRole() ?? 'sin rol asignado';
+    return `- Pantalla actual: ${this.router.url}\n- Rol del usuario: ${rol}`;
   }
 }

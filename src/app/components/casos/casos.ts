@@ -1,5 +1,6 @@
-import { Component, OnInit, signal, computed, ChangeDetectionStrategy, inject } from '@angular/core';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Component, DestroyRef, OnInit, signal, computed, ChangeDetectionStrategy, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Router, ActivatedRoute, type ParamMap } from '@angular/router';
 import { CasosService } from '../../core/services/casos.service';
 import { PlantillasService } from '../../core/services/plantillas.service';
 import { ContactService } from '../../core/services/contact.service';
@@ -31,6 +32,7 @@ import { NuevoCasoDrawerComponent } from './components/nuevo-caso-drawer/nuevo-c
 export class CasosComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly casosService = inject(CasosService);
   private readonly plantillasService = inject(PlantillasService);
   private readonly contactService = inject(ContactService);
@@ -96,19 +98,34 @@ export class CasosComponent implements OnInit {
       this.contactService.loadContacts(),
     ]);
 
-    const p = this.route.snapshot.queryParamMap;
-    if (p.get('newCaso') === '1' && this.perm.can('Casos', 'crear')) {
-      const contactId = p.get('contactId');
-      if (contactId) {
-        const contact = this.contactService.contacts().find(c => c.id === contactId) ?? null;
-        this.drawerInitialContact.set(contact);
-      }
-      const navState = history.state as DrawerInitialData | null;
-      if (navState?.titulo || navState?.descripcion || navState?.tipo || navState?.prioridad || navState?.estado) {
-        this.drawerInitialData.set(navState);
-      }
-      this.showDrawer.set(true);
-    }
+    // Se escucha el stream y NO el snapshot: si el usuario ya está en /casos
+    // (por ejemplo, se lo pide al agente desde esta misma pantalla), Angular
+    // reutiliza el componente y ngOnInit no vuelve a correr. Con el snapshot,
+    // la intención de crear se perdía en silencio.
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(p => this.abrirDrawerSiLoPidenPorUrl(p));
+  }
+
+  /**
+   * Consume la intención `newCaso=1` que llega por URL (desde Recepción IA o
+   * desde el agente) y limpia el query param: sin limpiarlo, una segunda
+   * petición idéntica no cambiaría la URL y el router no volvería a emitir.
+   */
+  private abrirDrawerSiLoPidenPorUrl(p: ParamMap): void {
+    if (p.get('newCaso') !== '1' || !this.perm.can('Casos', 'crear')) return;
+
+    const contactId = p.get('contactId');
+    this.drawerInitialContact.set(
+      contactId ? (this.contactService.contacts().find(c => c.id === contactId) ?? null) : null,
+    );
+
+    const navState = history.state as DrawerInitialData | null;
+    const tieneDatos = !!(navState?.titulo || navState?.descripcion || navState?.tipo || navState?.prioridad || navState?.estado);
+    this.drawerInitialData.set(tieneDatos ? navState : null);
+    this.showDrawer.set(true);
+
+    this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
   }
 
   async saveNuevoCaso(data: CreateCasoData): Promise<void> {

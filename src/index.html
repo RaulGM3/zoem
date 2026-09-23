@@ -9,9 +9,22 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0&display=swap" rel="stylesheet">
 </head>
 <body>
+  <!-- Loader global — se elimina cuando la primera ruta completa navegación -->
+  <style>
+    .app-loader{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#e8ecf3;gap:1rem;font-family:'Manrope',system-ui,sans-serif;transition:opacity .3s ease}
+    .app-loader.fade-out{opacity:0;pointer-events:none}
+    .app-loader-spinner{width:36px;height:36px;border:3px solid #edeff4;border-top-color:#2563ff;border-radius:50%;animation:spin .7s linear infinite}
+    .app-loader-text{color:#8a93a8;font-size:.85rem;letter-spacing:.02em}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @media(prefers-color-scheme:dark){.app-loader{background:#0c111d}.app-loader-spinner{border-color:#1e293b;border-top-color:#5b8def}.app-loader-text{color:#64748b}}
+  </style>
+  <div id="app-loader" class="app-loader">
+    <div class="app-loader-spinner"></div>
+    <span class="app-loader-text">Cargando…</span>
+  </div>
   <app-root></app-root>
 </body>
 </html>

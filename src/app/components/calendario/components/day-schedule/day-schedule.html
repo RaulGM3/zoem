@@ -425,7 +425,7 @@
                        style="border:1px solid var(--border);background:var(--surface-2)"
                        [class.opacity-60]="r.facturado">
                     <select
-                      class="form-select min-w-0 flex-1 py-1! text-[11px]!"
+                      class="form-select min-w-0 flex-1 py-1 text-[11px]"
                       [value]="r.userId" [disabled]="r.facturado"
                       (change)="updateBloqueField(r.id, 'userId', $event)"
                       aria-label="Miembro">
@@ -435,16 +435,16 @@
                     </select>
                     <input type="date" [value]="r.fecha" [disabled]="r.facturado"
                       (change)="updateBloqueField(r.id, 'fecha', $event)"
-                      class="form-input py-1! text-[11px]!"
+                      class="form-input py-1 text-[11px]"
                       aria-label="Fecha" />
                     <input type="time" [value]="r.horaInicio" [disabled]="r.facturado"
                       (change)="updateBloqueField(r.id, 'horaInicio', $event)"
-                      class="form-input py-1! text-[11px]!"
+                      class="form-input py-1 text-[11px]"
                       aria-label="Hora inicio" />
                     <span class="text-[11px]" style="color:var(--text-faint)">–</span>
                     <input type="time" [value]="r.horaFin" [disabled]="r.facturado"
                       (change)="updateBloqueField(r.id, 'horaFin', $event)"
-                      class="form-input py-1! text-[11px]!"
+                      class="form-input py-1 text-[11px]"
                       aria-label="Hora fin" />
                     <span class="ml-auto text-[11px] font-medium" style="color:var(--text-muted)">{{ bloqueHoras(r) }}h</span>
                     @if (r.facturado) {
@@ -550,7 +550,7 @@
               [value]="newAnnotationText()"
               (input)="onAnnotationInput($event)"
               (keydown)="onAnnotationKeydown($event)"
-              class="form-input flex-1 text-xs!"
+              class="form-input flex-1 text-xs"
             />
             <button
               class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white transition-colors duration-150 disabled:opacity-40"

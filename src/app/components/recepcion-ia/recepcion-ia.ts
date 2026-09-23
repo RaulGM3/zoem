@@ -215,16 +215,18 @@ export class RecepcionIAComponent implements OnInit {
   }
 
   agregarContacto(ll: LlamadaResumen): void {
-    const query: Record<string, string> = { newContact: '1' };
+    // Los datos viajan por `state` y no por la URL: son datos personales y la
+    // query string acaba en el historial del navegador y en cualquier log.
+    const state: Record<string, string> = {};
     const d = ll.datosCapturados;
     if (d?.nombreCliente) {
       const parts = d.nombreCliente.trim().split(/\s+/);
-      query['nombre'] = parts[0];
-      if (parts.length > 1) query['apellidos'] = parts.slice(1).join(' ');
+      state['nombre'] = parts[0];
+      if (parts.length > 1) state['apellidos'] = parts.slice(1).join(' ');
     }
-    if (d?.telefono) query['mobile'] = d.telefono;
-    if (d?.descripcionCaso) query['notes'] = d.descripcionCaso;
-    this.router.navigate(['/contactos'], { queryParams: query });
+    if (d?.telefono) state['mobile'] = d.telefono;
+    if (d?.descripcionCaso) state['notes'] = d.descripcionCaso;
+    this.router.navigate(['/contactos'], { queryParams: { newContact: '1' }, state });
   }
 
   async descartarLlamada(ll: LlamadaResumen): Promise<void> {

@@ -1,7 +1,8 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { provideAgentTools } from './core/agent/agent-tools';
 import { provideFirebaseApp, initializeApp, getApp } from '@angular/fire/app';
-import { provideAppCheck, initializeAppCheck, ReCaptchaV3Provider } from '@angular/fire/app-check';
+import { provideAppCheck, initializeAppCheck, ReCaptchaEnterpriseProvider } from '@angular/fire/app-check';
 import { provideAuth, getAuth, connectAuthEmulator } from '@angular/fire/auth';
 import { provideFirestore, getFirestore, connectFirestoreEmulator } from '@angular/fire/firestore';
 import { provideStorage, getStorage, connectStorageEmulator } from '@angular/fire/storage';
@@ -23,13 +24,14 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes, withComponentInputBinding()),
+    provideAgentTools(),
     provideFirebaseApp(() => initializeApp(environment.firebase)),
     provideAppCheck(() => {
       if (!environment.production) {
         window.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
       }
       return initializeAppCheck(getApp(), {
-        provider: new ReCaptchaV3Provider(environment.recaptchaV3SiteKey),
+        provider: new ReCaptchaEnterpriseProvider(environment.recaptchaSiteKey),
         isTokenAutoRefreshEnabled: true,
       });
     }),

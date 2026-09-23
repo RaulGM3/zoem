@@ -159,7 +159,7 @@ export class DemoLayoutComponent {
       category: 'Inteligencia Artificial',
       items: [
         { name: 'Recepción IA', href: '/recepcion-ia', icon: MessagesSquare, modulo: 'RecepciónIA' },
-        // { name: 'Agente IA', href: '/agente-ia', icon: Bot, badge: 'Online' },
+        { name: 'Agente IA', href: '/agente-ia', icon: Bot, badge: 'Beta' },
         // { name: 'Vertey Studio', href: '/vertey-studio', icon: Sparkles, badge: 'Pro' },
       ],
     },
