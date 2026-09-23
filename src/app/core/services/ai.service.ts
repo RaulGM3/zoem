@@ -3,6 +3,7 @@ import { FirebaseApp } from '@angular/fire/app';
 import {
   AI,
   FunctionDeclaration,
+  GenerationConfig,
   GenerativeModel,
   getAI,
   getGenerativeModel,
@@ -64,6 +65,26 @@ export class AiService {
       model: GEMINI_MODEL,
       systemInstruction,
       ...(functionDeclarations.length ? { tools: [{ functionDeclarations }] } : {}),
+    });
+  }
+
+  /**
+   * Modelo de texto plano: sin `responseSchema`, sin tools y sin historial.
+   * Para llamadas one-shot como la transcripción de un dictado.
+   *
+   * Existe SEPARADO del modelo del agente a propósito. Si el audio entrara en
+   * el chat con herramientas, el bucle de `AgentChatService.conversar()` lo
+   * reenviaría en cada vuelta (hasta `MAX_VUELTAS`), multiplicando por cinco el
+   * coste de tokens de un dictado que solo hay que leer una vez.
+   */
+  getTextModel(
+    systemInstruction?: string,
+    generationConfig?: GenerationConfig,
+  ): GenerativeModel {
+    return getGenerativeModel(this.instance, {
+      model: GEMINI_MODEL,
+      ...(systemInstruction ? { systemInstruction } : {}),
+      ...(generationConfig ? { generationConfig } : {}),
     });
   }
 }

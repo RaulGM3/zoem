@@ -1,4 +1,4 @@
-import { Schema } from 'firebase/ai';
+import { Esquema } from '../esquema';
 import { toolFail, toolOk, type AgentTool } from '../agent-tool';
 import type { Modulo } from '../../permissions/permissions';
 import { leerTexto, type NavegadorPort } from './ports';
@@ -41,7 +41,7 @@ export function navegacionTools({ navegador, puedeVer }: NavegacionToolsDeps): A
       description:
         'Lleva al usuario a la pantalla principal de un módulo de la aplicación. ' +
         'Para abrir un elemento concreto usa las herramientas de abrir, no esta.',
-      parameters: Schema.object({ properties: { modulo: Schema.enumString({ enum: modulos }) } }),
+      parameters: Esquema.object({ properties: { modulo: Esquema.enumString({ enum: modulos }) } }),
       async execute(args) {
         const modulo = leerTexto(args, 'modulo') as Modulo | undefined;
         if (!modulo || !RUTAS_POR_MODULO[modulo]) {

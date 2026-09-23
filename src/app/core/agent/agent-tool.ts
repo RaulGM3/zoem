@@ -1,4 +1,4 @@
-import type { ObjectSchema } from 'firebase/ai';
+import type { EsquemaObjeto } from './esquema';
 import type { Capability, Modulo } from '../permissions/permissions';
 
 /**
@@ -26,7 +26,7 @@ export interface AgentTool<A extends ToolArgs = ToolArgs> {
   /** Descripción en español — esto ES prompt, no documentación. Sé explícito. */
   readonly description: string;
   /** Esquema de los argumentos. Ausente = tool sin parámetros. */
-  readonly parameters?: ObjectSchema;
+  readonly parameters?: EsquemaObjeto;
   /** Permiso exigido. Ausente = disponible para cualquier usuario autenticado. */
   readonly permission?: { modulo: Modulo; cap: Capability };
   execute(args: A): Promise<ToolResult> | ToolResult;

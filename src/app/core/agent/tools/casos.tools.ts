@@ -1,4 +1,4 @@
-import { Schema } from 'firebase/ai';
+import { Esquema } from '../esquema';
 import { toolFail, toolOk, type AgentTool } from '../agent-tool';
 import { rankMatches } from '../matching';
 import type { Caso, CasoEstado, CasoPrioridad, CasoTipo } from '../../../interfaces/caso.interface';
@@ -30,11 +30,11 @@ export function casosTools({ casos, navegador }: CasosToolsDeps): AgentTool[] {
     description:
       'Busca casos del despacho por nombre o descripción y devuelve los candidatos con su id. ' +
       'Úsala SIEMPRE antes de abrir un caso: nunca inventes un id. Sin consulta, lista los casos disponibles.',
-    parameters: Schema.object({
+    parameters: Esquema.object({
       properties: {
-        consulta: Schema.string({ description: 'Texto a buscar en el título del caso.' }),
-        estado: Schema.enumString({ enum: [...ESTADOS] }),
-        tipo: Schema.enumString({ enum: [...TIPOS] }),
+        consulta: Esquema.string({ description: 'Texto a buscar en el título del caso.' }),
+        estado: Esquema.enumString({ enum: [...ESTADOS] }),
+        tipo: Esquema.enumString({ enum: [...TIPOS] }),
       },
       optionalProperties: ['consulta', 'estado', 'tipo'],
     }),
@@ -69,7 +69,7 @@ export function casosTools({ casos, navegador }: CasosToolsDeps): AgentTool[] {
     name: 'abrir_caso',
     description:
       'Abre la ficha de un caso concreto en pantalla. El id debe venir de buscar_casos.',
-    parameters: Schema.object({ properties: { casoId: Schema.string() } }),
+    parameters: Esquema.object({ properties: { casoId: Esquema.string() } }),
     permission: { modulo: 'Casos', cap: 'ver' },
     async execute(args) {
       const casoId = leerTexto(args, 'casoId');
@@ -88,13 +88,13 @@ export function casosTools({ casos, navegador }: CasosToolsDeps): AgentTool[] {
     description:
       'Deja preparado el formulario de nuevo caso con los datos que dé el usuario. ' +
       'NO guarda el caso: solo abre el formulario relleno para que el usuario lo confirme.',
-    parameters: Schema.object({
+    parameters: Esquema.object({
       properties: {
-        titulo: Schema.string({ description: 'Título del caso. Obligatorio.' }),
-        descripcion: Schema.string(),
-        tipo: Schema.enumString({ enum: [...TIPOS] }),
-        prioridad: Schema.enumString({ enum: [...PRIORIDADES] }),
-        contactoId: Schema.string({ description: 'Id del cliente, obtenido con buscar_contactos.' }),
+        titulo: Esquema.string({ description: 'Título del caso. Obligatorio.' }),
+        descripcion: Esquema.string(),
+        tipo: Esquema.enumString({ enum: [...TIPOS] }),
+        prioridad: Esquema.enumString({ enum: [...PRIORIDADES] }),
+        contactoId: Esquema.string({ description: 'Id del cliente, obtenido con buscar_contactos.' }),
       },
       optionalProperties: ['descripcion', 'tipo', 'prioridad', 'contactoId'],
     }),

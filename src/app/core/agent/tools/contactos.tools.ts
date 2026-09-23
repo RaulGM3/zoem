@@ -1,4 +1,4 @@
-import { Schema } from 'firebase/ai';
+import { Esquema } from '../esquema';
 import { toolFail, toolOk, type AgentTool } from '../agent-tool';
 import { rankMatches } from '../matching';
 import { getContactDisplayName, type Contact } from '../../../interfaces/contact.interface';
@@ -27,8 +27,8 @@ export function contactosTools({ contactos, navegador }: ContactosToolsDeps): Ag
     description:
       'Busca clientes y contactos del despacho por nombre, apellidos o razón social, y devuelve su id. ' +
       'Úsala SIEMPRE antes de abrir un contacto o de asociarlo a un caso: nunca inventes un id.',
-    parameters: Schema.object({
-      properties: { consulta: Schema.string({ description: 'Nombre o razón social a buscar.' }) },
+    parameters: Esquema.object({
+      properties: { consulta: Esquema.string({ description: 'Nombre o razón social a buscar.' }) },
       optionalProperties: ['consulta'],
     }),
     permission: { modulo: 'Contactos', cap: 'ver' },
@@ -47,7 +47,7 @@ export function contactosTools({ contactos, navegador }: ContactosToolsDeps): Ag
   const abrir_contacto: AgentTool = {
     name: 'abrir_contacto',
     description: 'Abre la ficha de un contacto. El id debe venir de buscar_contactos.',
-    parameters: Schema.object({ properties: { contactoId: Schema.string() } }),
+    parameters: Esquema.object({ properties: { contactoId: Esquema.string() } }),
     permission: { modulo: 'Contactos', cap: 'ver' },
     async execute(args) {
       const id = leerTexto(args, 'contactoId');
@@ -67,12 +67,12 @@ export function contactosTools({ contactos, navegador }: ContactosToolsDeps): Ag
     description:
       'Deja preparado el formulario de nuevo contacto (persona física) con los datos que dé el usuario. ' +
       'NO guarda el contacto: solo abre el formulario relleno para que el usuario lo confirme.',
-    parameters: Schema.object({
+    parameters: Esquema.object({
       properties: {
-        nombre: Schema.string({ description: 'Nombre de pila. Obligatorio.' }),
-        apellidos: Schema.string(),
-        mobile: Schema.string({ description: 'Teléfono móvil.' }),
-        notes: Schema.string({ description: 'Notas o contexto de la captación.' }),
+        nombre: Esquema.string({ description: 'Nombre de pila. Obligatorio.' }),
+        apellidos: Esquema.string(),
+        mobile: Esquema.string({ description: 'Teléfono móvil.' }),
+        notes: Esquema.string({ description: 'Notas o contexto de la captación.' }),
       },
       optionalProperties: ['apellidos', 'mobile', 'notes'],
     }),

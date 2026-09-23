@@ -8,6 +8,7 @@ import { PermissionService } from '../../core/services/permission.service';
 import { ThemeService } from '../../core/services/theme.service';
 import type { Modulo } from '../../core/permissions/permissions';
 import type { FirmRole } from '../../interfaces/member';
+import { AgenteLanzadorComponent } from '../agente-ia/agente-lanzador';
 import {
   LucideAngularModule,
   LucideIconData,
@@ -57,7 +58,9 @@ export interface NavCategory {
 
 @Component({
   selector: 'app-demo-layout',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, LucideAngularModule],
+  imports: [
+    RouterOutlet, RouterLink, RouterLinkActive, LucideAngularModule, AgenteLanzadorComponent,
+  ],
   templateUrl: './demo-layout.html',
 })
 export class DemoLayoutComponent {

@@ -294,3 +294,11 @@
     </div>
   </div>
 }
+
+<!--
+  Agente flotante. Va FUERA de <main> a propósito: no debe desplazarse con el
+  contenido ni quedar recortado por su overflow. Se pinta al final para que,
+  a igualdad de z-index, quede por encima del contenido — pero su z-30 lo deja
+  por DEBAJO del sidebar móvil (z-50) y de este diálogo (z-[100]).
+-->
+<app-agente-lanzador />

@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import type { FunctionDeclaration } from 'firebase/ai';
+import type { FunctionDeclaration, ObjectSchema } from 'firebase/ai';
 import { PermissionService } from '../services/permission.service';
 import { AGENT_TOOLS } from './agent-tools';
 import { toolFail, type AgentTool, type ToolArgs, type ToolResult } from './agent-tool';
@@ -50,12 +50,22 @@ export class AgentToolRegistry {
    * Lo que se le manda a Gemini como `tools`, ya filtrado por permisos.
    * `soloLectura` deja fuera todo lo que no sea capacidad "ver": es lo que
    * separa el modo "soporte" (consultar y navegar) del modo "acciones".
+   *
+   * ÚNICA costura con el SDK. `FunctionDeclaration.parameters` está tipado
+   * como la CLASE `ObjectSchema`, pero por el cable solo viaja su `toJSON()`.
+   * Nuestros esquemas (ver `esquema.ts`) ya nacen en ese formato final, así
+   * que el objeto es correcto aunque no sea una instancia de esa clase. La
+   * equivalencia no se supone: `esquema.spec.ts` la verifica contra el SDK.
    */
   declarations(opts?: { soloLectura?: boolean }): FunctionDeclaration[] {
     return [...this.tools.values()]
       .filter((tool) => this.permitida(tool))
       .filter((tool) => !opts?.soloLectura || !tool.permission || tool.permission.cap === 'ver')
-      .map(({ name, description, parameters }) => ({ name, description, parameters }));
+      .map(({ name, description, parameters }) => ({
+        name,
+        description,
+        parameters: parameters as unknown as ObjectSchema | undefined,
+      }));
   }
 
   /**
