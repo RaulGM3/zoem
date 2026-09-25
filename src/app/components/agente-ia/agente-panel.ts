@@ -32,7 +32,7 @@ import { AgenteChatComponent } from './agente-chat';
       class="fixed z-[60] flex flex-col overflow-hidden shadow-2xl
              inset-0
              sm:inset-auto sm:bottom-24 sm:right-6 sm:w-[26rem] sm:h-[min(70vh,40rem)] sm:rounded-2xl"
-      style="background:var(--surface);border:1px solid var(--border)"
+      style="background:var(--popover);border:1px solid var(--border);color:var(--text)"
     >
       <app-agente-chat class="flex-1 min-h-0">
         <button
@@ -41,8 +41,8 @@ import { AgenteChatComponent } from './agente-chat';
           data-test="cerrar-panel"
           (click)="cerrado.emit()"
           aria-label="Cerrar el asistente"
-          class="p-2 rounded-lg text-slate-700 hover:bg-slate-100
-                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+          class="p-2 rounded-lg text-[var(--text-muted)] hover:bg-surface-2 hover:text-[var(--text)]
+                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ia)]"
         >
           <lucide-icon [img]="XIcon" class="w-4 h-4" aria-hidden="true" />
         </button>

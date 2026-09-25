@@ -1,22 +1,22 @@
 <!-- La ALTURA la impone quien monte el componente, no este template. -->
 <div class="relative flex flex-col flex-1 min-h-0">
   <!-- Header -->
-  <div class="shrink-0 px-6 py-4 border-b border-slate-200 bg-white flex items-center justify-between">
+  <div class="shrink-0 px-6 py-4 border-b border-border bg-surface flex items-center justify-between">
     <div class="flex items-center gap-3">
       <div class="relative">
-        <div class="w-10 h-10 bg-linear-to-br from-violet-500 to-blue-600 rounded-xl flex items-center justify-center">
-          <lucide-icon [img]="BotIcon" class="w-5 h-5 text-white" />
+        <div class="w-10 h-10 gradient-ia rounded-xl flex items-center justify-center">
+          <lucide-icon [img]="BotIcon" class="w-5 h-5 text-on-ia" />
         </div>
-        <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white"></span>
+        <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-success rounded-full border-2 border-[var(--surface-sidebar)]"></span>
       </div>
       <div>
         <div class="flex items-center gap-2">
-          <span class="font-semibold text-slate-800">Vertey IA</span>
-          <span class="px-2 py-0.5 bg-violet-100 text-violet-700 text-xs rounded-full font-medium">Beta</span>
+          <span class="font-semibold text-[var(--text-strong)]">Vertey IA</span>
+          <span class="px-2 py-0.5 text-ia text-xs rounded-full font-medium" style="background:color-mix(in srgb, var(--accent-ia) 14%, transparent)">Beta</span>
         </div>
         <div class="flex items-center gap-1">
           <span [class]="'w-2 h-2 rounded-full ' + getModoIndicator(modo())"></span>
-          <span class="text-xs text-slate-700">Modo {{ modo() }}</span>
+          <span class="text-xs text-[var(--text-body)]">Modo {{ modo() }}</span>
         </div>
       </div>
     </div>
@@ -24,7 +24,7 @@
       <button
         (click)="limpiar()"
         aria-label="Vaciar la conversación"
-        class="p-2 hover:bg-slate-100 rounded-lg text-slate-700">
+        class="p-2 rounded-lg text-[var(--text-muted)] hover:bg-surface-2 hover:text-[var(--text)]">
         <lucide-icon [img]="RotateCcwIcon" class="w-4 h-4" />
       </button>
       <!-- Hueco para la carcasa: el panel flotante mete aquí su botón de cerrar. -->
@@ -33,7 +33,7 @@
   </div>
 
   <!-- Mode tabs -->
-  <div class="shrink-0 bg-white border-b border-slate-200 flex px-4">
+  <div class="shrink-0 bg-surface border-b border-border flex px-4">
     @for (m of modos; track m.value) {
       <button (click)="cambiarModo(m.value)" [class]="getModoTabClass(m.value)">
         {{ m.label }}
@@ -50,22 +50,22 @@
       <!-- `min-h-full`, no `h-full`: en un panel bajo debe poder desbordar y
            scrollear en vez de comprimirse y esconder las sugerencias. -->
       <div class="flex flex-col items-center justify-center min-h-full gap-6 text-center">
-        <div class="w-16 h-16 bg-linear-to-br from-violet-500 to-blue-600 rounded-2xl flex items-center justify-center">
-          <lucide-icon [img]="SparklesIcon" class="w-8 h-8 text-white" />
+        <div class="w-16 h-16 gradient-ia rounded-2xl flex items-center justify-center">
+          <lucide-icon [img]="SparklesIcon" class="w-8 h-8 text-on-ia" />
         </div>
         <div>
-          <h2 class="text-lg font-semibold text-slate-800">¿En qué puedo ayudarte?</h2>
-          <p class="text-sm text-slate-700 mt-1 font-medium">Elige una sugerencia para rellenar el mensaje, o escríbelo tú</p>
-          <p class="text-xs text-slate-600 mt-1">Las partes resaltadas son huecos: escribe encima y pulsa <kbd class="px-1 py-0.5 border border-slate-300 rounded text-[0.65rem] font-sans">Tab</kbd> para ir al siguiente</p>
+          <h2 class="text-lg font-semibold text-[var(--text-strong)]">¿En qué puedo ayudarte?</h2>
+          <p class="text-sm text-[var(--text-body)] mt-1 font-medium">Elige una sugerencia para rellenar el mensaje, o escríbelo tú</p>
+          <p class="text-xs text-[var(--text-muted)] mt-1">Las partes resaltadas son huecos: escribe encima y pulsa <kbd class="px-1 py-0.5 border border-border bg-surface-2 rounded text-[0.65rem] font-sans">Tab</kbd> para ir al siguiente</p>
         </div>
         <div class="flex flex-col gap-2 w-full max-w-md">
           @for (sug of sugerencias(); track sug.texto) {
             <button
               (click)="usarSugerencia(sug.texto)"
               [attr.aria-label]="'Usar la sugerencia: ' + sug.texto"
-              class="px-4 py-3 text-sm text-left border border-slate-200 rounded-xl hover:border-violet-300 hover:bg-violet-50 text-slate-700 transition-all">
-              <lucide-icon [img]="SparklesIcon" class="w-3.5 h-3.5 inline-block mr-2 text-violet-400" />
-              <span class="whitespace-pre-wrap">@for (seg of sug.segmentos; track $index) {@if (seg.hueco) {<span class="px-1 py-0.5 rounded bg-violet-100 text-violet-700 font-medium text-xs tracking-wide">{{ seg.texto }}</span>} @else {{{ seg.texto }}}}</span>
+              class="px-4 py-3 text-sm text-left border border-border rounded-xl bg-surface text-[var(--text-body)] transition-all hover:border-ia hover:bg-surface-2">
+              <lucide-icon [img]="SparklesIcon" class="w-3.5 h-3.5 inline-block mr-2 text-ia" />
+              <span class="whitespace-pre-wrap">@for (seg of sug.segmentos; track $index) {@if (seg.hueco) {<span class="px-1 py-0.5 rounded text-ia font-medium text-xs tracking-wide" style="background:color-mix(in srgb, var(--accent-ia) 16%, transparent)">{{ seg.texto }}</span>} @else {{{ seg.texto }}}}</span>
             </button>
           }
         </div>
@@ -76,28 +76,28 @@
       <div [class]="'flex ' + (msg.entrante ? 'justify-start' : 'justify-end')">
         @if (msg.entrante) {
           <div class="flex items-start gap-2 max-w-2xl">
-            <div class="w-7 h-7 bg-linear-to-br from-violet-500 to-blue-600 rounded-lg flex items-center justify-center shrink-0 mt-1">
-              <lucide-icon [img]="BotIcon" class="w-3.5 h-3.5 text-white" />
+            <div class="w-7 h-7 gradient-ia rounded-lg flex items-center justify-center shrink-0 mt-1">
+              <lucide-icon [img]="BotIcon" class="w-3.5 h-3.5 text-on-ia" />
             </div>
-            <div class="bg-white border border-slate-200 rounded-2xl rounded-tl-none px-4 py-3 shadow-sm">
-              <p class="text-sm text-slate-700 whitespace-pre-line">{{ msg.texto }}</p>
+            <div class="bg-surface border border-border rounded-2xl rounded-tl-none px-4 py-3 shadow-sm">
+              <p class="text-sm text-[var(--text-body)] whitespace-pre-line">{{ msg.texto }}</p>
               @if (msg.acciones?.length) {
                 <ul class="flex flex-wrap gap-1.5 mt-2 list-none p-0">
                   @for (accion of msg.acciones; track accion) {
-                    <li class="flex items-center gap-1 px-2 py-0.5 bg-violet-50 text-violet-700 text-xs rounded-full font-medium">
+                    <li class="flex items-center gap-1 px-2 py-0.5 text-ia text-xs rounded-full font-medium" style="background:color-mix(in srgb, var(--accent-ia) 12%, transparent)">
                       <lucide-icon [img]="ZapIcon" class="w-3 h-3" aria-hidden="true" />
                       {{ accion }}
                     </li>
                   }
                 </ul>
               }
-              <p class="text-xs text-slate-600 mt-2 font-medium">{{ msg.hora }}</p>
+              <p class="text-xs text-[var(--text-muted)] mt-2 font-medium">{{ msg.hora }}</p>
             </div>
           </div>
         } @else {
-          <div class="max-w-lg bg-violet-600 text-white rounded-2xl rounded-tr-none px-4 py-3">
+          <div class="max-w-lg bg-ia-solid text-on-ia rounded-2xl rounded-tr-none px-4 py-3">
             <p class="text-sm">{{ msg.texto }}</p>
-            <p class="text-xs text-violet-200 mt-2">{{ msg.hora }}</p>
+            <p class="text-xs text-on-ia/70 mt-2">{{ msg.hora }}</p>
           </div>
         }
       </div>
@@ -106,14 +106,14 @@
     @if (escribiendo()) {
       <div class="flex justify-start">
         <div class="flex items-start gap-2">
-          <div class="w-7 h-7 bg-linear-to-br from-violet-500 to-blue-600 rounded-lg flex items-center justify-center shrink-0 mt-1">
-            <lucide-icon [img]="BotIcon" class="w-3.5 h-3.5 text-white" />
+          <div class="w-7 h-7 gradient-ia rounded-lg flex items-center justify-center shrink-0 mt-1">
+            <lucide-icon [img]="BotIcon" class="w-3.5 h-3.5 text-on-ia" />
           </div>
-          <div class="bg-white border border-slate-200 rounded-2xl rounded-tl-none px-4 py-3">
+          <div class="bg-surface border border-border rounded-2xl rounded-tl-none px-4 py-3">
             <div class="flex gap-1 items-center h-4">
-              <div class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
-              <div class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
-              <div class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 300ms"></div>
+              <div class="w-1.5 h-1.5 bg-[var(--text-muted)] rounded-full animate-bounce" style="animation-delay: 0ms"></div>
+              <div class="w-1.5 h-1.5 bg-[var(--text-muted)] rounded-full animate-bounce" style="animation-delay: 150ms"></div>
+              <div class="w-1.5 h-1.5 bg-[var(--text-muted)] rounded-full animate-bounce" style="animation-delay: 300ms"></div>
             </div>
           </div>
         </div>
@@ -136,18 +136,18 @@
   -->
   <!-- Franja sobre `--bg` para que la caja del composer (`--surface`) despegue;
        es el mismo contraste al que iba el degradado que había antes. -->
-  <div class="shrink-0 flex flex-col items-center border-t border-slate-200"
+  <div class="shrink-0 flex flex-col items-center border-t border-border"
        style="background:var(--bg)">
     <div class="w-full max-w-3xl px-6 pb-4 pt-3">
       @if (error(); as detalle) {
-        <p role="alert" class="flex items-start gap-2 mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded-xl text-sm text-red-800">
+        <p role="alert" class="flex items-start gap-2 mb-3 px-3 py-2 rounded-xl text-sm text-danger" style="background:color-mix(in srgb, var(--danger) 12%, transparent);border:1px solid color-mix(in srgb, var(--danger) 35%, transparent)">
           <lucide-icon [img]="AlertIcon" class="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
           <span>El asistente no ha respondido. {{ detalle }}</span>
         </p>
       }
 
       <div
-        class="flex items-end gap-2 p-2 rounded-2xl shadow-lg shadow-slate-900/5 transition-colors focus-within:ring-2 focus-within:ring-violet-400/50"
+        class="flex items-end gap-2 p-2 rounded-2xl shadow-lg shadow-slate-900/5 transition-colors focus-within:ring-2 focus-within:ring-[var(--accent-ia)]/50"
         style="background:var(--surface);border:1px solid var(--border)">
         <textarea
           #chatInput
@@ -157,7 +157,7 @@
           [disabled]="escribiendo()"
           placeholder="Escribe tu pregunta..."
           rows="1"
-          class="flex-1 resize-none bg-transparent border-0 px-3 py-2.5 text-sm leading-6 max-h-40 focus:outline-none placeholder:text-slate-400 disabled:opacity-60"
+          class="flex-1 resize-none bg-transparent border-0 px-3 py-2.5 text-sm leading-6 max-h-40 focus:outline-none placeholder:text-[var(--text-faint)] disabled:opacity-60"
           style="color:var(--text)"
           aria-label="Mensaje al agente IA">
         </textarea>
@@ -168,7 +168,7 @@
           (click)="enviar()"
           [disabled]="!puedeEnviar()"
           aria-label="Enviar mensaje"
-          class="shrink-0 w-10 h-10 flex items-center justify-center bg-violet-600 text-white rounded-xl hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+          class="shrink-0 w-10 h-10 flex items-center justify-center bg-ia-solid text-on-ia rounded-xl transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed">
           <lucide-icon [img]="SendIcon" class="w-5 h-5" />
         </button>
       </div>

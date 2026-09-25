@@ -110,10 +110,16 @@ function prefiereMenosMovimiento(): boolean {
   );
 }
 
+/**
+ * Cada modo se pinta con un token semántico, no con un color de Tailwind:
+ * `brand`, `success` e `ia` ya se redeclaran bajo `.dark` en styles.css, así
+ * que estas mismas clases dan el tono correcto en claro y en oscuro. Un
+ * `text-blue-600` es constante y en oscuro se hunde contra el fondo.
+ */
 const MODO_COLOR: Record<AgenteMode, { tab: string; punto: string }> = {
-  soporte: { tab: 'border-b-2 border-blue-600 text-blue-600', punto: 'bg-blue-600' },
-  analisis: { tab: 'border-b-2 border-emerald-600 text-emerald-600', punto: 'bg-emerald-600' },
-  acciones: { tab: 'border-b-2 border-violet-600 text-violet-600', punto: 'bg-violet-600' },
+  soporte: { tab: 'border-b-2 border-brand text-brand', punto: 'bg-brand' },
+  analisis: { tab: 'border-b-2 border-success text-success', punto: 'bg-success' },
+  acciones: { tab: 'border-b-2 border-ia text-ia', punto: 'bg-ia' },
 };
 
 /**
@@ -205,7 +211,7 @@ export class AgenteChatComponent {
 
   getModoTabClass(m: AgenteMode): string {
     const base = 'px-4 py-2 text-sm font-medium ';
-    return base + (this.modo() === m ? MODO_COLOR[m].tab : 'text-slate-500 hover:text-slate-700');
+    return base + (this.modo() === m ? MODO_COLOR[m].tab : 'text-[var(--text-muted)] hover:text-[var(--text)]');
   }
 
   getModoIndicator(m: AgenteMode): string {

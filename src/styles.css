@@ -11,6 +11,12 @@
   --brand-soft: #5b8def;
   --brand-gradient: linear-gradient(135deg, #5b8def, #2563ff);
   --accent-ia: #6d5efc;
+  /* `--accent-ia` es color de TEXTO y cambia a lavanda claro en oscuro.
+     Para rellenos (botones, burbujas) hace falta un sólido estable con
+     contraste AA contra `--on-ia`: #7c3aed sobre blanco da 5.4:1 en ambos
+     temas. No sustituyas uno por el otro. */
+  --ia-solid: #7c3aed;
+  --on-ia: #ffffff;
 
   /* Texto */
   --text-strong: #0f1729;
@@ -117,6 +123,8 @@
   --color-brand: var(--brand);
   --color-brand-soft: var(--brand-soft);
   --color-ia: var(--accent-ia);
+  --color-ia-solid: var(--ia-solid);
+  --color-on-ia: var(--on-ia);
   --color-page: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
@@ -223,6 +231,12 @@
   /* ─── Clases de utilidad ─── */
   .gradient-brand {
     background: var(--brand-gradient);
+  }
+
+  /* Identidad del agente IA. Se construye con `--ia-solid` y `--brand`, ambos
+     estables entre temas, para que el texto blanco de encima mantenga AA. */
+  .gradient-ia {
+    background: linear-gradient(135deg, var(--ia-solid), var(--brand));
   }
 
   .glass {

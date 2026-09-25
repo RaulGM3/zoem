@@ -107,14 +107,19 @@ export class DocumentosComponent implements OnInit {
     return map[status] ?? status;
   }
 
+  /**
+   * Devuelve una clase `.badge-*` de styles.css, no colores de Tailwind.
+   * Esas clases se definen con `color-mix()` sobre tokens semánticos, así que
+   * el mismo nombre sirve en claro y en oscuro; un `bg-green-100` no.
+   */
   getStatusClass(status: DocTemplateStatus): string {
     const map: Record<DocTemplateStatus, string> = {
-      procesando: 'bg-blue-100 text-blue-700',
-      revision: 'bg-amber-100 text-amber-700',
-      listo: 'bg-green-100 text-green-700',
-      error: 'bg-red-100 text-red-700',
+      procesando: 'badge-brand',
+      revision: 'badge-warning',
+      listo: 'badge-success',
+      error: 'badge-danger',
     };
-    return map[status] ?? 'bg-slate-100 text-slate-600';
+    return map[status] ?? 'badge-muted';
   }
 
   formatDate(ts?: Timestamp): string {

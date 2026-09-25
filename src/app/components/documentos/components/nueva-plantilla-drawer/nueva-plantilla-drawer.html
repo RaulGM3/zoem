@@ -1,17 +1,20 @@
-<div class="fixed inset-0 z-40 bg-black/30" (click)="closed.emit()" aria-hidden="true"></div>
+<div class="fixed inset-0 z-40 bg-black/40 dark:bg-black/60" (click)="closed.emit()" aria-hidden="true"></div>
 <div class="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-  <aside class="pointer-events-auto bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
+  <!-- `--popover`, no `--surface`: en oscuro `--surface` es translúcido y dejaría
+       ver el contenido de detrás a través del diálogo. `--popover` es opaco. -->
+  <aside class="pointer-events-auto rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
+    style="background:var(--popover);border:1px solid var(--border);color:var(--text)"
     role="dialog" aria-modal="true" aria-labelledby="nueva-plantilla-title" appFocusTrap (escapeKey)="closed.emit()">
 
-    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-      <h2 id="nueva-plantilla-title" class="text-base font-semibold text-slate-800">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-border">
+      <h2 id="nueva-plantilla-title" class="text-base font-semibold text-[var(--text-strong)]">
         @switch (step()) {
           @case ('revision') { Revisar plantilla }
           @default { Nueva plantilla de documento }
         }
       </h2>
-      <button (click)="closed.emit()" class="p-1.5 rounded-lg hover:bg-slate-100" aria-label="Cerrar">
-        <lucide-icon [img]="XIcon" class="w-4 h-4 text-slate-700" />
+      <button (click)="closed.emit()" class="p-1.5 rounded-lg text-[var(--text-muted)] hover:bg-surface-2 hover:text-[var(--text)]" aria-label="Cerrar">
+        <lucide-icon [img]="XIcon" class="w-4 h-4" />
       </button>
     </div>
 
@@ -21,35 +24,35 @@
         @case ('upload') {
           <div class="space-y-5">
             <div class="space-y-1">
-              <label for="np-nombre" class="text-sm font-medium text-slate-700">Nombre <span class="text-red-500">*</span></label>
+              <label for="np-nombre" class="text-sm font-medium text-[var(--text-body)]">Nombre <span class="text-danger">*</span></label>
               <input id="np-nombre" type="text" [value]="formName()" (input)="formName.set($any($event.target).value)"
                 placeholder="Ej. Contrato de arrendamiento"
-                class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+                class="form-input" />
             </div>
             <div class="space-y-1">
-              <label for="np-desc" class="text-sm font-medium text-slate-700">Descripción</label>
+              <label for="np-desc" class="text-sm font-medium text-[var(--text-body)]">Descripción</label>
               <textarea id="np-desc" rows="2" [value]="formDescripcion()" (input)="formDescripcion.set($any($event.target).value)"
-                class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none"></textarea>
+                class="form-input resize-none"></textarea>
             </div>
 
             <label
               class="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-10 cursor-pointer transition-colors"
-              [class]="isDragging() ? 'border-violet-400 bg-violet-50' : 'border-slate-200 hover:border-violet-300 hover:bg-slate-50'"
+              [class]="isDragging() ? 'border-ia bg-[color-mix(in_srgb,var(--accent-ia)_12%,transparent)]' : 'border-border hover:border-ia hover:bg-surface-2'"
               (drop)="onDrop($event)" (dragover)="onDragOver($event)" (dragleave)="isDragging.set(false)">
               <input type="file" class="sr-only" accept=".pdf,.docx" (change)="onFileSelected($event)" />
               @if (file(); as f) {
-                <lucide-icon [img]="FileTextIcon" class="w-8 h-8 text-violet-500" />
-                <p class="text-sm font-medium text-slate-700">{{ f.name }}</p>
-                <p class="text-xs font-medium text-slate-600">Haz clic para cambiar el archivo</p>
+                <lucide-icon [img]="FileTextIcon" class="w-8 h-8 text-ia" />
+                <p class="text-sm font-medium text-[var(--text-body)]">{{ f.name }}</p>
+                <p class="text-xs font-medium text-[var(--text-muted)]">Haz clic para cambiar el archivo</p>
               } @else {
-                <lucide-icon [img]="UploadIcon" class="w-8 h-8 text-slate-600" />
-                <p class="text-sm font-medium text-slate-700">Arrastra un PDF o Word (.docx) aquí</p>
-                <p class="text-xs font-medium text-slate-600">o haz clic para seleccionarlo · máx. 15MB</p>
+                <lucide-icon [img]="UploadIcon" class="w-8 h-8 text-[var(--text-muted)]" />
+                <p class="text-sm font-medium text-[var(--text-body)]">Arrastra un PDF o Word (.docx) aquí</p>
+                <p class="text-xs font-medium text-[var(--text-muted)]">o haz clic para seleccionarlo · máx. 15MB</p>
               }
             </label>
 
             @if (errorMessage()) {
-              <p class="text-sm text-red-600">{{ errorMessage() }}</p>
+              <p class="text-sm text-danger">{{ errorMessage() }}</p>
             }
           </div>
         }
@@ -57,42 +60,42 @@
         @case ('procesando') {
           <div class="flex flex-col items-center justify-center gap-4 py-16">
             <div class="relative">
-              <div class="h-12 w-12 animate-spin rounded-full border-4 border-violet-100 border-t-violet-500"></div>
-              <lucide-icon [img]="SparklesIcon" class="absolute inset-0 m-auto w-5 h-5 text-violet-500" />
+              <div class="h-12 w-12 animate-spin rounded-full border-4 border-border border-t-[var(--accent-ia)]"></div>
+              <lucide-icon [img]="SparklesIcon" class="absolute inset-0 m-auto w-5 h-5 text-ia" />
             </div>
-            <p class="text-sm font-medium text-slate-700">Analizando documento con IA…</p>
-            <p class="text-xs font-medium text-slate-600">Detectando datos variables y generando la plantilla</p>
+            <p class="text-sm font-medium text-[var(--text-body)]">Analizando documento con IA…</p>
+            <p class="text-xs font-medium text-[var(--text-muted)]">Detectando datos variables y generando la plantilla</p>
           </div>
         }
 
         @case ('revision') {
           <div class="space-y-5">
-            <div class="rounded-lg bg-violet-50 px-4 py-3 text-sm text-violet-700">
+            <div class="rounded-lg px-4 py-3 text-sm text-ia" style="background:color-mix(in srgb, var(--accent-ia) 12%, transparent)">
               <span class="font-semibold">{{ variables().length }}</span> variables detectadas.
               Revisa las etiquetas y tipos antes de guardar.
             </div>
 
             <ul class="space-y-3">
               @for (v of variables(); track v.key; let i = $index) {
-                <li class="rounded-lg border border-slate-200 p-3 space-y-2">
+                <li class="rounded-lg border border-border p-3 space-y-2">
                   <div class="flex items-center gap-2">
-                    <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">{{ '{{' + v.key + '}}' }}</code>
+                    <code class="rounded bg-surface-2 px-1.5 py-0.5 text-xs text-[var(--text-muted)]">{{ '{{' + v.key + '}}' }}</code>
                     <span class="flex-1"></span>
-                    <label class="flex items-center gap-1.5 text-xs text-slate-700">
+                    <label class="flex items-center gap-1.5 text-xs text-[var(--text-body)]">
                       <input type="checkbox" [checked]="v.required" (change)="updateVariable(i, { required: $any($event.target).checked })"
-                        class="rounded border-slate-300 text-violet-600 focus:ring-violet-300" />
+                        class="rounded border-border accent-[var(--accent-ia)]" />
                       Obligatoria
                     </label>
-                    <button (click)="removeVariable(i)" class="p-1 rounded hover:bg-red-50" aria-label="Eliminar variable">
-                      <lucide-icon [img]="Trash2Icon" class="w-3.5 h-3.5 text-red-400" />
+                    <button (click)="removeVariable(i)" class="p-1 rounded text-danger hover:bg-[color-mix(in_srgb,var(--danger)_12%,transparent)]" aria-label="Eliminar variable">
+                      <lucide-icon [img]="Trash2Icon" class="w-3.5 h-3.5" />
                     </button>
                   </div>
                   <div class="grid grid-cols-2 gap-2">
                     <input type="text" [value]="v.label" (input)="updateVariable(i, { label: $any($event.target).value })"
                       placeholder="Etiqueta" aria-label="Etiqueta"
-                      class="w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+                      class="form-input px-2.5 py-1.5" />
                     <select [value]="v.type" (change)="updateVariable(i, { type: $any($event.target).value })" aria-label="Tipo"
-                      class="w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
+                      class="form-select px-2.5 py-1.5">
                       @for (t of tiposVariable; track t.value) {
                         <option [value]="t.value">{{ t.label }}</option>
                       }
@@ -100,64 +103,64 @@
                   </div>
                   <input type="text" [value]="v.description ?? ''" (input)="updateVariable(i, { description: $any($event.target).value || undefined })"
                     placeholder="Descripción (qué dato es y dónde encontrarlo)" aria-label="Descripción"
-                    class="w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-300" />
+                    class="form-input px-2.5 py-1.5 text-xs" />
                 </li>
               }
             </ul>
 
-            <div class="rounded-lg border border-slate-200">
+            <div class="rounded-lg border border-border">
               <button (click)="showPreview.set(!showPreview())"
-                class="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                class="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-[var(--text-body)] hover:bg-surface-2">
                 Vista previa del documento
-                <lucide-icon [img]="showPreview() ? ChevronUpIcon : ChevronDownIcon" class="w-4 h-4 text-slate-600" />
+                <lucide-icon [img]="showPreview() ? ChevronUpIcon : ChevronDownIcon" class="w-4 h-4 text-[var(--text-muted)]" />
               </button>
               @if (showPreview()) {
-                <div class="max-h-72 overflow-y-auto border-t border-slate-200 px-4 py-3 text-sm text-slate-700 prose-sm"
+                <div class="max-h-72 overflow-y-auto border-t border-border px-4 py-3 text-sm text-[var(--text-body)] prose-sm"
                   [innerHTML]="extractedHtml()"></div>
               }
             </div>
 
             @if (errorMessage()) {
-              <p class="text-sm text-red-600">{{ errorMessage() }}</p>
+              <p class="text-sm text-danger">{{ errorMessage() }}</p>
             }
           </div>
         }
 
         @case ('error') {
           <div class="flex flex-col items-center justify-center gap-4 py-16">
-            <div class="flex h-12 w-12 items-center justify-center rounded-full bg-red-50">
-              <lucide-icon [img]="TriangleAlertIcon" class="w-6 h-6 text-red-500" />
+            <div class="flex h-12 w-12 items-center justify-center rounded-full" style="background:color-mix(in srgb, var(--danger) 14%, transparent)">
+              <lucide-icon [img]="TriangleAlertIcon" class="w-6 h-6 text-danger" />
             </div>
-            <p class="text-sm font-medium text-slate-700">No se pudo procesar el documento</p>
-            <p class="max-w-sm text-center text-xs font-medium text-slate-700">{{ errorMessage() }}</p>
+            <p class="text-sm font-medium text-[var(--text-body)]">No se pudo procesar el documento</p>
+            <p class="max-w-sm text-center text-xs font-medium text-[var(--text-muted)]">{{ errorMessage() }}</p>
           </div>
         }
       }
     </div>
 
-    <div class="flex items-center justify-between gap-3 border-t border-slate-200 px-6 py-4">
+    <div class="flex items-center justify-between gap-3 border-t border-border px-6 py-4">
       @switch (step()) {
         @case ('upload') {
           <span></span>
           <button (click)="procesar()" [disabled]="!canProcess()"
-            class="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed">
+            class="inline-flex items-center gap-2 rounded-lg bg-ia-solid px-4 py-2 text-sm font-semibold text-on-ia transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed">
             <lucide-icon [img]="SparklesIcon" size="15" />
             Analizar con IA
           </button>
         }
         @case ('revision') {
-          <button (click)="retry()" class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">
+          <button (click)="retry()" class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-[var(--text-body)] hover:bg-surface-2">
             <lucide-icon [img]="ArrowLeftIcon" size="14" />
             Volver
           </button>
           <button (click)="guardar()" [disabled]="!canSave() || saving()"
-            class="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed">
+            class="rounded-lg bg-ia-solid px-4 py-2 text-sm font-semibold text-on-ia transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed">
             {{ saving() ? 'Guardando…' : 'Guardar plantilla' }}
           </button>
         }
         @case ('error') {
           <span></span>
-          <button (click)="retry()" class="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-500">
+          <button (click)="retry()" class="rounded-lg bg-ia-solid px-4 py-2 text-sm font-semibold text-on-ia transition-opacity hover:opacity-90">
             Intentar de nuevo
           </button>
         }
