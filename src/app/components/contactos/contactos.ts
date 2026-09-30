@@ -2,12 +2,11 @@ import { Component, signal, computed, inject, effect, ChangeDetectionStrategy } 
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DecimalPipe } from '@angular/common';
 import { RouterLink, ActivatedRoute, Router, type ParamMap } from '@angular/router';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import {
   LucideAngularModule,
   Users, Plus, Phone, Mail, Building2,
   Edit, Trash2, ChevronRight, ChevronLeft, UserPlus, TrendingUp,
-  GitMerge, Shield, Brain, ArrowRight, X, Check, LoaderCircle, StickyNote, Briefcase,
+  GitMerge, Shield, Brain, ArrowRight, X, Check, StickyNote, Briefcase,
 } from 'lucide-angular';
 // import { PIPELINE_DEALS } from '../../data/dummy-data'; // dummy data — tab oculto
 import { ContactService } from '../../core/services/contact.service';
@@ -16,27 +15,23 @@ import { SearchService } from '../../core/services/search.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { ToastService } from '../../core/services/toast.service';
 import {
-  Contact, PersonaFisica, PersonaJuridica, ContactStatus, CanalEntrada,
-  CONTACT_STATUS_LABELS, CONTACT_STATUS_OPTIONS, CANAL_ENTRADA_LABELS,
+  Contact, ContactStatus,
+  CONTACT_STATUS_LABELS, CONTACT_STATUS_OPTIONS,
   getContactDisplayName, getContactInitials, getContactStatusStyle,
 } from '../../interfaces';
 import { ImportarContactosComponent } from './components/importar-contactos/importar-contactos';
-import { FocusTrapDirective } from '../../shared/directives/focus-trap.directive';
+import { ContactoDrawerComponent, type ContactoPrefill } from './components/contacto-drawer/contacto-drawer';
 import {
   EstadoContactoDialogComponent, type CambioEstadoResult,
 } from '../../shared/components/estado-contacto-dialog/estado-contacto-dialog';
 import { SeguimientoContactoService } from '../../core/services/seguimiento-contacto.service';
-
-type ContactPayload =
-  | Omit<PersonaFisica, 'id' | 'companyId' | 'createdAt' | 'updatedAt'>
-  | Omit<PersonaJuridica, 'id' | 'companyId' | 'createdAt' | 'updatedAt'>;
 
 type ContactosTab = 'contactos' | 'pipeline' | 'rgpd' | 'herramientas';
 
 @Component({
   selector: 'app-contactos',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, LucideAngularModule, DecimalPipe, ReactiveFormsModule, ImportarContactosComponent, FocusTrapDirective, EstadoContactoDialogComponent],
+  imports: [RouterLink, LucideAngularModule, DecimalPipe, ImportarContactosComponent, ContactoDrawerComponent, EstadoContactoDialogComponent],
   templateUrl: './contactos.html',
 })
 export class ContactosComponent {
@@ -57,7 +52,6 @@ export class ContactosComponent {
   readonly ArrowRightIcon = ArrowRight;
   readonly XIcon = X;
   readonly CheckIcon = Check;
-  readonly Loader2Icon = LoaderCircle;
   readonly StickyNoteIcon = StickyNote;
   readonly BriefcaseIcon = Briefcase;
 
@@ -65,7 +59,6 @@ export class ContactosComponent {
   readonly usersService = inject(UsersService);
   readonly perm = inject(PermissionService);
   private readonly toast = inject(ToastService);
-  private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly searchSvc = inject(SearchService);
@@ -73,27 +66,15 @@ export class ContactosComponent {
 
   readonly contactStatuses = CONTACT_STATUS_OPTIONS;
 
-  readonly canalesEntrada: readonly { value: CanalEntrada; label: string }[] = (
-    Object.entries(CANAL_ENTRADA_LABELS) as [CanalEntrada, string][]
-  ).map(([value, label]) => ({ value, label }));
-
   activeTab = signal<ContactosTab>('contactos');
   /** Búsqueda centralizada en el header — scopeada a "contactos". */
   readonly search = this.searchSvc.termFor('contactos');
   filterStatus = signal('');
   filterType = signal('');
-  showDrawer = signal(false);
+  /** Drawer de alta/edición abierto (null = cerrado) y sus datos de partida. */
+  readonly drawer = signal<{ contact: Contact | null; prefill: ContactoPrefill | null } | null>(null);
   showImportDrawer = signal(false);
-  editingId = signal<string | null>(null);
-  /** Tipo original del contacto al abrir edición — necesario para limpiar los
-   * campos exclusivos del tipo anterior si el usuario cambia de tipo a mitad
-   * de la edición (ver saveContact). */
-  private editingOriginalType: 'persona_fisica' | 'persona_juridica' | null = null;
-  formType = signal<'persona_fisica' | 'persona_juridica'>('persona_fisica');
-  isSaving = signal(false);
   deleteConfirmId = signal<string | null>(null);
-  formStep = signal<1 | 2>(1);
-  showErrors = signal(false);
 
   /** Contacto cuyo estado se está cambiando desde el chip (null = diálogo cerrado). */
   readonly estadoContacto = signal<Contact | null>(null);
@@ -103,40 +84,6 @@ export class ContactosComponent {
   // Dummy data — tabs Embudo CRM y RGPD ocultos hasta tener fuente real
   // pipelineDeals = PIPELINE_DEALS;
   // rgpdData = RGPD_CONSENTIMIENTOS;
-
-  form = this.fb.group({
-    email: ['', [Validators.email]],
-    mobile: [''],
-    status: ['activo', Validators.required],
-    notes: [''],
-    asunto: [''],
-    canalEntrada: ['' as CanalEntrada | ''],
-    assignedTo: [''],
-    // Persona Física
-    nombre: [''],
-    apellidos: [''],
-    nifType: ['dni'],
-    nif: [''],
-
-    nacionalidad: ['ES'],
-    estadoCivil: ['casado'],
-    // Persona Jurídica
-    razonSocial: [''],
-    nombreComercial: [''],
-    formaJuridica: [''],
-    cifType: ['cif'],
-    cif: [''],
-    sectorActividad: [''],
-    website: [''],
-    representanteLegalNombre: [''],
-    // Dirección
-    calle: [''],
-    numero: [''],
-    codigoPostal: [''],
-    municipio: [''],
-    provincia: [''],
-    pais: ['ES'],
-  });
 
   constructor() {
     this.reloadContacts();
@@ -178,21 +125,14 @@ export class ContactosComponent {
   private abrirDrawerSiLoPidenPorUrl(p: ParamMap): void {
     if (p.get('newContact') !== '1') return;
 
-    const datos = (history.state ?? {}) as Partial<
-      Record<'nombre' | 'apellidos' | 'mobile' | 'notes', string>
-    >;
+    const datos = (history.state ?? {}) as ContactoPrefill;
 
-    this.formType.set('persona_fisica');
-    this.formStep.set(1);
-    this.showErrors.set(false);
-    this.form.reset({ status: 'activo', nifType: 'dni', cifType: 'cif', pais: 'ES', nacionalidad: 'ES', estadoCivil: 'casado' });
-    this.form.patchValue({
-      nombre: datos.nombre ?? '',
-      apellidos: datos.apellidos ?? '',
-      mobile: datos.mobile ?? '',
-      notes: datos.notes ?? '',
+    // Objeto nuevo en cada petición: si el drawer ya estaba abierto, el cambio
+    // de `prefill` hace que reinicie el formulario con los datos recién llegados.
+    this.drawer.set({
+      contact: null,
+      prefill: { nombre: datos.nombre, apellidos: datos.apellidos, mobile: datos.mobile, notes: datos.notes },
     });
-    this.showDrawer.set(true);
 
     this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
   }
@@ -330,228 +270,22 @@ export class ContactosComponent {
     return this.contactService.contacts().filter((c) => c.status === 'activo').length;
   }
 
-  showStep1Fields = computed(() => !!this.editingId() || this.formStep() === 1);
-  showStep2Fields = computed(() => !!this.editingId() || this.formStep() === 2);
-
-  /**
-   * Falta una vía de contacto: NI email NI móvil. Regla de negocio: un contacto
-   * necesita al menos UNA forma de contacto, no las dos.
-   * Método (no computed) a propósito: lee el form, que no es señal.
-   */
-  missingContactChannel(): boolean {
-    const v = this.form.getRawValue();
-    return !v.email?.trim() && !v.mobile?.trim();
-  }
-
-  /**
-   * Valida el paso 1 ANTES de avanzar/guardar. Método (no computed): los
-   * Reactive Forms no son signals, así que un computed se quedaría stale.
-   */
-  step1Valid(): boolean {
-    const v = this.form.getRawValue();
-    const emailFormatOk = !this.form.get('email')?.invalid; // vacío = válido
-    const channelOk = !this.missingContactChannel(); // email O móvil
-    const baseOk = emailFormatOk && channelOk;
-    if (this.formType() === 'persona_fisica') {
-      return baseOk && !!v.nombre?.trim() && !!v.apellidos?.trim();
-    }
-    return baseOk && !!v.razonSocial?.trim();
-  }
-
-  nextStep() {
-    if (!this.step1Valid()) {
-      this.showErrors.set(true);
-      return;
-    }
-    this.showErrors.set(false);
-    this.formStep.set(2);
-  }
-
-  prevStep() {
-    this.formStep.set(1);
-  }
-
   openNew() {
-    this.editingId.set(null);
-    this.editingOriginalType = null;
-    this.formType.set('persona_fisica');
-    this.formStep.set(1);
-    this.showErrors.set(false);
-    this.form.reset({
-      status: 'activo', nifType: 'dni', cifType: 'cif', pais: 'ES', nacionalidad: 'ES', estadoCivil: 'casado',
-    });
-    this.showDrawer.set(true);
+    this.drawer.set({ contact: null, prefill: null });
   }
 
   openEdit(contact: Contact) {
-    this.editingId.set(contact.id);
-    this.editingOriginalType = contact.type;
-    this.formType.set(contact.type);
-    const dir =
-      contact.type === 'persona_fisica' ? contact.direccion : contact.direccionSocial;
-    const base = {
-      email: contact.email,
-      mobile: contact.mobile ?? '',
-      status: contact.status,
-      notes: contact.notes ?? '',
-      asunto: contact.asunto ?? '',
-      canalEntrada: (contact.canalEntrada ?? '') as CanalEntrada | '',
-      assignedTo: contact.assignedTo ?? '',
-      calle: dir?.calle ?? '',
-      numero: dir?.numero ?? '',
-      codigoPostal: dir?.codigoPostal ?? '',
-      municipio: dir?.municipio ?? '',
-      provincia: dir?.provincia ?? '',
-      pais: dir?.pais ?? 'ES',
-    };
-    if (contact.type === 'persona_fisica') {
-      this.form.patchValue({
-        ...base,
-        nombre: contact.nombre,
-        apellidos: contact.apellidos,
-        nifType: contact.nifType,
-        nif: contact.nif ?? '',
-        nacionalidad: contact.nacionalidad ?? 'ES',
-        estadoCivil: contact.estadoCivil ?? '',
-      });
-    } else {
-      this.form.patchValue({
-        ...base,
-        razonSocial: contact.razonSocial,
-        nombreComercial: contact.nombreComercial ?? '',
-        formaJuridica: contact.formaJuridica ?? '',
-        cifType: contact.cifType,
-        cif: contact.cif ?? '',
-        sectorActividad: contact.sectorActividad ?? '',
-        website: contact.website ?? '',
-        representanteLegalNombre: contact.representanteLegalNombre ?? '',
-      });
-    }
-    this.showDrawer.set(true);
-  }
-
-  async saveContact() {
-    // Validación ANTES de tocar Firestore — aplica tanto al crear como al
-    // editar (antes el edit se saltaba el chequeo y podía vaciar campos).
-    if (!this.step1Valid()) {
-      this.showErrors.set(true);
-      this.formStep.set(1);
-      return;
-    }
-    this.isSaving.set(true);
-    try {
-      const v = this.form.getRawValue();
-      const base = {
-        email: v.email || '',
-        mobile: v.mobile || '',
-        status: v.status as ContactStatus,
-        notes: v.notes || '',
-        asunto: v.asunto || undefined,
-        canalEntrada: (v.canalEntrada || undefined) as CanalEntrada | undefined,
-        assignedTo: v.assignedTo || undefined,
-      };
-      const direccion = {
-        calle: v.calle || '',
-        numero: v.numero || '',
-        codigoPostal: v.codigoPostal || '',
-        municipio: v.municipio || '',
-        provincia: v.provincia || '',
-        pais: v.pais || 'ES',
-      };
-
-      let data: ContactPayload;
-      if (this.formType() === 'persona_fisica') {
-        data = {
-          type: 'persona_fisica',
-          ...base,
-          nombre: v.nombre!,
-          apellidos: v.apellidos!,
-          nifType: v.nifType as PersonaFisica['nifType'],
-          nif: v.nif || '',
-          nacionalidad: v.nacionalidad || 'ES',
-          estadoCivil: (v.estadoCivil as PersonaFisica['estadoCivil']) || 'casado',
-          direccion,
-        };
-      } else {
-        data = {
-          type: 'persona_juridica',
-          ...base,
-          razonSocial: v.razonSocial!,
-          nombreComercial: v.nombreComercial || '',
-          formaJuridica: v.formaJuridica || '',
-          cifType: v.cifType as 'cif' | 'vat' | 'otro',
-          cif: v.cif || '',
-          sectorActividad: v.sectorActividad || '',
-          website: v.website || '',
-          representanteLegalNombre: v.representanteLegalNombre || '',
-          direccionSocial: direccion,
-        };
-      }
-
-      const editId = this.editingId();
-      const updatePayload: Record<string, unknown> = editId
-        ? this.withClearedPreviousTypeFields(data as Record<string, unknown>)
-        : (data as Record<string, unknown>);
-      let creado: Contact | null = null;
-      await this.toast.run(
-        async () => {
-          if (editId) {
-            await this.contactService.updateContact(editId, updatePayload);
-            return;
-          }
-          creado = await this.contactService.createContact(data);
-        },
-        {
-          successMessage: editId ? 'Contacto actualizado' : 'Contacto creado',
-          errorTitle: 'No se pudo guardar el contacto',
-          // El drawer se cierra SOLO si la escritura terminó bien. Si falla,
-          // queda abierto con los datos para reintentar desde el toast.
-          onSuccess: () => {
-            this.closeDrawer();
-            // Alta nueva: proponer el primer compromiso sobre el contacto creado.
-            if (creado && this.perm.can('Calendario', 'crear')) this.seguimientoContacto.set(creado);
-          },
-        }
-      );
-    } finally {
-      this.isSaving.set(false);
-    }
+    this.drawer.set({ contact, prefill: null });
   }
 
   closeDrawer() {
-    this.showDrawer.set(false);
-    this.editingId.set(null);
-    this.editingOriginalType = null;
-    this.formStep.set(1);
-    this.showErrors.set(false);
-    this.form.reset({ status: 'activo', nifType: 'dni', cifType: 'cif', pais: 'ES', nacionalidad: 'ES', estadoCivil: 'casado' });
+    this.drawer.set(null);
   }
 
-  /**
-   * `updateContact` hace un merge-update en Firestore: si el usuario cambia
-   * el tipo de contacto (Persona Física ↔ Jurídica) a mitad de una edición,
-   * los campos del tipo ANTERIOR (p.ej. `nombre`/`apellidos`/`nif` al pasar a
-   * jurídica) nunca se limpiaban y quedaban conviviendo con los nuevos —
-   * documento híbrido/corrupto. Aquí los ponemos explícitamente a `null`
-   * antes de enviar el update, solo cuando el tipo realmente cambió.
-   */
-  private withClearedPreviousTypeFields(data: Record<string, unknown>): Record<string, unknown> {
-    if (!this.editingOriginalType || this.editingOriginalType === this.formType()) {
-      return data;
-    }
-    const personaFisicaFields = {
-      nombre: null, apellidos: null, nifType: null, nif: null,
-      nacionalidad: null, estadoCivil: null, profesion: null, direccion: null,
-      lugarNacimiento: null,
-    };
-    const personaJuridicaFields = {
-      razonSocial: null, nombreComercial: null, formaJuridica: null, cifType: null,
-      cif: null, fechaConstitucion: null, registroMercantil: null, sectorActividad: null,
-      website: null, direccionSocial: null, direccionFiscal: null,
-      representanteLegalNombre: null, representanteLegalId: null,
-    };
-    const clearedFields = this.editingOriginalType === 'persona_fisica' ? personaFisicaFields : personaJuridicaFields;
-    return { ...clearedFields, ...data };
+  onContactoGuardado(creado: Contact | null) {
+    this.closeDrawer();
+    // Alta nueva: proponer el primer compromiso sobre el contacto creado.
+    if (creado && this.perm.can('Calendario', 'crear')) this.seguimientoContacto.set(creado);
   }
 
   abrirCaso(contactId: string): void {

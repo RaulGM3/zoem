@@ -1,0 +1,130 @@
+@let file = this.file();
+<div class="flex items-center gap-3 px-4 py-3 group" style="border-bottom:1px solid var(--border-soft)">
+  <lucide-icon [img]="FileTextIcon" class="w-5 h-5 shrink-0" style="color:var(--brand)" />
+  <div class="flex-1 min-w-0">
+    <p class="text-sm font-medium truncate flex items-center gap-1.5" style="color:var(--text-body)">
+      @if (file.clasificado) {
+        <lucide-icon [img]="LockIcon" class="w-3.5 h-3.5 shrink-0" style="color:var(--warning)" aria-label="Documento clasificado" />
+      }
+      <span class="truncate">{{ file.name }}</span>
+      @if ((file.version ?? 1) > 1) {
+        <span class="px-1.5 py-0.5 text-[10px] font-bold rounded shrink-0" style="background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand)">v{{ file.version }}</span>
+      }
+    </p>
+    @if (file.sizeBytes) {
+      <p class="text-xs" style="color:var(--text-faint)">{{ formatFileSize(file.sizeBytes) }}</p>
+    }
+  </div>
+  <div class="flex items-center gap-2 shrink-0">
+    <button
+      (click)="preview.emit()"
+      class="p-1.5 rounded-lg transition-colors duration-150"
+      style="color:var(--text-faint)"
+      (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-muted)'"
+      (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+      aria-label="Previsualizar"
+    >
+      <lucide-icon [img]="EyeIcon" class="w-4 h-4" />
+    </button>
+    @if (file.clasificado) {
+      <button
+        (click)="downloadClassified.emit()"
+        class="p-1.5 rounded-lg transition-colors duration-150"
+        style="color:var(--text-faint)"
+        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-muted)'"
+        (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+        aria-label="Descargar (documento clasificado)"
+      >
+        <lucide-icon [img]="DownloadIcon" class="w-4 h-4" />
+      </button>
+    } @else {
+      <a
+        [href]="file.downloadUrl"
+        target="_blank"
+        rel="noopener"
+        download
+        (click)="downloaded.emit()"
+        class="p-1.5 rounded-lg transition-colors duration-150"
+        style="color:var(--text-faint)"
+        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-muted)'"
+        (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+        aria-label="Descargar"
+      >
+        <lucide-icon [img]="DownloadIcon" class="w-4 h-4" />
+      </a>
+    }
+    @if (canEdit()) {
+      <button
+        (click)="triggerReupload()"
+        class="p-1.5 rounded-lg transition-colors duration-150"
+        style="color:var(--text-faint)"
+        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-muted)'"
+        (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+        aria-label="Subir nueva versión"
+      >
+        <lucide-icon [img]="RefreshCwIcon" class="w-4 h-4" />
+      </button>
+      <input
+        type="file"
+        #fileInput
+      [id]="'reupload-file-' + file.id"
+        class="hidden"
+        (change)="onReuploadSelected($event)"
+        aria-hidden="true"
+      />
+    }
+    <button
+      (click)="history.emit()"
+      class="p-1.5 rounded-lg transition-colors duration-150"
+      style="color:var(--text-faint)"
+      (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-muted)'"
+      (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+      aria-label="Ver historial"
+    >
+      <lucide-icon [img]="HistoryIcon" class="w-4 h-4" />
+    </button>
+    @if (isAdmin()) {
+      <button
+        (click)="access.emit()"
+        class="p-1.5 rounded-lg transition-colors duration-150"
+        [style.color]="file.clasificado ? 'var(--warning)' : 'var(--text-faint)'"
+        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+        (mouseleave)="$any($event.currentTarget).style.background=''"
+        aria-label="Gestionar acceso"
+      >
+        <lucide-icon [img]="LockIcon" class="w-4 h-4" />
+      </button>
+    }
+    @if (canDelete()) {
+      @if (confirmingDelete()) {
+        <button (click)="deleteConfirmed.emit()"
+          class="p-1.5 rounded-lg transition-colors duration-150"
+          style="color:var(--danger)"
+          (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)'"
+          (mouseleave)="$any($event.currentTarget).style.background=''"
+          aria-label="Confirmar borrado">
+          <lucide-icon [img]="CheckIcon" class="w-4 h-4" />
+        </button>
+        <button (click)="deleteCancelled.emit()"
+          class="p-1.5 rounded-lg transition-colors duration-150"
+          style="color:var(--text-faint)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+          (mouseleave)="$any($event.currentTarget).style.background=''"
+          aria-label="Cancelar">
+          <lucide-icon [img]="XIcon" class="w-4 h-4" />
+        </button>
+      } @else {
+        <button
+          (click)="deleteRequested.emit()"
+          class="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-colors duration-150"
+          style="color:var(--text-faint)"
+          (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)';$any($event.currentTarget).style.color='var(--danger)'"
+          (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+          aria-label="Eliminar archivo"
+        >
+          <lucide-icon [img]="Trash2Icon" class="w-4 h-4" />
+        </button>
+      }
+    }
+  </div>
+</div>

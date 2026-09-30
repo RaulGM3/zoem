@@ -1,0 +1,108 @@
+<!-- Summary cards -->
+@let rm = resumenMov();
+<div class="grid grid-cols-2 gap-3" [class]="rm.honorarios > 0 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'">
+
+  <!-- Ingresos -->
+  <div class="kpi-card">
+    <p class="text-xs uppercase tracking-wide" style="color:var(--text-faint)">Ingresos</p>
+    <p class="text-xl font-bold mt-1" style="color:var(--success);font-family:var(--font-display)">
+      {{ rm.totalIngresos | number:'1.2-2' }} €
+    </p>
+  </div>
+
+  <!-- Egresos: total limpio + desglose en popover (hover, foco o clic) -->
+  <div class="kpi-card relative" (mouseleave)="desgloseAbierto.set(false)">
+    <div class="flex items-center justify-between gap-2">
+      <p class="text-xs uppercase tracking-wide" style="color:var(--text-faint)">Egresos</p>
+      @if (desgloseEgresos().length > 0) {
+        <button
+          type="button"
+          id="egresos-desglose-trigger"
+          aria-controls="egresos-desglose"
+          [attr.aria-expanded]="desgloseAbierto()"
+          (click)="desgloseAbierto.set(!desgloseAbierto())"
+          (mouseenter)="desgloseAbierto.set(true)"
+          (focus)="desgloseAbierto.set(true)"
+          class="p-1 -m-1 rounded-md transition-colors duration-150"
+          [style.color]="desgloseAbierto() ? 'var(--text-body)' : 'var(--text-faint)'"
+        >
+          <lucide-icon [img]="InfoIcon" class="w-3.5 h-3.5" />
+          <span class="sr-only">Ver desglose de egresos por tipo</span>
+        </button>
+      }
+    </div>
+
+    <p class="text-xl font-bold mt-1" style="color:var(--danger);font-family:var(--font-display)">
+      {{ rm.totalEgresos | number:'1.2-2' }} €
+    </p>
+
+    @if (desgloseEgresos().length > 0) {
+      <!-- Barra proporcional: lectura instantánea del reparto, siempre visible -->
+      <div class="mt-2 flex h-1.5 gap-px rounded-full overflow-hidden" aria-hidden="true">
+        @for (t of desgloseEgresos(); track t.tipo) {
+          <span [style.background]="t.color" [style.width.%]="t.porcentaje"></span>
+        }
+      </div>
+
+      <div
+        id="egresos-desglose"
+        role="group"
+        aria-labelledby="egresos-desglose-trigger"
+        [hidden]="!desgloseAbierto()"
+        class="absolute left-0 right-0 top-full z-20 mt-1 rounded-xl p-3 shadow-lg space-y-1.5"
+        style="background:var(--surface);border:1px solid var(--border)"
+      >
+        @for (t of desgloseEgresos(); track t.tipo) {
+          <button
+            type="button"
+            (click)="seleccionarTipo(t.tipo)"
+            class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors duration-150"
+            (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+            (mouseleave)="$any($event.currentTarget).style.background=''"
+            [attr.aria-label]="'Filtrar movimientos por ' + t.etiqueta"
+          >
+            <span class="h-2 w-2 shrink-0 rounded-full" [style.background]="t.color"></span>
+            <span class="flex-1 text-left text-xs" style="color:var(--text-body)">{{ t.etiqueta }}</span>
+            <span class="text-xs tabular-nums" style="color:var(--text-muted)">{{ t.importe | number:'1.2-2' }} €</span>
+            <span class="w-9 text-right text-xs tabular-nums" style="color:var(--text-faint)">{{ t.porcentaje | number:'1.0-0' }}%</span>
+          </button>
+        }
+        <p class="pt-1 text-xs" style="color:var(--text-faint);border-top:1px solid var(--border-soft)">
+          Pulsa un tipo para filtrar los movimientos
+        </p>
+      </div>
+    }
+  </div>
+
+  <!-- Honorarios (solo si los hay) -->
+  @if (rm.honorarios > 0) {
+    <div class="kpi-card">
+      <p class="text-xs uppercase tracking-wide" style="color:var(--text-faint)">Honorarios</p>
+      <p class="text-xl font-bold mt-1" style="color:var(--accent-ia);font-family:var(--font-display)">
+        {{ rm.honorarios | number:'1.2-2' }} €
+      </p>
+    </div>
+  }
+
+  <!-- Saldo neto -->
+  <div class="kpi-card">
+    <p class="text-xs uppercase tracking-wide" style="color:var(--text-faint)">Saldo neto del caso</p>
+    <p class="text-xl font-bold mt-1" style="font-family:var(--font-display)"
+      [style.color]="rm.saldo >= 0 ? 'var(--success)' : 'var(--danger)'">
+      {{ rm.saldo | number:'1.2-2' }} €
+    </p>
+  </div>
+
+</div>
+
+<!-- Resumen de IVA (solo si hay cuota repercutida o soportada) -->
+@if (rm.ivaRepercutido > 0 || rm.ivaSoportado > 0) {
+  <div class="rounded-xl p-4 flex flex-wrap items-center justify-between gap-3" style="background:var(--surface);border:1px solid var(--border)">
+    <p class="text-xs uppercase tracking-wide" style="color:var(--text-faint)">IVA del caso</p>
+    <div class="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
+      <span style="color:var(--text-muted)">Repercutido <span class="font-semibold" style="color:var(--text-strong)">{{ rm.ivaRepercutido | number:'1.2-2' }} €</span></span>
+      <span style="color:var(--text-muted)">Soportado <span class="font-semibold" style="color:var(--text-strong)">{{ rm.ivaSoportado | number:'1.2-2' }} €</span></span>
+      <span style="color:var(--text-muted)">Liquidación <span class="font-semibold" [style.color]="(rm.ivaRepercutido - rm.ivaSoportado) >= 0 ? 'var(--danger)' : 'var(--success)'">{{ rm.ivaRepercutido - rm.ivaSoportado | number:'1.2-2' }} €</span></span>
+    </div>
+  </div>
+}

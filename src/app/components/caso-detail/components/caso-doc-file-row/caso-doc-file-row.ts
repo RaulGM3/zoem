@@ -1,0 +1,66 @@
+import { Component, ChangeDetectionStrategy, ElementRef, input, output, viewChild } from '@angular/core';
+import {
+  LucideAngularModule, FileText, Download, Trash2, Eye, Check, X, History, RefreshCw, Lock,
+} from 'lucide-angular';
+import type { CasoDocFile } from '../../../../interfaces';
+
+/**
+ * Fila de un archivo libre en la pestaña de documentos del caso.
+ * Presentacional: solo avisa de la acción elegida.
+ */
+@Component({
+  selector: 'app-caso-doc-file-row',
+  host: { class: 'block' },
+  imports: [LucideAngularModule],
+  templateUrl: './caso-doc-file-row.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class CasoDocFileRowComponent {
+  readonly file = input.required<CasoDocFile>();
+  readonly canEdit = input(true);
+  readonly canDelete = input(true);
+  readonly isAdmin = input(false);
+  /** El padre decide qué fila está pidiendo confirmación: solo una a la vez. */
+  readonly confirmingDelete = input(false);
+
+  readonly preview = output<void>();
+  /** Se ha pulsado el enlace de descarga directa (para dejar rastro en auditoría). */
+  readonly downloaded = output<void>();
+  readonly downloadClassified = output<void>();
+  readonly reupload = output<File>();
+  readonly history = output<void>();
+  readonly access = output<void>();
+  readonly deleteRequested = output<void>();
+  readonly deleteConfirmed = output<void>();
+  readonly deleteCancelled = output<void>();
+
+  readonly FileTextIcon = FileText;
+  readonly DownloadIcon = Download;
+  readonly Trash2Icon = Trash2;
+  readonly EyeIcon = Eye;
+  readonly CheckIcon = Check;
+  readonly XIcon = X;
+  readonly HistoryIcon = History;
+  readonly RefreshCwIcon = RefreshCw;
+  readonly LockIcon = Lock;
+
+  private readonly fileInput = viewChild<ElementRef<HTMLInputElement>>('fileInput');
+
+  triggerReupload(): void {
+    this.fileInput()?.nativeElement.click();
+  }
+
+  onReuploadSelected(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    const newFile = target.files?.[0];
+    if (newFile) this.reupload.emit(newFile);
+    target.value = '';
+  }
+
+  formatFileSize(bytes: number | undefined): string {
+    if (!bytes) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+}

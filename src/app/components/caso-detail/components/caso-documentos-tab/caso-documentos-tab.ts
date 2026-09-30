@@ -2,8 +2,8 @@ import {
   Component, ChangeDetectionStrategy, inject, input, output, signal, computed,
 } from '@angular/core';
 import {
-  LucideAngularModule, CheckCircle2, FileText, FilePen, Folder, FolderOpen, FolderPlus,
-  Loader, Download, Upload, Trash2, ChevronRight, Eye, Check, X, History, RefreshCw, Lock,
+  LucideAngularModule, Folder, FolderOpen, FolderPlus,
+  Loader, Upload, Trash2, ChevronRight, Check, X, Lock,
 } from 'lucide-angular';
 import type { CasoDocSlot, CasoDocFolder, CasoDocFile } from '../../../../interfaces';
 import type { DocVersionEntry } from '../../../../interfaces/doc-lifecycle.interface';
@@ -12,6 +12,10 @@ import { ClassifiedUrlService } from '../../../../core/services/classified-url.s
 import { DocAuditService } from '../../../../core/services/doc-audit.service';
 import { PermissionService } from '../../../../core/services/permission.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { FolderNavigation } from '../../../../core/documentos/folder-navigation';
+import { CasoDocSlotRowComponent } from '../caso-doc-slot-row/caso-doc-slot-row';
+import { CasoDocFileRowComponent } from '../caso-doc-file-row/caso-doc-file-row';
+import { CasoDocsChecklistComponent } from '../caso-docs-checklist/caso-docs-checklist';
 import { CasoDocPreviewComponent, PreviewDoc } from '../caso-doc-preview/caso-doc-preview';
 import { CasoDocGeneradorComponent, GeneratedDocEvent } from '../caso-doc-generador/caso-doc-generador';
 import { DocHistoryPanelComponent } from '../../../../shared/components/doc-history-panel/doc-history-panel';
@@ -56,7 +60,10 @@ interface AccessTarget {
 @Component({
   selector: 'app-caso-documentos-tab',
   host: { style: 'display: block' },
-  imports: [LucideAngularModule, CasoDocPreviewComponent, CasoDocGeneradorComponent, DocHistoryPanelComponent, DocAccessDrawerComponent],
+  imports: [
+    LucideAngularModule, CasoDocSlotRowComponent, CasoDocFileRowComponent, CasoDocsChecklistComponent,
+    CasoDocPreviewComponent, CasoDocGeneradorComponent, DocHistoryPanelComponent, DocAccessDrawerComponent,
+  ],
   templateUrl: './caso-documentos-tab.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -94,27 +101,21 @@ export class CasoDocumentosTabComponent {
   readonly deleteFolder = output<string>();
   readonly generateDoc = output<GeneratedDocEvent>();
 
-  readonly CheckCircle2Icon = CheckCircle2;
-  readonly FileTextIcon = FileText;
-  readonly FilePenIcon = FilePen;
   readonly FolderIcon = Folder;
   readonly FolderOpenIcon = FolderOpen;
   readonly FolderPlusIcon = FolderPlus;
   readonly LoaderIcon = Loader;
-  readonly DownloadIcon = Download;
   readonly UploadIcon = Upload;
   readonly Trash2Icon = Trash2;
   readonly ChevronRightIcon = ChevronRight;
-  readonly EyeIcon = Eye;
   readonly CheckIcon = Check;
   readonly XIcon = X;
-  readonly HistoryIcon = History;
-  readonly RefreshCwIcon = RefreshCw;
   readonly LockIcon = Lock;
 
   // ── Estado de navegación (UI local) ────────────────────
-  readonly currentFolderId = signal<string | null>(null);
-  readonly folderPath = signal<CasoDocFolder[]>([]);
+  private readonly nav = new FolderNavigation<CasoDocFolder>();
+  readonly currentFolderId = this.nav.currentFolderId;
+  readonly folderPath = this.nav.path;
   readonly isCreatingFolder = signal(false);
   readonly newFolderName = signal('');
   readonly confirmingDeleteFolderId = signal<string | null>(null);
@@ -151,28 +152,19 @@ export class CasoDocumentosTabComponent {
     && this.currentFiles().length === 0
   );
 
-  // ── Panel lateral: slots pendientes de la plantilla ────
-  readonly pendingSlots = computed(() =>
-    this.slots().filter(s => s.status !== 'subido' && s.status !== 'generado')
-  );
-
   // ── Navegación ─────────────────────────────────────────
   openFolder(folder: CasoDocFolder): void {
-    this.currentFolderId.set(folder.id);
-    this.folderPath.update(path => [...path, folder]);
+    this.nav.open(folder);
     this.resetTransient();
   }
 
   navigateToRoot(): void {
-    this.currentFolderId.set(null);
-    this.folderPath.set([]);
+    this.nav.toRoot();
     this.resetTransient();
   }
 
   navigateToBreadcrumb(index: number): void {
-    const path = this.folderPath();
-    this.currentFolderId.set(path[index].id);
-    this.folderPath.set(path.slice(0, index + 1));
+    this.nav.toBreadcrumb(index);
     this.resetTransient();
   }
 
@@ -212,16 +204,10 @@ export class CasoDocumentosTabComponent {
   }
 
   // ── Slots requeridos ───────────────────────────────────
+  /** Abre el selector de archivo de la fila de un slot (lo usa el salto desde el checklist). */
   triggerSlotUpload(slotId: string): void {
     const el = document.getElementById(`upload-slot-${slotId}`) as HTMLInputElement | null;
     el?.click();
-  }
-
-  onSlotFileSelected(event: Event, slot: CasoDocSlot): void {
-    const target = event.target as HTMLInputElement;
-    const file = target.files?.[0];
-    if (file) this.uploadSlot.emit({ slot, file });
-    target.value = '';
   }
 
   // ── Archivos libres ────────────────────────────────────
@@ -306,19 +292,6 @@ export class CasoDocumentosTabComponent {
   confirmDeleteFile(file: CasoDocFile): void {
     this.deleteFile.emit(file);
     this.confirmingDeleteFileId.set(null);
-  }
-
-  // ── Resubir (nueva versión) ────────────────────────────
-  triggerReupload(fileId: string): void {
-    const el = document.getElementById(`reupload-file-${fileId}`) as HTMLInputElement | null;
-    el?.click();
-  }
-
-  onReuploadSelected(event: Event, file: CasoDocFile): void {
-    const target = event.target as HTMLInputElement;
-    const newFile = target.files?.[0];
-    if (newFile) this.reuploadFile.emit({ file, newFile });
-    target.value = '';
   }
 
   // ── Historial y auditoría ──────────────────────────────
@@ -425,9 +398,7 @@ export class CasoDocumentosTabComponent {
     if (!slot.folderId) {
       this.navigateToRoot();
     } else {
-      const path = this.buildFolderPath(slot.folderId);
-      this.currentFolderId.set(slot.folderId);
-      this.folderPath.set(path);
+      this.nav.goTo(slot.folderId, this.folders());
       this.resetTransient();
     }
     if (slot.docTemplateId) {
@@ -435,26 +406,5 @@ export class CasoDocumentosTabComponent {
     } else {
       setTimeout(() => this.triggerSlotUpload(slot.id), 50);
     }
-  }
-
-  private buildFolderPath(folderId: string): CasoDocFolder[] {
-    const all = this.folders();
-    const path: CasoDocFolder[] = [];
-    let currentId: string | null = folderId;
-    while (currentId) {
-      const folder = all.find(f => f.id === currentId);
-      if (!folder) break;
-      path.unshift(folder);
-      currentId = folder.parentId ?? null;
-    }
-    return path;
-  }
-
-  // ── Helpers ────────────────────────────────────────────
-  formatFileSize(bytes: number | undefined): string {
-    if (!bytes) return '';
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 }

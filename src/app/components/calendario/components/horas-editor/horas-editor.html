@@ -1,0 +1,108 @@
+@let item = this.item();
+<div>
+  <div class="mb-2 flex items-center justify-between">
+    <p class="text-[11px] font-semibold uppercase tracking-wider" style="color:var(--text-faint)">Horas trabajadas</p>
+    @if (horasEditor() === null) {
+      <button
+        class="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium transition-colors duration-150"
+        style="background:color-mix(in srgb,var(--brand) 8%,transparent);color:var(--brand)"
+        (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 16%,transparent)'"
+        (mouseleave)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 8%,transparent)'"
+        (click)="openHorasEditor()"
+      >
+        <lucide-icon [img]="ClockIcon" size="12"></lucide-icon>
+        {{ (item.registrosHoras?.length ?? 0) > 0 ? 'Editar horas' : 'Registrar horas' }}
+      </button>
+    }
+  </div>
+
+  @if (horasEditor(); as regs) {
+    <!-- Editor de bloques -->
+    <div class="space-y-2">
+      @for (r of regs; track r.id) {
+        <div class="flex flex-wrap items-center gap-1.5 rounded-lg p-2"
+             style="border:1px solid var(--border);background:var(--surface-2)"
+             [class.opacity-60]="r.facturado">
+          <select
+            class="form-select min-w-0 flex-1 py-1 text-[11px]"
+            [value]="r.userId" [disabled]="r.facturado"
+            (change)="updateBloqueField(r.id, 'userId', $event)"
+            aria-label="Miembro">
+            @for (m of members(); track m.id) {
+              <option [value]="m.userId">{{ m.nombre }}</option>
+            }
+          </select>
+          <input type="date" [value]="r.fecha" [disabled]="r.facturado"
+            (change)="updateBloqueField(r.id, 'fecha', $event)"
+            class="form-input py-1 text-[11px]"
+            aria-label="Fecha" />
+          <input type="time" [value]="r.horaInicio" [disabled]="r.facturado"
+            (change)="updateBloqueField(r.id, 'horaInicio', $event)"
+            class="form-input py-1 text-[11px]"
+            aria-label="Hora inicio" />
+          <span class="text-[11px]" style="color:var(--text-faint)">–</span>
+          <input type="time" [value]="r.horaFin" [disabled]="r.facturado"
+            (change)="updateBloqueField(r.id, 'horaFin', $event)"
+            class="form-input py-1 text-[11px]"
+            aria-label="Hora fin" />
+          <span class="ml-auto text-[11px] font-medium" style="color:var(--text-muted)">{{ bloqueHoras(r) }}h</span>
+          @if (r.facturado) {
+            <span class="rounded px-1.5 py-0.5 text-[9px] font-semibold" style="background:color-mix(in srgb,var(--success) 15%,transparent);color:var(--success)">Facturado</span>
+          } @else {
+            <button class="flex h-6 w-6 items-center justify-center rounded transition-colors duration-150"
+              style="color:var(--text-faint)"
+              (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 12%,transparent)';$any($event.currentTarget).style.color='var(--brand)'"
+              (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+              (click)="splitBloque(r.id)" [attr.aria-label]="'Separar bloque en otro día'">
+              <lucide-icon [img]="ScissorsIcon" size="12"></lucide-icon>
+            </button>
+            <button class="flex h-6 w-6 items-center justify-center rounded transition-colors duration-150"
+              style="color:var(--text-faint)"
+              (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 12%,transparent)';$any($event.currentTarget).style.color='var(--danger)'"
+              (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+              (click)="removeBloque(r.id)" [attr.aria-label]="'Eliminar bloque'">
+              <lucide-icon [img]="Trash2Icon" size="12"></lucide-icon>
+            </button>
+          }
+        </div>
+      }
+
+      <div class="flex items-center justify-between pt-1">
+        <button class="flex items-center gap-1 text-[11px] font-medium hover:underline" style="color:var(--brand)"
+          (click)="addBloque()">
+          <lucide-icon [img]="PlusIcon" size="12"></lucide-icon> Añadir bloque
+        </button>
+        <span class="text-[11px] font-semibold" style="color:var(--text-body)">Total: {{ horasEditorTotal() }}h</span>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-1">
+        <button class="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150"
+          style="color:var(--text-muted)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+          (mouseleave)="$any($event.currentTarget).style.background=''"
+          (click)="cancelHorasEditor()">Cancelar</button>
+        <button class="rounded-lg px-3 py-1.5 text-xs font-medium text-white transition-colors duration-150"
+          style="background:var(--brand)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+          (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'"
+          (click)="saveHoras()">Guardar horas</button>
+      </div>
+    </div>
+  } @else if ((item.registrosHoras?.length ?? 0) > 0) {
+    <!-- Resumen de horas registradas -->
+    <ul class="space-y-1">
+      @for (r of item.registrosHoras!; track r.id) {
+        <li class="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11px]" style="background:var(--surface-2);color:var(--text-body)">
+          <span class="font-medium" style="color:var(--text-strong)">{{ memberName(r.userId) }}</span>
+          <span style="color:var(--text-faint)">{{ r.fecha }} · {{ r.horaInicio }}–{{ r.horaFin }}</span>
+          <span class="ml-auto font-medium">{{ bloqueHoras(r) }}h</span>
+          @if (r.facturado) {
+            <span class="rounded px-1.5 py-0.5 text-[9px] font-semibold" style="background:color-mix(in srgb,var(--success) 15%,transparent);color:var(--success)">Facturado</span>
+          }
+        </li>
+      }
+    </ul>
+  } @else {
+    <p class="text-xs italic" style="color:var(--text-faint)">Sin horas registradas todavía</p>
+  }
+</div>

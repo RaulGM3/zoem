@@ -6,20 +6,18 @@ import { Router } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import {
   LucideAngularModule, ArrowLeft, Edit, Phone, Mail, MapPin,
-  Building2, Calendar, Tag, FolderPlus, Upload, Folder, FolderOpen,
-  Check, X, Pencil, Download, Trash2, CalendarClock, CircleAlert,
+  Building2, Calendar, Tag, CalendarClock, CircleAlert,
 } from 'lucide-angular';
 import { INVOICES } from '../../data/dummy-data';
 import { ContactService } from '../../core/services/contact.service';
 import { ContactFolderService } from '../../core/services/contact-folder.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ContactFileService } from '../../core/services/contact-file.service';
-import { UploadQueueService } from '../../core/services/upload-queue.service';
 import { CasosService } from '../../core/services/casos.service';
 import { UsersService } from '../../core/services/users';
 import { PermissionService } from '../../core/services/permission.service';
 import {
-  Contact, ContactFolder, ContactFile, Caso, Evento,
+  Contact, Caso, Evento,
   CONTACT_STATUS_LABELS, CANAL_ENTRADA_LABELS, ContactStatus, CanalEntrada,
   getContactDisplayName, getContactInitials, getContactStatusStyle,
 } from '../../interfaces';
@@ -31,10 +29,11 @@ import {
 import {
   EstadoContactoDialogComponent, type CambioEstadoResult,
 } from '../../shared/components/estado-contacto-dialog/estado-contacto-dialog';
+import { ContactoDocumentosComponent } from './components/contacto-documentos/contacto-documentos';
 
 @Component({
   selector: 'app-contacto-detail',
-  imports: [LucideAngularModule, DecimalPipe, EstadoContactoDialogComponent],
+  imports: [LucideAngularModule, DecimalPipe, EstadoContactoDialogComponent, ContactoDocumentosComponent],
   templateUrl: './contacto-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -47,41 +46,21 @@ export class ContactoDetailComponent {
   readonly Building2Icon = Building2;
   readonly CalendarIcon = Calendar;
   readonly TagIcon = Tag;
-  readonly FolderPlusIcon = FolderPlus;
-  readonly UploadIcon = Upload;
-  readonly FolderIcon = Folder;
-  readonly FolderOpenIcon = FolderOpen;
-  readonly CheckIcon = Check;
-  readonly XIcon = X;
-  readonly PencilIcon = Pencil;
-  readonly DownloadIcon = Download;
-  readonly Trash2Icon = Trash2;
   readonly CalendarClockIcon = CalendarClock;
   readonly CircleAlertIcon = CircleAlert;
 
   id = input.required<string>();
 
   private router = inject(Router);
-  readonly folderService = inject(ContactFolderService);
-  readonly fileService = inject(ContactFileService);
+  private readonly folderService = inject(ContactFolderService);
+  private readonly fileService = inject(ContactFileService);
   private readonly toast = inject(ToastService);
-  private readonly uploadQueue = inject(UploadQueueService);
   private readonly contactService = inject(ContactService);
   private readonly casosService = inject(CasosService);
   private readonly eventosService = inject(EventosService);
   private readonly seguimientosService = inject(SeguimientoContactoService);
   readonly usersService = inject(UsersService);
   readonly perm = inject(PermissionService);
-
-  // Document browser state
-  currentFolderId = signal<string | null>(null);
-  folderPath = signal<ContactFolder[]>([]);
-  isCreatingFolder = signal(false);
-  newFolderName = signal('');
-  renamingFolderId = signal<string | null>(null);
-  renameValue = signal('');
-  deletingFolderId = signal<string | null>(null);
-  deletingFileId = signal<string | null>(null);
 
   contacto = signal<Contact | null>(null);
 
@@ -97,14 +76,10 @@ export class ContactoDetailComponent {
       // `untracked` es necesario: si no, `members()` queda como dependencia
       // reactiva de TODO el effect, y cuando `loadMembers()` resuelve y
       // `members` cambia, se re-ejecuta el effect completo — recargando
-      // contacto/carpetas/archivos/casos y reseteando currentFolderId/
-      // folderPath a la raíz, perdiendo la navegación de carpetas en curso.
+      // contacto/carpetas/archivos/casos sin motivo.
       untracked(() => {
         if (this.usersService.members().length === 0) this.usersService.loadMembers();
       });
-      // Reset browser state when contact changes
-      this.currentFolderId.set(null);
-      this.folderPath.set([]);
     });
 
     // Mantiene el borrador de notas sincronizado cuando cambia el contacto.
@@ -155,8 +130,6 @@ export class ContactoDetailComponent {
     INVOICES.filter((f) => f.client === this.name())
   );
 
-  totalDocumentos = computed(() => this.fileService.files().length);
-
   /** Hoy en YYYY-MM-DD, para marcar seguimientos vencidos. */
   private readonly hoy = new Date().toISOString().slice(0, 10);
 
@@ -177,14 +150,6 @@ export class ContactoDetailComponent {
     const m = this.usersService.members().find(m => m.userId === c.assignedTo);
     return m ? `${m.nombre}${m.apellido ? ' ' + m.apellido : ''}` : null;
   });
-
-  currentFolders = computed(() =>
-    this.folderService.folders().filter((f) => f.parentId === this.currentFolderId())
-  );
-
-  currentFiles = computed(() =>
-    this.fileService.files().filter((f) => f.folderId === this.currentFolderId())
-  );
 
   // --- Contact display helpers ---
 
@@ -370,118 +335,6 @@ export class ContactoDetailComponent {
       borrador:  { background: 'var(--surface-2)',     color: 'var(--text-muted)' },
     };
     return map[status] ?? { background: 'var(--surface-2)', color: 'var(--text-muted)' };
-  }
-
-  // --- Document browser ---
-
-  navigateToFolder(folder: ContactFolder) {
-    this.currentFolderId.set(folder.id);
-    this.folderPath.update((path) => [...path, folder]);
-  }
-
-  navigateToRoot() {
-    this.currentFolderId.set(null);
-    this.folderPath.set([]);
-  }
-
-  navigateToBreadcrumb(index: number) {
-    const path = this.folderPath();
-    this.currentFolderId.set(path[index].id);
-    this.folderPath.set(path.slice(0, index + 1));
-  }
-
-  async createFolder() {
-    if (!this.perm.can('Contactos', 'crear')) return;
-    const name = this.newFolderName().trim();
-    if (!name) return;
-    await this.toast.run(
-      () => this.folderService.createFolder({
-        contactId: this.id(),
-        parentId: this.currentFolderId(),
-        name,
-      }),
-      {
-        errorTitle: 'No se pudo crear la carpeta',
-        onSuccess: () => {
-          this.newFolderName.set('');
-          this.isCreatingFolder.set(false);
-        },
-      }
-    );
-  }
-
-  startRename(folder: ContactFolder) {
-    if (!this.perm.can('Contactos', 'editar')) return;
-    this.renamingFolderId.set(folder.id);
-    this.renameValue.set(folder.name);
-  }
-
-  async confirmRename(folderId: string) {
-    if (!this.perm.can('Contactos', 'editar')) return;
-    const name = this.renameValue().trim();
-    if (!name) return;
-    await this.toast.run(() => this.folderService.updateFolder(folderId, { name }, this.id()), {
-      errorTitle: 'No se pudo renombrar la carpeta',
-      onSuccess: () => this.renamingFolderId.set(null),
-    });
-  }
-
-  async deleteFolder(folderId: string) {
-    if (!this.perm.can('Contactos', 'eliminar')) return;
-    await this.toast.run(() => this.deleteFolderRecursive(folderId), {
-      successMessage: 'Carpeta eliminada',
-      errorTitle: 'No se pudo eliminar la carpeta',
-      onSuccess: () => this.deletingFolderId.set(null),
-    });
-  }
-
-  private async deleteFolderRecursive(folderId: string) {
-    const subFolders = this.folderService.folders().filter((f) => f.parentId === folderId);
-    for (const sub of subFolders) {
-      await this.deleteFolderRecursive(sub.id);
-    }
-    const files = this.fileService.files().filter((f) => f.folderId === folderId);
-    for (const file of files) {
-      await this.fileService.deleteFile(file.id, file.storagePath, this.id());
-    }
-    await this.folderService.deleteFolder(folderId);
-  }
-
-  onFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const files = Array.from(input.files ?? []);
-    input.value = '';
-    if (!this.perm.can('Contactos', 'crear')) return;
-    for (const file of files) {
-      this.uploadQueue.enqueue(
-        () => this.fileService.uploadFile(this.id(), this.currentFolderId(), file),
-        file.name,
-        { successMessage: `"${file.name}" subido`, errorTitle: 'No se pudo subir el archivo' },
-      );
-    }
-  }
-
-  async deleteFile(file: ContactFile) {
-    if (!this.perm.can('Contactos', 'eliminar')) return;
-    await this.toast.run(() => this.fileService.deleteFile(file.id, file.storagePath, this.id()), {
-      successMessage: 'Archivo eliminado',
-      errorTitle: 'No se pudo eliminar el archivo',
-      onSuccess: () => this.deletingFileId.set(null),
-    });
-  }
-
-  getFileIcon(mimeType: string): string {
-    if (mimeType === 'application/pdf') return '📄';
-    if (mimeType.startsWith('image/')) return '🖼️';
-    if (mimeType.includes('word') || mimeType.includes('document')) return '📝';
-    if (mimeType.includes('sheet') || mimeType.includes('excel')) return '📊';
-    return '📎';
-  }
-
-  formatFileSize(bytes: number): string {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
   volver() {

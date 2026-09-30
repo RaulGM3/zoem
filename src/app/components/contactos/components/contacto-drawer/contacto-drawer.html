@@ -1,0 +1,373 @@
+<!-- Drawer backdrop -->
+<div class="fixed inset-0 bg-black/40 z-40" (click)="close()" aria-hidden="true"></div>
+
+<!-- Modal drawer -->
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+  <aside
+    class="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl shadow-2xl"
+    style="background:var(--surface);border:1px solid var(--border)"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="editingId() ? 'Editar contacto' : 'Nuevo contacto'"
+    appFocusTrap
+    (escapeKey)="close()"
+  >
+    <!-- Header del drawer -->
+    <div class="flex items-center justify-between px-6 py-4 shrink-0"
+      style="border-bottom:1px solid var(--border)">
+      <h2 class="text-base font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">
+        {{ editingId() ? 'Editar contacto' : 'Nuevo contacto' }}
+      </h2>
+      <button (click)="close()"
+        class="rounded-xl p-1.5 transition-colors duration-150"
+        style="color:var(--text-muted)"
+        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+        (mouseleave)="$any($event.currentTarget).style.background=''"
+        aria-label="Cerrar">
+        <span class="material-symbols-outlined" style="font-size:20px">close</span>
+      </button>
+    </div>
+
+    <!-- Step indicator (solo contacto nuevo) -->
+    @if (!editingId()) {
+      <div class="flex items-center gap-2 px-6 pt-5 pb-1">
+        <div class="flex items-center gap-1.5 shrink-0">
+          <span class="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white"
+            [style.background]="formStep() === 2 ? 'var(--success)' : 'var(--brand)'">
+            @if (formStep() === 2) { <lucide-icon [img]="CheckIcon" size="10" /> } @else { 1 }
+          </span>
+          <span class="text-xs font-semibold"
+            [style.color]="formStep() === 1 ? 'var(--brand)' : 'var(--text-faint)'">Datos principales</span>
+        </div>
+        <div class="mx-1 h-px flex-1" style="background:var(--border)"></div>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <span class="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
+            [style.background]="formStep() === 2 ? 'var(--brand)' : 'transparent'"
+            [style.color]="formStep() === 2 ? 'white' : 'var(--text-muted)'"
+            [style.border]="formStep() !== 2 ? '1px solid var(--border)' : 'none'">2</span>
+          <span class="text-xs"
+            [style.color]="formStep() === 2 ? 'var(--brand)' : 'var(--text-faint)'">
+            <span class="font-semibold">Info adicional</span>
+            <span> (opcional)</span>
+          </span>
+        </div>
+      </div>
+    }
+
+    <!-- Body scrollable -->
+    <form [formGroup]="form" (ngSubmit)="saveContact()" class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+
+      <!-- Tipo de contacto -->
+      @if (showStep1Fields()) {
+        <div>
+          <p class="form-section-title">Tipo de contacto</p>
+          <div class="flex gap-3">
+            <button type="button" (click)="formType.set('persona_fisica')"
+              class="flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all duration-150"
+              [style.border]="formType() === 'persona_fisica' ? '2px solid var(--brand)' : '1px solid var(--border)'"
+              [style.background]="formType() === 'persona_fisica' ? 'color-mix(in srgb,var(--brand) 8%,transparent)' : 'var(--surface-2)'"
+              [style.color]="formType() === 'persona_fisica' ? 'var(--brand)' : 'var(--text-body)'">
+              Persona Física
+            </button>
+            <button type="button" (click)="formType.set('persona_juridica')"
+              class="flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all duration-150"
+              [style.border]="formType() === 'persona_juridica' ? '2px solid var(--brand)' : '1px solid var(--border)'"
+              [style.background]="formType() === 'persona_juridica' ? 'color-mix(in srgb,var(--brand) 8%,transparent)' : 'var(--surface-2)'"
+              [style.color]="formType() === 'persona_juridica' ? 'var(--brand)' : 'var(--text-body)'">
+              Persona Jurídica
+            </button>
+          </div>
+        </div>
+      }
+
+      <!-- PERSONA FÍSICA -->
+      @if (formType() === 'persona_fisica') {
+        @if (showStep1Fields()) {
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="nombre" class="form-label">Nombre *</label>
+              <input id="nombre" formControlName="nombre" type="text" class="form-input"
+                [class.error]="showErrors() && !form.get('nombre')?.value?.trim()" />
+              @if (showErrors() && !form.get('nombre')?.value?.trim()) {
+                <p class="form-error">Campo obligatorio</p>
+              }
+            </div>
+            <div>
+              <label for="apellidos" class="form-label">Apellidos *</label>
+              <input id="apellidos" formControlName="apellidos" type="text" class="form-input"
+                [class.error]="showErrors() && !form.get('apellidos')?.value?.trim()" />
+              @if (showErrors() && !form.get('apellidos')?.value?.trim()) {
+                <p class="form-error">Campo obligatorio</p>
+              }
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="nifType" class="form-label">Documento</label>
+              <select id="nifType" formControlName="nifType" class="form-select">
+                <option value="dni">DNI</option>
+                <option value="nie">NIE</option>
+                <option value="pasaporte">Pasaporte</option>
+                <option value="otro">Otro</option>
+              </select>
+            </div>
+            <div>
+              <label for="nif" class="form-label">Número</label>
+              <input id="nif" formControlName="nif" type="text" class="form-input"
+                [class.error]="showErrors() && !form.get('nif')?.value?.trim()" />
+              @if (showErrors() && !form.get('nif')?.value?.trim()) {
+                <p class="form-error">Campo obligatorio</p>
+              }
+            </div>
+          </div>
+        }
+        @if (showStep2Fields()) {
+          <div>
+            <label for="nacionalidad" class="form-label">Nacionalidad (ISO)</label>
+            <input id="nacionalidad" formControlName="nacionalidad" type="text" placeholder="ES" class="form-input" />
+          </div>
+          <div>
+            <label for="estadoCivil" class="form-label">Estado civil</label>
+            <select id="estadoCivil" formControlName="estadoCivil" class="form-select">
+              <option value="">— Sin especificar —</option>
+              <option value="soltero">Soltero/a</option>
+              <option value="casado">Casado/a</option>
+              <option value="divorciado">Divorciado/a</option>
+              <option value="viudo">Viudo/a</option>
+              <option value="pareja_hecho">Pareja de hecho</option>
+            </select>
+          </div>
+        }
+      }
+
+      <!-- PERSONA JURÍDICA -->
+      @if (formType() === 'persona_juridica') {
+        @if (showStep1Fields()) {
+          <div>
+            <label for="razonSocial" class="form-label">Razón social *</label>
+            <input id="razonSocial" formControlName="razonSocial" type="text" class="form-input"
+              [class.error]="showErrors() && !form.get('razonSocial')?.value?.trim()" />
+            @if (showErrors() && !form.get('razonSocial')?.value?.trim()) {
+              <p class="form-error">Campo obligatorio</p>
+            }
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="cifType" class="form-label">Documento</label>
+              <select id="cifType" formControlName="cifType" class="form-select">
+                <option value="cif">CIF (España)</option>
+                <option value="vat">VAT (UE)</option>
+                <option value="otro">Otro</option>
+              </select>
+            </div>
+            <div>
+              <label for="cif" class="form-label">Número *</label>
+              <input id="cif" formControlName="cif" type="text" class="form-input"
+                [class.error]="showErrors() && !form.get('cif')?.value?.trim()" />
+              @if (showErrors() && !form.get('cif')?.value?.trim()) {
+                <p class="form-error">Campo obligatorio</p>
+              }
+            </div>
+          </div>
+        }
+        @if (showStep2Fields()) {
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="nombreComercial" class="form-label">Nombre comercial</label>
+              <input id="nombreComercial" formControlName="nombreComercial" type="text" class="form-input" />
+            </div>
+            <div>
+              <label for="formaJuridica" class="form-label">Forma jurídica</label>
+              <select id="formaJuridica" formControlName="formaJuridica" class="form-select">
+                <option value="">— Seleccionar —</option>
+                <option value="S.L.">S.L.</option>
+                <option value="S.A.">S.A.</option>
+                <option value="S.L.U.">S.L.U.</option>
+                <option value="S.L.P.">S.L.P.</option>
+                <option value="Autónomo">Autónomo</option>
+                <option value="Cooperativa">Cooperativa</option>
+                <option value="Asociación">Asociación</option>
+                <option value="Fundación">Fundación</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="sectorActividad" class="form-label">Sector de actividad</label>
+              <input id="sectorActividad" formControlName="sectorActividad" type="text" class="form-input" />
+            </div>
+            <div>
+              <label for="website" class="form-label">Sitio web</label>
+              <input id="website" formControlName="website" type="url" placeholder="https://" class="form-input" />
+            </div>
+          </div>
+          <div>
+            <label for="representanteLegalNombre" class="form-label">Representante legal</label>
+            <input id="representanteLegalNombre" formControlName="representanteLegalNombre" type="text" class="form-input" />
+          </div>
+        }
+      }
+
+      <!-- Datos de contacto -->
+      @if (showStep1Fields()) {
+        <div class="form-divider">
+          <p class="form-section-title">Datos de contacto</p>
+          <div class="space-y-3">
+            <div>
+              <label for="email" class="form-label">Email</label>
+              <input id="email" formControlName="email" type="email" class="form-input"
+                [class.error]="((showErrors() || form.get('email')?.touched) && form.get('email')?.invalid) || (showErrors() && missingContactChannel())" />
+              @if ((showErrors() || form.get('email')?.touched) && form.get('email')?.invalid && form.get('email')?.value) {
+                <p class="form-error">Email no válido</p>
+              }
+            </div>
+            <div>
+              <label for="mobile" class="form-label">Móvil</label>
+              <input id="mobile" formControlName="mobile" type="tel" class="form-input"
+                [class.error]="showErrors() && missingContactChannel()" />
+            </div>
+            @if (showErrors() && missingContactChannel()) {
+              <p class="form-error">Indica al menos un email o un móvil.</p>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Dirección -->
+      @if (showStep2Fields()) {
+        <div class="form-divider">
+          <p class="form-section-title">Dirección</p>
+          <div class="space-y-3">
+            <div class="grid grid-cols-3 gap-3">
+              <div class="col-span-2">
+                <label for="calle" class="form-label">Calle</label>
+                <input id="calle" formControlName="calle" type="text" class="form-input" />
+              </div>
+              <div>
+                <label for="numero" class="form-label">Nº / Piso</label>
+                <input id="numero" formControlName="numero" type="text" class="form-input" />
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label for="codigoPostal" class="form-label">C.P.</label>
+                <input id="codigoPostal" formControlName="codigoPostal" type="text" class="form-input" />
+              </div>
+              <div>
+                <label for="municipio" class="form-label">Municipio</label>
+                <input id="municipio" formControlName="municipio" type="text" class="form-input" />
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label for="provincia" class="form-label">Provincia</label>
+                <input id="provincia" formControlName="provincia" type="text" class="form-input" />
+              </div>
+              <div>
+                <label for="pais" class="form-label">País (ISO)</label>
+                <input id="pais" formControlName="pais" type="text" placeholder="ES" class="form-input" />
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Estado y notas -->
+      @if (showStep1Fields()) {
+        <div class="form-divider space-y-3">
+          <div>
+            <label for="status" class="form-label">Estado *</label>
+            <select id="status" formControlName="status" class="form-select">
+              @for (s of contactStatuses; track s.value) {
+                <option [value]="s.value">{{ s.label }}</option>
+              }
+            </select>
+          </div>
+          <div>
+            <label for="notes" class="form-label">Notas internas</label>
+            <textarea id="notes" formControlName="notes" rows="3"
+              class="form-input resize-none"></textarea>
+          </div>
+          <div>
+            <label for="asunto" class="form-label">Asunto</label>
+            <input id="asunto" formControlName="asunto" type="text"
+              placeholder="Ej. Divorcio, herencia, consulta laboral…"
+              class="form-input" />
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="canalEntrada" class="form-label">Canal de entrada</label>
+              <select id="canalEntrada" formControlName="canalEntrada" class="form-select">
+                <option value="">— Sin especificar —</option>
+                @for (c of canalesEntrada; track c.value) {
+                  <option [value]="c.value">{{ c.label }}</option>
+                }
+              </select>
+            </div>
+            <div>
+              <label for="assignedTo" class="form-label">Asignado a</label>
+              <select id="assignedTo" formControlName="assignedTo" class="form-select">
+                <option value="">Sin asignar</option>
+                @for (m of usersService.members(); track m.id) {
+                  <option [value]="m.userId">{{ m.nombre }}{{ m.apellido ? ' ' + m.apellido : '' }}</option>
+                }
+              </select>
+            </div>
+          </div>
+        </div>
+      }
+
+      <div class="h-4"></div>
+    </form>
+
+    <!-- Footer sticky -->
+    <div class="flex gap-3 px-6 py-4 shrink-0"
+      style="border-top:1px solid var(--border);background:var(--surface)">
+      @if (!editingId() && formStep() === 1) {
+        <button type="button" (click)="close()"
+          class="flex-1 rounded-xl py-2.5 text-sm font-medium transition-colors duration-150"
+          style="border:1px solid var(--border);color:var(--text-body);background:var(--surface-2)">
+          Cancelar
+        </button>
+        <button type="button" (click)="nextStep()"
+          class="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white flex items-center justify-center gap-1.5 transition-all duration-150"
+          style="background:var(--brand)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+          (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+          Continuar
+          <span class="material-symbols-outlined" style="font-size:16px">chevron_right</span>
+        </button>
+      } @else if (!editingId() && formStep() === 2) {
+        <button type="button" (click)="prevStep()"
+          class="rounded-xl px-3 py-2.5 text-sm font-medium flex items-center gap-1 transition-colors duration-150"
+          style="border:1px solid var(--border);color:var(--text-body);background:var(--surface-2)">
+          <span class="material-symbols-outlined" style="font-size:16px">chevron_left</span>
+          Atrás
+        </button>
+        <button type="button" (click)="saveContact()" [disabled]="isSaving()"
+          class="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all duration-150"
+          style="background:var(--brand)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+          (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+          @if (isSaving()) { <lucide-icon [img]="Loader2Icon" size="16" class="animate-spin"></lucide-icon> }
+          Guardar contacto
+        </button>
+      } @else {
+        <button type="button" (click)="close()"
+          class="flex-1 rounded-xl py-2.5 text-sm font-medium transition-colors duration-150"
+          style="border:1px solid var(--border);color:var(--text-body);background:var(--surface-2)">
+          Cancelar
+        </button>
+        <button type="button" (click)="saveContact()" [disabled]="isSaving()"
+          class="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all duration-150"
+          style="background:var(--brand)"
+          (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
+          (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+          @if (isSaving()) { <lucide-icon [img]="Loader2Icon" size="16" class="animate-spin"></lucide-icon> }
+          Guardar cambios
+        </button>
+      }
+    </div>
+  </aside>
+</div>
