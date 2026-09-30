@@ -1,0 +1,174 @@
+<section aria-labelledby="ayuda-titulo" class="space-y-6">
+  <!-- Cabecera -->
+  <header class="flex items-center gap-3">
+    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+      style="background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand)">
+      <lucide-icon [img]="LifeBuoyIcon" class="w-5 h-5" aria-hidden="true" />
+    </div>
+    <div>
+      <h1 id="ayuda-titulo" class="text-[19px] font-semibold"
+        style="color:var(--text-strong);font-family:var(--font-display)">
+        Ayuda
+      </h1>
+      <p class="text-sm" style="color:var(--text-body)">Guías paso a paso de cada pantalla de Vertey</p>
+    </div>
+  </header>
+
+  <!-- Buscador -->
+  <div class="card p-4">
+    <label for="ayuda-buscar" class="form-label">Buscar en la ayuda</label>
+    <div class="relative">
+      <lucide-icon [img]="SearchIcon" aria-hidden="true"
+        class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
+        style="color:var(--text-body)" />
+      <input id="ayuda-buscar" type="search" class="form-input pl-10" autocomplete="off"
+        placeholder="Ej. crear un caso, invitar usuario…"
+        [value]="consulta()" (input)="alBuscar($event)" aria-describedby="ayuda-recuento" />
+    </div>
+    <p id="ayuda-recuento" role="status" aria-live="polite" class="mt-2 min-h-5 text-sm"
+      style="color:var(--text-body)">{{ recuento() }}</p>
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
+    <!-- Índice de guías -->
+    <nav aria-label="Guías" class="card p-2 self-start">
+      <ul class="space-y-1">
+        @for (g of visibles(); track g.id) {
+          <li>
+            <a [routerLink]="['/ayuda', g.id]" (click)="limpiarBusqueda()"
+              [attr.aria-current]="!buscando() && g.id === idActivo() ? 'page' : null"
+              class="block rounded-xl px-3 py-2 text-sm font-medium transition-colors duration-150"
+              [style.background]="!buscando() && g.id === idActivo() ? 'color-mix(in srgb,var(--brand) 10%,transparent)' : 'transparent'"
+              [style.color]="!buscando() && g.id === idActivo() ? 'var(--brand)' : 'var(--text-body)'">{{ g.titulo }}</a>
+          </li>
+        }
+      </ul>
+    </nav>
+
+    <div class="min-w-0 space-y-6">
+      @if (buscando()) {
+        <!-- Resultados de búsqueda -->
+        <section aria-labelledby="ayuda-resultados" class="space-y-4">
+          <h2 id="ayuda-resultados" class="text-base font-semibold"
+            style="color:var(--text-strong);font-family:var(--font-display)">
+            Resultados de la búsqueda
+          </h2>
+
+          @for (r of resultados(); track r.guia.id) {
+            <div data-resultado class="card p-5 space-y-4">
+              <h3 class="text-sm font-semibold">
+                <a [routerLink]="['/ayuda', r.guia.id]" (click)="limpiarBusqueda()"
+                  class="underline underline-offset-2" style="color:var(--brand)">{{ r.guia.titulo }}</a>
+              </h3>
+              @for (t of r.tareas; track t.id) {
+                <div>
+                  <h4 class="text-sm font-semibold" style="color:var(--text-strong)">{{ t.titulo }}</h4>
+                  <ol class="mt-2 list-decimal space-y-1 pl-5 text-sm" style="color:var(--text-body)">
+                    @for (paso of t.pasos; track $index) {
+                      <li>{{ paso }}</li>
+                    }
+                  </ol>
+                  @if (t.nota) {
+                    <p class="mt-2 rounded-xl p-3 text-sm"
+                      style="background:var(--surface-2);color:var(--text-body)">{{ t.nota }}</p>
+                  }
+                </div>
+              }
+            </div>
+          } @empty {
+            <p class="card p-5 text-sm" style="color:var(--text-body)">
+              No hay ninguna guía que coincida. Prueba con otras palabras o pregúntale al agente.
+            </p>
+          }
+        </section>
+      } @else {
+        @switch (estado()) {
+          @case ('cargando') {
+            <p class="card p-5 text-sm" style="color:var(--text-body)">Cargando guías…</p>
+          }
+          @case ('error') {
+            <div class="card p-5 space-y-3" role="alert">
+              <p class="text-sm" style="color:var(--text-body)">No se pudieron cargar las guías. Comprueba tu conexión.</p>
+              <button type="button" (click)="reintentar()"
+                class="rounded-xl px-3 py-2 text-sm font-medium"
+                style="border:1px solid var(--border);color:var(--text-strong);background:var(--surface)">
+                Reintentar
+              </button>
+            </div>
+          }
+          @case ('sin-acceso') {
+            <div class="card p-5 space-y-2">
+              <h2 class="text-base font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">
+                No tienes acceso a esta guía
+              </h2>
+              <p class="text-sm" style="color:var(--text-body)">
+                Documenta una pantalla que tu rol no puede ver. Si la necesitas, pídele el permiso al administrador de tu despacho.
+              </p>
+            </div>
+          }
+          @case ('no-existe') {
+            <div class="card p-5 space-y-2">
+              <h2 class="text-base font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">
+                Esta guía no existe
+              </h2>
+              <p class="text-sm" style="color:var(--text-body)">Elige una de las guías del índice.</p>
+            </div>
+          }
+          @case ('guia') {
+            @if (activa(); as g) {
+              <article class="card p-5 space-y-6" aria-labelledby="ayuda-guia-titulo">
+                <header class="space-y-2">
+                  <h2 #tituloGuia id="ayuda-guia-titulo" tabindex="-1" class="text-lg font-semibold outline-none"
+                    style="color:var(--text-strong);font-family:var(--font-display)">{{ g.titulo }}</h2>
+                  <p class="text-sm" style="color:var(--text-body)">{{ g.resumen }}</p>
+                  <p class="text-sm" style="color:var(--text-body)">
+                    <span class="font-semibold" style="color:var(--text-strong)">Para qué sirve:</span>
+                    {{ g.paraQue }}
+                  </p>
+                  <a [routerLink]="g.ruta" class="inline-block text-sm font-medium underline underline-offset-2"
+                    style="color:var(--brand)">Ir a {{ g.titulo }}</a>
+                </header>
+
+                @for (t of g.tareas; track t.id) {
+                  <section [attr.aria-labelledby]="'ayuda-tarea-' + t.id" class="pt-5"
+                    style="border-top:1px solid var(--border)">
+                    <h3 [id]="'ayuda-tarea-' + t.id" class="text-sm font-semibold" style="color:var(--text-strong)">{{ t.titulo }}</h3>
+                    <ol class="mt-2 list-decimal space-y-1 pl-5 text-sm" style="color:var(--text-body)">
+                      @for (paso of t.pasos; track $index) {
+                        <li>{{ paso }}</li>
+                      }
+                    </ol>
+                    @if (t.nota) {
+                      <p class="mt-2 rounded-xl p-3 text-sm"
+                        style="background:var(--surface-2);color:var(--text-body)">{{ t.nota }}</p>
+                    }
+                  </section>
+                } @empty {
+                  <p class="text-sm" style="color:var(--text-body)">
+                    Tu rol puede ver esta pantalla, pero no tiene tareas disponibles en ella.
+                  </p>
+                }
+              </article>
+            }
+          }
+        }
+      }
+
+      <!-- Salida hacia el agente -->
+      <aside aria-labelledby="ayuda-agente" class="card p-5 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 id="ayuda-agente" class="text-sm font-semibold" style="color:var(--text-strong)">
+            ¿No encuentras lo que buscas?
+          </h2>
+          <p class="text-sm" style="color:var(--text-body)">El agente responde con estas mismas guías y te lleva a la pantalla.</p>
+        </div>
+        <a routerLink="/agente-ia"
+          class="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white"
+          style="background:var(--brand)">
+          <lucide-icon [img]="SparklesIcon" class="w-4 h-4" aria-hidden="true" />
+          Pregúntale al agente
+        </a>
+      </aside>
+    </div>
+  </div>
+</section>

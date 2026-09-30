@@ -155,6 +155,14 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/plantilla-detail/plantilla-detail').then((m) => m.PlantillaDetailComponent),
       },
+      // Sin guard: la página filtra cada guía por los permisos del usuario.
+      // `ayuda` redirige para que todo pase por UNA ruta: así Angular reutiliza el
+      // componente al cambiar de guía y el foco puede saltar al título nuevo.
+      { path: 'ayuda', pathMatch: 'full', redirectTo: 'ayuda/general' },
+      {
+        path: 'ayuda/:guia',
+        loadComponent: () => import('./components/ayuda/ayuda').then((m) => m.AyudaComponent),
+      },
       {
         path: 'llamadas',
         loadComponent: () =>
