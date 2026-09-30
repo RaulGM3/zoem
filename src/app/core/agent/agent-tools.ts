@@ -1,9 +1,11 @@
 import { inject, InjectionToken, type EnvironmentProviders, makeEnvironmentProviders } from '@angular/core';
 import { Router } from '@angular/router';
+import { cargarGuias } from '../ayuda/cargar-guias';
 import { CasosService } from '../services/casos.service';
 import { ContactService } from '../services/contact.service';
 import { PermissionService } from '../services/permission.service';
 import type { AgentTool } from './agent-tool';
+import { ayudaTools } from './tools/ayuda.tools';
 import { casosTools } from './tools/casos.tools';
 import { contactosTools } from './tools/contactos.tools';
 import { navegacionTools } from './tools/navegacion.tools';
@@ -40,6 +42,15 @@ export function provideAgentTools(): EnvironmentProviders {
           navegador: inject(Router),
           puedeVer: (modulo) => perm.canAccess(modulo),
         });
+      },
+    },
+    {
+      provide: AGENT_TOOLS,
+      multi: true,
+      useFactory: () => {
+        const perm = inject(PermissionService);
+        // `cargarGuias` es un import diferido: el texto de las guías no entra en el bundle inicial.
+        return ayudaTools({ cargar: cargarGuias, puede: (modulo, cap) => perm.can(modulo, cap) });
       },
     },
   ]);

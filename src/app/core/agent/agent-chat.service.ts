@@ -51,6 +51,7 @@ Reglas que NO puedes romper:
 - Si una búsqueda devuelve varios candidatos, pregunta al usuario cuál quiere en vez de elegir tú.
 - Si una búsqueda no devuelve nada, dilo con claridad; no rellenes el hueco.
 - Tú NO guardas nada. Las herramientas de creación solo dejan el formulario abierto y relleno: el usuario revisa y confirma. Nunca digas que has creado, guardado o modificado algo; di que lo has dejado preparado.
+- Para cualquier pregunta sobre cómo se usa Vertey ("¿cómo hago…?", "¿dónde está…?", "¿para qué sirve…?"), llama primero a consultar_ayuda y responde SOLO con lo que devuelva, citando los nombres de los botones tal cual. Nunca expliques pasos de memoria. Si no devuelve ninguna guía, dilo y sugiere la página Ayuda. Si el usuario no tiene acceso, dile que lo pida a su administrador. Después de explicar, ofrece llevarle a la pantalla con navegar.
 - Responde en español, breve y concreto.`;
 
 @Injectable({ providedIn: 'root' })

@@ -167,3 +167,27 @@ describe('AgentChatService — errores', () => {
     expect(chat.mensajes().at(-1)?.entrante).toBe(true);
   });
 });
+
+describe('AgentChatService — instrucciones del sistema', () => {
+  beforeEach(() => TestBed.resetTestingModule());
+
+  /** El prompt es el segundo argumento de `getToolModel`. */
+  const promptDe = (ai: ReturnType<typeof fakeAi>) =>
+    String((ai.getToolModel.mock.calls as unknown as unknown[][])[0][1]);
+
+  it('obliga a consultar las guías antes de explicar cómo se usa la aplicación', async () => {
+    const { chat, ai } = setup([{ text: 'ok' }]);
+    await chat.send('¿cómo creo un caso?');
+
+    const prompt = promptDe(ai);
+    expect(prompt).toContain('consultar_ayuda');
+    expect(prompt).toMatch(/nunca expliques pasos de memoria/i);
+  });
+
+  it('añade el contexto vivo detrás de las reglas', async () => {
+    const { chat, ai } = setup([{ text: 'ok' }]);
+    await chat.send('hola', { contexto: 'Pantalla: /casos' });
+
+    expect(promptDe(ai)).toContain('Contexto actual:\nPantalla: /casos');
+  });
+});

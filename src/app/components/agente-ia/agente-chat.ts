@@ -18,8 +18,11 @@ import { BotonDictadoComponent } from './boton-dictado';
  */
 type AgenteMode = 'soporte' | 'analisis' | 'acciones';
 
-const SUGERENCIAS: Record<AgenteMode, string[]> = {
+export const SUGERENCIAS: Record<AgenteMode, string[]> = {
   soporte: [
+    '¿Cómo creo un caso nuevo?',
+    '¿Cómo invito a un usuario?',
+    '¿Para qué sirve Tesorería?',
     '¿Qué casos tengo en proceso?',
     'Busca el contacto de NOMBRE',
     'Llévame a Facturación',

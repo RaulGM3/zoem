@@ -6,7 +6,7 @@ import { AgentChatService } from '../../core/agent/agent-chat.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { GRABADOR, type Grabador } from '../../core/voz/grabador.port';
 import { TranscripcionService } from '../../core/voz/transcripcion.service';
-import { AgenteChatComponent, estaPegadoAbajo } from './agente-chat';
+import { AgenteChatComponent, SUGERENCIAS, estaPegadoAbajo } from './agente-chat';
 
 function montar() {
   const send = vi.fn(async () => {});
@@ -39,6 +39,19 @@ function montar() {
 
 const textarea = (f: ReturnType<typeof montar>['fixture']) =>
   f.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
+
+describe('SUGERENCIAS — preguntas de ayuda', () => {
+  const deAyuda = SUGERENCIAS.soporte.filter((s) => /^¿(Cómo|Para qué)/.test(s));
+
+  it('el modo soporte ofrece preguntas de "¿cómo hago…?"', () => {
+    expect(deAyuda.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('las preguntas de ayuda no llevan huecos: se envían tal cual', () => {
+    // Un hueco es una palabra de 2+ letras en MAYÚSCULAS (ver `huecoRegex`).
+    for (const pregunta of deAyuda) expect(pregunta).not.toMatch(/[A-ZÑ]{2,}/);
+  });
+});
 
 describe('AgenteChatComponent — dictado por voz', () => {
   beforeEach(() => TestBed.resetTestingModule());
