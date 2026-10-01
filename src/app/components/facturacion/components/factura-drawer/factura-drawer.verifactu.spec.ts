@@ -39,6 +39,7 @@ describe('FacturaDrawerComponent — bloqueo por Verifactu (R9.4, S9.6)', () => 
     fixture.componentRef.setInput('editMode', true);
     fixture.componentRef.setInput('editingInvoice', editing);
     fixture.componentRef.setInput('verifactuEnabled', true);
+    fixture.componentRef.setInput('initialCliente', { nombre: 'Cliente Test', tipoId: 'nif', nif: '12345678Z' });
     fixture.componentRef.setInput('initialLineas', [
       { concepto: 'Honorarios', cantidad: 1, precioUnitario: 100, base: 100, aplicaIva: true },
     ]);

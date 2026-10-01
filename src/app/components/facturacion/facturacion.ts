@@ -10,7 +10,8 @@ import type { InvoiceFormPayload } from './components/factura-drawer/factura-dra
 import { InvoicePdfService } from '../../core/services/invoice-pdf.service';
 import { CompanyService, getLabelIdentificacion } from '../../core/services/company.service';
 import { ContactService } from '../../core/services/contact.service';
-import { getContactDisplayName, type Contact, type Direccion } from '../../interfaces/contact.interface';
+import type { Contact } from '../../interfaces/contact.interface';
+import { clienteDesdeContacto, clienteDesdeFactura, type ClienteFactura } from '../../core/facturacion/cliente-factura';
 import { PermissionService } from '../../core/services/permission.service';
 import { ToastService } from '../../core/services/toast.service';
 import { Caso, gestoriaCompleta, Hito } from '../../interfaces';
@@ -23,16 +24,6 @@ import { FacturacionHorasTabComponent } from './components/facturacion-horas-tab
 import { FacturacionConfiguracionTabComponent } from './components/facturacion-configuracion-tab/facturacion-configuracion-tab';
 import { FacturaDrawerComponent } from './components/factura-drawer/factura-drawer';
 import { CierreModalComponent } from './components/cierre-modal/cierre-modal';
-
-function getContactNif(c: Contact): string | undefined {
-  return c.type === 'persona_fisica' ? c.nif : c.cif;
-}
-
-function getContactDireccion(c: Contact): string | undefined {
-  const d: Direccion | undefined = c.type === 'persona_fisica' ? c.direccion : (c.direccionFiscal ?? c.direccionSocial);
-  if (!d) return undefined;
-  return [d.calle, d.numero, d.piso, d.codigoPostal, d.municipio, d.provincia].filter(Boolean).join(', ');
-}
 
 import { FacturacionFacturasTabComponent } from './components/facturacion-facturas-tab/facturacion-facturas-tab';
 import { EditarNumeroModalComponent } from './components/editar-numero-modal/editar-numero-modal';
@@ -166,6 +157,9 @@ export class FacturacionComponent implements OnInit {
   readonly drawerNotes = signal('');
   readonly drawerStandalone = signal(false);
   readonly drawerRectificativa = signal(false);
+  /** Cliente con el que se precarga la sección Cliente del drawer, y contacto del que viene (si lo hay). */
+  readonly drawerCliente = signal<ClienteFactura | null>(null);
+  readonly drawerContacto = signal<Contact | null>(null);
 
   readonly drawerIssueDate = computed(() => new Date().toISOString().slice(0, 10));
   readonly drawerDueDate = computed(() => {
@@ -188,7 +182,23 @@ export class FacturacionComponent implements OnInit {
     this.drawerNotes.set('');
     this.drawerStandalone.set(false);
     this.drawerRectificativa.set(false);
+    this.drawerCliente.set(null);
+    this.drawerContacto.set(null);
     this.facturaCaso.set(caso);
+    void this.precargarContacto(caso.contactoIds?.[0], () => this.facturaCaso() === caso);
+  }
+
+  /**
+   * Resuelve el contacto en segundo plano y precarga la sección Cliente. `sigueAbierto` evita
+   * aplicar un resultado tardío a un drawer que ya se cerró o se reabrió para otra factura.
+   * Un contacto borrado o ilegible no impide facturar: el cliente se escribe a mano.
+   */
+  private async precargarContacto(contactoId: string | undefined, sigueAbierto: () => boolean): Promise<void> {
+    if (!contactoId) return;
+    const contacto = await this.contactService.getContact(contactoId).catch(() => null);
+    if (!contacto || !sigueAbierto()) return;
+    this.drawerContacto.set(contacto);
+    this.drawerCliente.set(clienteDesdeContacto(contacto));
   }
 
   /** Abre el drawer para crear una factura standalone (sin caso). */
@@ -199,6 +209,8 @@ export class FacturacionComponent implements OnInit {
     this.drawerNotes.set('');
     this.drawerStandalone.set(true);
     this.drawerRectificativa.set(false);
+    this.drawerCliente.set(null);
+    this.drawerContacto.set(null);
     // Usamos un Caso "fantasma" para abrir el drawer — el drawer solo lee titulo
     this.facturaCaso.set({ id: '', titulo: 'Factura libre' } as Caso);
   }
@@ -211,7 +223,19 @@ export class FacturacionComponent implements OnInit {
     this.drawerNotes.set(invoice.notes ?? '');
     this.drawerStandalone.set(false);
     this.drawerRectificativa.set(false);
-    this.facturaCaso.set({ id: invoice.casoId ?? '', titulo: invoice.casoTitulo ?? invoice.invoiceNumber } as Caso);
+    // La factura conserva su propia copia del cliente: se precarga el snapshot, no el contacto.
+    this.drawerCliente.set(clienteDesdeFactura(invoice));
+    this.drawerContacto.set(null);
+    const caso = { id: invoice.casoId ?? '', titulo: invoice.casoTitulo ?? invoice.invoiceNumber } as Caso;
+    this.facturaCaso.set(caso);
+    void this.precargarContactoVinculado(invoice.clienteContactoId, () => this.facturaCaso() === caso);
+  }
+
+  /** Solo vincula el contacto (para poder desvincularlo); no pisa el snapshot de la factura. */
+  private async precargarContactoVinculado(contactoId: string | undefined, sigueAbierto: () => boolean): Promise<void> {
+    if (!contactoId) return;
+    const contacto = await this.contactService.getContact(contactoId).catch(() => null);
+    if (contacto && sigueAbierto()) this.drawerContacto.set(contacto);
   }
 
   cerrarFacturaDrawer(): void {
@@ -220,6 +244,8 @@ export class FacturacionComponent implements OnInit {
     this.drawerEditingInvoice.set(null);
     this.drawerStandalone.set(false);
     this.drawerRectificativa.set(false);
+    this.drawerCliente.set(null);
+    this.drawerContacto.set(null);
   }
 
   async confirmarFactura(payload: InvoiceFormPayload): Promise<void> {
@@ -239,6 +265,7 @@ export class FacturacionComponent implements OnInit {
             payload.issueDate,
             payload.dueDate,
             payload.notes || undefined,
+            payload.cliente,
           ),
           {
             successMessage: 'Factura actualizada',
@@ -294,6 +321,7 @@ export class FacturacionComponent implements OnInit {
             payload.issueDate,
             payload.dueDate,
             payload.notes || undefined,
+            payload.cliente,
           ),
           {
             successMessage: 'Factura creada',
@@ -303,13 +331,6 @@ export class FacturacionComponent implements OnInit {
         );
       } else {
         // Invoice linked to a caso
-        const contactoId = caso.contactoIds?.[0];
-        let cliente: { nombre: string; nif?: string; direccion?: string } | undefined;
-        if (contactoId) {
-          const c = await this.contactService.getContact(contactoId).catch(() => null);
-          if (c) cliente = { nombre: getContactDisplayName(c), nif: getContactNif(c), direccion: getContactDireccion(c) };
-        }
-
         const facturaId = await this.toast.run(
           () => this.invoiceService.createInvoiceForCaso(
             caso.id,
@@ -319,7 +340,7 @@ export class FacturacionComponent implements OnInit {
             payload.dueDate,
             payload.notes || undefined,
             caso.titulo,
-            cliente,
+            payload.cliente,
           ),
           { errorTitle: 'No se pudo generar la factura' }
         );
@@ -540,6 +561,9 @@ export class FacturacionComponent implements OnInit {
     this.drawerNotes.set(`Rectificativa de ${invoice.invoiceNumber}`);
     this.drawerStandalone.set(false);
     this.drawerRectificativa.set(true);
+    // La rectificativa hereda el cliente de la original (lo copia el servicio).
+    this.drawerCliente.set(clienteDesdeFactura(invoice));
+    this.drawerContacto.set(null);
     this.facturaCaso.set({ id: invoice.casoId ?? '', titulo: invoice.casoTitulo ?? invoice.invoiceNumber } as Caso);
   }
 

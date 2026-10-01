@@ -7,6 +7,7 @@ import { Storage } from '@angular/fire/storage';
 import { InvoiceService, InvoiceLinea, Invoice } from './invoice.service';
 import { InvoicePdfService } from './invoice-pdf.service';
 import { CompanyService, Company } from './company.service';
+import type { ClienteFactura } from '../facturacion/cliente-factura';
 
 // ────────────────────────────────────────────────────
 // vi.hoisted: variables accesibles DENTRO de vi.mock (hoisting seguro)
@@ -37,6 +38,7 @@ vi.mock('@angular/fire/firestore', () => ({
   where: vi.fn().mockReturnValue('mock-where'),
   getDoc: (...args: unknown[]) => mockGetDoc(...args),
   deleteDoc: vi.fn().mockResolvedValue(undefined),
+  deleteField: () => '__deleteField__',
 }));
 
 vi.mock('@angular/fire/functions', () => ({
@@ -644,5 +646,178 @@ describe('InvoiceService.finalizeDraft()', () => {
 
     await vi.waitFor(() => expect(generateAndUpload).toHaveBeenCalledTimes(1));
     expect(mockCallable).not.toHaveBeenCalled();
+  });
+});
+
+// ────────────────────────────────────────────────────
+// Tests: cliente de la factura (cliente-factura-nif, R2)
+// ────────────────────────────────────────────────────
+
+describe('InvoiceService — cliente de la factura', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetCallable();
+    TestBed.resetTestingModule();
+    mockAddDoc.mockResolvedValue({ id: 'invoice-gen' });
+    mockGetDocs.mockResolvedValue({ docs: [] });
+  });
+
+  const hoy = '2026-09-01';
+  const vence = '2026-10-01';
+  const lineas: InvoiceLinea[] = [{ concepto: 'H', cantidad: 1, precioUnitario: 100, base: 100, aplicaIva: true }];
+  const clienteNif: ClienteFactura = {
+    contactoId: 'c-1',
+    nombre: 'Ana Pérez',
+    tipoId: 'nif',
+    nif: '12345678Z',
+    direccion: 'Calle Mayor 1, Madrid',
+  };
+
+  it('S2.1 createStandaloneInvoice persiste nombre, NIF, dirección, tipo y contacto', async () => {
+    const { svc } = setupService();
+
+    await svc.createStandaloneInvoice(lineas, 0.21, hoy, vence, undefined, clienteNif);
+
+    expect(mockAddDoc.mock.calls[0][1]).toMatchObject({
+      clienteNombre: 'Ana Pérez',
+      clienteNif: '12345678Z',
+      clienteDireccion: 'Calle Mayor 1, Madrid',
+      clienteTipoId: 'nif',
+      clienteContactoId: 'c-1',
+    });
+  });
+
+  it('S2.2 createInvoiceForCaso persiste el cliente completo', async () => {
+    const { svc } = setupService();
+
+    await svc.createInvoiceForCaso('caso-1', lineas, 0.21, hoy, vence, undefined, 'Caso', clienteNif);
+
+    expect(mockAddDoc.mock.calls[0][1]).toMatchObject({
+      casoId: 'caso-1',
+      clienteNombre: 'Ana Pérez',
+      clienteNif: '12345678Z',
+      clienteTipoId: 'nif',
+      clienteContactoId: 'c-1',
+    });
+  });
+
+  it('saveDraft persiste el cliente (documento extranjero sin normalizar a NIF)', async () => {
+    const { svc } = setupService();
+
+    await svc.saveDraft(lineas, 0.21, hoy, vence, undefined, undefined, undefined, {
+      nombre: 'John Smith',
+      tipoId: 'extranjero',
+      nif: ' pa-123 ',
+    });
+
+    expect(mockAddDoc.mock.calls[0][1]).toMatchObject({
+      status: 'borrador',
+      clienteNombre: 'John Smith',
+      clienteNif: 'pa-123',
+      clienteTipoId: 'extranjero',
+    });
+  });
+
+  it('S2.5 un NIF con espacios y minúsculas se guarda normalizado', async () => {
+    const { svc } = setupService();
+
+    await svc.createStandaloneInvoice(lineas, 0.21, hoy, vence, undefined, { ...clienteNif, nif: ' 12.345.678-z ' });
+
+    expect(mockAddDoc.mock.calls[0][1].clienteNif).toBe('12345678Z');
+  });
+
+  it('sin cliente no escribe campos de cliente', async () => {
+    const { svc } = setupService();
+
+    await svc.createStandaloneInvoice(lineas, 0.21, hoy, vence);
+
+    expect(Object.keys(mockAddDoc.mock.calls[0][1])).not.toContain('clienteNombre');
+    expect(Object.keys(mockAddDoc.mock.calls[0][1])).not.toContain('clienteTipoId');
+  });
+
+  it('S2.3 updateInvoiceContent persiste el cliente recibido', async () => {
+    const { svc } = setupService();
+    stubGetDoc(makeInvoiceDoc({ status: 'borrador' }));
+
+    await svc.updateInvoiceContent('inv-1', lineas, 0.21, hoy, vence, 'nota', clienteNif);
+
+    expect(mockUpdateDoc.mock.calls[0][1]).toMatchObject({
+      clienteNombre: 'Ana Pérez',
+      clienteNif: '12345678Z',
+      clienteDireccion: 'Calle Mayor 1, Madrid',
+      clienteTipoId: 'nif',
+      clienteContactoId: 'c-1',
+    });
+  });
+
+  it('S2.3 updateInvoiceContent borra en Firestore el NIF, la dirección y el contacto que el usuario vació', async () => {
+    const { svc } = setupService();
+    stubGetDoc(makeInvoiceDoc({ status: 'borrador', clienteNif: 'B12345674', clienteDireccion: 'Antigua', clienteContactoId: 'c-1' }));
+
+    await svc.updateInvoiceContent('inv-1', lineas, 0.21, hoy, vence, undefined, { nombre: 'Cliente puntual', tipoId: 'nif' });
+
+    expect(mockUpdateDoc.mock.calls[0][1]).toMatchObject({
+      clienteNombre: 'Cliente puntual',
+      clienteNif: '__deleteField__',
+      clienteDireccion: '__deleteField__',
+      clienteContactoId: '__deleteField__',
+    });
+  });
+
+  it('S2.3 updateInvoiceContent sin cliente no toca los campos de cliente', async () => {
+    const { svc } = setupService();
+    stubGetDoc(makeInvoiceDoc({ status: 'borrador', clienteNombre: 'Previo' }));
+
+    await svc.updateInvoiceContent('inv-1', lineas, 0.21, hoy, vence);
+
+    expect(Object.keys(mockUpdateDoc.mock.calls[0][1])).not.toContain('clienteNombre');
+  });
+
+  it('S2.3 updateInvoiceContent regenera el PDF con el cliente nuevo si no es borrador', async () => {
+    const { svc, generateAndUpload } = setupService();
+    stubGetDoc(makeInvoiceDoc({ status: 'pendiente', clienteNombre: 'Previo' }));
+
+    await svc.updateInvoiceContent('inv-1', lineas, 0.21, hoy, vence, undefined, clienteNif);
+
+    await vi.waitFor(() => expect(generateAndUpload).toHaveBeenCalledTimes(1));
+    expect(generateAndUpload.mock.calls[0][0]).toMatchObject({
+      clienteNombre: 'Ana Pérez',
+      clienteNif: '12345678Z',
+      clienteTipoId: 'nif',
+    });
+  });
+
+  it('S2.4 createRectificativa copia clienteTipoId y clienteContactoId de la original', async () => {
+    const { svc } = setupService();
+    stubGetDoc(
+      makeInvoiceDoc({
+        clienteNombre: 'Ana Pérez',
+        clienteNif: 'PA123',
+        clienteTipoId: 'extranjero',
+        clienteContactoId: 'c-9',
+      }),
+    );
+
+    await svc.createRectificativa('inv-1', lineas, 0.21, hoy, vence);
+
+    expect(mockAddDoc.mock.calls[0][1]).toMatchObject({
+      clienteNombre: 'Ana Pérez',
+      clienteNif: 'PA123',
+      clienteTipoId: 'extranjero',
+      clienteContactoId: 'c-9',
+    });
+  });
+
+  it('S2.6 ningún payload de cliente escribe `verifactu`', async () => {
+    const { svc } = setupService();
+    stubGetDoc(makeInvoiceDoc({ status: 'borrador' }));
+
+    await svc.createStandaloneInvoice(lineas, 0.21, hoy, vence, undefined, clienteNif);
+    await svc.createInvoiceForCaso('caso-1', lineas, 0.21, hoy, vence, undefined, 'Caso', clienteNif);
+    await svc.saveDraft(lineas, 0.21, hoy, vence, undefined, undefined, undefined, clienteNif);
+    await svc.updateInvoiceContent('inv-1', lineas, 0.21, hoy, vence, undefined, clienteNif);
+
+    expect(escrituras().length).toBeGreaterThanOrEqual(4);
+    for (const data of escrituras()) expect(Object.keys(data)).not.toContain('verifactu');
   });
 });

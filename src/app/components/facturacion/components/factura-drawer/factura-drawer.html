@@ -24,6 +24,74 @@
     <!-- Body -->
     <div class="flex-1 space-y-5 overflow-y-auto p-5" [formGroup]="form">
 
+      <!-- Cliente -->
+      <fieldset formGroupName="cliente" class="space-y-3">
+        <legend class="mb-1 text-xs font-semibold uppercase tracking-wider"
+          style="color:var(--text-faint);font-family:var(--font-mono)">Cliente</legend>
+
+        @if (contacto()) {
+          <div class="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs"
+            style="background:var(--surface-2);color:var(--text-body)">
+            <span>Contacto: <strong>{{ contactoNombre() }}</strong></span>
+            @if (!verifactuLocked()) {
+              <button type="button" (click)="quitarContacto()"
+                class="rounded px-2 py-1 font-medium underline"
+                style="color:var(--brand)">Quitar contacto</button>
+            }
+          </div>
+        }
+
+        <div>
+          <label for="cliente-nombre" class="form-label">Nombre o razón social</label>
+          <input id="cliente-nombre" type="text" formControlName="nombre" autocomplete="off"
+            class="form-input w-full"
+            [class.error]="clienteInvalido('nombre')"
+            aria-required="true"
+            [attr.aria-invalid]="clienteInvalido('nombre') ? 'true' : 'false'"
+            [attr.aria-describedby]="clienteInvalido('nombre') ? 'cliente-nombre-error' : null" />
+          @if (clienteInvalido('nombre')) {
+            <p id="cliente-nombre-error" class="form-error" role="alert">
+              Indica el nombre o la razón social del cliente.
+            </p>
+          }
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="cliente-tipoId" class="form-label">Tipo de documento</label>
+            <select id="cliente-tipoId" formControlName="tipoId" class="form-select">
+              <option value="nif">NIF (España)</option>
+              <option value="extranjero">Documento extranjero</option>
+            </select>
+          </div>
+          <div>
+            <label for="cliente-nif" class="form-label">Número de documento</label>
+            <input id="cliente-nif" type="text" formControlName="nif" autocomplete="off"
+              class="form-input w-full"
+              [class.error]="clienteInvalido('nif')"
+              [attr.aria-required]="clienteTipoId() === 'nif' && verifactuEnabled() ? 'true' : null"
+              [attr.aria-invalid]="clienteInvalido('nif') ? 'true' : 'false'"
+              [attr.aria-describedby]="clienteInvalido('nif') ? 'cliente-nif-error' : null" />
+            @if (clienteInvalido('nif')) {
+              <p id="cliente-nif-error" class="form-error" role="alert">{{ mensajeErrorNif() }}</p>
+            }
+          </div>
+        </div>
+
+        @if (avisoDocumentoExtranjero()) {
+          <p class="rounded-lg px-3 py-2 text-xs" role="status"
+            style="background:color-mix(in srgb,var(--warning) 10%,transparent);color:var(--text-body)">
+            Verifactu aún no admite documentos extranjeros: la factura se guardará, pero no se enviará a la AEAT.
+          </p>
+        }
+
+        <div>
+          <label for="cliente-direccion" class="form-label">Dirección</label>
+          <input id="cliente-direccion" type="text" formControlName="direccion" autocomplete="off"
+            class="form-input w-full" />
+        </div>
+      </fieldset>
+
       <!-- Dates -->
       <div class="grid grid-cols-2 gap-3">
         <div>

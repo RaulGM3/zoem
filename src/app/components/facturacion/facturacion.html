@@ -117,6 +117,8 @@
     [verifactuEnabled]="companyService.activeCompany()?.verifactu?.enabled ?? false"
     [editMode]="drawerEditMode()"
     [editingInvoice]="drawerEditingInvoice()"
+    [initialCliente]="drawerCliente()"
+    [contactoVinculado]="drawerContacto()"
     (closed)="cerrarFacturaDrawer()"
     (confirmed)="confirmarFactura($event)"
   />

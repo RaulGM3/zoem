@@ -11,6 +11,7 @@ import {
   query,
   where,
   serverTimestamp,
+  deleteField,
 } from '@angular/fire/firestore';
 import { Functions, httpsCallable } from '@angular/fire/functions';
 import { CompanyService } from './company.service';
@@ -23,6 +24,7 @@ import type {
   VerifactuSolicitud,
   VerifactuSubmitResponse,
 } from '../../interfaces/verifactu.interface';
+import { camposClienteFactura, type ClienteFactura, type TipoIdCliente } from '../facturacion/cliente-factura';
 import { motivoBloqueoVerifactu, tipoReintento, verifactuBloqueada } from '../verifactu/verifactu-ui';
 
 export type InvoiceStatus = 'borrador' | 'pendiente' | 'pagada' | 'vencida' | 'anulada';
@@ -48,6 +50,10 @@ export interface Invoice {
   clienteNombre?: string;
   clienteNif?: string;
   clienteDireccion?: string;
+  /** Tipo de documento del cliente. Ausente (facturas antiguas) equivale a 'nif'. */
+  clienteTipoId?: TipoIdCliente;
+  /** Contacto del que se precargó el cliente (la factura conserva su propia copia). */
+  clienteContactoId?: string;
   lineas?: InvoiceLinea[];
   ivaRate?: number;
   notes?: string;
@@ -172,7 +178,7 @@ export class InvoiceService {
     dueDate: string,
     notes?: string,
     casoTitulo?: string,
-    cliente?: { nombre: string; nif?: string; direccion?: string },
+    cliente?: ClienteFactura,
   ): Promise<string> {
     const amount = lineas.reduce((s, l) => s + l.base, 0);
     const vat = lineas.reduce((s, l) => {
@@ -192,9 +198,7 @@ export class InvoiceService {
       dueDate,
       casoId,
       casoTitulo,
-      clienteNombre: cliente?.nombre,
-      clienteNif: cliente?.nif,
-      clienteDireccion: cliente?.direccion,
+      ...(cliente ? camposClienteFactura(cliente) : {}),
       lineas,
       ivaRate,
       notes,
@@ -281,7 +285,7 @@ export class InvoiceService {
     notes?: string,
     casoId?: string,
     casoTitulo?: string,
-    cliente?: { nombre: string; nif?: string; direccion?: string },
+    cliente?: ClienteFactura,
   ): Promise<string> {
     const amount = lineas.reduce((s, l) => s + l.base, 0);
     const vat = lineas.reduce((s, l) => {
@@ -299,9 +303,7 @@ export class InvoiceService {
       dueDate,
       casoId,
       casoTitulo,
-      clienteNombre: cliente?.nombre,
-      clienteNif: cliente?.nif,
-      clienteDireccion: cliente?.direccion,
+      ...(cliente ? camposClienteFactura(cliente) : {}),
       lineas,
       ivaRate,
       notes,
@@ -319,7 +321,7 @@ export class InvoiceService {
   }
 
   /**
-   * Actualiza el contenido de una factura existente (líneas, fechas, notas).
+   * Actualiza el contenido de una factura existente (líneas, fechas, notas y, si se pasa, cliente).
    * No se permite con un registro Verifactu vivo (en cola, pendiente o enviado): el
    * registro reservado no debe divergir de la factura. Tras `error` vuelve a ser editable.
    */
@@ -330,6 +332,7 @@ export class InvoiceService {
     issueDate: string,
     dueDate: string,
     notes?: string,
+    cliente?: ClienteFactura,
   ): Promise<void> {
     const invoice = await this.getInvoice(invoiceId);
     if (!invoice) throw new Error('Factura no encontrada');
@@ -342,6 +345,18 @@ export class InvoiceService {
       return s + l.base * (l.ivaRate ?? ivaRate);
     }, 0);
 
+    const camposCliente = cliente ? camposClienteFactura(cliente) : undefined;
+    // Al editar, un campo que el usuario vació debe borrarse en Firestore (un `undefined` se
+    // descartaría y la factura conservaría el valor antiguo).
+    const escrituraCliente = camposCliente
+      ? ({
+          ...camposCliente,
+          clienteNif: camposCliente.clienteNif ?? deleteField(),
+          clienteDireccion: camposCliente.clienteDireccion ?? deleteField(),
+          clienteContactoId: camposCliente.clienteContactoId ?? deleteField(),
+        } as unknown as Partial<Invoice>)
+      : {};
+
     await this.updateInvoice(invoiceId, {
       lineas,
       ivaRate,
@@ -351,13 +366,14 @@ export class InvoiceService {
       amount,
       vat,
       total: amount + vat,
+      ...escrituraCliente,
     });
 
     // Regenerar PDF si la factura no es borrador
     if (invoice.status !== 'borrador') {
       const company = this.companyService.activeCompany();
       if (company?.id) {
-        const updated: Invoice = { ...invoice, lineas, ivaRate, issueDate, dueDate, notes, amount, vat, total: amount + vat };
+        const updated: Invoice = { ...invoice, lineas, ivaRate, issueDate, dueDate, notes, amount, vat, total: amount + vat, ...camposCliente };
         this.pdfService.generateAndUpload(updated)
           .then(pdfUrl => this.updateInvoice(invoiceId, { pdfUrl }))
           .catch(err => console.error('[PDF] Error regenerando PDF:', err));
@@ -470,7 +486,7 @@ export class InvoiceService {
     issueDate: string,
     dueDate: string,
     notes?: string,
-    cliente?: { nombre: string; nif?: string; direccion?: string },
+    cliente?: ClienteFactura,
   ): Promise<string> {
     const amount = lineas.reduce((s, l) => s + l.base, 0);
     const vat = lineas.reduce((s, l) => {
@@ -486,9 +502,7 @@ export class InvoiceService {
       status: 'pendiente' as InvoiceStatus,
       issueDate,
       dueDate,
-      clienteNombre: cliente?.nombre,
-      clienteNif: cliente?.nif,
-      clienteDireccion: cliente?.direccion,
+      ...(cliente ? camposClienteFactura(cliente) : {}),
       lineas,
       ivaRate,
       notes,
@@ -533,6 +547,8 @@ export class InvoiceService {
       clienteNombre: original.clienteNombre,
       clienteNif: original.clienteNif,
       clienteDireccion: original.clienteDireccion,
+      clienteTipoId: original.clienteTipoId,
+      clienteContactoId: original.clienteContactoId,
       lineas,
       ivaRate,
       notes: notes ?? `Rectificativa de ${original.invoiceNumber}`,

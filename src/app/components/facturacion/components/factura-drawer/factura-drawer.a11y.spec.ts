@@ -14,6 +14,7 @@ async function montar(lineas: InvoiceLinea[]): Promise<ComponentFixture<FacturaD
   await TestBed.configureTestingModule({ imports: [FacturaDrawerComponent] }).compileComponents();
   const fixture = TestBed.createComponent(FacturaDrawerComponent);
   fixture.componentRef.setInput('initialLineas', lineas);
+  fixture.componentRef.setInput('initialCliente', { nombre: 'Cliente Test', tipoId: 'nif' });
   fixture.detectChanges();
   await fixture.whenStable();
   fixture.detectChanges();
@@ -44,6 +45,42 @@ describe('FacturaDrawerComponent — accesibilidad (axe), causa de exención (S1
     expect(select.getAttribute('aria-invalid')).toBe('true');
     expect(raiz.querySelector('[role="alert"]')?.textContent).toContain('causa de exención');
 
+    const violaciones = await analizarA11y(raiz);
+    expect(violaciones, `\n${formatearViolaciones(violaciones)}\n`).toEqual([]);
+  });
+});
+
+describe('FacturaDrawerComponent — accesibilidad (axe), sección Cliente (S4.12 sin buscador)', () => {
+  it('sin violaciones con la sección Cliente y el contacto vinculado', async () => {
+    const fixture = await montar(LINEAS_EXENTAS);
+    fixture.componentRef.setInput('verifactuEnabled', true);
+    fixture.componentRef.setInput('initialCliente', { contactoId: 'c-1', nombre: 'Ana', tipoId: 'extranjero', nif: 'PA1' });
+    fixture.componentRef.setInput('contactoVinculado', { id: 'c-1', type: 'persona_fisica', nombre: 'Ana', apellidos: 'P', nifType: 'pasaporte', nif: 'PA1' });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const raiz = fixture.nativeElement as HTMLElement;
+    expect(raiz.querySelector('#cliente-nombre')).not.toBeNull();
+    expect(raiz.querySelector('[role="status"]')).not.toBeNull();
+
+    const violaciones = await analizarA11y(raiz);
+    expect(violaciones, `\n${formatearViolaciones(violaciones)}\n`).toEqual([]);
+  });
+
+  it('sin violaciones con los errores del cliente visibles (nombre vacío, NIF inválido)', async () => {
+    const fixture = await montar([{ concepto: 'H', cantidad: 1, precioUnitario: 100, base: 100, aplicaIva: true }]);
+    fixture.componentRef.setInput('initialCliente', { nombre: '', tipoId: 'nif', nif: '12345678A' });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const raiz = fixture.nativeElement as HTMLElement;
+    Array.from(raiz.querySelectorAll<HTMLButtonElement>('button'))
+      .find((b) => /Generar factura/.test(b.textContent ?? ''))!
+      .click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(raiz.querySelector('#cliente-nombre-error')).not.toBeNull();
+    expect(raiz.querySelector('#cliente-nif-error')).not.toBeNull();
     const violaciones = await analizarA11y(raiz);
     expect(violaciones, `\n${formatearViolaciones(violaciones)}\n`).toEqual([]);
   });

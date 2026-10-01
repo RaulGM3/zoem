@@ -8,9 +8,10 @@ import {
   signal,
   computed,
   ElementRef,
+  untracked,
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormArray, FormGroup, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, FormArray, FormGroup, Validators, type ValidatorFn } from '@angular/forms';
 import {
   LucideAngularModule,
   X,
@@ -31,6 +32,13 @@ import {
 } from '../../../../interfaces/iva';
 import type { CausaExencion } from '../../../../interfaces/verifactu.interface';
 import { motivoBloqueoVerifactu } from '../../../../core/verifactu/verifactu-ui';
+import {
+  camposClienteFactura,
+  type ClienteFactura,
+  type TipoIdCliente,
+} from '../../../../core/facturacion/cliente-factura';
+import { nifValidator } from '../../../../core/fiscal/nif.validator';
+import { getContactDisplayName, type Contact } from '../../../../interfaces/contact.interface';
 
 export interface InvoiceFormPayload {
   lineas: InvoiceLinea[];
@@ -38,7 +46,13 @@ export interface InvoiceFormPayload {
   issueDate: string;
   dueDate: string;
   notes: string;
+  /** Cliente de la factura (copia legal): NIF ya normalizado, `contactoId` solo si sigue vinculado. */
+  cliente: ClienteFactura;
+  /** `true` solo con contacto vinculado y la casilla "Guardar también en el contacto" marcada. */
+  guardarEnContacto: boolean;
 }
+
+export type CampoCliente = 'nombre' | 'nif';
 
 interface IvaGroup {
   rate: number;
@@ -73,6 +87,17 @@ export class FacturaDrawerComponent {
   readonly verifactuEnabled = input(false);
   readonly editMode = input(false);
   readonly editingInvoice = input<Invoice | null>(null);
+  /** Cliente con el que precargar la sección (contacto del caso o snapshot de la factura). */
+  readonly initialCliente = input<ClienteFactura | null>(null);
+  /** Contacto del que viene el cliente; permite desvincularlo y (más adelante) escribirle de vuelta. */
+  readonly contactoVinculado = input<Contact | null>(null);
+
+  /** Contacto vinculado a esta factura. Arranca con `contactoVinculado` y puede quitarse. */
+  readonly contacto = signal<Contact | null>(null);
+  readonly contactoNombre = computed(() => {
+    const c = this.contacto();
+    return c ? getContactDisplayName(c) : '';
+  });
 
   /** Motivo del bloqueo: registro vivo en Verifactu (en cola, pendiente o enviado). */
   readonly verifactuBloqueo = computed(() => {
@@ -113,8 +138,19 @@ export class FacturaDrawerComponent {
     issueDate: [''],
     dueDate: [''],
     notes: [''],
+    cliente: this.fb.group({
+      nombre: ['', Validators.required],
+      tipoId: ['nif'],
+      nif: [''],
+      direccion: [''],
+      guardarEnContacto: [false],
+    }),
     lineas: this.fb.array<FormGroup>([]),
   });
+
+  /** Tipo de documento elegido, como señal para mostrar el aviso de documento extranjero. */
+  readonly clienteTipoId = computed(() => this.formValue().cliente.tipoId as TipoIdCliente);
+  readonly avisoDocumentoExtranjero = computed(() => this.verifactuEnabled() && this.clienteTipoId() === 'extranjero');
 
   get lineasArray(): FormArray<FormGroup> {
     return this.form.controls.lineas;
@@ -176,7 +212,43 @@ export class FacturaDrawerComponent {
     // Sync form changes → signal for computed preview
     this.form.valueChanges.subscribe(() => {
       this.syncCausasExencion();
+      this.syncClienteValidators();
       this.formValue.set(this.form.getRawValue());
+    });
+
+    // Cliente: efecto SEPARADO del de las líneas. El contacto del caso llega de forma asíncrona y
+    // al re-parchear el cliente no se deben pisar las líneas que el usuario ya haya editado.
+    effect(() => {
+      const cliente = this.initialCliente();
+      const contacto = this.contactoVinculado();
+      untracked(() => {
+        this.contacto.set(contacto);
+        if (cliente) {
+          this.form.controls.cliente.patchValue(
+            {
+              nombre: cliente.nombre,
+              tipoId: cliente.tipoId,
+              nif: cliente.nif ?? '',
+              direccion: cliente.direccion ?? '',
+            },
+            { emitEvent: false },
+          );
+        }
+        this.syncClienteValidators();
+        this.formValue.set(this.form.getRawValue());
+      });
+    });
+
+    // Validadores y bloqueo dependen de la empresa (Verifactu) y del estado del registro, no de los datos.
+    effect(() => {
+      const bloqueada = this.verifactuLocked();
+      this.verifactuEnabled();
+      untracked(() => {
+        if (bloqueada) this.form.controls.cliente.disable({ emitEvent: false });
+        else this.form.controls.cliente.enable({ emitEvent: false });
+        this.syncClienteValidators();
+        this.formValue.set(this.form.getRawValue());
+      });
     });
 
     // Initialize form when inputs arrive
@@ -240,6 +312,25 @@ export class FacturaDrawerComponent {
     return !!control && control.invalid && (control.touched || this.submitted());
   }
 
+  /** ¿Hay que mostrar el error del campo del cliente? */
+  clienteInvalido(campo: CampoCliente): boolean {
+    const control = this.form.controls.cliente.controls[campo];
+    return control.invalid && (control.touched || this.submitted());
+  }
+
+  /** Texto del error del NIF: obligatorio con Verifactu o con formato/control erróneo. */
+  readonly mensajeErrorNif = (): string =>
+    this.form.controls.cliente.controls.nif.hasError('required')
+      ? 'Con Verifactu activado, el NIF del cliente es obligatorio.'
+      : 'El NIF no es válido: revisa los números y la letra.';
+
+  /** Desvincula el contacto conservando los datos escritos: pasa a ser un cliente puntual. */
+  quitarContacto(): void {
+    this.contacto.set(null);
+    this.form.controls.cliente.controls.guardarEnContacto.setValue(false);
+    this.host.nativeElement.querySelector<HTMLElement>('#cliente-nombre')?.focus();
+  }
+
   onConfirm(): void {
     if (this.form.invalid) {
       this.submitted.set(true);
@@ -269,12 +360,29 @@ export class FacturaDrawerComponent {
       };
     });
 
+    const contacto = this.contacto();
+    const campos = camposClienteFactura({
+      contactoId: contacto?.id,
+      nombre: val.cliente.nombre ?? '',
+      tipoId: val.cliente.tipoId as TipoIdCliente,
+      nif: val.cliente.nif ?? '',
+    });
+    const cliente: ClienteFactura = {
+      contactoId: campos.clienteContactoId,
+      nombre: campos.clienteNombre,
+      tipoId: campos.clienteTipoId,
+      nif: campos.clienteNif,
+      direccion: val.cliente.direccion?.trim() || undefined,
+    };
+
     this.confirmed.emit({
       lineas,
       ivaRate: globalRate,
       issueDate: val.issueDate ?? '',
       dueDate: val.dueDate ?? '',
       notes: val.notes ?? '',
+      cliente,
+      guardarEnContacto: !!val.cliente.guardarEnContacto && contacto !== null,
     });
   }
 
@@ -290,6 +398,21 @@ export class FacturaDrawerComponent {
       ivaRate: [l.ivaRate != null ? Math.round(l.ivaRate * 100) : null],
       causaExencion: [l.causaExencion ?? ''],
     });
+  }
+
+  /**
+   * Validadores del número de documento según el tipo: NIF español -> validador de NIF (y
+   * obligatorio con Verifactu); documento extranjero -> sin validación. Sin emitir eventos.
+   */
+  private syncClienteValidators(): void {
+    const { tipoId, nif } = this.form.controls.cliente.controls;
+    const validadores: ValidatorFn[] = [];
+    if (tipoId.value === 'nif') {
+      validadores.push(nifValidator(() => tipoId.value ?? 'nif'));
+      if (this.verifactuEnabled()) validadores.push(Validators.required);
+    }
+    nif.setValidators(validadores);
+    nif.updateValueAndValidity({ emitEvent: false });
   }
 
   /**
