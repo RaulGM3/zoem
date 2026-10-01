@@ -22,6 +22,7 @@ import {
 import type { Invoice, InvoiceLinea } from '../../../../core/services/invoice.service';
 import { normalizeLinea } from '../../../../core/services/invoice.service';
 import { Caso } from '../../../../interfaces';
+import { opcionesIva } from '../../../../interfaces/iva';
 
 export interface InvoiceFormPayload {
   lineas: InvoiceLinea[];
@@ -62,6 +63,14 @@ export class FacturaDrawerComponent {
     const inv = this.editingInvoice();
     return inv?.verifactu?.estado === 'enviado';
   });
+
+  /** Tipos de IVA seleccionables; incluye los tipos libres que ya traiga la factura. */
+  readonly tiposIva = computed(() =>
+    opcionesIva([
+      this.defaultIvaRate(),
+      ...this.initialLineas().map((l) => (l.ivaRate != null ? l.ivaRate * 100 : null)),
+    ]),
+  );
 
   readonly headerTitle = computed(() => this.editMode() ? 'Editar factura' : 'Generar factura');
   readonly confirmLabel = computed(() => {
@@ -143,7 +152,7 @@ export class FacturaDrawerComponent {
     // Initialize form when inputs arrive
     effect(() => {
       const lineas = this.initialLineas();
-      const rate = this.defaultIvaRate();
+      const rate = Math.round(this.defaultIvaRate());
       const issue = this.issueDate();
       const due = this.dueDate();
       const notes = this.initialNotes();

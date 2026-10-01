@@ -11,6 +11,18 @@ export const TIPOS_IVA = [21, 10, 4, 0] as const;
 
 export type TipoIva = (typeof TIPOS_IVA)[number];
 
+/**
+ * Opciones para un selector de tipo de IVA: los tipos vigentes más los `extra`
+ * que no estén en la lista (facturas antiguas con un tipo libre), de mayor a menor.
+ */
+export function opcionesIva(extra: readonly (number | null | undefined)[]): number[] {
+  const tipos = new Set<number>(TIPOS_IVA);
+  for (const t of extra) {
+    if (t != null) tipos.add(Math.round(t));
+  }
+  return [...tipos].sort((a, b) => b - a);
+}
+
 export interface DesgloseIva {
   baseImponible: number;
   cuotaIva: number;

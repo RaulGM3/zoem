@@ -1,5 +1,24 @@
 import { describe, it, expect } from 'vitest';
-import { desglosarIva, TIPOS_IVA } from './iva';
+import { desglosarIva, opcionesIva, TIPOS_IVA } from './iva';
+
+describe('opcionesIva', () => {
+  it('sin tipos extra devuelve los tipos vigentes', () => {
+    expect(opcionesIva([])).toEqual([21, 10, 4, 0]);
+  });
+
+  it('ignora los extra que ya son tipos vigentes o vienen vacíos', () => {
+    expect(opcionesIva([21, 0, null, undefined])).toEqual([21, 10, 4, 0]);
+  });
+
+  it('conserva un tipo heredado fuera de lista, ordenado de mayor a menor', () => {
+    expect(opcionesIva([7])).toEqual([21, 10, 7, 4, 0]);
+  });
+
+  it('redondea el ruido de coma flotante y no duplica', () => {
+    // 0.07 * 100 === 7.000000000000001
+    expect(opcionesIva([0.07 * 100, 7])).toEqual([21, 10, 7, 4, 0]);
+  });
+});
 
 describe('desglosarIva', () => {
   it('desglosa un total con IVA al 21% en base y cuota', () => {

@@ -39,11 +39,14 @@
       <!-- Global IVA rate -->
       <div class="flex items-center justify-between">
         <div>
-          <label for="ivaRate" class="form-label mb-0">Tasa de IVA (%)</label>
-          <p class="text-[10px]" style="color:var(--text-faint)">Se aplica a líneas sin tasa propia</p>
+          <label for="ivaRate" class="form-label mb-0">Tipo de IVA</label>
+          <p class="text-[10px]" style="color:var(--text-faint)">Se aplica a líneas sin tipo propio</p>
         </div>
-        <input id="ivaRate" type="number" min="0" formControlName="ivaRate"
-          class="form-input w-24 text-right" />
+        <select id="ivaRate" formControlName="ivaRate" class="form-select w-36">
+          @for (t of tiposIva(); track t) {
+            <option [ngValue]="t">{{ t === 0 ? 'Exento (0%)' : t + '%' }}</option>
+          }
+        </select>
       </div>
 
       <!-- Line items -->
@@ -127,12 +130,14 @@
               </label>
               @if (linea.value['aplicaIva']) {
                 <div class="flex items-center gap-1">
-                  <label class="text-[10px]" style="color:var(--text-faint)">Tasa:</label>
-                  <input type="number" formControlName="ivaRate" placeholder="Global"
-                    min="0" step="1"
-                    class="form-input w-16 text-right text-xs py-0.5"
-                    [attr.aria-label]="'Tasa IVA línea ' + (i + 1)" />
-                  <span class="text-[10px]" style="color:var(--text-faint)">%</span>
+                  <select formControlName="ivaRate"
+                    class="form-select w-32 text-xs py-0.5"
+                    [attr.aria-label]="'Tipo de IVA línea ' + (i + 1)">
+                    <option [ngValue]="null">Global</option>
+                    @for (t of tiposIva(); track t) {
+                      <option [ngValue]="t">{{ t === 0 ? 'Exento (0%)' : t + '%' }}</option>
+                    }
+                  </select>
                 </div>
               }
             </div>

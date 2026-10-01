@@ -63,8 +63,12 @@ export class TranscripcionService {
     try {
       const result = await model.generateContent([{ inlineData: { data, mimeType } }]);
       crudo = result.response.text();
-    } catch {
-      throw new ErrorDictado('red');
+    } catch (e) {
+      // "red" es lo que ve el usuario, pero aquí cae CUALQUIER rechazo del
+      // modelo (cuota, App Check, formato, bloqueo). Sin este registro el
+      // tooltip culpa a la conexión y la causa real se pierde.
+      console.error('[dictado] La transcripción ha fallado:', e);
+      throw new ErrorDictado('red', e);
     }
 
     const texto = limpiarTranscripcion(crudo);

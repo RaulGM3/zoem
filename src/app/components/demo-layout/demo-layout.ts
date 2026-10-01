@@ -156,6 +156,7 @@ export class DemoLayoutComponent {
       category: 'Principal',
       items: [
         { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+        { name: 'Ayuda', href: '/ayuda', icon: LifeBuoy },
         // { name: 'Informes', href: '/informes', icon: BarChart3, badge: 'Nuevo' },
       ],
     },
@@ -188,7 +189,6 @@ export class DemoLayoutComponent {
       items: [
         { name: 'Usuarios y Permisos', href: '/usuarios', icon: UserCog, badge: 'Nuevo', modulo: 'Configuración' },
         { name: 'Mi Perfil', href: '/perfil', icon: User },
-        { name: 'Ayuda', href: '/ayuda', icon: LifeBuoy },
       ],
     },
     {

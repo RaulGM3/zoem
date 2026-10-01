@@ -108,7 +108,7 @@
   <app-factura-drawer
     [caso]="caso"
     [initialLineas]="drawerLineas()"
-    [defaultIvaRate]="drawerEditingInvoice()?.ivaRate ? drawerEditingInvoice()!.ivaRate! * 100 : 21"
+    [defaultIvaRate]="(drawerEditingInvoice()?.ivaRate ?? 0.21) * 100"
     [issueDate]="drawerEditingInvoice()?.issueDate ?? drawerIssueDate()"
     [dueDate]="drawerEditingInvoice()?.dueDate ?? drawerDueDate()"
     [initialNotes]="drawerNotes()"

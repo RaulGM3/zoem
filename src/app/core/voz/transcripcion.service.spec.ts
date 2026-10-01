@@ -105,4 +105,15 @@ describe('TranscripcionService', () => {
     const { svc } = montar(() => { throw new Error('network down'); });
     await expect(svc.transcribir(audio())).rejects.toMatchObject({ motivo: 'red' });
   });
+
+  it('conserva y registra la causa real del fallo en vez de tragársela', async () => {
+    const consola = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const causa = new Error('[400] Unsupported MIME type');
+    const { svc } = montar(() => { throw causa; });
+
+    await expect(svc.transcribir(audio())).rejects.toMatchObject({ motivo: 'red', cause: causa });
+    expect(consola).toHaveBeenCalledWith(expect.stringContaining('dictado'), causa);
+
+    consola.mockRestore();
+  });
 });

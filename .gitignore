@@ -50,3 +50,5 @@ Thumbs.db
 /functions/node_modules
 /functions/lib
 .codemap
+# SDD skill registry
+.atl/
