@@ -189,4 +189,61 @@ describe('validarPrecondiciones', () => {
   it('D3 el NIF emisor se comprueba antes que el estado del alta', () => {
     expect(validarPrecondiciones(factura(), empresa({ cif: '' }), 'anulacion')).toMatchObject({ codigo: 'NIF_EMISOR' });
   });
+
+  describe('identificación del cliente (cliente-factura-nif)', () => {
+    const MENSAJE_EXTRANJERO =
+      'El cliente se identifica con un documento extranjero (pasaporte, VAT u otro). Zoem aún no envía a la AEAT facturas con documentos extranjeros: la factura no se ha registrado en Verifactu.';
+
+    it('S3.1 cliente extranjero con número -> CLIENTE_EXTRANJERO', () => {
+      const r = validarPrecondiciones(factura({ clienteTipoId: 'extranjero', clienteNif: 'PAA123456' }), empresa(), 'alta');
+      expect(r).toEqual({ ok: false, codigo: 'CLIENTE_EXTRANJERO', mensaje: MENSAJE_EXTRANJERO });
+    });
+
+    it('S3.1 cliente extranjero sin número -> CLIENTE_EXTRANJERO (no NIF_CLIENTE)', () => {
+      const r = validarPrecondiciones(factura({ clienteTipoId: 'extranjero', clienteNif: '' }), empresa(), 'alta');
+      expect(r).toMatchObject({ ok: false, codigo: 'CLIENTE_EXTRANJERO' });
+    });
+
+    it('el impuesto no soportado se comprueba antes que el cliente extranjero', () => {
+      const r = validarPrecondiciones(factura({ clienteTipoId: 'extranjero' }), empresa({ ca: 'canarias' }), 'alta');
+      expect(r).toMatchObject({ ok: false, codigo: 'IMPUESTO_NO_SOPORTADO' });
+    });
+
+    it('S3.2 sin tipo (legacy) y NIF válido -> ok', () => {
+      expect(validarPrecondiciones(factura({ clienteTipoId: undefined }), empresa(), 'alta')).toEqual({ ok: true });
+    });
+
+    it('S3.3 sin tipo y NIF con el control erróneo -> NIF_CLIENTE_INVALIDO con el valor normalizado', () => {
+      const r = validarPrecondiciones(factura({ clienteNif: ' b12345675 ' }), empresa(), 'alta');
+      expect(r).toEqual({
+        ok: false,
+        codigo: 'NIF_CLIENTE_INVALIDO',
+        mensaje: 'El NIF del cliente «B12345675» no es un NIF español válido. Corrígelo en la factura y vuelve a enviarla.',
+      });
+    });
+
+    it('S3.3 NIF con formato imposible (pasaporte sin tipo) -> NIF_CLIENTE_INVALIDO', () => {
+      const r = validarPrecondiciones(factura({ clienteNif: 'PAA123456' }), empresa(), 'alta');
+      expect(r).toMatchObject({ ok: false, codigo: 'NIF_CLIENTE_INVALIDO' });
+    });
+
+    it('S3.4 tipo nif con espacios y minúsculas válidos -> ok', () => {
+      expect(validarPrecondiciones(factura({ clienteTipoId: 'nif', clienteNif: ' b-12345674 ' }), empresa(), 'alta')).toEqual({
+        ok: true,
+      });
+    });
+
+    it('el NIF vacío sigue siendo NIF_CLIENTE (antes que la validación)', () => {
+      expect(validarPrecondiciones(factura({ clienteTipoId: 'nif', clienteNif: '' }), empresa(), 'alta')).toMatchObject({
+        codigo: 'NIF_CLIENTE',
+      });
+    });
+
+    it('S3.5 anulación con cliente extranjero -> sin cambios (solo ALTA_NO_ACEPTADA)', () => {
+      const aceptada = factura({ clienteTipoId: 'extranjero', verifactu: { estado: 'enviado', tipoRegistro: 'alta' } });
+      expect(validarPrecondiciones(aceptada, empresa(), 'anulacion')).toEqual({ ok: true });
+      const noAceptada = factura({ clienteTipoId: 'extranjero', verifactu: { estado: 'error', tipoRegistro: 'alta' } });
+      expect(validarPrecondiciones(noAceptada, empresa(), 'anulacion')).toMatchObject({ codigo: 'ALTA_NO_ACEPTADA' });
+    });
+  });
 });

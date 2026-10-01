@@ -111,6 +111,21 @@ describe('procesarEnvio: precondiciones y desactivado (4.2)', () => {
     expect(v?.errorMessage).toContain('NIF');
   });
 
+  it('S3.7 cliente extranjero o NIF inválido: precondición sin llamar al sender ni tocar la cabecera', async () => {
+    const casos: [Partial<InvoiceDoc>, string, string][] = [
+      [{ clienteTipoId: 'extranjero', clienteNif: 'PAA123456' }, 'CLIENTE_EXTRANJERO', 'extranjero'],
+      [{ clienteNif: 'B12345675' }, 'NIF_CLIENTE_INVALIDO', 'B12345675'],
+    ];
+    for (const [over, codigo, fragmento] of casos) {
+      const e = montar({ facturas: [factura('inv1', over)] });
+      const r = await procesarEnvio(e.deps, alta('inv1'));
+      expect(r).toMatchObject({ sent: false, motivo: 'precondicion', codigo, estado: 'error' });
+      expect(e.sender.llamadas).toHaveLength(0);
+      expect(e.store.head(CO)).toBeNull();
+      expect(e.store.factura(CO, 'inv1')?.verifactu?.errorMessage).toContain(fragmento);
+    }
+  });
+
   it('S3.5 línea exenta sin causa: el mensaje nombra la causa y no se envía', async () => {
     const lineas = [{ concepto: 'Cuota', cantidad: 1, precioUnitario: 50, base: 50, aplicaIva: false }];
     const e = montar({ facturas: [factura('inv1', { lineas })] });

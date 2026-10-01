@@ -58,6 +58,8 @@ export interface InvoiceDoc {
   issueDate: string;
   clienteNombre?: string;
   clienteNif?: string;
+  /** Ausente (facturas antiguas) equivale a 'nif'. */
+  clienteTipoId?: 'nif' | 'extranjero';
   lineas?: InvoiceLineaDoc[];
   /** Fracción (0.21). */
   ivaRate?: number;

@@ -2,6 +2,7 @@ import { ID_VERSION, SISTEMA_INFORMATICO, impuestoDeEmpresa, numeroInstalacion }
 import { calcularDesglose } from './desglose';
 import { fechaAeat, fechaHoraHuso } from './fechas';
 import { huellaAlta, huellaAnulacion } from './huella';
+import { normalizarNif } from './nif';
 import type {
   ChainLink,
   CompanyDoc,
@@ -103,7 +104,7 @@ export function buildRegistroAlta(entrada: EntradaRegistroAlta): RegistroAlta {
     registro.facturasRectificadas = [idFacturaDe(original, company)];
   }
   if (invoice.clienteNif) {
-    registro.destinatario = { nombreRazon: invoice.clienteNombre ?? '', nif: invoice.clienteNif };
+    registro.destinatario = { nombreRazon: invoice.clienteNombre ?? '', nif: normalizarNif(invoice.clienteNif) };
   }
   return registro;
 }

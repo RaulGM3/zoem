@@ -45,6 +45,25 @@ const ANTERIOR: ChainLink = {
 };
 
 describe('buildRegistroAlta F1', () => {
+  it('S3.6 el destinatario lleva el NIF normalizado (mayúsculas, sin espacios, sin prefijo ES)', () => {
+    const sucio = buildRegistroAlta({
+      invoice: factura({ clienteNif: ' es b-12.345.674 ' }),
+      company: empresa(),
+      anterior: null,
+      ahora: AHORA,
+      rechazoPrevio: false,
+    });
+    expect(sucio.destinatario).toEqual({ nombreRazon: 'Cliente SL', nif: 'B12345674' });
+    const dni = buildRegistroAlta({
+      invoice: factura({ clienteNif: '12345678z' }),
+      company: empresa(),
+      anterior: null,
+      ahora: AHORA,
+      rechazoPrevio: false,
+    });
+    expect(dni.destinatario).toEqual({ nombreRazon: 'Cliente SL', nif: '12345678Z' });
+  });
+
   it('S3.1 F1 con destinatario, desglose, totales y datos de identificación', () => {
     const r = buildRegistroAlta({ invoice: factura(), company: empresa(), anterior: null, ahora: AHORA, rechazoPrevio: false });
     expect(r.tipo).toBe('alta');

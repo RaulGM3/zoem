@@ -1,9 +1,12 @@
 import { calcularDesglose, esLineaExenta, MAX_DESGLOSE } from './desglose';
 import { impuestoDeEmpresa } from './config';
+import { normalizarNif, validarNif } from './nif';
 import type { CompanyDoc, InvoiceDoc } from './types';
 
 export type CodigoPrecondicion =
   | 'NIF_CLIENTE'
+  | 'NIF_CLIENTE_INVALIDO'
+  | 'CLIENTE_EXTRANJERO'
   | 'CAUSA_EXENCION'
   | 'IMPUESTO_NO_SOPORTADO'
   | 'R1_SIN_ORIGINAL'
@@ -58,8 +61,22 @@ export function validarPrecondiciones(
     return falla('IMPUESTO_NO_SOPORTADO', `${impuesto.motivo}. No se envía la factura a AEAT.`);
   }
 
+  if (invoice.clienteTipoId === 'extranjero') {
+    return falla(
+      'CLIENTE_EXTRANJERO',
+      'El cliente se identifica con un documento extranjero (pasaporte, VAT u otro). Zoem aún no envía a la AEAT facturas con documentos extranjeros: la factura no se ha registrado en Verifactu.',
+    );
+  }
+
   if (vacio(invoice.clienteNif)) {
     return falla('NIF_CLIENTE', 'El cliente no tiene NIF. Indica el NIF del cliente para enviar la factura a AEAT.');
+  }
+
+  if (!validarNif(invoice.clienteNif ?? '').ok) {
+    return falla(
+      'NIF_CLIENTE_INVALIDO',
+      `El NIF del cliente «${normalizarNif(invoice.clienteNif ?? '')}» no es un NIF español válido. Corrígelo en la factura y vuelve a enviarla.`,
+    );
   }
 
   if (invoice.tipoFactura === 'R1' && (!original || original.companyId !== invoice.companyId)) {
