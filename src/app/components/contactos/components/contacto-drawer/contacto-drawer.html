@@ -103,7 +103,7 @@
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label for="nifType" class="form-label">Documento</label>
+              <label for="nifType" class="form-label">Tipo de documento</label>
               <select id="nifType" formControlName="nifType" class="form-select">
                 <option value="dni">DNI</option>
                 <option value="nie">NIE</option>
@@ -112,11 +112,13 @@
               </select>
             </div>
             <div>
-              <label for="nif" class="form-label">Número</label>
+              <label for="nif" class="form-label">Número de documento</label>
               <input id="nif" formControlName="nif" type="text" class="form-input"
-                [class.error]="showErrors() && !form.get('nif')?.value?.trim()" />
-              @if (showErrors() && !form.get('nif')?.value?.trim()) {
-                <p class="form-error">Campo obligatorio</p>
+                [class.error]="mostrarErrorDocumento()"
+                [attr.aria-invalid]="mostrarErrorDocumento() ? 'true' : null"
+                [attr.aria-describedby]="mostrarErrorDocumento() ? 'nif-error' : null" />
+              @if (mostrarErrorDocumento()) {
+                <p id="nif-error" class="form-error" role="alert">El NIF no es válido: revisa los números y la letra.</p>
               }
             </div>
           </div>
@@ -153,19 +155,21 @@
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label for="cifType" class="form-label">Documento</label>
+              <label for="cifType" class="form-label">Tipo de documento</label>
               <select id="cifType" formControlName="cifType" class="form-select">
-                <option value="cif">CIF (España)</option>
+                <option value="cif">NIF (España)</option>
                 <option value="vat">VAT (UE)</option>
                 <option value="otro">Otro</option>
               </select>
             </div>
             <div>
-              <label for="cif" class="form-label">Número *</label>
+              <label for="cif" class="form-label">Número de documento</label>
               <input id="cif" formControlName="cif" type="text" class="form-input"
-                [class.error]="showErrors() && !form.get('cif')?.value?.trim()" />
-              @if (showErrors() && !form.get('cif')?.value?.trim()) {
-                <p class="form-error">Campo obligatorio</p>
+                [class.error]="mostrarErrorDocumento()"
+                [attr.aria-invalid]="mostrarErrorDocumento() ? 'true' : null"
+                [attr.aria-describedby]="mostrarErrorDocumento() ? 'cif-error' : null" />
+              @if (mostrarErrorDocumento()) {
+                <p id="cif-error" class="form-error" role="alert">El NIF no es válido: revisa los números y la letra.</p>
               }
             </div>
           </div>

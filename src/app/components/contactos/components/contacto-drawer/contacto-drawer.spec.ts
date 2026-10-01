@@ -141,7 +141,7 @@ describe('ContactoDrawerComponent', () => {
       await click(boton('Continuar', drawer()!));
       expect(existe('calle')).toBe(false);
       expect(qa('.form-error').map(e => e.textContent?.trim())).toEqual([
-        'Campo obligatorio', 'Campo obligatorio', 'Campo obligatorio', 'Indica al menos un email o un móvil.',
+        'Campo obligatorio', 'Campo obligatorio', 'Indica al menos un email o un móvil.',
       ]);
       expect(contactService.createContact).not.toHaveBeenCalled();
     });
@@ -181,7 +181,7 @@ describe('ContactoDrawerComponent', () => {
       await abrirNuevo();
       rellenarPaso1();
       escribir('nifType', 'nie');
-      escribir('nif', 'Y7654321Z');
+      escribir('nif', 'Y7654321G');
       escribir('mobile', '611222333');
       escribir('status', 'potencial');
       escribir('notes', 'Llamar por la tarde');
@@ -198,7 +198,7 @@ describe('ContactoDrawerComponent', () => {
         type: 'persona_fisica',
         email: 'eva@example.com', mobile: '611222333', status: 'potencial', notes: 'Llamar por la tarde',
         asunto: 'Divorcio', canalEntrada: 'web', assignedTo: 'u2',
-        nombre: 'Eva', apellidos: 'Ruiz', nifType: 'nie', nif: 'Y7654321Z', nacionalidad: 'ES', estadoCivil: 'soltero',
+        nombre: 'Eva', apellidos: 'Ruiz', nifType: 'nie', nif: 'Y7654321G', nacionalidad: 'ES', estadoCivil: 'soltero',
         direccion: { calle: 'Sol', numero: '', codigoPostal: '', municipio: 'Sevilla', provincia: '', pais: 'ES' },
       });
       expect(run.mock.calls.at(-1)![1]).toMatchObject({ successMessage: 'Contacto creado' });
@@ -210,7 +210,7 @@ describe('ContactoDrawerComponent', () => {
       await click(boton('Persona Jurídica', drawer()!));
       expect(existe('nombre')).toBe(false);
       escribir('razonSocial', 'Beta S.A.');
-      escribir('cif', 'A11111111');
+      escribir('cif', 'A11111119');
       escribir('email', 'hola@beta.test');
       await click(boton('Continuar', drawer()!));
       escribir('formaJuridica', 'S.A.');
@@ -220,7 +220,7 @@ describe('ContactoDrawerComponent', () => {
         type: 'persona_juridica',
         email: 'hola@beta.test', mobile: '', status: 'activo', notes: '',
         asunto: undefined, canalEntrada: undefined, assignedTo: undefined,
-        razonSocial: 'Beta S.A.', nombreComercial: '', formaJuridica: 'S.A.', cifType: 'cif', cif: 'A11111111',
+        razonSocial: 'Beta S.A.', nombreComercial: '', formaJuridica: 'S.A.', cifType: 'cif', cif: 'A11111119',
         sectorActividad: '', website: 'https://beta.test', representanteLegalNombre: '',
         direccionSocial: { calle: '', numero: '', codigoPostal: '', municipio: '', provincia: '', pais: 'ES' },
       });
@@ -377,6 +377,139 @@ describe('ContactoDrawerComponent', () => {
       await abrirNuevo();
       expect(Array.from(q<HTMLSelectElement>('#assignedTo').options).map(o => o.textContent?.trim()))
         .toEqual(['Sin asignar', 'Marta', 'Luis Gil']);
+    });
+  });
+
+  describe('documento de identificación (cliente-factura-nif, R6)', () => {
+    const textoLabel = (para: string): string => q(`label[for="${para}"]`).textContent!.replace(/\s+/g, ' ').trim();
+    const errorDoc = (id: string): HTMLElement | null => el().querySelector<HTMLElement>(`#${id}-error`);
+    const rellenarFisica = (): void => {
+      escribir('nombre', 'Eva');
+      escribir('apellidos', 'Ruiz');
+      escribir('email', 'eva@test.dev');
+    };
+
+    it('S6.1 persona física: "Tipo de documento" y "Número de documento"', async () => {
+      await abrirNuevo();
+      expect(textoLabel('nifType')).toBe('Tipo de documento');
+      expect(textoLabel('nif')).toBe('Número de documento');
+      expect(qa<HTMLOptionElement>('#nifType option').map(o => o.textContent!.trim())).toEqual(['DNI', 'NIE', 'Pasaporte', 'Otro']);
+    });
+
+    it('S6.1 persona jurídica: "NIF (España)" con valor cif, sin ningún "CIF" visible ni asterisco en el número', async () => {
+      await abrirNuevo();
+      await click(boton('Persona Jurídica', drawer()!));
+      expect(textoLabel('cifType')).toBe('Tipo de documento');
+      expect(textoLabel('cif')).toBe('Número de documento');
+      const opciones = qa<HTMLOptionElement>('#cifType option');
+      expect(opciones.map(o => [o.value, o.textContent!.trim()])).toEqual([['cif', 'NIF (España)'], ['vat', 'VAT (UE)'], ['otro', 'Otro']]);
+      expect(drawer()!.textContent).not.toMatch(/CIF/);
+    });
+
+    it('S6.4 el número vacío ya no muestra "Campo obligatorio" ni bloquea, en física y jurídica', async () => {
+      await abrirNuevo();
+      await click(boton('Continuar', drawer()!)); // faltan nombre/apellidos: showErrors activo
+      expect(q('#nif').parentElement!.textContent).not.toContain('Campo obligatorio');
+      expect(q('#nif').getAttribute('aria-invalid')).toBeNull();
+
+      await click(boton('Persona Jurídica', drawer()!));
+      await click(boton('Continuar', drawer()!));
+      expect(q('#cif').parentElement!.textContent).not.toContain('Campo obligatorio');
+
+      escribir('razonSocial', 'Beta S.A.');
+      escribir('email', 'hola@beta.test');
+      await click(boton('Continuar', drawer()!));
+      expect(existe('formaJuridica')).toBe(true);
+    });
+
+    it('S6.2 un DNI con la letra de control mal no avanza y muestra un error accesible', async () => {
+      await abrirNuevo();
+      rellenarFisica();
+      escribir('nif', '12345678A');
+      await click(boton('Continuar', drawer()!));
+
+      expect(existe('nacionalidad')).toBe(false);
+      const error = errorDoc('nif');
+      expect(error?.getAttribute('role')).toBe('alert');
+      expect(error?.textContent).toContain('El NIF no es válido: revisa los números y la letra.');
+      expect(q('#nif').getAttribute('aria-invalid')).toBe('true');
+      expect(q('#nif').getAttribute('aria-describedby')).toBe('nif-error');
+    });
+
+    it('S6.2 una edición con el NIE inválido no guarda; corregido, guarda', async () => {
+      await abrirEdicion('Ana López');
+      escribir('nif', 'X1234567A');
+      await click(boton('Guardar', drawer()!));
+      expect(contactService.updateContact).not.toHaveBeenCalled();
+      expect(errorDoc('nif')).not.toBeNull();
+
+      escribir('nif', 'X1234567L');
+      await click(boton('Guardar', drawer()!));
+      expect(contactService.updateContact).toHaveBeenCalledTimes(1);
+    });
+
+    it('S6.2 jurídica con tipo NIF (cif) inválido bloquea; con VAT u Otro el mismo texto no se valida', async () => {
+      await abrirNuevo();
+      await click(boton('Persona Jurídica', drawer()!));
+      escribir('razonSocial', 'Beta S.A.');
+      escribir('email', 'hola@beta.test');
+      escribir('cif', 'A11111111'); // control correcto = 9
+      await click(boton('Continuar', drawer()!));
+      expect(existe('formaJuridica')).toBe(false);
+      expect(errorDoc('cif')).not.toBeNull();
+
+      escribir('cifType', 'vat');
+      await click(boton('Continuar', drawer()!));
+      expect(existe('formaJuridica')).toBe(true);
+    });
+
+    it('S6.3 pasaporte y otro documento se aceptan sin validar como NIF', async () => {
+      await abrirNuevo();
+      rellenarFisica();
+      escribir('nifType', 'pasaporte');
+      escribir('nif', 'PAA 123456');
+      await click(boton('Continuar', drawer()!));
+      await click(boton('Guardar contacto', drawer()!));
+      expect(payloadCreado()).toMatchObject({ nifType: 'pasaporte', nif: 'PAA 123456' });
+    });
+
+    it('S6.4 sin número guarda igualmente', async () => {
+      await abrirNuevo();
+      rellenarFisica();
+      await click(boton('Continuar', drawer()!));
+      await click(boton('Guardar contacto', drawer()!));
+      expect(payloadCreado()).toMatchObject({ nifType: 'dni', nif: '' });
+    });
+
+    it('S6.5 con tipo español se guarda normalizado (mayúsculas, sin separadores ni prefijo ES)', async () => {
+      await abrirNuevo();
+      rellenarFisica();
+      escribir('nif', ' 12.345.678-z ');
+      await click(boton('Continuar', drawer()!));
+      await click(boton('Guardar contacto', drawer()!));
+      expect(payloadCreado()).toMatchObject({ nifType: 'dni', nif: '12345678Z' });
+    });
+
+    it('S6.5 jurídica con tipo NIF se normaliza; VAT conserva el texto escrito (recortado)', async () => {
+      await abrirNuevo();
+      await click(boton('Persona Jurídica', drawer()!));
+      escribir('razonSocial', 'Beta S.A.');
+      escribir('email', 'hola@beta.test');
+      escribir('cif', 'es-b12345674');
+      await click(boton('Continuar', drawer()!));
+      await click(boton('Guardar contacto', drawer()!));
+      expect(payloadCreado()).toMatchObject({ cifType: 'cif', cif: 'B12345674' });
+
+      contactService.createContact.mockClear();
+      await abrirNuevo();
+      await click(boton('Persona Jurídica', drawer()!));
+      escribir('razonSocial', 'Gamma Ltd');
+      escribir('email', 'hi@gamma.test');
+      escribir('cifType', 'vat');
+      escribir('cif', ' fr 12 345678901 ');
+      await click(boton('Continuar', drawer()!));
+      await click(boton('Guardar contacto', drawer()!));
+      expect(payloadCreado()).toMatchObject({ cifType: 'vat', cif: 'fr 12 345678901' });
     });
   });
 });

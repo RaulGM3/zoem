@@ -10,6 +10,7 @@ import {
   Contact, PersonaFisica, PersonaJuridica, ContactStatus, CanalEntrada,
   CONTACT_STATUS_OPTIONS, CANAL_ENTRADA_LABELS,
 } from '../../../../interfaces';
+import { normalizarNif, validarNif } from '../../../../core/fiscal/nif';
 import { FocusTrapDirective } from '../../../../shared/directives/focus-trap.directive';
 
 type ContactPayload =
@@ -187,11 +188,39 @@ export class ContactoDrawerComponent {
    * Valida el paso 1 ANTES de avanzar/guardar. Método (no computed): los
    * Reactive Forms no son signals, así que un computed se quedaría stale.
    */
+  /**
+   * Número de documento español (DNI/NIE o NIF de empresa) con formato o letra de control
+   * erróneos. Los documentos extranjeros (pasaporte, VAT, otro) y el vacío no se validan.
+   */
+  documentoInvalido(): boolean {
+    const v = this.form.getRawValue();
+    const fisica = this.formType() === 'persona_fisica';
+    if (!this.esDocumentoEspanol()) return false;
+    const resultado = validarNif(fisica ? (v.nif ?? '') : (v.cif ?? ''));
+    return !resultado.ok && resultado.motivo !== 'vacio';
+  }
+
+  /** ¿Mostrar el error del número de documento? Tras intentar avanzar o al salir del campo. */
+  mostrarErrorDocumento(): boolean {
+    const control = this.form.get(this.formType() === 'persona_fisica' ? 'nif' : 'cif');
+    return this.documentoInvalido() && (this.showErrors() || !!control?.touched);
+  }
+
+  private esDocumentoEspanol(): boolean {
+    const v = this.form.getRawValue();
+    return this.formType() === 'persona_fisica' ? v.nifType === 'dni' || v.nifType === 'nie' : v.cifType === 'cif';
+  }
+
+  /** Español: normalizado (mayúsculas, sin separadores ni prefijo ES); extranjero: tal cual, recortado. */
+  private documentoParaGuardar(valor: string | null | undefined): string {
+    return this.esDocumentoEspanol() ? normalizarNif(valor ?? '') : (valor ?? '').trim();
+  }
+
   step1Valid(): boolean {
     const v = this.form.getRawValue();
     const emailFormatOk = !this.form.get('email')?.invalid; // vacío = válido
     const channelOk = !this.missingContactChannel(); // email O móvil
-    const baseOk = emailFormatOk && channelOk;
+    const baseOk = emailFormatOk && channelOk && !this.documentoInvalido();
     if (this.formType() === 'persona_fisica') {
       return baseOk && !!v.nombre?.trim() && !!v.apellidos?.trim();
     }
@@ -252,7 +281,7 @@ export class ContactoDrawerComponent {
           nombre: v.nombre!,
           apellidos: v.apellidos!,
           nifType: v.nifType as PersonaFisica['nifType'],
-          nif: v.nif || '',
+          nif: this.documentoParaGuardar(v.nif),
           nacionalidad: v.nacionalidad || 'ES',
           estadoCivil: (v.estadoCivil as PersonaFisica['estadoCivil']) || 'casado',
           direccion,
@@ -265,7 +294,7 @@ export class ContactoDrawerComponent {
           nombreComercial: v.nombreComercial || '',
           formaJuridica: v.formaJuridica || '',
           cifType: v.cifType as 'cif' | 'vat' | 'otro',
-          cif: v.cif || '',
+          cif: this.documentoParaGuardar(v.cif),
           sectorActividad: v.sectorActividad || '',
           website: v.website || '',
           representanteLegalNombre: v.representanteLegalNombre || '',
