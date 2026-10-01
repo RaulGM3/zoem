@@ -57,10 +57,17 @@ export function backoffS(attempts: number): number {
 
 const CAMPOS_ERROR = ['errorKind', 'errorMessage', 'codigoError', 'descripcionError'] as const;
 
+/** Campos que solo viven mientras el parche que los escribió es el último. */
+const CAMPOS_AVISO = ['avisoMessage'] as const;
+
 /** Un estado distinto de `error` no arrastra los restos del error anterior (salvo los del propio parche). */
 function sinErroresSiNoError<T extends Partial<VerifactuState>>(resultado: T, patch: VerifactuPatch): T {
-  if (patch.estado === 'error') return resultado;
   const limpio = { ...resultado };
+  // El aviso (pendiente sin certificado) nunca sobrevive a un parche que no lo renueve.
+  for (const campo of CAMPOS_AVISO) {
+    if (!(campo in patch)) delete limpio[campo];
+  }
+  if (patch.estado === 'error') return limpio;
   for (const campo of CAMPOS_ERROR) {
     if (!(campo in patch)) delete limpio[campo];
   }

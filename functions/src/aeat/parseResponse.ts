@@ -22,6 +22,8 @@ export type Resultado =
   | { tipo: 'transporte'; status: number }
   | { tipo: 'unknown' };
 
+const DESCRIPCION_SOBRE_RECHAZADO = 'Envío rechazado por la AEAT sin detalle por registro';
+
 type Nodo = Record<string, unknown>;
 
 const parser = new XMLParser({
@@ -94,20 +96,27 @@ export function parseRespuesta(http: HttpRespuesta): Resultado {
   const respuesta = buscar(arbol, 'RespuestaRegFactuSistemaFacturacion');
   if (!esNodo(respuesta)) return { tipo: 'unknown' };
 
-  const linea = primero(respuesta['RespuestaLinea']);
-  if (!esNodo(linea)) return { tipo: 'unknown' };
-
-  const estado = texto(linea['EstadoRegistro']);
   const csv = texto(respuesta['CSV']);
   const espera = Number(texto(respuesta['TiempoEsperaEnvio']));
   const esperaS = Number.isFinite(espera) && texto(respuesta['TiempoEsperaEnvio']) !== undefined ? espera : undefined;
+  const conEspera = <T extends object>(r: T): T & { esperaS?: number } => (esperaS !== undefined ? { ...r, esperaS } : r);
+
+  const linea = primero(respuesta['RespuestaLinea']);
+  if (!esNodo(linea)) {
+    // Sobre rechazado entero (EstadoEnvio Incorrecto) sin detalle por registro: AEAT no
+    // registró nada. Es un rechazo y no un pending atascado. El resto sin línea es fail-safe.
+    if (texto(respuesta['EstadoEnvio']) === 'Incorrecto') {
+      return conEspera({ tipo: 'incorrecto' as const, descripcion: DESCRIPCION_SOBRE_RECHAZADO });
+    }
+    return { tipo: 'unknown' };
+  }
+
+  const estado = texto(linea['EstadoRegistro']);
 
   // Código/descripción A NIVEL DE REGISTRO: propiedades directas de RespuestaLinea,
   // nunca las anidadas dentro de RegistroDuplicado.
   const codigo = texto(linea['CodigoErrorRegistro']);
   const descripcion = texto(linea['DescripcionErrorRegistro']);
-
-  const conEspera = <T extends object>(r: T): T & { esperaS?: number } => (esperaS !== undefined ? { ...r, esperaS } : r);
 
   switch (estado) {
     case 'Correcto':

@@ -21,6 +21,18 @@ function vacio(valor: string | undefined): boolean {
   return !valor || valor.trim() === '';
 }
 
+function validarAltaAceptada(invoice: InvoiceDoc): ResultadoPrecondicion {
+  const estado = invoice.verifactu?.estado;
+  if (estado === 'enviado') return { ok: true };
+  if (estado === 'pendiente' || estado === 'en_cola') {
+    return falla(
+      'ALTA_NO_ACEPTADA',
+      'El alta de esta factura aún está en curso; podrás anularla en Verifactu cuando la AEAT la acepte.',
+    );
+  }
+  return falla('ALTA_NO_ACEPTADA', 'La factura no llegó a registrarse en la AEAT: no hay nada que anular en Verifactu.');
+}
+
 /**
  * Comprueba todo lo que debe cumplirse ANTES de generar un registro. Si falla, no se
  * envía nada ni se toca la cadena. `original` es la factura rectificada ya resuelta
@@ -36,8 +48,10 @@ export function validarPrecondiciones(
     return falla('NIF_EMISOR', 'La empresa no tiene CIF/NIF configurado; es obligatorio para Verifactu.');
   }
 
-  // La anulación solo identifica la factura: no lleva desglose ni destinatario.
-  if (tipo === 'anulacion') return { ok: true };
+  // La anulación solo identifica la factura: no lleva desglose ni destinatario. Pero solo
+  // tiene sentido anular lo que AEAT tiene registrado (alta `enviado`, también con errores
+  // admisibles). La anulación sin registro previo (`SinRegistroPrevio`) queda fuera de alcance.
+  if (tipo === 'anulacion') return validarAltaAceptada(invoice);
 
   const impuesto = impuestoDeEmpresa(company.ca);
   if (!impuesto.ok) {

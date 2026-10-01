@@ -34,6 +34,12 @@ export interface VerifactuState {
   descripcionError?: string;
   errorKind?: 'precondicion' | 'aeat' | 'configuracion';
   errorMessage?: string;
+  /**
+   * Motivo visible de un `pendiente` que no avanza por causa de configuración (p. ej. falta el
+   * certificado en un drenaje). NO es un error: el estado sigue `pendiente` y el reintento
+   * automático continúa. Se borra con cualquier parche posterior que no lo lleve.
+   */
+  avisoMessage?: string;
   rechazoPrevio?: boolean;
   attempts?: number;
   encoladoAt?: string;

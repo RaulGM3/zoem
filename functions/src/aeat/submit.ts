@@ -85,7 +85,14 @@ async function resultadoFinal(deps: EnvioDeps, solicitud: SolicitudEnvio): Promi
   return resultado;
 }
 
-/** Envía el XML almacenado (fuera de tx) y liquida el resultado en otra tx. Cualquier fallo de red = `unknown`. */
+/** Mensaje único de certificado ausente: lo usa el callable (error) y el drenaje (aviso en un pendiente). */
+export const MENSAJE_SIN_CERTIFICADO = 'Certificado AEAT no configurado para esta empresa.';
+
+/**
+ * Envía el XML almacenado (fuera de tx) y liquida el resultado en otra tx. Un fallo de red es
+ * `unknown`. Si faltan las credenciales el pending sigue con su backoff (la cadena no cambia),
+ * pero se anota `avisoMessage` en la factura para que el motivo sea visible sin pasarla a error.
+ */
 async function enviarYLiquidar(
   deps: EnvioDeps,
   companyId: string,
@@ -93,16 +100,32 @@ async function enviarYLiquidar(
   pending: PendingRecord,
   credenciales?: Credenciales,
 ): Promise<void> {
-  let resultado: Resultado;
+  let resultado: Resultado = { tipo: 'unknown' };
+  let sinCertificado = false;
   try {
-    const creds = credenciales ?? (await deps.credentials(companyId));
-    resultado = parseRespuesta(await deps.sender(endpointDe(company), pending.xml, creds));
+    let creds = credenciales;
+    if (!creds) {
+      try {
+        creds = await deps.credentials(companyId);
+      } catch {
+        sinCertificado = true;
+      }
+    }
+    if (creds) resultado = parseRespuesta(await deps.sender(endpointDe(company), pending.xml, creds));
   } catch {
     resultado = { tipo: 'unknown' };
   }
   await deps.store.runTx(companyId, async (tx) => {
     const head = await tx.getHead();
-    await aplicarDecision(tx, decidirLiquidacion(head, pending.huella, resultado, deps.clock()));
+    const decision = decidirLiquidacion(head, pending.huella, resultado, deps.clock());
+    if (sinCertificado && decision.accion.tipo === 'atascado') {
+      decision.invoicePatches.push({
+        invoiceId: pending.invoiceId,
+        tipo: pending.tipo,
+        patch: { estado: 'pendiente', avisoMessage: MENSAJE_SIN_CERTIFICADO },
+      });
+    }
+    await aplicarDecision(tx, decision);
   });
 }
 
@@ -223,7 +246,7 @@ export async function procesarEnvio(deps: EnvioDeps, solicitud: SolicitudEnvio):
   try {
     credenciales = await deps.credentials(companyId);
   } catch {
-    const mensaje = 'Certificado AEAT no configurado para esta empresa.';
+    const mensaje = MENSAJE_SIN_CERTIFICADO;
     await marcarError(deps, companyId, invoiceId, tipo, 'configuracion', mensaje);
     return { sent: false, motivo: 'certificado', mensaje, estado: 'error' };
   }

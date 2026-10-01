@@ -149,9 +149,44 @@ describe('validarPrecondiciones', () => {
     expect(validarPrecondiciones(factura({ lineas }), empresa(), 'alta')).toEqual({ ok: true });
   });
 
-  it('anulación: solo exige NIF emisor (no desglose, no NIF cliente)', () => {
-    const f = factura({ clienteNif: undefined, lineas: [linea({ aplicaIva: false })] });
+  it('anulación: con el alta aceptada solo exige NIF emisor (no desglose, no NIF cliente)', () => {
+    const f = factura({
+      clienteNif: undefined,
+      lineas: [linea({ aplicaIva: false })],
+      verifactu: { estado: 'enviado', tipoRegistro: 'alta', csv: 'C' },
+    });
     expect(validarPrecondiciones(f, empresa(), 'anulacion')).toEqual({ ok: true });
     expect(validarPrecondiciones(f, empresa({ cif: '' }), 'anulacion')).toMatchObject({ codigo: 'NIF_EMISOR' });
+  });
+
+  it('D3 anulación con el alta aceptada con errores (enviado + aceptadoConErrores) -> ok', () => {
+    const f = factura({ verifactu: { estado: 'enviado', tipoRegistro: 'alta', aceptadoConErrores: true } });
+    expect(validarPrecondiciones(f, empresa(), 'anulacion')).toEqual({ ok: true });
+  });
+
+  it.each([
+    ['sin estado verifactu', undefined],
+    ['no_aplica', { estado: 'no_aplica', tipoRegistro: 'alta' }],
+    ['error', { estado: 'error', tipoRegistro: 'alta', errorKind: 'aeat' }],
+  ] as const)('D3 anulación con el alta %s -> ALTA_NO_ACEPTADA (nada que anular en AEAT)', (_n, verifactu) => {
+    const r = validarPrecondiciones(factura({ verifactu: verifactu as InvoiceDoc['verifactu'] }), empresa(), 'anulacion');
+    expect(r).toEqual({
+      ok: false,
+      codigo: 'ALTA_NO_ACEPTADA',
+      mensaje: 'La factura no llegó a registrarse en la AEAT: no hay nada que anular en Verifactu.',
+    });
+  });
+
+  it.each(['pendiente', 'en_cola'] as const)('D3 anulación con el alta %s -> ALTA_NO_ACEPTADA (aún en curso)', (estado) => {
+    const r = validarPrecondiciones(factura({ verifactu: { estado, tipoRegistro: 'alta' } }), empresa(), 'anulacion');
+    expect(r).toEqual({
+      ok: false,
+      codigo: 'ALTA_NO_ACEPTADA',
+      mensaje: 'El alta de esta factura aún está en curso; podrás anularla en Verifactu cuando la AEAT la acepte.',
+    });
+  });
+
+  it('D3 el NIF emisor se comprueba antes que el estado del alta', () => {
+    expect(validarPrecondiciones(factura(), empresa({ cif: '' }), 'anulacion')).toMatchObject({ codigo: 'NIF_EMISOR' });
   });
 });

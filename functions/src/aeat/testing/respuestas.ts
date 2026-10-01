@@ -122,6 +122,21 @@ export const respuestaIncorrecto: HttpRespuesta = {
   }),
 };
 
+/** Sobre rechazado entero (EstadoEnvio Incorrecto) sin ninguna RespuestaLinea ni código a nivel de sobre. */
+export const respuestaIncorrectoSinLineas: HttpRespuesta = {
+  status: 200,
+  body: `<env:Envelope xmlns:env="http://schemas.xmlsoap.org/soap/envelope/"><env:Body>
+<tikR:RespuestaRegFactuSistemaFacturacion xmlns:tikR="${NS_BASE}/RespuestaSuministro.xsd">
+<tikR:TiempoEsperaEnvio>60</tikR:TiempoEsperaEnvio><tikR:EstadoEnvio>Incorrecto</tikR:EstadoEnvio>
+</tikR:RespuestaRegFactuSistemaFacturacion></env:Body></env:Envelope>`,
+};
+
+/** Igual pero con EstadoEnvio Correcto: sin líneas no hay nada que confirmar (fail-safe unknown). */
+export const respuestaCorrectoSinLineas: HttpRespuesta = {
+  status: 200,
+  body: respuestaIncorrectoSinLineas.body.replace('>Incorrecto<', '>Correcto<'),
+};
+
 /** Reenvío de un registro ya registrado: 3000 + bloque RegistroDuplicado (con su propio código anidado). */
 export function respuestaDuplicado(estado: 'Correcta' | 'AceptadaConErrores' | 'Anulada', tiempoEspera = 60): HttpRespuesta {
   return {

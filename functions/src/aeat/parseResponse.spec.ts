@@ -11,6 +11,8 @@ import {
   respuestaHttp500Html,
   respuestaHttp503,
   respuestaIncorrecto,
+  respuestaIncorrectoSinLineas,
+  respuestaCorrectoSinLineas,
   respuestaMalformada,
   respuestaSinEstadoRegistro,
   respuestaTextoBasura,
@@ -68,6 +70,18 @@ describe('parseRespuesta - tipos base', () => {
     expect(parseRespuesta(respuestaTextoBasura)).toEqual({ tipo: 'unknown' });
     expect(parseRespuesta(respuestaMalformada)).toEqual({ tipo: 'unknown' });
     expect(parseRespuesta(respuestaSinEstadoRegistro)).toEqual({ tipo: 'unknown' });
+  });
+
+  it('sobre con EstadoEnvio Incorrecto y sin RespuestaLinea -> incorrecto (no se registró nada), con espera', () => {
+    expect(parseRespuesta(respuestaIncorrectoSinLineas)).toEqual({
+      tipo: 'incorrecto',
+      descripcion: 'Envío rechazado por la AEAT sin detalle por registro',
+      esperaS: 60,
+    });
+  });
+
+  it('sin RespuestaLinea pero con EstadoEnvio Correcto -> unknown (fail-safe)', () => {
+    expect(parseRespuesta(respuestaCorrectoSinLineas)).toEqual({ tipo: 'unknown' });
   });
 
   it('un EstadoRegistro desconocido -> unknown (fail-safe, no se acepta)', () => {

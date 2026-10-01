@@ -9,6 +9,7 @@ import {
   respuestaFault4104,
   respuestaHttp500Html,
   respuestaIncorrecto,
+  respuestaIncorrectoSinLineas,
   respuestaXml,
 } from './testing/respuestas';
 import type { ChainHead, CompanyDoc, InvoiceDoc } from './types';
@@ -37,6 +38,8 @@ function empresa(over: Partial<CompanyDoc> = {}): CompanyDoc {
 }
 
 interface Entorno {
+  /** Mutable: permite quitar/devolver el certificado a mitad de un test. */
+  certificado: { disponible: boolean };
   store: FakeChainStore;
   sender: FakeSender;
   clock: FakeClock;
@@ -49,17 +52,18 @@ function montar(opciones: { empresa?: CompanyDoc; facturas?: InvoiceDoc[]; sinCe
   for (const f of opciones.facturas ?? [factura('inv1')]) store.sembrarFactura(f);
   const sender = new FakeSender();
   const clock = new FakeClock(T0);
+  const certificado = { disponible: !opciones.sinCertificado };
   const deps: EnvioDeps = {
     store,
     docs: store,
     sender: sender.enviar,
     credentials: async () => {
-      if (opciones.sinCertificado) throw new Error('secret no encontrado');
+      if (!certificado.disponible) throw new Error('secret no encontrado');
       return credencialesFalsas;
     },
     clock: clock.ahora,
   };
-  return { store, sender, clock, deps };
+  return { certificado, store, sender, clock, deps };
 }
 
 const alta = (invoiceId: string) => ({ companyId: CO, invoiceId, tipo: 'alta' as const });
@@ -152,6 +156,29 @@ describe('procesarEnvio: precondiciones y desactivado (4.2)', () => {
     const v = e.store.factura(CO, 'inv1')?.verifactu;
     expect(v?.estado).toBe('enviado');
     expect(v?.anulacion?.estado).toBe('error');
+  });
+
+  it('D3 anulación de una factura cuyo alta no se aceptó: precondición ALTA_NO_ACEPTADA, anotada en `anulacion`, sin reservar ni enviar', async () => {
+    const e = montar({ facturas: [factura('inv1', { verifactu: { estado: 'error', tipoRegistro: 'alta', errorKind: 'aeat' } })] });
+    const r = await procesarEnvio(e.deps, { companyId: CO, invoiceId: 'inv1', tipo: 'anulacion' });
+    expect(r).toMatchObject({ sent: false, motivo: 'precondicion', codigo: 'ALTA_NO_ACEPTADA', estado: 'error' });
+    expect(e.sender.llamadas).toHaveLength(0);
+    expect(e.store.head(CO)).toBeNull();
+    const v = e.store.factura(CO, 'inv1')?.verifactu;
+    expect(v?.estado).toBe('error');
+    expect(v?.anulacion).toMatchObject({
+      estado: 'error',
+      errorKind: 'precondicion',
+      errorMessage: 'La factura no llegó a registrarse en la AEAT: no hay nada que anular en Verifactu.',
+    });
+  });
+
+  it('D3 anulación con el alta pendiente de AEAT: se rechaza con mensaje de alta en curso y la cadena queda intacta', async () => {
+    const e = montar({ facturas: [factura('inv1', { verifactu: { estado: 'pendiente', tipoRegistro: 'alta' } })] });
+    const r = await procesarEnvio(e.deps, { companyId: CO, invoiceId: 'inv1', tipo: 'anulacion' });
+    expect(r).toMatchObject({ sent: false, motivo: 'precondicion', codigo: 'ALTA_NO_ACEPTADA' });
+    expect(e.store.head(CO)).toBeNull();
+    expect(e.sender.llamadas).toHaveLength(0);
   });
 
   it('sin certificado: error de configuración, nada se envía ni se reserva', async () => {
@@ -259,6 +286,22 @@ describe('procesarEnvio: camino feliz y concurrencia (4.3)', () => {
     expect(e.store.factura(CO, 'inv1')?.verifactu?.errorKind).toBeUndefined();
   });
 
+  it('sobre Incorrecto sin RespuestaLinea: se liquida como rechazo (error + rechazoPrevio), el registro sigue en la cadena y no queda pending', async () => {
+    const e = montar();
+    e.sender.encolar(respuestaIncorrectoSinLineas);
+    const r = await procesarEnvio(e.deps, alta('inv1'));
+    expect(r).toMatchObject({ sent: false, estado: 'error' });
+    const h = headDe(e);
+    expect(h.pending).toBeNull();
+    expect(h.last).not.toBeNull();
+    expect(e.store.factura(CO, 'inv1')?.verifactu).toMatchObject({
+      estado: 'error',
+      errorKind: 'aeat',
+      rechazoPrevio: true,
+      errorMessage: 'Envío rechazado por la AEAT sin detalle por registro',
+    });
+  });
+
   it('SOAP Fault (HTTP 500): error de configuración liquidado, sin pending atascado', async () => {
     const e = montar();
     e.sender.encolar(respuestaFault4104);
@@ -307,6 +350,51 @@ describe('procesarEnvio: transporte y reenvío (4.4)', () => {
     await procesarEnvio(e.deps, alta('inv1'));
     expect(headDe(e).pending).not.toBeNull();
     expect(e.store.factura(CO, 'inv1')?.verifactu?.estado).toBe('pendiente');
+  });
+
+  it('D9 sin certificado en el drenaje: el pending y el backoff no cambian, la factura sigue pendiente pero con aviso; al volver el certificado se envía y el aviso desaparece', async () => {
+    const e = montar();
+    e.sender.encolar(new Error('ETIMEDOUT'), respuestaCorrecto);
+    await procesarEnvio(e.deps, alta('inv1'));
+    const antes = headDe(e);
+    const huella = antes.pending!.huella;
+
+    e.certificado.disponible = false;
+    e.clock.avanzarS(61);
+    await drenarEmpresa(e.deps, CO);
+
+    expect(e.sender.llamadas).toHaveLength(1);
+    const tras = headDe(e);
+    expect(tras.pending?.huella).toBe(huella);
+    expect(tras.pending?.xml).toBe(antes.pending?.xml);
+    expect(tras.pending?.attempts).toBe(2);
+    expect(Date.parse(tras.drainAt!)).toBe(T0 + 61_000 + 120_000);
+    expect(tras.last).toEqual(antes.last);
+    const v = e.store.factura(CO, 'inv1')?.verifactu;
+    expect(v?.estado).toBe('pendiente');
+    expect(v?.avisoMessage).toBe('Certificado AEAT no configurado para esta empresa.');
+    expect(v?.errorKind).toBeUndefined();
+
+    e.certificado.disponible = true;
+    e.clock.avanzarS(121);
+    await drenarEmpresa(e.deps, CO);
+    expect(e.sender.llamadas).toHaveLength(2);
+    expect(e.sender.llamadas[1]?.xml).toBe(antes.pending?.xml);
+    const final = e.store.factura(CO, 'inv1')?.verifactu;
+    expect(final?.estado).toBe('enviado');
+    expect(final).not.toHaveProperty('avisoMessage');
+    expect(headDe(e).pending).toBeNull();
+  });
+
+  it('D9 un fallo de red en el drenaje (certificado disponible) NO deja aviso de certificado', async () => {
+    const e = montar();
+    e.sender.encolar(new Error('ETIMEDOUT'), new Error('ECONNRESET'));
+    await procesarEnvio(e.deps, alta('inv1'));
+    e.clock.avanzarS(61);
+    await drenarEmpresa(e.deps, CO);
+    const v = e.store.factura(CO, 'inv1')?.verifactu;
+    expect(v?.estado).toBe('pendiente');
+    expect(v).not.toHaveProperty('avisoMessage');
   });
 
   it('S7.5/S7.9 el reenvío manda el XML almacenado byte a byte aunque la factura se edite; antes del backoff no se envía', async () => {

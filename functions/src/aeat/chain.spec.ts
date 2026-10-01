@@ -89,6 +89,38 @@ describe('aplicarPatchVerifactu', () => {
 });
 
 describe('aplicarPatchVerifactu: limpieza de errores', () => {
+  it('D9 avisoMessage (pendiente sin certificado) se conserva en un parche pendiente que lo lleva', () => {
+    const r = aplicarPatchVerifactu({ estado: 'pendiente', tipoRegistro: 'alta', huella: 'H' }, 'alta', {
+      estado: 'pendiente',
+      avisoMessage: 'Certificado AEAT no configurado para esta empresa.',
+    });
+    expect(r).toEqual({
+      estado: 'pendiente',
+      tipoRegistro: 'alta',
+      huella: 'H',
+      avisoMessage: 'Certificado AEAT no configurado para esta empresa.',
+    });
+  });
+
+  it('D9 avisoMessage se borra con cualquier parche posterior que no lo lleve (reenvío o liquidación)', () => {
+    const previo = { estado: 'pendiente', tipoRegistro: 'alta', avisoMessage: 'x' } as const;
+    expect(aplicarPatchVerifactu(previo, 'alta', { estado: 'enviado', csv: 'C' })).toEqual({
+      estado: 'enviado',
+      tipoRegistro: 'alta',
+      csv: 'C',
+    });
+    expect(aplicarPatchVerifactu(previo, 'alta', { estado: 'pendiente', attempts: 2 })).not.toHaveProperty('avisoMessage');
+  });
+
+  it('D9 en una anulación el aviso anida en `anulacion` y no toca el del alta', () => {
+    const r = aplicarPatchVerifactu({ estado: 'enviado', tipoRegistro: 'alta' }, 'anulacion', {
+      estado: 'pendiente',
+      avisoMessage: 'm',
+    });
+    expect(r.anulacion).toEqual({ estado: 'pendiente', avisoMessage: 'm' });
+    expect(r).not.toHaveProperty('avisoMessage');
+  });
+
   it('un estado distinto de error borra los restos del error previo', () => {
     const r = aplicarPatchVerifactu(
       { estado: 'error', tipoRegistro: 'alta', errorKind: 'aeat', errorMessage: 'm', codigoError: '1100', descripcionError: 'd', rechazoPrevio: true },
