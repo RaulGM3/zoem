@@ -13,17 +13,18 @@ export const GUIA_CONTACTOS: Guia = {
     {
       id: 'crear-contacto',
       titulo: 'Crear un contacto',
-      claves: ['nuevo', 'alta', 'añadir', 'cliente', 'persona física', 'persona jurídica', 'empresa'],
+      claves: ['nuevo', 'alta', 'añadir', 'cliente', 'persona física', 'persona jurídica', 'empresa', 'nif', 'dni', 'documento'],
       requiere: { modulo: 'Contactos', capacidad: 'crear' },
       pasos: [
         'En Contactos, pulsa "Nuevo Contacto".',
         'Elige el "Tipo de contacto": Persona Física o Persona Jurídica.',
         'Rellena los datos principales: "Nombre" y "Apellidos" para una persona física, o "Razón social" para una jurídica.',
+        'Si lo tienes, elige el "Tipo de documento" (DNI, NIE, Pasaporte u Otro para una persona física; NIF (España), VAT (UE) u Otro para una jurídica) y escribe el "Número de documento". Es opcional, pero un DNI, NIE o NIF inválido no te deja continuar: revisa los números y la letra.',
         'En "Datos de contacto", indica al menos un email o un móvil.',
         'Pulsa "Continuar". La "Info adicional" es opcional: estado, asunto, canal de entrada, a quién se asigna y notas internas.',
         'Pulsa "Guardar contacto".',
       ],
-      nota: 'Al guardar, Vertey puede pedirte el "Próximo paso" (qué hay que entregar y para cuándo). Puedes programarlo o pulsar "Omitir".',
+      nota: 'Vertey guarda los documentos españoles normalizados (mayúsculas, sin espacios ni guiones) y no valida pasaportes, VAT ni otros documentos. Al guardar, Vertey puede pedirte el "Próximo paso" (qué hay que entregar y para cuándo). Puedes programarlo o pulsar "Omitir".',
     },
     {
       id: 'importar-contactos',
