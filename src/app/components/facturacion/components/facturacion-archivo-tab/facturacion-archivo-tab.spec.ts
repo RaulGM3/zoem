@@ -81,13 +81,29 @@ describe('FacturacionArchivoTabComponent — Verifactu (R9.2, R9.3)', () => {
     expect(botonReintentar()).toBeTruthy();
   });
 
-  it('en_cola: etiqueta anunciada con role=status y Reintentar', async () => {
+  it('en_cola: etiqueta como texto plano (sin región viva por fila) y Reintentar', async () => {
     await montar([factura('f3', { estado: 'en_cola', tipoRegistro: 'alta', encoladoAt: '2026-10-01T09:59:00Z' })]);
 
-    const estado = el().querySelector('[role="status"]');
-    expect(estado).toBeTruthy();
-    expect(texto(estado!)).toContain('En cola');
+    expect(texto(el())).toContain('En cola');
+    const vivas = el().querySelectorAll('[role="status"]');
+    expect(vivas).toHaveLength(1);
+    expect(texto(vivas[0]!)).toBe('');
     expect(botonReintentar()).toBeTruthy();
+  });
+
+  it('al reintentar anuncia en la región viva única y luego el nuevo estado', async () => {
+    await montar([factura('f1', { estado: 'error', tipoRegistro: 'alta', errorMessage: 'AEAT no disponible' })]);
+    const viva = el().querySelector('[role="status"]')!;
+
+    botonReintentar()!.click();
+    fixture.detectChanges();
+    expect(texto(viva)).toBe('Reintentando el envío a Verifactu del caso Caso caso-f1');
+
+    const enviada = factura('f1', { estado: 'enviado', tipoRegistro: 'alta', csv: 'C1' });
+    fixture.componentRef.setInput('invoiceMap', new Map([[enviada.id, enviada]]));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(texto(viva)).toBe('Caso Caso caso-f1: Registrada en AEAT');
   });
 
   it('enviado: CSV visible y sin Reintentar', async () => {
@@ -115,7 +131,8 @@ describe('FacturacionArchivoTabComponent — Verifactu (R9.2, R9.3)', () => {
   it('caso con factura sin Verifactu: no muestra estado ni Reintentar', async () => {
     await montar([factura('f6')]);
 
-    expect(el().querySelector('[role="status"]')).toBeNull();
+    expect(texto(el().querySelector('[role="status"]')!)).toBe('');
+    expect(el().textContent).not.toContain('Registrada en AEAT');
     expect(botonReintentar()).toBeUndefined();
   });
 
@@ -125,7 +142,10 @@ describe('FacturacionArchivoTabComponent — Verifactu (R9.2, R9.3)', () => {
       factura('f2', { estado: 'pendiente', tipoRegistro: 'alta', attempts: 1 }),
       factura('f4', { estado: 'enviado', tipoRegistro: 'alta', csv: 'C' }),
     ]);
-    const violaciones = await analizarA11y(el().querySelector('tbody')!);
+    const violaciones = [
+      ...(await analizarA11y(el().querySelector('tbody')!)),
+      ...(await analizarA11y(el().querySelector('[role="status"]')!)),
+    ];
     expect(violaciones, `\n${formatearViolaciones(violaciones)}\n`).toEqual([]);
   });
 });

@@ -81,19 +81,63 @@ describe('FacturacionFacturasTabComponent — Verifactu (R9.2, R9.3, R9.4)', () 
     expect(texto(fila('F-2'))).toContain('AEAT 1100: Valor incorrecto');
   });
 
-  it('en_cola: etiqueta visible y anunciada con role=status, sin edición, con Reintentar (S9.4, S9.6)', async () => {
+  it('en_cola: etiqueta visible como texto plano (sin región viva por fila), sin edición, con Reintentar (S9.4, S9.6)', async () => {
     await montar([
       factura('F-3', { estado: 'en_cola', tipoRegistro: 'alta', encoladoAt: '2026-10-01T09:58:00Z' }),
     ]);
     const row = fila('F-3');
 
-    const estado = row.querySelector('[role="status"]');
-    expect(estado).toBeTruthy();
-    expect(texto(estado!)).toContain('En cola');
-    expect(texto(estado!)).toContain('Esperando al registro anterior · hace 2 min');
+    expect(row.querySelector('[role="status"], [aria-live]')).toBeNull();
+    expect(texto(row)).toContain('En cola');
+    expect(texto(row)).toContain('Esperando al registro anterior · hace 2 min');
     expect(botonPorEtiqueta(row, /^Editar factura/)).toBeUndefined();
     expect(botonPorEtiqueta(row, /Cambiar número/)).toBeUndefined();
     expect(botonPorEtiqueta(row, /Reintentar.*F-3/)).toBeTruthy();
+  });
+
+  it('una sola región viva en toda la tabla, vacía hasta que el usuario actúa', async () => {
+    await montar([
+      factura('F-1', { estado: 'error', tipoRegistro: 'alta', errorMessage: 'Falta NIF' }),
+      factura('F-3', { estado: 'en_cola', tipoRegistro: 'alta' }),
+      factura('F-4', { estado: 'pendiente', tipoRegistro: 'alta', attempts: 1 }),
+    ]);
+    const vivas = el().querySelectorAll('[role="status"]');
+    expect(vivas).toHaveLength(1);
+    expect(vivas[0]!.getAttribute('aria-live')).toBe('polite');
+    expect(texto(vivas[0]!)).toBe('');
+  });
+
+  it('al reintentar anuncia "Reintentando" y, cuando el estado cambia, el nuevo estado (una sola vez)', async () => {
+    await montar([factura('F-1', { estado: 'error', tipoRegistro: 'alta', errorMessage: 'AEAT no disponible' })]);
+    const viva = el().querySelector('[role="status"]')!;
+
+    botonPorEtiqueta(fila('F-1'), /Reintentar.*F-1/)!.click();
+    fixture.detectChanges();
+    expect(texto(viva)).toBe('Reintentando el envío a Verifactu de la factura F-1');
+
+    fixture.componentRef.setInput('invoices', [
+      factura('F-1', { estado: 'enviado', tipoRegistro: 'alta', csv: 'CSV-1' }),
+    ]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(texto(viva)).toBe('Factura F-1: Registrada en AEAT');
+
+    // Un cambio posterior que no viene de un reintento del usuario no se anuncia.
+    fixture.componentRef.setInput('invoices', [
+      factura('F-1', { estado: 'enviado', tipoRegistro: 'alta', csv: 'CSV-1' }, { status: 'pagada' }),
+    ]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(texto(viva)).toBe('Factura F-1: Registrada en AEAT');
+  });
+
+  it('un cambio de estado que NO viene de un reintento del usuario no se anuncia', async () => {
+    await montar([factura('F-1', { estado: 'pendiente', tipoRegistro: 'alta', attempts: 1 })]);
+    fixture.componentRef.setInput('invoices', [factura('F-1', { estado: 'enviado', tipoRegistro: 'alta', csv: 'C' })]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(texto(el().querySelector('[role="status"]')!)).toBe('');
   });
 
   it('pendiente: intentos y antigüedad, sin edición, con Reintentar (S9.2, S9.6)', async () => {
@@ -147,7 +191,7 @@ describe('FacturacionFacturasTabComponent — Verifactu (R9.2, R9.3, R9.4)', () 
     await montar([factura('F-8')]);
     const row = fila('F-8');
 
-    expect(row.querySelector('[role="status"]')).toBeNull();
+    expect(texto(row)).toContain('—');
     expect(botonPorEtiqueta(row, /^Editar factura/)).toBeTruthy();
     expect(botonPorEtiqueta(row, /Reintentar/)).toBeUndefined();
   });
@@ -172,8 +216,11 @@ describe('FacturacionFacturasTabComponent — Verifactu (R9.2, R9.3, R9.4)', () 
       factura('F-6', { estado: 'enviado', tipoRegistro: 'alta', csv: 'C', aceptadoConErrores: true, codigoError: '4102', descripcionError: 'x' }),
       factura('F-8'),
     ]);
-    const tbody = el().querySelector('tbody')!;
-    const violaciones = await analizarA11y(tbody);
+    const violaciones = [
+      ...(await analizarA11y(el().querySelector('tbody')!)),
+      // La región viva única también debe pasar axe (los filtros de arriba tienen etiquetas ajenas a este cambio).
+      ...(await analizarA11y(el().querySelector('[role="status"]')!)),
+    ];
     expect(violaciones, `\n${formatearViolaciones(violaciones)}\n`).toEqual([]);
   });
 });

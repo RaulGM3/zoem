@@ -1,3 +1,5 @@
+<!-- Única región viva: solo anuncia cambios de Verifactu provocados por el usuario (reintento) -->
+<div class="sr-only" role="status" aria-live="polite" aria-atomic="true">{{ anuncio() }}</div>
 <div class="overflow-x-auto">
   <table class="w-full text-sm">
     <thead>
@@ -33,7 +35,7 @@
                   <lucide-icon [img]="FileCheckIcon" size="13"></lucide-icon> Emitida
                 </span>
                 @if (verifactuVista(caso.facturaId); as vf) {
-                  <div role="status" class="flex flex-col gap-0.5 text-xs">
+                  <div class="flex flex-col gap-0.5 text-xs">
                     <span class="font-medium" [style.color]="verifactuColor(vf)">{{ vf.etiqueta }}</span>
                     @if (vf.detalle) {
                       <span style="color:var(--text-muted)">{{ vf.detalle }}</span>
@@ -46,7 +48,7 @@
                     }
                   </div>
                   @if (vf.reintentable) {
-                    <button type="button" (click)="$event.stopPropagation(); retryVerifactu.emit(caso.facturaId!)"
+                    <button type="button" (click)="$event.stopPropagation(); reintentar(caso)"
                       class="inline-flex w-fit items-center gap-1 rounded-lg px-2 py-1 text-xs transition-colors duration-150"
                       style="border:1px solid var(--border);color:var(--text-muted)"
                       [attr.aria-label]="'Reintentar envío a Verifactu del caso ' + caso.titulo"

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { InvoiceStatus } from '../services/invoice.service';
 import type { VerifactuEstado } from '../../interfaces/verifactu.interface';
 import {
+  anuncioCambioVerifactu,
   formatoAntiguedad,
   motivoBloqueoVerifactu,
   tipoReintento,
@@ -101,6 +102,34 @@ describe('vistaVerifactu (R9.2)', () => {
     expect(v.reintentable).toBe(true);
   });
 
+  it('pendiente con avisoMessage (falta el certificado): el motivo se muestra en el detalle y sigue siendo reintentable', () => {
+    const v = vistaVerifactu(
+      inv({
+        estado: 'pendiente',
+        tipoRegistro: 'alta',
+        attempts: 2,
+        generadoAt: '2026-10-01T09:30:00Z',
+        avisoMessage: 'Certificado AEAT no configurado para esta empresa.',
+      }),
+      AHORA,
+    )!;
+    expect(v.estado).toBe('pendiente');
+    expect(v.tono).toBe('warning');
+    expect(v.detalle).toBe('Intento 2 · hace 30 min · Certificado AEAT no configurado para esta empresa.');
+    expect(v.reintentable).toBe(true);
+  });
+
+  it('pendiente solo con avisoMessage -> el detalle es el aviso; en la anulación también', () => {
+    const alta = vistaVerifactu(inv({ estado: 'pendiente', tipoRegistro: 'alta', avisoMessage: 'Sin certificado' }), AHORA)!;
+    expect(alta.detalle).toBe('Sin certificado');
+    const baja = vistaVerifactu(
+      inv({ estado: 'enviado', tipoRegistro: 'alta', anulacion: { estado: 'pendiente', avisoMessage: 'Sin certificado' } }, 'anulada'),
+      AHORA,
+    )!;
+    expect(baja.etiqueta).toBe('Anulación pendiente de AEAT');
+    expect(baja.detalle).toBe('Sin certificado');
+  });
+
   it('pendiente sin intentos ni fecha -> sin detalle', () => {
     const v = vistaVerifactu(inv({ estado: 'pendiente', tipoRegistro: 'alta' }), AHORA)!;
     expect(v.detalle).toBeNull();
@@ -194,5 +223,27 @@ describe('vistaVerifactu (R9.2)', () => {
     )!;
     expect(v.etiqueta).toBe('Anulación registrada');
     expect(v.csv).toBe('BAJA');
+  });
+});
+
+describe('anuncioCambioVerifactu (región viva: solo cambios de estado)', () => {
+  const vista = (verifactu: VerifactuEstado) => vistaVerifactu(inv(verifactu), AHORA)!;
+
+  it('el estado cambia: anuncia la referencia, la etiqueta nueva y el detalle', () => {
+    const antes = vista({ estado: 'error', tipoRegistro: 'alta', errorMessage: 'x' });
+    const despues = vista({ estado: 'pendiente', tipoRegistro: 'alta', attempts: 2 });
+    expect(anuncioCambioVerifactu(antes, despues, 'Factura F-1')).toBe('Factura F-1: Pendiente de AEAT. Intento 2');
+  });
+
+  it('sin cambio de estado (mismo estado y etiqueta) no hay anuncio', () => {
+    const antes = vista({ estado: 'pendiente', tipoRegistro: 'alta', attempts: 1 });
+    const despues = vista({ estado: 'pendiente', tipoRegistro: 'alta', attempts: 2 });
+    expect(anuncioCambioVerifactu(antes, despues, 'Factura F-1')).toBeNull();
+  });
+
+  it('aceptado: anuncia la etiqueta sin detalle vacío', () => {
+    const antes = vista({ estado: 'pendiente', tipoRegistro: 'alta' });
+    const despues = vista({ estado: 'enviado', tipoRegistro: 'alta', csv: 'C' });
+    expect(anuncioCambioVerifactu(antes, despues, 'Factura F-2')).toBe('Factura F-2: Registrada en AEAT');
   });
 });

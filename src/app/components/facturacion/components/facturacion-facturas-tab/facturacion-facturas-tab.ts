@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, input, output, signal, computed } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output, signal, computed, effect, untracked } from '@angular/core';
 import { DecimalPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -15,6 +15,7 @@ import {
 } from 'lucide-angular';
 import type { Invoice, InvoiceStatus } from '../../../../core/services/invoice.service';
 import {
+  anuncioCambioVerifactu,
   colorTono,
   tipoReintento,
   verifactuBloqueada,
@@ -31,6 +32,13 @@ const STATUS_CONFIG: Record<InvoiceStatus, { label: string; bg: string; color: s
 };
 
 type StatusFilter = InvoiceStatus | 'todos';
+
+/** Reintento iniciado por el usuario cuyo resultado hay que anunciar (una sola vez). */
+interface SeguimientoReintento {
+  invoiceId: string;
+  referencia: string;
+  antes: Pick<VistaVerifactu, 'estado' | 'etiqueta'>;
+}
 
 @Component({
   selector: 'app-facturacion-facturas-tab',
@@ -61,6 +69,27 @@ export class FacturacionFacturasTabComponent {
   readonly RotateCcwIcon = RotateCcw;
   readonly BanIcon = Ban;
   readonly HashIcon = Hash;
+
+  /** Texto de la ÚNICA región viva de la tabla: solo cambios provocados por el usuario. */
+  readonly anuncio = signal('');
+  private seguimiento: SeguimientoReintento | null = null;
+
+  constructor() {
+    effect(() => {
+      const invoices = this.invoices();
+      const seguimiento = this.seguimiento;
+      if (!seguimiento) return;
+      untracked(() => {
+        const inv = invoices.find((i) => i.id === seguimiento.invoiceId);
+        const vista = inv ? vistaVerifactu(inv, Date.now()) : null;
+        if (!vista) return;
+        const texto = anuncioCambioVerifactu(seguimiento.antes, vista, seguimiento.referencia);
+        if (texto === null) return;
+        this.anuncio.set(texto);
+        this.seguimiento = null;
+      });
+    });
+  }
 
   readonly searchQuery = signal('');
   readonly statusFilter = signal<StatusFilter>('todos');
@@ -161,6 +190,15 @@ export class FacturacionFacturasTabComponent {
   /** Vista del registro Verifactu; `Date.now()` se lee al renderizar para la antigüedad. */
   verifactuVista(invoice: Invoice): VistaVerifactu | null {
     return vistaVerifactu(invoice, Date.now());
+  }
+
+  /** Reintento del usuario: lo anuncia y empieza a seguir el cambio de estado de esa factura. */
+  reintentar(invoice: Invoice): void {
+    const referencia = `Factura ${invoice.invoiceNumber}`;
+    const vista = vistaVerifactu(invoice, Date.now());
+    this.seguimiento = vista ? { invoiceId: invoice.id, referencia, antes: { estado: vista.estado, etiqueta: vista.etiqueta } } : null;
+    this.anuncio.set(`Reintentando el envío a Verifactu de la factura ${invoice.invoiceNumber}`);
+    this.retryVerifactu.emit(invoice.id);
   }
 
   verifactuColor(vista: VistaVerifactu): string {

@@ -30,6 +30,11 @@ export interface VerifactuEstado {
   descripcionError?: string;
   errorKind?: 'precondicion' | 'aeat' | 'configuracion';
   errorMessage?: string;
+  /**
+   * Motivo por el que un registro `pendiente` no avanza (p. ej. falta el certificado en un
+   * reintento automático). No es un error: el servidor sigue reintentando.
+   */
+  avisoMessage?: string;
   /** Hubo un rechazo previo del mismo registro (el reenvío va como subsanación). */
   rechazoPrevio?: boolean;
   /** Envíos realizados a la AEAT (cuenta envíos, no pulsaciones de reintento). */

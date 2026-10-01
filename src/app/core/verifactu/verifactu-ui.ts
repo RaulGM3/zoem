@@ -112,7 +112,11 @@ export function vistaVerifactu(factura: FacturaVerifactu, ahoraMs: number): Vist
         ...base,
         etiqueta: esBaja ? 'Anulación pendiente de AEAT' : 'Pendiente de AEAT',
         tono: 'warning',
-        detalle: juntar([r.attempts ? `Intento ${r.attempts}` : null, r.generadoAt && formatoAntiguedad(r.generadoAt, ahoraMs)]),
+        detalle: juntar([
+          r.attempts ? `Intento ${r.attempts}` : null,
+          r.generadoAt && formatoAntiguedad(r.generadoAt, ahoraMs),
+          r.avisoMessage,
+        ]),
       };
     case 'enviado': {
       const conErrores = r.aceptadoConErrores === true;
@@ -135,6 +139,19 @@ export function vistaVerifactu(factura: FacturaVerifactu, ahoraMs: number): Vist
     case 'no_aplica':
       return { ...base, etiqueta: 'No aplica', tono: 'neutral', detalle: null };
   }
+}
+
+/**
+ * Texto para la región viva tras una acción del usuario (reintento): solo si el estado o la
+ * etiqueta cambiaron respecto a `antes`; null si no hay nada nuevo que anunciar.
+ */
+export function anuncioCambioVerifactu(
+  antes: Pick<VistaVerifactu, 'estado' | 'etiqueta'>,
+  despues: VistaVerifactu,
+  referencia: string,
+): string | null {
+  if (antes.estado === despues.estado && antes.etiqueta === despues.etiqueta) return null;
+  return `${referencia}: ${despues.etiqueta}${despues.detalle ? `. ${despues.detalle}` : ''}`;
 }
 
 /** Token CSS del color de texto para cada tono (reutiliza los tokens de styles.css). */
