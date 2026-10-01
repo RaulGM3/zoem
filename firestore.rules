@@ -276,6 +276,11 @@ service cloud.firestore {
       }
       match /casoPlantillas/{doc=**} { allow read: if isSuper() || isMember(cid); allow write: if isSuper() || canWrite(cid); }
 
+      // ---- Cadena Verifactu (cola, cabeza, registro pendiente) --------
+      // Estado interno del servidor: ningún cliente lo lee ni escribe (el Admin SDK
+      // de las Cloud Functions ignora las reglas). Explícito aunque el default ya deniega.
+      match /verifactuChain/{doc=**} { allow read, write: if false; }
+
       // Feed de actividad: cualquier miembro activo agrega; editar/borrar = Admin/Gestor
       match /actividad/{doc=**} {
         allow read:   if isSuper() || isMember(cid);
@@ -451,12 +456,32 @@ service cloud.firestore {
     }
 
     // --- Financiero: Admin + Gestor solamente ---------------------------
+    // `verifactu` (estado, huella, QR, CSV, cola) lo escribe SOLO el servidor
+    // (Cloud Functions con Admin SDK, que ignora estas reglas). Ningún cliente,
+    // ni siquiera Admin/Gestor/superusuario, puede crearlo, modificarlo ni borrarlo.
     match /invoices/{id} {
+      // Verdadero si la escritura cambia `verifactu` (añadir, cambiar cualquier
+      // subcampo, o eliminarlo). affectedKeys() solo lista las claves de primer
+      // nivel que difieren, y `verifactu.estado = x` cambia la clave `verifactu`.
+      // Reenviar el MISMO valor sin cambios no cuenta como modificación.
+      function verifactuIntacto() {
+        return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['verifactu']);
+      }
+      // Registro Verifactu "vivo": ya reservado en la cadena del emisor (en cola,
+      // pendiente de AEAT o aceptado). Borrar la factura dejaría un eslabón huérfano.
+      // `error` y 'no_aplica' (legacy) o ausencia NO bloquean el borrado.
+      function verifactuVivo() {
+        return resource.data.get('verifactu', {}).get('estado', '') in ['en_cola', 'pendiente', 'enviado'];
+      }
+
       allow read:   if isSuper() || isManager(resource.data.companyId);
-      allow create: if isSuper() || isManager(request.resource.data.companyId);
-      allow update: if isSuper() || (isManager(resource.data.companyId)
-                      && request.resource.data.companyId == resource.data.companyId);
-      allow delete: if isSuper() || isManager(resource.data.companyId);
+      allow create: if (isSuper() || isManager(request.resource.data.companyId))
+                    && !('verifactu' in request.resource.data);
+      allow update: if (isSuper() || (isManager(resource.data.companyId)
+                        && request.resource.data.companyId == resource.data.companyId))
+                    && verifactuIntacto();
+      allow delete: if (isSuper() || isManager(resource.data.companyId))
+                    && !verifactuVivo();
     }
 
     // ====================================================================
