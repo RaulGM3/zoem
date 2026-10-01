@@ -423,3 +423,283 @@ describe('FacturaDrawerComponent — sección Cliente (cliente-factura-nif, R4)'
     expect(texto()).not.toContain('Quitar contacto');
   });
 });
+
+describe('FacturaDrawerComponent — buscador de contactos y guardado en el contacto (cliente-factura-nif, R4/R5)', () => {
+  let fixture: ComponentFixture<FacturaDrawerComponent>;
+  let emitidos: InvoiceFormPayload[];
+  let solicitudes: number;
+
+  const raiz = (): HTMLElement => fixture.nativeElement as HTMLElement;
+  const campo = <T extends HTMLElement>(id: string): T => raiz().querySelector<T>(`#${id}`)!;
+  const buscador = (): HTMLInputElement => campo<HTMLInputElement>('cliente-buscar');
+  const opciones = (): HTMLElement[] => Array.from(raiz().querySelectorAll<HTMLElement>('[role="option"]'));
+  const casilla = (): HTMLInputElement | null => raiz().querySelector<HTMLInputElement>('#cliente-guardar-contacto');
+
+  const fisica = (id: string, nombre: string, apellidos: string, nif?: string): Contact =>
+    ({ id, type: 'persona_fisica', nombre, apellidos, email: `${nombre.toLowerCase()}@x.es`, nifType: 'dni', ...(nif ? { nif } : {}) }) as Contact;
+  const ANA = fisica('c-1', 'Ana', 'Pérez', '12345678Z');
+  const BEA = fisica('c-2', 'Bea', 'Gómez'); // sin documento
+  const ANTONIO = fisica('c-3', 'Antonio', 'Ruiz', '00000000T');
+  const EMPRESA = { id: 'c-4', type: 'persona_juridica', razonSocial: 'Acme SL', email: 'info@acme.es', cifType: 'cif', cif: 'B12345674' } as Contact;
+  const CONTACTOS = [ANA, BEA, ANTONIO, EMPRESA];
+
+  async function estabilizar(): Promise<void> {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  async function montar(
+    o: {
+      contactos?: Contact[];
+      permitir?: boolean;
+      cliente?: ClienteFactura | null;
+      contacto?: Contact | null;
+      rectificativa?: boolean;
+    } = {},
+  ): Promise<void> {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({ imports: [FacturaDrawerComponent] }).compileComponents();
+    fixture = TestBed.createComponent(FacturaDrawerComponent);
+    fixture.componentRef.setInput('initialLineas', [linea()]);
+    fixture.componentRef.setInput('contactos', o.contactos ?? CONTACTOS);
+    fixture.componentRef.setInput('permitirBuscarContacto', o.permitir ?? true);
+    fixture.componentRef.setInput('rectificativa', o.rectificativa ?? false);
+    if (o.cliente !== undefined) fixture.componentRef.setInput('initialCliente', o.cliente);
+    if (o.contacto !== undefined) fixture.componentRef.setInput('contactoVinculado', o.contacto);
+    emitidos = [];
+    solicitudes = 0;
+    fixture.componentInstance.confirmed.subscribe((p) => emitidos.push(p));
+    fixture.componentInstance.contactosSolicitados.subscribe(() => solicitudes++);
+    await estabilizar();
+  }
+
+  async function escribirBusqueda(valor: string): Promise<void> {
+    const el = buscador();
+    el.focus();
+    el.value = valor;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    await estabilizar();
+  }
+
+  async function tecla(key: string): Promise<KeyboardEvent> {
+    const ev = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+    buscador().dispatchEvent(ev);
+    await estabilizar();
+    return ev;
+  }
+
+  async function confirmar(): Promise<void> {
+    Array.from(raiz().querySelectorAll<HTMLButtonElement>('button'))
+      .find((b) => /Generar factura/.test(b.textContent ?? ''))!
+      .click();
+    await estabilizar();
+  }
+
+  it('S4.3 factura libre: sección vacía con un combobox ARIA etiquetado "Buscar contacto"', async () => {
+    await montar({ cliente: null });
+    const b = buscador();
+    expect(raiz().querySelector('label[for="cliente-buscar"]')?.textContent).toContain('Buscar contacto');
+    expect(b.getAttribute('role')).toBe('combobox');
+    expect(b.getAttribute('aria-expanded')).toBe('false');
+    expect(b.getAttribute('aria-controls')).toBe('cliente-buscar-lista');
+    expect(b.getAttribute('aria-autocomplete')).toBe('list');
+    expect(campo<HTMLInputElement>('cliente-nombre').value).toBe('');
+  });
+
+  it('sin permitirBuscarContacto no hay buscador; con él pero con registro Verifactu vivo tampoco', async () => {
+    await montar({ permitir: false });
+    expect(raiz().querySelector('#cliente-buscar')).toBeNull();
+    await montar({ permitir: true });
+    expect(raiz().querySelector('#cliente-buscar')).not.toBeNull();
+  });
+
+  it('pide cargar los contactos al enfocar el buscador', async () => {
+    await montar();
+    buscador().dispatchEvent(new Event('focus'));
+    await estabilizar();
+    expect(solicitudes).toBe(1);
+  });
+
+  it('S4.14 busca por nombre, NIF, email o teléfono y abre un listbox con role=option', async () => {
+    await montar();
+    await escribirBusqueda('an');
+    const nombres = opciones().map((o) => o.textContent?.replace(/\s+/g, ' ').trim());
+    expect(nombres).toHaveLength(2);
+    expect(nombres[0]).toContain('Ana Pérez');
+    expect(nombres[1]).toContain('Antonio Ruiz');
+    expect(buscador().getAttribute('aria-expanded')).toBe('true');
+    expect(campo('cliente-buscar-lista').getAttribute('role')).toBe('listbox');
+    expect(opciones().every((o) => o.tagName === 'LI' && o.id.startsWith('cliente-opcion-'))).toBe(true);
+
+    await escribirBusqueda('B12345674');
+    expect(opciones()).toHaveLength(1);
+    expect(opciones()[0].textContent).toContain('Acme SL');
+
+    await escribirBusqueda('info@acme');
+    expect(opciones()).toHaveLength(1);
+  });
+
+  it('S4.14 muestra como máximo 8 resultados', async () => {
+    const muchos = Array.from({ length: 12 }, (_, i) => fisica(`m-${i}`, `Mario${i}`, 'López'));
+    await montar({ contactos: muchos });
+    await escribirBusqueda('mario');
+    expect(opciones()).toHaveLength(8);
+  });
+
+  it('anuncia de forma educada el número de resultados y "Sin resultados"', async () => {
+    await montar();
+    await escribirBusqueda('an');
+    const vivo = raiz().querySelector('#cliente-buscar-estado')!;
+    expect(vivo.getAttribute('aria-live')).toBe('polite');
+    expect(vivo.textContent).toContain('2 contactos encontrados');
+
+    await escribirBusqueda('ana');
+    expect(vivo.textContent).toContain('1 contacto encontrado');
+
+    await escribirBusqueda('zzz');
+    expect(vivo.textContent).toContain('Sin resultados');
+    expect(buscador().getAttribute('aria-expanded')).toBe('false');
+    expect(opciones()).toHaveLength(0);
+  });
+
+  it('S4.13 teclado: ↓ ↓ Enter elige la 2ª opción (aria-activedescendant sigue a la activa); Enter no envía el formulario', async () => {
+    await montar();
+    await escribirBusqueda('an');
+
+    await tecla('ArrowDown');
+    expect(buscador().getAttribute('aria-activedescendant')).toBe(opciones()[0].id);
+    expect(opciones()[0].getAttribute('aria-selected')).toBe('true');
+    expect(opciones()[1].getAttribute('aria-selected')).toBe('false');
+
+    await tecla('ArrowDown');
+    expect(buscador().getAttribute('aria-activedescendant')).toBe(opciones()[1].id);
+
+    const enter = await tecla('Enter');
+    expect(enter.defaultPrevented).toBe(true);
+    expect(campo<HTMLInputElement>('cliente-nombre').value).toBe('Antonio Ruiz');
+    expect(buscador().getAttribute('aria-expanded')).toBe('false');
+    expect(buscador().hasAttribute('aria-activedescendant')).toBe(false);
+  });
+
+  it('S4.13 ↑ desde la primera salta a la última; Escape cierra sin elegir y conserva el texto', async () => {
+    await montar();
+    await escribirBusqueda('an');
+    await tecla('ArrowDown');
+    await tecla('ArrowUp');
+    expect(buscador().getAttribute('aria-activedescendant')).toBe(opciones()[1].id);
+
+    await tecla('Escape');
+    expect(buscador().getAttribute('aria-expanded')).toBe('false');
+    expect(buscador().value).toBe('an');
+    expect(campo<HTMLInputElement>('cliente-nombre').value).toBe('');
+  });
+
+  it('Enter sin opción activa no elige nada', async () => {
+    await montar();
+    await escribirBusqueda('an');
+    await tecla('Enter');
+    expect(campo<HTMLInputElement>('cliente-nombre').value).toBe('');
+  });
+
+  it('S4.4 elegir un contacto con el ratón precarga el cliente, lo vincula y muestra "Quitar contacto"', async () => {
+    await montar({ cliente: null });
+    await escribirBusqueda('acme');
+    // Se elige con mousedown (preventDefault evita que el buscador pierda el foco antes de elegir).
+    opciones()[0].dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+    await estabilizar();
+
+    expect(campo<HTMLInputElement>('cliente-nombre').value).toBe('Acme SL');
+    expect(campo<HTMLInputElement>('cliente-nif').value).toBe('B12345674');
+    expect(campo<HTMLSelectElement>('cliente-tipoId').value).toBe('nif');
+    expect(raiz().textContent).toContain('Quitar contacto');
+    await confirmar();
+    expect(emitidos[0].cliente).toMatchObject({ contactoId: 'c-4', nombre: 'Acme SL', nif: 'B12345674' });
+  });
+
+  it('S4.4 el mousedown sobre una opción no roba el foco al buscador', async () => {
+    await montar();
+    await escribirBusqueda('ana');
+    const ev = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    opciones()[0].dispatchEvent(ev);
+    expect(ev.defaultPrevented).toBe(true);
+  });
+
+  it('S5.5 contacto sin documento: la casilla "Guardar también en el contacto" sale marcada y el payload lo refleja', async () => {
+    await montar({ cliente: null });
+    await escribirBusqueda('bea');
+    await tecla('ArrowDown');
+    await tecla('Enter');
+
+    expect(casilla()).not.toBeNull();
+    expect(casilla()!.checked).toBe(true);
+    expect(raiz().querySelector('label[for="cliente-guardar-contacto"]')?.textContent).toContain('Guardar también en el contacto');
+    await escribirBusqueda('');
+    campo<HTMLInputElement>('cliente-nif').value = '12345678Z';
+    campo<HTMLInputElement>('cliente-nif').dispatchEvent(new Event('input', { bubbles: true }));
+    await estabilizar();
+    await confirmar();
+    expect(emitidos[0].guardarEnContacto).toBe(true);
+  });
+
+  it('S5.5 contacto con documento: la casilla sale desmarcada; marcarla activa el flag', async () => {
+    await montar({ cliente: null });
+    await escribirBusqueda('ana');
+    await tecla('ArrowDown');
+    await tecla('Enter');
+    expect(casilla()!.checked).toBe(false);
+
+    casilla()!.click();
+    await estabilizar();
+    await confirmar();
+    expect(emitidos[0].guardarEnContacto).toBe(true);
+  });
+
+  it('S5.6 casilla desmarcada: el payload no pide escribir en el contacto', async () => {
+    await montar({ cliente: null });
+    await escribirBusqueda('bea');
+    await tecla('ArrowDown');
+    await tecla('Enter');
+    casilla()!.click();
+    await estabilizar();
+    expect(casilla()!.checked).toBe(false);
+    await confirmar();
+    expect(emitidos[0].guardarEnContacto).toBe(false);
+  });
+
+  it('sin contacto vinculado no hay casilla; al quitar el contacto desaparece y el flag es false', async () => {
+    await montar({ cliente: { nombre: 'Puntual', tipoId: 'nif' } });
+    expect(casilla()).toBeNull();
+
+    await montar({ cliente: { contactoId: 'c-2', nombre: 'Bea Gómez', tipoId: 'nif' }, contacto: BEA });
+    expect(casilla()!.checked).toBe(true);
+    Array.from(raiz().querySelectorAll<HTMLButtonElement>('button')).find((b) => /Quitar contacto/.test(b.textContent ?? ''))!.click();
+    await estabilizar();
+    expect(casilla()).toBeNull();
+    await confirmar();
+    expect(emitidos[0].guardarEnContacto).toBe(false);
+  });
+
+  it('rectificativa: cliente de solo lectura con texto de ayuda, sin buscador, sin "Quitar contacto" ni casilla', async () => {
+    await montar({
+      cliente: { contactoId: 'c-1', nombre: 'Ana Pérez', tipoId: 'nif', nif: '12345678Z' },
+      contacto: ANA,
+      rectificativa: true,
+    });
+    for (const id of ['cliente-nombre', 'cliente-tipoId', 'cliente-nif', 'cliente-direccion']) {
+      expect(campo<HTMLInputElement>(id).disabled, id).toBe(true);
+    }
+    expect(campo<HTMLInputElement>('cliente-nombre').value).toBe('Ana Pérez');
+    expect(raiz().querySelector('#cliente-buscar')).toBeNull();
+    expect(casilla()).toBeNull();
+    expect(raiz().textContent).not.toContain('Quitar contacto');
+    expect(raiz().textContent).toContain('La rectificativa mantiene el mismo cliente que la factura original');
+    await confirmar();
+    expect(emitidos).toHaveLength(1);
+  });
+
+  it('fuera de una rectificativa no aparece el texto de ayuda', async () => {
+    await montar({ cliente: { nombre: 'Puntual', tipoId: 'nif' } });
+    expect(raiz().textContent).not.toContain('La rectificativa mantiene');
+  });
+});

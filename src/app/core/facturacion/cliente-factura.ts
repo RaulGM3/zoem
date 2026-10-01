@@ -125,3 +125,30 @@ export function filtrarContactos(contactos: readonly Contact[], consulta: string
     })
     .slice(0, max);
 }
+
+/** Lo mínimo del servicio de contactos que necesita el guardado en el contacto. */
+export interface EscrituraContactos {
+  getContact(id: string): Promise<Contact | null>;
+  updateContact(id: string, data: Record<string, unknown>): Promise<void>;
+}
+
+export type ResultadoEscrituraContacto = 'actualizado' | 'sin-cambios' | 'omitido';
+
+/**
+ * "Guardar también en el contacto": lee el contacto fresco y escribe SOLO el parche mínimo.
+ * Se llama DESPUÉS de guardar la factura; si falla, el error se propaga para que el llamante
+ * avise sin revertir la factura (la factura es la copia legal, el contacto es best-effort).
+ */
+export async function escribirClienteEnContacto(
+  contactos: EscrituraContactos,
+  opciones: { guardar: boolean; cliente: ClienteFactura },
+): Promise<ResultadoEscrituraContacto> {
+  const id = opciones.cliente.contactoId;
+  if (!opciones.guardar || !id) return 'omitido';
+  const contacto = await contactos.getContact(id);
+  if (!contacto) return 'omitido';
+  const parche = parcheContacto(contacto, opciones.cliente);
+  if (!parche) return 'sin-cambios';
+  await contactos.updateContact(id, parche);
+  return 'actualizado';
+}

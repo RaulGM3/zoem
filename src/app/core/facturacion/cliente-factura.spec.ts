@@ -1,10 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { PersonaFisica, PersonaJuridica } from '../../interfaces/contact.interface';
 import {
   camposClienteFactura,
   clienteDesdeContacto,
   clienteDesdeFactura,
   contactoSinDocumento,
+  escribirClienteEnContacto,
   filtrarContactos,
   parcheContacto,
   tipoIdDeContacto,
@@ -262,5 +263,63 @@ describe('filtrarContactos (S4.14)', () => {
     const muchos = Array.from({ length: 12 }, (_, i) => fisica({ id: `m${i}`, nombre: 'Marta', apellidos: `N${i}` }));
     expect(filtrarContactos(muchos, 'marta')).toHaveLength(8);
     expect(filtrarContactos(muchos, 'marta', 3)).toHaveLength(3);
+  });
+});
+
+describe('escribirClienteEnContacto (glue testeable de "Guardar también en el contacto")', () => {
+  const cli: ClienteFactura = { contactoId: 'c1', nombre: 'Ana Pérez', tipoId: 'nif', nif: ' x1234567l ' };
+
+  function deps(contacto: PersonaFisica | PersonaJuridica | null) {
+    return {
+      getContact: vi.fn(async () => contacto),
+      updateContact: vi.fn(async () => undefined),
+    };
+  }
+
+  it('S5.1/S5.3 con la casilla marcada escribe SOLO el parche (tipo y número) con el contacto fresco', async () => {
+    const d = deps(fisica({ nif: undefined }));
+    const r = await escribirClienteEnContacto(d, { guardar: true, cliente: cli });
+    expect(r).toBe('actualizado');
+    expect(d.getContact).toHaveBeenCalledWith('c1');
+    expect(d.updateContact).toHaveBeenCalledTimes(1);
+    expect(d.updateContact).toHaveBeenCalledWith('c1', { nifType: 'nie', nif: 'X1234567L' });
+  });
+
+  it('jurídica: escribe cifType, cif y razonSocial y nada más', async () => {
+    const d = deps(juridica({ cif: undefined }));
+    await escribirClienteEnContacto(d, { guardar: true, cliente: { contactoId: 'c2', nombre: 'Acme SL', tipoId: 'nif', nif: 'b12345674' } });
+    expect(d.updateContact).toHaveBeenCalledWith('c2', { cifType: 'cif', cif: 'B12345674', razonSocial: 'Acme SL' });
+  });
+
+  it('S5.6 casilla desmarcada: no lee ni escribe el contacto', async () => {
+    const d = deps(fisica());
+    expect(await escribirClienteEnContacto(d, { guardar: false, cliente: cli })).toBe('omitido');
+    expect(d.getContact).not.toHaveBeenCalled();
+    expect(d.updateContact).not.toHaveBeenCalled();
+  });
+
+  it('sin contactoId en el cliente: omitido', async () => {
+    const d = deps(fisica());
+    expect(await escribirClienteEnContacto(d, { guardar: true, cliente: { nombre: 'Puntual', tipoId: 'nif', nif: '12345678Z' } })).toBe('omitido');
+    expect(d.updateContact).not.toHaveBeenCalled();
+  });
+
+  it('S5.4 sin cambios (mismo documento): no escribe', async () => {
+    const d = deps(fisica({ nifType: 'dni', nif: '12345678Z' }));
+    const r = await escribirClienteEnContacto(d, { guardar: true, cliente: { contactoId: 'c1', nombre: 'Ana', tipoId: 'nif', nif: '12345678z' } });
+    expect(r).toBe('sin-cambios');
+    expect(d.updateContact).not.toHaveBeenCalled();
+  });
+
+  it('contacto borrado entre medias: omitido sin error', async () => {
+    const d = deps(null);
+    expect(await escribirClienteEnContacto(d, { guardar: true, cliente: cli })).toBe('omitido');
+    expect(d.updateContact).not.toHaveBeenCalled();
+  });
+
+  it('S5.6 si falla la escritura el error se propaga (el llamante muestra el aviso)', async () => {
+    const d = deps(fisica({ nif: undefined }));
+    d.updateContact.mockRejectedValueOnce(new Error('permission-denied'));
+    await expect(escribirClienteEnContacto(d, { guardar: true, cliente: cli })).rejects.toThrow('permission-denied');
   });
 });

@@ -34,6 +34,9 @@ import type { CausaExencion } from '../../../../interfaces/verifactu.interface';
 import { motivoBloqueoVerifactu } from '../../../../core/verifactu/verifactu-ui';
 import {
   camposClienteFactura,
+  clienteDesdeContacto,
+  contactoSinDocumento,
+  filtrarContactos,
   type ClienteFactura,
   type TipoIdCliente,
 } from '../../../../core/facturacion/cliente-factura';
@@ -91,6 +94,12 @@ export class FacturaDrawerComponent {
   readonly initialCliente = input<ClienteFactura | null>(null);
   /** Contacto del que viene el cliente; permite desvincularlo y (más adelante) escribirle de vuelta. */
   readonly contactoVinculado = input<Contact | null>(null);
+  /** Contactos entre los que buscar (los carga el padre cuando se le pide con `contactosSolicitados`). */
+  readonly contactos = input<Contact[]>([]);
+  /** Muestra el buscador de contactos (facturas con o sin caso; nunca en una rectificativa). */
+  readonly permitirBuscarContacto = input(false);
+  /** Rectificativa: hereda el cliente de la original, la sección es de solo lectura. */
+  readonly rectificativa = input(false);
 
   /** Contacto vinculado a esta factura. Arranca con `contactoVinculado` y puede quitarse. */
   readonly contacto = signal<Contact | null>(null);
@@ -105,6 +114,25 @@ export class FacturaDrawerComponent {
     return inv ? motivoBloqueoVerifactu(inv) : null;
   });
   readonly verifactuLocked = computed(() => this.verifactuBloqueo() !== null);
+  /** La sección Cliente no se puede editar: registro Verifactu vivo o rectificativa. */
+  readonly soloLectura = computed(() => this.verifactuLocked() || this.rectificativa());
+  readonly puedeBuscarContacto = computed(() => this.permitirBuscarContacto() && !this.soloLectura());
+  readonly puedeGuardarEnContacto = computed(() => this.contacto() !== null && !this.soloLectura());
+
+  // --- Buscador de contactos (combobox ARIA con listbox) ---
+  readonly query = signal('');
+  private readonly abierto = signal(false);
+  private readonly activo = signal(-1);
+  private readonly mensajeSeleccion = signal('');
+  readonly opciones = computed(() => filtrarContactos(this.contactos(), this.query()));
+  readonly listaAbierta = computed(() => this.abierto() && this.opciones().length > 0);
+  readonly opcionActiva = computed(() => (this.listaAbierta() ? this.activo() : -1));
+  readonly anuncioBusqueda = computed(() => {
+    if (!this.query().trim()) return this.mensajeSeleccion();
+    const n = this.opciones().length;
+    if (n === 0) return 'Sin resultados';
+    return n === 1 ? '1 contacto encontrado' : `${n} contactos encontrados`;
+  });
 
   /** Tipos de IVA seleccionables; incluye los tipos libres que ya traiga la factura. */
   readonly tiposIva = computed(() =>
@@ -123,6 +151,8 @@ export class FacturaDrawerComponent {
   // --- Outputs ---
   readonly closed = output<void>();
   readonly confirmed = output<InvoiceFormPayload>();
+  /** El usuario va a buscar: el padre debe tener cargados los contactos. */
+  readonly contactosSolicitados = output<void>();
 
   // --- Icons ---
   readonly XIcon = X;
@@ -234,6 +264,11 @@ export class FacturaDrawerComponent {
             { emitEvent: false },
           );
         }
+        // Por defecto se escribe de vuelta solo si el contacto aún no tenía documento (S5.5).
+        this.form.controls.cliente.controls.guardarEnContacto.setValue(
+          contacto ? contactoSinDocumento(contacto) : false,
+          { emitEvent: false },
+        );
         this.syncClienteValidators();
         this.formValue.set(this.form.getRawValue());
       });
@@ -241,7 +276,7 @@ export class FacturaDrawerComponent {
 
     // Validadores y bloqueo dependen de la empresa (Verifactu) y del estado del registro, no de los datos.
     effect(() => {
-      const bloqueada = this.verifactuLocked();
+      const bloqueada = this.soloLectura();
       this.verifactuEnabled();
       untracked(() => {
         if (bloqueada) this.form.controls.cliente.disable({ emitEvent: false });
@@ -331,6 +366,83 @@ export class FacturaDrawerComponent {
     this.host.nativeElement.querySelector<HTMLElement>('#cliente-nombre')?.focus();
   }
 
+  /** Nombre y documento de una opción del buscador. */
+  documentoContacto(c: Contact): string {
+    return (c.type === 'persona_fisica' ? c.nif : c.cif) ?? '';
+  }
+
+  nombreContacto(c: Contact): string {
+    return getContactDisplayName(c);
+  }
+
+  idOpcion(i: number): string {
+    return `cliente-opcion-${i}`;
+  }
+
+  onBuscarInput(valor: string): void {
+    this.query.set(valor);
+    this.abierto.set(true);
+    this.activo.set(-1);
+    this.mensajeSeleccion.set('');
+  }
+
+  onBuscarKeydown(ev: KeyboardEvent): void {
+    const n = this.opciones().length;
+    switch (ev.key) {
+      case 'ArrowDown':
+        if (n === 0) return;
+        ev.preventDefault();
+        this.abierto.set(true);
+        this.activo.update((i) => (i + 1) % n);
+        return;
+      case 'ArrowUp':
+        if (n === 0) return;
+        ev.preventDefault();
+        this.abierto.set(true);
+        this.activo.update((i) => (i <= 0 ? n - 1 : i - 1));
+        return;
+      case 'Enter': {
+        const elegida = this.opciones()[this.opcionActiva()];
+        if (!elegida) return;
+        ev.preventDefault();
+        this.seleccionarContacto(elegida);
+        return;
+      }
+      case 'Escape':
+        if (!this.listaAbierta()) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        this.cerrarLista();
+        return;
+    }
+  }
+
+  cerrarLista(): void {
+    this.abierto.set(false);
+    this.activo.set(-1);
+  }
+
+  /** Vincula el contacto y precarga el cliente con sus datos (el usuario puede corregirlos después). */
+  seleccionarContacto(c: Contact): void {
+    const cliente = clienteDesdeContacto(c);
+    this.form.controls.cliente.patchValue(
+      {
+        nombre: cliente.nombre,
+        tipoId: cliente.tipoId,
+        nif: cliente.nif ?? '',
+        direccion: cliente.direccion ?? '',
+        guardarEnContacto: contactoSinDocumento(c),
+      },
+      { emitEvent: false },
+    );
+    this.contacto.set(c);
+    this.syncClienteValidators();
+    this.formValue.set(this.form.getRawValue());
+    this.query.set('');
+    this.cerrarLista();
+    this.mensajeSeleccion.set(`Contacto ${getContactDisplayName(c)} seleccionado.`);
+  }
+
   onConfirm(): void {
     if (this.form.invalid) {
       this.submitted.set(true);
@@ -382,7 +494,7 @@ export class FacturaDrawerComponent {
       dueDate: val.dueDate ?? '',
       notes: val.notes ?? '',
       cliente,
-      guardarEnContacto: !!val.cliente.guardarEnContacto && contacto !== null,
+      guardarEnContacto: !!val.cliente.guardarEnContacto && contacto !== null && this.puedeGuardarEnContacto(),
     });
   }
 

@@ -29,15 +29,55 @@
         <legend class="mb-1 text-xs font-semibold uppercase tracking-wider"
           style="color:var(--text-faint);font-family:var(--font-mono)">Cliente</legend>
 
+        @if (rectificativa()) {
+          <p class="rounded-lg px-3 py-2 text-xs" style="background:var(--surface-2);color:var(--text-body)">
+            La rectificativa mantiene el mismo cliente que la factura original, por eso no se puede cambiar aquí.
+          </p>
+        }
+
         @if (contacto()) {
           <div class="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs"
             style="background:var(--surface-2);color:var(--text-body)">
             <span>Contacto: <strong>{{ contactoNombre() }}</strong></span>
-            @if (!verifactuLocked()) {
+            @if (!soloLectura()) {
               <button type="button" (click)="quitarContacto()"
                 class="rounded px-2 py-1 font-medium underline"
                 style="color:var(--brand)">Quitar contacto</button>
             }
+          </div>
+        }
+
+        @if (puedeBuscarContacto()) {
+          <div class="relative">
+            <label for="cliente-buscar" class="form-label">Buscar contacto</label>
+            <input id="cliente-buscar" type="text" autocomplete="off" class="form-input w-full"
+              role="combobox" aria-autocomplete="list" aria-controls="cliente-buscar-lista"
+              placeholder="Nombre, NIF, email o teléfono"
+              [attr.aria-expanded]="listaAbierta() ? 'true' : 'false'"
+              [attr.aria-activedescendant]="opcionActiva() >= 0 ? idOpcion(opcionActiva()) : null"
+              [value]="query()"
+              (input)="onBuscarInput($any($event.target).value)"
+              (keydown)="onBuscarKeydown($event)"
+              (focus)="contactosSolicitados.emit()"
+              (blur)="cerrarLista()" />
+            <ul id="cliente-buscar-lista" role="listbox" aria-label="Contactos encontrados"
+              class="absolute left-0 right-0 z-10 mt-1 max-h-56 overflow-y-auto rounded-lg shadow-lg"
+              style="background:var(--surface);border:1px solid var(--border)"
+              [hidden]="!listaAbierta()">
+              @for (c of opciones(); track c.id; let i = $index) {
+                <li role="option" [id]="idOpcion(i)" class="cursor-pointer px-3 py-2 text-sm"
+                  style="color:var(--text-body)"
+                  [style.background]="opcionActiva() === i ? 'var(--surface-2)' : null"
+                  [attr.aria-selected]="opcionActiva() === i ? 'true' : 'false'"
+                  (mousedown)="$event.preventDefault(); seleccionarContacto(c)">
+                  <span class="font-medium">{{ nombreContacto(c) }}</span>
+                  @if (documentoContacto(c)) {
+                    <span class="ml-2 text-xs" style="color:var(--text-muted)">{{ documentoContacto(c) }}</span>
+                  }
+                </li>
+              }
+            </ul>
+            <p id="cliente-buscar-estado" class="sr-only" aria-live="polite">{{ anuncioBusqueda() }}</p>
           </div>
         }
 
@@ -90,6 +130,21 @@
           <input id="cliente-direccion" type="text" formControlName="direccion" autocomplete="off"
             class="form-input w-full" />
         </div>
+
+        @if (puedeGuardarEnContacto()) {
+          <div class="flex items-start gap-2">
+            <input id="cliente-guardar-contacto" type="checkbox" formControlName="guardarEnContacto"
+              class="mt-0.5 rounded" style="accent-color:var(--brand)"
+              aria-describedby="cliente-guardar-contacto-ayuda" />
+            <div>
+              <label for="cliente-guardar-contacto" class="text-xs cursor-pointer"
+                style="color:var(--text-body)">Guardar también en el contacto</label>
+              <p id="cliente-guardar-contacto-ayuda" class="text-[11px]" style="color:var(--text-muted)">
+                Actualiza el tipo y el número de documento del contacto (no cambia su dirección ni su nombre).
+              </p>
+            </div>
+          </div>
+        }
       </fieldset>
 
       <!-- Dates -->

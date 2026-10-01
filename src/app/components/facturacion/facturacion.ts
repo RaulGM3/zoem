@@ -11,7 +11,12 @@ import { InvoicePdfService } from '../../core/services/invoice-pdf.service';
 import { CompanyService, getLabelIdentificacion } from '../../core/services/company.service';
 import { ContactService } from '../../core/services/contact.service';
 import type { Contact } from '../../interfaces/contact.interface';
-import { clienteDesdeContacto, clienteDesdeFactura, type ClienteFactura } from '../../core/facturacion/cliente-factura';
+import {
+  clienteDesdeContacto,
+  clienteDesdeFactura,
+  escribirClienteEnContacto,
+  type ClienteFactura,
+} from '../../core/facturacion/cliente-factura';
 import { PermissionService } from '../../core/services/permission.service';
 import { ToastService } from '../../core/services/toast.service';
 import { Caso, gestoriaCompleta, Hito } from '../../interfaces';
@@ -160,6 +165,26 @@ export class FacturacionComponent implements OnInit {
   /** Cliente con el que se precarga la sección Cliente del drawer, y contacto del que viene (si lo hay). */
   readonly drawerCliente = signal<ClienteFactura | null>(null);
   readonly drawerContacto = signal<Contact | null>(null);
+  /** Contactos para el buscador del drawer (se cargan la primera vez que se busca). */
+  readonly contactos = this.contactService.contacts;
+
+  /** Carga los contactos si aún no están; un fallo se avisa y el cliente puede escribirse a mano. */
+  async cargarContactos(): Promise<void> {
+    if (this.contactService.contacts().length > 0 || this.contactService.isLoading()) return;
+    await this.toast.run(() => this.contactService.loadContacts(), { errorTitle: 'No se pudieron cargar los contactos' });
+  }
+
+  /**
+   * "Guardar también en el contacto": se ejecuta con la factura YA guardada (es la copia legal) y
+   * es best-effort: si falla se avisa, pero la factura no se revierte.
+   */
+  private async guardarClienteEnContacto(payload: InvoiceFormPayload): Promise<void> {
+    if (!payload.guardarEnContacto) return;
+    await this.toast.run(
+      () => escribirClienteEnContacto(this.contactService, { guardar: true, cliente: payload.cliente }),
+      { errorTitle: 'La factura se guardó, pero no se pudo actualizar el contacto' },
+    );
+  }
 
   readonly drawerIssueDate = computed(() => new Date().toISOString().slice(0, 10));
   readonly drawerDueDate = computed(() => {
@@ -256,6 +281,7 @@ export class FacturacionComponent implements OnInit {
     const editingInvoice = this.drawerEditingInvoice();
     if (this.drawerEditMode() && editingInvoice) {
       this.saving.set(true);
+      let guardada = false;
       try {
         await this.toast.run(
           () => this.invoiceService.updateInvoiceContent(
@@ -270,9 +296,13 @@ export class FacturacionComponent implements OnInit {
           {
             successMessage: 'Factura actualizada',
             errorTitle: 'No se pudo actualizar la factura',
-            onSuccess: () => this.cerrarFacturaDrawer(),
+            onSuccess: () => {
+              guardada = true;
+              this.cerrarFacturaDrawer();
+            },
           }
         );
+        if (guardada) await this.guardarClienteEnContacto(payload);
       } finally {
         this.saving.set(false);
       }
@@ -314,6 +344,7 @@ export class FacturacionComponent implements OnInit {
 
       if (isStandalone) {
         // Standalone invoice — no caso
+        let guardada = false;
         await this.toast.run(
           () => this.invoiceService.createStandaloneInvoice(
             lineas,
@@ -326,9 +357,13 @@ export class FacturacionComponent implements OnInit {
           {
             successMessage: 'Factura creada',
             errorTitle: 'No se pudo crear la factura',
-            onSuccess: () => this.cerrarFacturaDrawer(),
+            onSuccess: () => {
+              guardada = true;
+              this.cerrarFacturaDrawer();
+            },
           }
         );
+        if (guardada) await this.guardarClienteEnContacto(payload);
       } else {
         // Invoice linked to a caso
         const facturaId = await this.toast.run(
@@ -345,6 +380,7 @@ export class FacturacionComponent implements OnInit {
           { errorTitle: 'No se pudo generar la factura' }
         );
         if (facturaId === undefined) return;
+        await this.guardarClienteEnContacto(payload);
         await this.toast.run(() => this.casosService.marcarFacturado(caso.id, facturaId), {
           successMessage: 'Factura generada',
           errorTitle: 'La factura se creó pero no se pudo marcar el caso como facturado',

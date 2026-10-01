@@ -119,6 +119,10 @@
     [editingInvoice]="drawerEditingInvoice()"
     [initialCliente]="drawerCliente()"
     [contactoVinculado]="drawerContacto()"
+    [contactos]="contactos()"
+    [permitirBuscarContacto]="!drawerRectificativa()"
+    [rectificativa]="drawerRectificativa()"
+    (contactosSolicitados)="cargarContactos()"
     (closed)="cerrarFacturaDrawer()"
     (confirmed)="confirmarFactura($event)"
   />

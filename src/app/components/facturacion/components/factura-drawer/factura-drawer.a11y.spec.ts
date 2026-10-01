@@ -85,3 +85,69 @@ describe('FacturaDrawerComponent — accesibilidad (axe), sección Cliente (S4.1
     expect(violaciones, `\n${formatearViolaciones(violaciones)}\n`).toEqual([]);
   });
 });
+
+describe('FacturaDrawerComponent — accesibilidad (axe), buscador de contactos (S4.12)', () => {
+  const CONTACTOS = [
+    { id: 'c-1', type: 'persona_fisica', nombre: 'Ana', apellidos: 'Pérez', email: 'ana@x.es', nifType: 'dni', nif: '12345678Z' },
+    { id: 'c-2', type: 'persona_fisica', nombre: 'Antonio', apellidos: 'Ruiz', email: 'antonio@x.es', nifType: 'dni' },
+  ];
+
+  async function montarConBuscador(): Promise<ComponentFixture<FacturaDrawerComponent>> {
+    const fixture = await montar([{ concepto: 'H', cantidad: 1, precioUnitario: 100, base: 100, aplicaIva: true }]);
+    fixture.componentRef.setInput('contactos', CONTACTOS);
+    fixture.componentRef.setInput('permitirBuscarContacto', true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    return fixture;
+  }
+
+  it('sin violaciones con el buscador cerrado', async () => {
+    const fixture = await montarConBuscador();
+    const raiz = fixture.nativeElement as HTMLElement;
+    expect(raiz.querySelector('#cliente-buscar[role="combobox"]')).not.toBeNull();
+    const violaciones = await analizarA11y(raiz);
+    expect(violaciones, `\n${formatearViolaciones(violaciones)}\n`).toEqual([]);
+  });
+
+  it('sin violaciones con el listbox abierto y una opción activa', async () => {
+    const fixture = await montarConBuscador();
+    const raiz = fixture.nativeElement as HTMLElement;
+    const buscador = raiz.querySelector<HTMLInputElement>('#cliente-buscar')!;
+    buscador.value = 'an';
+    buscador.dispatchEvent(new Event('input', { bubbles: true }));
+    buscador.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(buscador.getAttribute('aria-expanded')).toBe('true');
+    expect(raiz.querySelectorAll('[role="option"]')).toHaveLength(2);
+    expect(buscador.getAttribute('aria-activedescendant')).toBe('cliente-opcion-0');
+    const violaciones = await analizarA11y(raiz);
+    expect(violaciones, `\n${formatearViolaciones(violaciones)}\n`).toEqual([]);
+  });
+
+  it('sin violaciones con un contacto vinculado y la casilla "Guardar también en el contacto"', async () => {
+    const fixture = await montarConBuscador();
+    fixture.componentRef.setInput('initialCliente', { contactoId: 'c-2', nombre: 'Antonio Ruiz', tipoId: 'nif' });
+    fixture.componentRef.setInput('contactoVinculado', CONTACTOS[1]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const raiz = fixture.nativeElement as HTMLElement;
+    expect(raiz.querySelector('#cliente-guardar-contacto')).not.toBeNull();
+    const violaciones = await analizarA11y(raiz);
+    expect(violaciones, `\n${formatearViolaciones(violaciones)}\n`).toEqual([]);
+  });
+
+  it('sin violaciones en una rectificativa (cliente de solo lectura con ayuda)', async () => {
+    const fixture = await montar([{ concepto: 'H', cantidad: 1, precioUnitario: -100, base: -100, aplicaIva: true }]);
+    fixture.componentRef.setInput('rectificativa', true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const raiz = fixture.nativeElement as HTMLElement;
+    expect(raiz.textContent).toContain('La rectificativa mantiene el mismo cliente');
+    const violaciones = await analizarA11y(raiz);
+    expect(violaciones, `\n${formatearViolaciones(violaciones)}\n`).toEqual([]);
+  });
+});
