@@ -39,15 +39,8 @@ export interface VerifactuState {
   encoladoAt?: string;
   generadoAt?: string;
   enviadoAt?: string;
-  anulacion?: {
-    estado: EstadoVerifactu;
-    huella?: string;
-    csv?: string;
-    codigoError?: string;
-    descripcionError?: string;
-    errorMessage?: string;
-    enviadoAt?: string;
-  };
+  /** Misma máquina de estados que el alta, sin tocar sus campos (el QR sobrevive). */
+  anulacion?: Omit<VerifactuState, 'anulacion' | 'tipoRegistro' | 'qrUrl'>;
 }
 
 export interface InvoiceDoc {
