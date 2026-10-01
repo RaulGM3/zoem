@@ -7,6 +7,14 @@ const SOAP_PRODUCCION = 'https://www1.agenciatributaria.gob.es/wlpl/TIKE-CONT/ws
 const QR_SANDBOX = 'https://prewww2.aeat.es/wlpl/TIKE-CONT/ValidarQR';
 const QR_PRODUCCION = 'https://www2.agenciatributaria.gob.es/wlpl/TIKE-CONT/ValidarQR';
 
+/**
+ * Sandbox salvo `sandbox: false` explícito. Criterio único para endpoint y QR:
+ * ante un flag ausente nunca se envía (ni se imprime un QR) de producción.
+ */
+export function esSandbox(verifactu: { sandbox?: boolean } | undefined): boolean {
+  return verifactu?.sandbox !== false;
+}
+
 export function soapEndpoint(sandbox: boolean): string {
   return sandbox ? SOAP_SANDBOX : SOAP_PRODUCCION;
 }

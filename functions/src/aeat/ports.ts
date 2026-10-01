@@ -1,7 +1,7 @@
 // Puertos (interfaces) del orquestador Verifactu. Las implementaciones reales
 // (Firestore, https, Secret Manager) viven en adapters.ts; los tests usan testing/fakes.ts.
 import type { HttpRespuesta } from './parseResponse';
-import type { ChainHead, EstadoVerifactu, InvoiceDoc, VerifactuState } from './types';
+import type { ChainHead, CompanyDoc, EstadoVerifactu, InvoiceDoc, VerifactuState } from './types';
 
 /**
  * Cambio parcial de `invoice.verifactu`. Siempre lleva `estado` (el alta añade `tipoRegistro`).
@@ -39,3 +39,9 @@ export type SoapSender = (url: string, xml: string, creds: Credenciales) => Prom
 export type CredentialReader = (companyId: string) => Promise<Credenciales>;
 
 export type Clock = () => Date;
+
+/** Lecturas fuera de transacción (Admin SDK). `getInvoice` devuelve null si la factura no es de esa empresa. */
+export interface DocReader {
+  getCompany(companyId: string): Promise<CompanyDoc | null>;
+  getInvoice(companyId: string, invoiceId: string): Promise<InvoiceDoc | null>;
+}

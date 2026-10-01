@@ -1,8 +1,8 @@
 // Dobles en memoria de los puertos para los tests del orquestador y de la cadena.
 import { aplicarPatchVerifactu } from '../chain';
 import type { HttpRespuesta } from '../parseResponse';
-import type { ChainStore, ChainTx, Clock, CredentialReader, Credenciales, SoapSender, VerifactuPatch } from '../ports';
-import type { ChainHead, InvoiceDoc } from '../types';
+import type { ChainStore, ChainTx, Clock, CredentialReader, Credenciales, DocReader, SoapSender, VerifactuPatch } from '../ports';
+import type { ChainHead, CompanyDoc, InvoiceDoc } from '../types';
 
 const MAX_REINTENTOS_TX = 10;
 
@@ -18,7 +18,8 @@ interface EstadoEmpresa {
  * acumulan en un buffer y solo se aplican si nadie ha confirmado entre medias; si no,
  * se vuelve a ejecutar el callback (igual que Firestore).
  */
-export class FakeChainStore implements ChainStore {
+export class FakeChainStore implements ChainStore, DocReader {
+  private readonly companies = new Map<string, CompanyDoc>();
   private readonly empresas = new Map<string, EstadoEmpresa>();
   /** Número de veces que una transacción tuvo que reintentarse por conflicto. */
   conflictos = 0;
@@ -32,6 +33,19 @@ export class FakeChainStore implements ChainStore {
       this.empresas.set(companyId, e);
     }
     return e;
+  }
+
+  sembrarEmpresa(companyId: string, company: CompanyDoc): void {
+    this.companies.set(companyId, structuredClone(company));
+  }
+
+  async getCompany(companyId: string): Promise<CompanyDoc | null> {
+    const c = this.companies.get(companyId);
+    return c ? structuredClone(c) : null;
+  }
+
+  async getInvoice(companyId: string, invoiceId: string): Promise<InvoiceDoc | null> {
+    return this.factura(companyId, invoiceId) ?? null;
   }
 
   sembrarFactura(invoice: InvoiceDoc): void {

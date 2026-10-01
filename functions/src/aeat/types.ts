@@ -67,7 +67,8 @@ export interface CompanyDoc {
   ca: string;
   verifactu?: {
     enabled: boolean;
-    sandbox: boolean;
+    /** Ausente en empresas antiguas: se trata como sandbox (ver `esSandbox`). */
+    sandbox?: boolean;
     certNif?: string;
   };
 }

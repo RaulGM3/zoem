@@ -124,6 +124,18 @@ describe('decidirEntrada (3.2)', () => {
     if (d.accion.tipo === 'enviar') expect(d.accion.pending).toEqual(d.head.pending);
   });
 
+  it('QR coherente con el endpoint: sin flag `sandbox` en la empresa, el QR es de sandbox', () => {
+    const d = decidirEntrada(null, entrada({ company: empresa({ verifactu: { enabled: true } }) }), NOW);
+    const p = d.invoicePatches.find((x) => x.invoiceId === 'inv1');
+    expect(p?.patch.qrUrl).toContain('https://prewww2.aeat.es/wlpl/TIKE-CONT/ValidarQR');
+  });
+
+  it('QR de producción solo con `sandbox: false` explícito', () => {
+    const d = decidirEntrada(null, entrada({ company: empresa({ verifactu: { enabled: true, sandbox: false } }) }), NOW);
+    const p = d.invoicePatches.find((x) => x.invoiceId === 'inv1');
+    expect(p?.patch.qrUrl).toContain('https://www2.agenciatributaria.gob.es/wlpl/TIKE-CONT/ValidarQR');
+  });
+
   it('S7.2 con `last`=A y sin pending: RegistroAnterior = A y la huella usa la huella de A', () => {
     const a = enlace();
     const d = decidirEntrada(head({ last: a }), entrada(), NOW);

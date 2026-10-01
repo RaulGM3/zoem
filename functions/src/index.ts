@@ -204,6 +204,7 @@ export const elevenLabsWebhook = onRequest(
 // ─── AEAT Verifactu ─────────────────────────────────────────────────────────
 export { storeAeatCredential } from './aeat/storeCredential';
 export { verifactuSubmit } from './aeat/verifactuSubmit';
+export { verifactuDrain } from './aeat/verifactuDrain';
 
 // ─── Generación de documentos ────────────────────────────────────────────────
 export { generateDocx } from './htmlToDocx';

@@ -8,7 +8,7 @@
 import { DEFAULT_ESPERA_S, MAX_BACKOFF_S, impuestoDeEmpresa } from './config';
 import { buildRegistroAlta, buildRegistroAnulacion } from './buildRegistro';
 import { calcularDesglose } from './desglose';
-import { qrUrl } from './endpoints';
+import { esSandbox, qrUrl } from './endpoints';
 import { fechaAeat } from './fechas';
 import type { Resultado } from './parseResponse';
 import type { ChainTx, InvoicePatch, VerifactuPatch } from './ports';
@@ -119,7 +119,7 @@ function qrDe(e: EntradaCadena): string | undefined {
   const impuesto = impuestoDeEmpresa(e.company.ca);
   if (!impuesto.ok) return undefined;
   const { importeTotal } = calcularDesglose(e.invoice.lineas ?? [], e.invoice.ivaRate ?? 0, impuesto.impuesto);
-  return qrUrl(e.company.verifactu?.sandbox ?? false, {
+  return qrUrl(esSandbox(e.company.verifactu), {
     nif: e.company.cif ?? '',
     numSerie: e.invoice.invoiceNumber,
     fecha: fechaAeat(e.invoice.issueDate),
