@@ -113,4 +113,24 @@ describe('InvoicePdfService — QR Verifactu (D11)', () => {
     expect(pdf).toMatch(/\(0,22 .\) Tj/);
     expect(pdf).not.toMatch(/\(0,2[34] .\) Tj/);
   });
+
+  it('S7.1: cliente con NIF imprime "NIF: X" y los tipos ausentes se tratan como nif', async () => {
+    const conTipo = await generar(
+      factura(undefined, { clienteNombre: 'Ana', clienteNif: '12345678Z', clienteTipoId: 'nif' }),
+    );
+    expect(conTipo).toContain('(NIF: 12345678Z)');
+    expect(conTipo).not.toContain('NIF/CIF');
+    const legacy = await generar(factura(undefined, { clienteNombre: 'Ana', clienteNif: 'B12345674' }));
+    expect(legacy).toContain('(NIF: B12345674)');
+    expect(legacy).not.toContain('Doc. identificaci');
+  });
+
+  it('S7.2: cliente con documento extranjero imprime "Doc. identificación: X"', async () => {
+    const pdf = await generar(
+      factura(undefined, { clienteNombre: 'John', clienteNif: 'PAA123456', clienteTipoId: 'extranjero' }),
+    );
+    expect(pdf).toContain('Doc. identificaci');
+    expect(pdf).toContain('PAA123456');
+    expect(pdf).not.toContain('(NIF: PAA123456)');
+  });
 });

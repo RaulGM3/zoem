@@ -97,7 +97,11 @@ export class InvoicePdfService {
       let cy = startY + 10;
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(90, 90, 90);
-      if (invoice.clienteNif) { doc.text(`NIF/CIF: ${invoice.clienteNif}`, margin, cy); cy += 5; }
+      if (invoice.clienteNif) {
+        const etiqueta = invoice.clienteTipoId === 'extranjero' ? 'Doc. identificación' : 'NIF';
+        doc.text(`${etiqueta}: ${invoice.clienteNif}`, margin, cy);
+        cy += 5;
+      }
       if (invoice.clienteDireccion) {
         const lines = doc.splitTextToSize(invoice.clienteDireccion, 90) as string[];
         doc.text(lines, margin, cy);
