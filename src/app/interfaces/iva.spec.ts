@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { desglosarIva, opcionesIva, TIPOS_IVA } from './iva';
+import {
+  CAUSAS_EXENCION,
+  CAUSA_EXENCION_LABELS,
+  desglosarIva,
+  esLineaExenta,
+  opcionesIva,
+  TIPOS_IVA,
+} from './iva';
 
 describe('opcionesIva', () => {
   it('sin tipos extra devuelve los tipos vigentes', () => {
@@ -54,5 +61,38 @@ describe('desglosarIva', () => {
 
   it('expone los tipos de IVA vigentes en España', () => {
     expect(TIPOS_IVA).toEqual([21, 10, 4, 0]);
+  });
+});
+
+describe('causas de exención (R10.2)', () => {
+  it('ofrece E1-E6 y N1-N2, en ese orden', () => {
+    expect([...CAUSAS_EXENCION]).toEqual(['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'N1', 'N2']);
+  });
+
+  it('cada causa tiene una etiqueta descriptiva que empieza por su código', () => {
+    for (const c of CAUSAS_EXENCION) {
+      expect(CAUSA_EXENCION_LABELS[c].startsWith(`${c} · `)).toBe(true);
+      expect(CAUSA_EXENCION_LABELS[c].length).toBeGreaterThan(8);
+    }
+    expect(CAUSA_EXENCION_LABELS.N2).toContain('localización');
+  });
+});
+
+describe('esLineaExenta (espejo de functions/src/aeat/desglose.ts)', () => {
+  it('línea sin IVA es exenta aunque el global sea 21', () => {
+    expect(esLineaExenta({ aplicaIva: false }, 0.21)).toBe(true);
+  });
+
+  it('línea con IVA y tipo propio 0 es exenta', () => {
+    expect(esLineaExenta({ aplicaIva: true, ivaRate: 0 }, 0.21)).toBe(true);
+  });
+
+  it('línea con IVA sin tipo propio hereda el global: 0 exenta, 21 no', () => {
+    expect(esLineaExenta({ aplicaIva: true }, 0)).toBe(true);
+    expect(esLineaExenta({ aplicaIva: true }, 0.21)).toBe(false);
+  });
+
+  it('un tipo propio no exento gana al global exento', () => {
+    expect(esLineaExenta({ aplicaIva: true, ivaRate: 0.1 }, 0)).toBe(false);
   });
 });

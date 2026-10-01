@@ -7,6 +7,7 @@ import {
   inject,
   signal,
   computed,
+  ElementRef,
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormArray, FormGroup, Validators } from '@angular/forms';
@@ -22,7 +23,13 @@ import {
 import type { Invoice, InvoiceLinea } from '../../../../core/services/invoice.service';
 import { normalizeLinea } from '../../../../core/services/invoice.service';
 import { Caso } from '../../../../interfaces';
-import { opcionesIva } from '../../../../interfaces/iva';
+import {
+  CAUSAS_EXENCION,
+  CAUSA_EXENCION_LABELS,
+  esLineaExenta,
+  opcionesIva,
+} from '../../../../interfaces/iva';
+import type { CausaExencion } from '../../../../interfaces/verifactu.interface';
 import { motivoBloqueoVerifactu } from '../../../../core/verifactu/verifactu-ui';
 
 export interface InvoiceFormPayload {
@@ -47,6 +54,13 @@ interface IvaGroup {
 })
 export class FacturaDrawerComponent {
   private readonly fb = inject(FormBuilder);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+
+  /** Opciones del selector de causa de exención (E1..E6, N1, N2). */
+  readonly causasExencion = CAUSAS_EXENCION.map((valor) => ({ valor, etiqueta: CAUSA_EXENCION_LABELS[valor] }));
+
+  /** Se pone a `true` al intentar confirmar con el formulario inválido: entonces se muestran los errores. */
+  readonly submitted = signal(false);
 
   // --- Inputs ---
   readonly caso = input<Caso | null>(null);
@@ -109,6 +123,18 @@ export class FacturaDrawerComponent {
   // --- Preview (driven by form value changes → signal) ---
   private readonly formValue = signal(this.form.getRawValue());
 
+  /** Por línea: ¿su tipo efectivo es exento/no sujeto (y por tanto exige causa)? */
+  readonly lineaExenta = computed(() => {
+    const val = this.formValue();
+    const globalRate = (val.ivaRate ?? 21) / 100;
+    return val.lineas.map((l) =>
+      esLineaExenta(
+        { aplicaIva: !!l['aplicaIva'], ivaRate: l['ivaRate'] != null ? l['ivaRate'] / 100 : null },
+        globalRate,
+      ),
+    );
+  });
+
   readonly preview = computed(() => {
     const val = this.formValue();
     const globalRate = (val.ivaRate ?? 21) / 100;
@@ -149,6 +175,7 @@ export class FacturaDrawerComponent {
   constructor() {
     // Sync form changes → signal for computed preview
     this.form.valueChanges.subscribe(() => {
+      this.syncCausasExencion();
       this.formValue.set(this.form.getRawValue());
     });
 
@@ -168,6 +195,7 @@ export class FacturaDrawerComponent {
       if (this.lineasArray.length === 0) {
         this.lineasArray.push(this.createLineaGroup(normalizeLinea({})), { emitEvent: false });
       }
+      this.syncCausasExencion();
       this.formValue.set(this.form.getRawValue());
     });
   }
@@ -206,14 +234,29 @@ export class FacturaDrawerComponent {
 
   // --- Confirm ---
 
+  /** ¿Hay que mostrar el error de la causa de la línea `i`? */
+  causaInvalida(i: number): boolean {
+    const control = this.lineasArray.at(i).controls['causaExencion'];
+    return !!control && control.invalid && (control.touched || this.submitted());
+  }
+
   onConfirm(): void {
-    if (this.form.invalid) return;
+    if (this.form.invalid) {
+      this.submitted.set(true);
+      this.form.markAllAsTouched();
+      this.host.nativeElement
+        .querySelector<HTMLElement>('input.ng-invalid, select.ng-invalid, textarea.ng-invalid')
+        ?.focus();
+      return;
+    }
     const val = this.form.getRawValue();
     const globalRate = (val.ivaRate ?? 21) / 100;
+    const exentas = this.lineaExenta();
 
-    const lineas: InvoiceLinea[] = val.lineas.map((l) => {
+    const lineas: InvoiceLinea[] = val.lineas.map((l, i) => {
       const cantidad = l['cantidad'] ?? 1;
       const precioUnitario = l['precioUnitario'] ?? 0;
+      const causa = exentas[i] ? (l['causaExencion'] as CausaExencion | '') : '';
       return {
         concepto: l['concepto'] ?? '',
         descripcion: l['descripcion'] || undefined,
@@ -222,6 +265,7 @@ export class FacturaDrawerComponent {
         base: cantidad * precioUnitario,
         aplicaIva: l['aplicaIva'] ?? false,
         ivaRate: l['ivaRate'] != null ? l['ivaRate'] / 100 : undefined,
+        ...(causa ? { causaExencion: causa } : {}),
       };
     });
 
@@ -244,6 +288,32 @@ export class FacturaDrawerComponent {
       precioUnitario: [l.precioUnitario, Validators.required],
       aplicaIva: [l.aplicaIva],
       ivaRate: [l.ivaRate != null ? Math.round(l.ivaRate * 100) : null],
+      causaExencion: [l.causaExencion ?? ''],
     });
+  }
+
+  /**
+   * Mantiene la causa de exención de cada línea coherente con su tipo de IVA efectivo:
+   * exenta -> obligatoria; no exenta -> sin validador y valor vaciado (S10.5).
+   * Solo actualiza validez/valor del control de la causa, sin emitir eventos (evita bucles).
+   */
+  private syncCausasExencion(): void {
+    const globalRate = (this.form.controls.ivaRate.value ?? 21) / 100;
+    for (const group of this.lineasArray.controls) {
+      const causa = group.controls['causaExencion'];
+      if (!causa) continue;
+      const rate = group.controls['ivaRate'].value;
+      const exenta = esLineaExenta(
+        { aplicaIva: !!group.controls['aplicaIva'].value, ivaRate: rate != null ? rate / 100 : null },
+        globalRate,
+      );
+      if (exenta && !causa.hasValidator(Validators.required)) {
+        causa.addValidators(Validators.required);
+        causa.updateValueAndValidity({ emitEvent: false });
+      } else if (!exenta && (causa.hasValidator(Validators.required) || causa.value)) {
+        causa.removeValidators(Validators.required);
+        causa.reset('', { emitEvent: false });
+      }
+    }
   }
 }

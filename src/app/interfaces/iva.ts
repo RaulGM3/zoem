@@ -6,6 +6,8 @@
  * imponible y cuota, de forma que `baseImponible + cuotaIva === importe`.
  */
 
+import type { CausaExencion } from './verifactu.interface';
+
 /** Tipos de IVA vigentes en España (general, reducido, superreducido, exento/no sujeto). */
 export const TIPOS_IVA = [21, 10, 4, 0] as const;
 
@@ -51,4 +53,42 @@ export function calcularIvaDesdeBase(base: number, tipoIva: TipoIva, exento: boo
   if (exento || tipoIva === 0) return { baseImponible: round2(base), cuotaIva: 0 };
   const cuotaIva = round2(base * tipoIva / 100);
   return { baseImponible: round2(base), cuotaIva };
+}
+
+/** Causas de exención (E1..E6) y de no sujeción (N1, N2) que admite el registro Verifactu. */
+export const CAUSAS_EXENCION: readonly CausaExencion[] = ['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'N1', 'N2'];
+
+/**
+ * Etiquetas de las causas. Solo se citan artículos de la LIVA donde la causa los
+ * fija sin ambigüedad; el resto queda genérico hasta confirmar el texto oficial.
+ */
+export const CAUSA_EXENCION_LABELS: Readonly<Record<CausaExencion, string>> = {
+  E1: 'E1 · Exenta por el art. 20 LIVA',
+  E2: 'E2 · Exenta por el art. 21 LIVA (exportaciones)',
+  E3: 'E3 · Exenta por el art. 22 LIVA (asimiladas a exportaciones)',
+  E4: 'E4 · Exenta por los arts. 23 y 24 LIVA (regímenes aduaneros)',
+  E5: 'E5 · Exenta por el art. 25 LIVA (entregas intracomunitarias)',
+  E6: 'E6 · Exenta por otros motivos',
+  N1: 'N1 · No sujeta (art. 7, 14 u otros)',
+  N2: 'N2 · No sujeta por reglas de localización',
+};
+
+/** Tipo de IVA efectivo de una línea (0..1): sin IVA es 0; sin tipo propio hereda el global. */
+export function tasaEfectivaLinea(
+  linea: { aplicaIva: boolean; ivaRate?: number | null },
+  ivaGlobal: number,
+): number {
+  return linea.aplicaIva ? (linea.ivaRate ?? ivaGlobal) : 0;
+}
+
+/**
+ * La línea es exenta o no sujeta (y por tanto necesita causa) si no lleva IVA o su
+ * tipo efectivo es 0. Espejo de `esLineaExenta` en functions/src/aeat/desglose.ts
+ * (no hay código compartido por el rootDir de functions).
+ */
+export function esLineaExenta(
+  linea: { aplicaIva: boolean; ivaRate?: number | null },
+  ivaGlobal: number,
+): boolean {
+  return !linea.aplicaIva || tasaEfectivaLinea(linea, ivaGlobal) === 0;
 }

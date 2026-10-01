@@ -3,8 +3,9 @@ import { Storage, ref, uploadBytes, getDownloadURL } from '@angular/fire/storage
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import QRCode from 'qrcode';
-import type { Invoice, InvoiceLinea } from './invoice.service';
+import type { Invoice } from './invoice.service';
 import { normalizeLinea } from './invoice.service';
+import { totalesRegistro } from '../verifactu/totales-registro';
 import { CompanyService, getLabelIdentificacion } from './company.service';
 import type { Company } from './company.service';
 
@@ -113,6 +114,8 @@ export class InvoicePdfService {
     // ── Lines table ─────────────────────────────────────────────────────────
     const lineas = (invoice.lineas ?? []).map(l => normalizeLinea(l));
     const globalIvaRate = invoice.ivaRate ?? 0;
+    // Mismos totales (redondeados por grupo) que el registro Verifactu y su QR.
+    const totales = totalesRegistro(lineas, globalIvaRate);
 
     const rows: string[][] = [];
     for (const l of lineas) {
@@ -164,19 +167,18 @@ export class InvoicePdfService {
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(90, 90, 90);
     doc.text('Base imponible', labelX, tY);
-    doc.text(this.formatMoney(invoice.amount) + ' €', right, tY, { align: 'right' });
+    doc.text(this.formatMoney(totales.baseTotal) + ' €', right, tY, { align: 'right' });
     tY += 6;
 
     // Per-rate IVA breakdown
-    const ivaGroups = this.groupByIvaRate(lineas, globalIvaRate);
-    for (const [pct, { cuota }] of ivaGroups) {
+    for (const { pct, cuota } of totales.grupos) {
       doc.text(`IVA (${pct}%)`, labelX, tY);
       doc.text(this.formatMoney(cuota) + ' €', right, tY, { align: 'right' });
       tY += 6;
     }
-    if (ivaGroups.size === 0) {
+    if (totales.grupos.length === 0) {
       doc.text('IVA', labelX, tY);
-      doc.text(this.formatMoney(invoice.vat) + ' €', right, tY, { align: 'right' });
+      doc.text(this.formatMoney(totales.cuotaTotal) + ' €', right, tY, { align: 'right' });
       tY += 6;
     }
 
@@ -187,7 +189,7 @@ export class InvoicePdfService {
     doc.setFontSize(11);
     doc.setTextColor(30, 30, 30);
     doc.text('TOTAL', labelX, tY + 4);
-    doc.text(this.formatMoney(invoice.total) + ' €', right, tY + 4, { align: 'right' });
+    doc.text(this.formatMoney(totales.total) + ' €', right, tY + 4, { align: 'right' });
 
     // Notes
     if (invoice.notes) {
@@ -200,26 +202,25 @@ export class InvoicePdfService {
     }
 
     // ── Verifactu footer ────────────────────────────────────────────────────
-    if (invoice.verifactu?.estado === 'enviado' && invoice.verifactu.csv) {
-      const csv = invoice.verifactu.csv;
-      // Usar la URL del portal de verificación ciudadano (generada por el servidor (verifactu.qrUrl))
-      const qrUrl = invoice.verifactu.qrUrl
-        ?? `https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tikeV/cont/index.html?nif=&numserie=${encodeURIComponent(invoice.invoiceNumber)}&importe=${invoice.total.toFixed(2)}`;
-      const qrDataUrl = await this.generateQrDataUrl(qrUrl);
+    // El QR se dibuja siempre que el servidor haya guardado `qrUrl` (desde que se genera el
+    // registro, en cualquier estado). Esa URL ya lleva el ImporteTotal redondeado: nunca se
+    // reconstruye en el cliente. Sin `qrUrl` (Verifactu no aplica o error de precondición) no se dibuja nada.
+    const verifactu = invoice.verifactu;
+    if (verifactu?.qrUrl) {
+      const csv = verifactu.csv;
+      const qrDataUrl = await this.generateQrDataUrl(verifactu.qrUrl);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(130, 130, 130);
       if (qrDataUrl) {
         doc.addImage(qrDataUrl, 'PNG', margin, 263, 22, 22);
-        doc.setFontSize(7);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(130, 130, 130);
         doc.text('Verificar en AEAT', margin, 287);
         doc.setFontSize(7.5);
-        doc.text(`CSV: ${csv}`, margin + 25, 270);
-        doc.text('Factura registrada en Verifactu · Sistema de Facturación Verificable', margin + 25, 276);
+        doc.text('VERI*FACTU · Factura verificable en la sede electrónica de la AEAT', margin + 25, 270);
+        if (csv) doc.text(`CSV: ${csv}`, margin + 25, 276);
       } else {
         doc.setFontSize(7.5);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(130, 130, 130);
-        doc.text(`Factura registrada en Verifactu (AEAT) · CSV: ${csv}`, margin, 275);
+        doc.text(`VERI*FACTU (AEAT)${csv ? ` · CSV: ${csv}` : ''}`, margin, 275);
       }
     }
 
@@ -245,19 +246,5 @@ export class InvoicePdfService {
 
   private formatQty(n: number): string {
     return n % 1 === 0 ? String(n) : n.toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
-  }
-
-  private groupByIvaRate(lineas: InvoiceLinea[], globalRate: number): Map<number, { base: number; cuota: number }> {
-    const groups = new Map<number, { base: number; cuota: number }>();
-    for (const l of lineas) {
-      if (!l.aplicaIva) continue;
-      const rate = l.ivaRate ?? globalRate;
-      const pct = Math.round(rate * 100);
-      const existing = groups.get(pct) ?? { base: 0, cuota: 0 };
-      existing.base += l.base;
-      existing.cuota += l.base * rate;
-      groups.set(pct, existing);
-    }
-    return groups;
   }
 }

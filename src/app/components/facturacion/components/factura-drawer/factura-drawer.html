@@ -141,6 +141,29 @@
                 </div>
               }
             </div>
+
+            <!-- Row 5: Causa de exención (solo líneas exentas / no sujetas) -->
+            @if (lineaExenta()[i]) {
+              <div>
+                <label [for]="'causa-exencion-' + i" class="form-label">Causa de exención</label>
+                <select [id]="'causa-exencion-' + i" formControlName="causaExencion"
+                  class="form-select text-xs"
+                  [class.error]="causaInvalida(i)"
+                  aria-required="true"
+                  [attr.aria-invalid]="causaInvalida(i) ? 'true' : 'false'"
+                  [attr.aria-describedby]="causaInvalida(i) ? 'causa-exencion-error-' + i : null">
+                  <option value="">Selecciona una causa</option>
+                  @for (c of causasExencion; track c.valor) {
+                    <option [value]="c.valor">{{ c.etiqueta }}</option>
+                  }
+                </select>
+                @if (causaInvalida(i)) {
+                  <p [id]="'causa-exencion-error-' + i" class="form-error" role="alert">
+                    Selecciona la causa de exención de esta línea.
+                  </p>
+                }
+              </div>
+            }
           </div>
         }
 
@@ -222,7 +245,7 @@
         (mouseleave)="$any($event.currentTarget).style.background=''">
         Cancelar
       </button>
-      <button (click)="onConfirm()" [disabled]="saving() || form.invalid || verifactuLocked()"
+      <button (click)="onConfirm()" [disabled]="saving() || verifactuLocked()"
         class="flex-1 rounded-lg py-2.5 text-sm font-semibold text-white disabled:opacity-50 transition-colors duration-150"
         style="background:var(--brand)"
         (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
