@@ -2,6 +2,7 @@ import { Component, ChangeDetectionStrategy, input, output, signal, effect } fro
 import { LucideAngularModule, User, X, Mail, Phone, Hash } from 'lucide-angular';
 import type { Caso, CasoEstado, CasoPrioridad, CasoTipo, Contact } from '../../../../interfaces';
 import { getContactDisplayName } from '../../../../interfaces';
+import { etiquetaDocumentoContacto } from '../../../../core/fiscal/documento-contacto';
 
 export interface CasoInfoFormData {
   titulo: string;
@@ -91,8 +92,7 @@ export class CasoInfoTabComponent {
   }
 
   getContactIdLabel(c: Contact): string {
-    if (c.type === 'persona_fisica') return c.nifType?.toUpperCase() ?? 'NIF';
-    return c.cifType?.toUpperCase() ?? 'CIF';
+    return etiquetaDocumentoContacto(c);
   }
 
   getContactPhone(c: Contact): string | undefined {

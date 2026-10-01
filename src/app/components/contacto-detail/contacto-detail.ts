@@ -30,6 +30,7 @@ import {
   EstadoContactoDialogComponent, type CambioEstadoResult,
 } from '../../shared/components/estado-contacto-dialog/estado-contacto-dialog';
 import { ContactoDocumentosComponent } from './components/contacto-documentos/contacto-documentos';
+import { etiquetaDocumentoContacto } from '../../core/fiscal/documento-contacto';
 
 @Component({
   selector: 'app-contacto-detail',
@@ -166,10 +167,7 @@ export class ContactoDetailComponent {
   }
 
   getIdentifierLabel(c: Contact): string {
-    if (c.type === 'persona_fisica') {
-      return c.nifType === 'pasaporte' ? 'Pasaporte' : c.nifType?.toUpperCase() ?? 'NIF';
-    }
-    return c.cifType === 'vat' ? 'VAT' : 'CIF';
+    return etiquetaDocumentoContacto(c);
   }
 
   getIdentifier(c: Contact): string | undefined {

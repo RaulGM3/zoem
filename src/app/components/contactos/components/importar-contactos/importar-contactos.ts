@@ -78,7 +78,7 @@ export class ImportarContactosComponent {
     { key: 'razonSocial',     label: 'Razón Social',      tag: 'Persona jurídica' },
     { key: 'email',           label: 'Email',             requiredFor: 'canal'    },
     { key: 'mobile',          label: 'Teléfono móvil',    requiredFor: 'canal'    },
-    { key: 'nif',             label: 'NIF / CIF' },
+    { key: 'nif',             label: 'NIF' },
     { key: 'status',          label: 'Estado' },
     { key: 'asunto',          label: 'Asunto' },
     { key: 'notes',           label: 'Notas' },
