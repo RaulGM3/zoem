@@ -7,9 +7,6 @@ import {
   Link,
   Pencil,
   CheckCircle2,
-  ShieldCheck,
-  ShieldAlert,
-  ShieldX,
   RefreshCw,
   CircleDollarSign,
   RotateCcw,
@@ -17,6 +14,13 @@ import {
   Hash,
 } from 'lucide-angular';
 import type { Invoice, InvoiceStatus } from '../../../../core/services/invoice.service';
+import {
+  colorTono,
+  tipoReintento,
+  verifactuBloqueada,
+  vistaVerifactu,
+  type VistaVerifactu,
+} from '../../../../core/verifactu/verifactu-ui';
 
 const STATUS_CONFIG: Record<InvoiceStatus, { label: string; bg: string; color: string }> = {
   borrador:  { label: 'Borrador',  bg: 'color-mix(in srgb,var(--text-faint) 12%,transparent)', color: 'var(--text-muted)' },
@@ -52,9 +56,6 @@ export class FacturacionFacturasTabComponent {
   readonly LinkIcon = Link;
   readonly PencilIcon = Pencil;
   readonly CheckCircle2Icon = CheckCircle2;
-  readonly ShieldCheckIcon = ShieldCheck;
-  readonly ShieldAlertIcon = ShieldAlert;
-  readonly ShieldXIcon = ShieldX;
   readonly RefreshCwIcon = RefreshCw;
   readonly CircleDollarSignIcon = CircleDollarSign;
   readonly RotateCcwIcon = RotateCcw;
@@ -124,15 +125,16 @@ export class FacturacionFacturasTabComponent {
   }
 
   canEdit(invoice: Invoice): boolean {
-    return invoice.verifactu?.estado !== 'enviado' && invoice.status !== 'anulada';
+    return !verifactuBloqueada(invoice) && invoice.status !== 'anulada';
   }
 
   canMarkPaid(invoice: Invoice): boolean {
     return invoice.status === 'pendiente' || invoice.status === 'vencida';
   }
 
+  /** Error, pendiente o en cola (R9.3); en facturas anuladas reintenta la anulación. */
   canRetryVerifactu(invoice: Invoice): boolean {
-    return invoice.verifactu?.estado === 'error';
+    return tipoReintento(invoice) !== null;
   }
 
   canFinalize(invoice: Invoice): boolean {
@@ -146,29 +148,22 @@ export class FacturacionFacturasTabComponent {
 
   /**
    * El número forma parte del `IDFactura` registrado en la AEAT y de la cadena de
-   * huellas, así que una vez aceptado por Verifactu es inmutable.
+   * huellas, así que con un registro vivo (en cola, pendiente o enviado) es inmutable.
    */
   canEditNumber(invoice: Invoice): boolean {
-    return invoice.verifactu?.estado !== 'enviado' && invoice.status !== 'anulada';
+    return !verifactuBloqueada(invoice) && invoice.status !== 'anulada';
   }
 
   canAnular(invoice: Invoice): boolean {
     return invoice.status !== 'anulada' && invoice.status !== 'borrador';
   }
 
-  verifactuIcon(invoice: Invoice): typeof ShieldCheck {
-    const estado = invoice.verifactu?.estado;
-    if (estado === 'enviado') return this.ShieldCheckIcon;
-    if (estado === 'error') return this.ShieldXIcon;
-    if (estado === 'pendiente') return this.ShieldAlertIcon;
-    return this.ShieldXIcon;
+  /** Vista del registro Verifactu; `Date.now()` se lee al renderizar para la antigüedad. */
+  verifactuVista(invoice: Invoice): VistaVerifactu | null {
+    return vistaVerifactu(invoice, Date.now());
   }
 
-  verifactuColor(invoice: Invoice): string {
-    const estado = invoice.verifactu?.estado;
-    if (estado === 'enviado') return 'var(--success)';
-    if (estado === 'error') return 'var(--danger)';
-    if (estado === 'pendiente') return 'var(--warning)';
-    return 'var(--text-faint)';
+  verifactuColor(vista: VistaVerifactu): string {
+    return colorTono(vista.tono);
   }
 }

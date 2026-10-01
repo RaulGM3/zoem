@@ -23,6 +23,7 @@ import type { Invoice, InvoiceLinea } from '../../../../core/services/invoice.se
 import { normalizeLinea } from '../../../../core/services/invoice.service';
 import { Caso } from '../../../../interfaces';
 import { opcionesIva } from '../../../../interfaces/iva';
+import { motivoBloqueoVerifactu } from '../../../../core/verifactu/verifactu-ui';
 
 export interface InvoiceFormPayload {
   lineas: InvoiceLinea[];
@@ -59,10 +60,12 @@ export class FacturaDrawerComponent {
   readonly editMode = input(false);
   readonly editingInvoice = input<Invoice | null>(null);
 
-  readonly verifactuLocked = computed(() => {
+  /** Motivo del bloqueo: registro vivo en Verifactu (en cola, pendiente o enviado). */
+  readonly verifactuBloqueo = computed(() => {
     const inv = this.editingInvoice();
-    return inv?.verifactu?.estado === 'enviado';
+    return inv ? motivoBloqueoVerifactu(inv) : null;
   });
+  readonly verifactuLocked = computed(() => this.verifactuBloqueo() !== null);
 
   /** Tipos de IVA seleccionables; incluye los tipos libres que ya traiga la factura. */
   readonly tiposIva = computed(() =>

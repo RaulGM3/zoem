@@ -106,13 +106,21 @@
 
             <!-- Verifactu -->
             <td class="px-3 py-2.5 text-center">
-              @if (inv.verifactu?.estado) {
-                <lucide-icon [img]="verifactuIcon(inv)" size="15"
-                  [style.color]="verifactuColor(inv)"
-                  [attr.aria-label]="'Verifactu: ' + inv.verifactu!.estado">
-                </lucide-icon>
+              @if (verifactuVista(inv); as vf) {
+                <div role="status" class="flex flex-col items-center gap-0.5 text-xs">
+                  <span class="font-semibold" [style.color]="verifactuColor(vf)">{{ vf.etiqueta }}</span>
+                  @if (vf.detalle) {
+                    <span class="max-w-[200px]" style="color:var(--text-muted)">{{ vf.detalle }}</span>
+                  }
+                  @if (vf.aviso) {
+                    <span class="max-w-[200px]" style="color:var(--warning)">{{ vf.aviso }}</span>
+                  }
+                  @if (vf.csv) {
+                    <span class="tabular-nums" style="color:var(--text-muted);font-family:var(--font-mono)">CSV: {{ vf.csv }}</span>
+                  }
+                </div>
               } @else {
-                <span class="text-xs" style="color:var(--text-faint)">—</span>
+                <span class="text-xs" style="color:var(--text-muted)">—</span>
               }
             </td>
 
@@ -191,7 +199,7 @@
                     style="color:var(--text-muted)"
                     (mouseenter)="$any($event.currentTarget).style.color='var(--warning)'"
                     (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)'"
-                    [attr.aria-label]="'Reintentar Verifactu: ' + (inv.verifactu?.error ?? '')">
+                    [attr.aria-label]="'Reintentar envío a Verifactu de la factura ' + inv.invoiceNumber">
                     <lucide-icon [img]="RefreshCwIcon" size="14"></lucide-icon>
                   </button>
                 }

@@ -1,64 +1,58 @@
-/** Tipos para el Sistema de Información de Facturación (SIF) de la AEAT — Verifactu */
+/**
+ * Tipos de Verifactu (SIF de la AEAT) en el cliente.
+ *
+ * El servidor es el único que escribe `invoice.verifactu` (hash, cadena, XML y envío
+ * viven en `functions/src/aeat`). Estos tipos ESPEJAN `functions/src/aeat/types.ts`
+ * porque `functions` y `src/app` no comparten código (rootDir distinto): si cambia uno,
+ * hay que cambiar el otro.
+ */
 
-export interface VerifactuIDFactura {
-  NIF: string;
-  NumSerieFactura: string;
-  FechaExpedicionFactura: string; // dd-mm-yyyy
-}
+/** Causas de exención (E1..E6) y de no sujeción (N1, N2) del XSD de la AEAT. */
+export type CausaExencion = 'E1' | 'E2' | 'E3' | 'E4' | 'E5' | 'E6' | 'N1' | 'N2';
 
-export interface VerifactuDesgloseIVA {
-  BaseImponibleOImporteNoSujeto: number;
-  TipoImpositivo: number; // porcentaje, ej. 21
-  CuotaRepercutida: number;
-}
+/** Máquina de estados del registro. `no_aplica` solo aparece en facturas antiguas. */
+export type EstadoVerifactu = 'en_cola' | 'pendiente' | 'enviado' | 'error' | 'no_aplica';
 
-/** Registro de alta de factura según spec AEAT Verifactu v1.0 */
-export interface VerifactuRegistro {
-  IDFactura: VerifactuIDFactura;
-  NombreRazonEmisor: string;
-  TipoFactura: 'F1' | 'F2' | 'R1' | 'R2' | 'R3' | 'R4' | 'R5';
-  DescripcionOperacion: string;
-  /** NIF del destinatario (empresa o persona, si aplica) */
-  NIF?: string;
-  NombreDestinatario?: string;
-  Desglose: VerifactuDesgloseIVA[];
-  CuotaTotal: number;
-  ImporteTotal: number;
-  /** SHA-256 hex del registro anterior de la misma empresa. Vacío en la primera factura. */
-  HuellaAnterior: string;
-  FechaHoraHusoGenRegistro: string; // ISO-8601 con zona horaria
-}
+/** Lo que el cliente puede pedir al callable `verifactuSubmit`. */
+export type TipoEnvioVerifactu = 'alta' | 'anulacion';
 
-/** Estado de Verifactu almacenado en el documento Invoice de Firestore */
+/** Estado de un registro (alta o anulación) tal y como lo escribe el servidor. */
 export interface VerifactuEstado {
-  estado: 'pendiente' | 'enviado' | 'error' | 'no_aplica';
-  /** SHA-256 hex de este registro (para usarse como HuellaAnterior en la siguiente factura) */
+  estado: EstadoVerifactu;
+  tipoRegistro: TipoEnvioVerifactu;
   huella?: string;
-  huellaAnterior?: string;
-  /** Código Seguro de Verificación devuelto por AEAT tras aceptar el registro */
-  csv?: string;
+  /** URL de verificación para el QR del PDF; existe desde que se genera el registro. */
   qrUrl?: string;
+  /** Código Seguro de Verificación devuelto por la AEAT. */
+  csv?: string;
+  aceptadoConErrores?: boolean;
+  codigoError?: string;
+  descripcionError?: string;
+  errorKind?: 'precondicion' | 'aeat' | 'configuracion';
+  errorMessage?: string;
+  /** Hubo un rechazo previo del mismo registro (el reenvío va como subsanación). */
+  rechazoPrevio?: boolean;
+  /** Envíos realizados a la AEAT (cuenta envíos, no pulsaciones de reintento). */
+  attempts?: number;
+  encoladoAt?: string;
+  generadoAt?: string;
   enviadoAt?: string;
-  /** CSV devuelto por AEAT al aceptar el RegistroBaja (anulación). No pisa `csv`, que es el del alta. */
-  csvBaja?: string;
-  /** ISO datetime en que AEAT procesó la anulación. */
-  bajaAt?: string;
+  /** Misma máquina de estados que el alta, sin tocar sus campos (el QR sobrevive). */
+  anulacion?: Omit<VerifactuEstado, 'anulacion' | 'tipoRegistro' | 'qrUrl'>;
+  /** Solo en facturas anteriores a la migración al servidor. */
   error?: string;
 }
 
-/** Registro de baja (anulación) de factura según spec AEAT Verifactu v1.0 */
-export interface VerifactuRegistroBaja {
-  IDFactura: VerifactuIDFactura;
-  NombreRazonEmisor: string;
-  /** Motivo de la anulación */
-  DescripcionOperacion: string;
-  HuellaAnterior: string;
-  FechaHoraHusoGenRegistro: string;
+/** Petición del callable `verifactuSubmit`. Reintentar es llamar de nuevo con lo mismo. */
+export interface VerifactuSolicitud {
+  companyId: string;
+  invoiceId: string;
+  tipo: TipoEnvioVerifactu;
 }
 
-/** Respuesta de la Cloud Function verifactuSubmit */
-export interface VerifactuSubmitResponse {
-  csv: string;
-  estado: 'aceptado' | 'rechazado';
-  rawResponse?: string;
-}
+/** Respuesta del callable `verifactuSubmit` (ver `ResultadoEnvio` en functions). */
+export type VerifactuSubmitResponse =
+  | { sent: false; motivo: 'verifactu_desactivado' }
+  | { sent: false; motivo: 'precondicion'; codigo: string; mensaje: string; estado: 'error' }
+  | { sent: false; motivo: 'certificado'; mensaje: string; estado: 'error' }
+  | { sent: boolean; estado: EstadoVerifactu; mensaje?: string; csv?: string };

@@ -202,7 +202,7 @@ export class InvoicePdfService {
     // ── Verifactu footer ────────────────────────────────────────────────────
     if (invoice.verifactu?.estado === 'enviado' && invoice.verifactu.csv) {
       const csv = invoice.verifactu.csv;
-      // Usar la URL del portal de verificación ciudadano (generada por verifactu-client.generateQrUrl)
+      // Usar la URL del portal de verificación ciudadano (generada por el servidor (verifactu.qrUrl))
       const qrUrl = invoice.verifactu.qrUrl
         ?? `https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tikeV/cont/index.html?nif=&numserie=${encodeURIComponent(invoice.invoiceNumber)}&importe=${invoice.total.toFixed(2)}`;
       const qrDataUrl = await this.generateQrDataUrl(qrUrl);

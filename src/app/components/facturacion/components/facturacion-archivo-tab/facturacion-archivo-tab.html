@@ -32,13 +32,29 @@
                   style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">
                   <lucide-icon [img]="FileCheckIcon" size="13"></lucide-icon> Emitida
                 </span>
-                @if (verifactuEstado(caso.facturaId); as vf) {
-                  <span class="inline-flex items-center gap-1 text-xs"
-                    [style.color]="verifactuBadgeColor(caso.facturaId)"
-                    [title]="vf.csv ? 'CSV: ' + vf.csv : (vf.error ?? 'Verifactu: ' + vf.estado)">
-                    <lucide-icon [img]="verifactuBadgeIcon(caso.facturaId)" size="12"></lucide-icon>
-                    {{ vf.estado === 'enviado' ? 'Verifactu ✓' : vf.estado === 'error' ? 'Error AEAT' : 'Pendiente AEAT' }}
-                  </span>
+                @if (verifactuVista(caso.facturaId); as vf) {
+                  <div role="status" class="flex flex-col gap-0.5 text-xs">
+                    <span class="font-medium" [style.color]="verifactuColor(vf)">{{ vf.etiqueta }}</span>
+                    @if (vf.detalle) {
+                      <span style="color:var(--text-muted)">{{ vf.detalle }}</span>
+                    }
+                    @if (vf.aviso) {
+                      <span style="color:var(--warning)">{{ vf.aviso }}</span>
+                    }
+                    @if (vf.csv) {
+                      <span class="tabular-nums" style="color:var(--text-muted);font-family:var(--font-mono)">CSV: {{ vf.csv }}</span>
+                    }
+                  </div>
+                  @if (vf.reintentable) {
+                    <button type="button" (click)="$event.stopPropagation(); retryVerifactu.emit(caso.facturaId!)"
+                      class="inline-flex w-fit items-center gap-1 rounded-lg px-2 py-1 text-xs transition-colors duration-150"
+                      style="border:1px solid var(--border);color:var(--text-muted)"
+                      [attr.aria-label]="'Reintentar envío a Verifactu del caso ' + caso.titulo"
+                      (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                      (mouseleave)="$any($event.currentTarget).style.background=''">
+                      <lucide-icon [img]="RefreshCwIcon" size="12"></lucide-icon> Reintentar
+                    </button>
+                  }
                 }
                 @if (pdfUrl(caso.facturaId)) {
                   <div class="flex items-center gap-1.5">

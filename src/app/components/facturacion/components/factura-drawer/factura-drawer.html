@@ -203,7 +203,7 @@
       <div class="mx-5 mb-3 flex items-center gap-2 rounded-lg px-3 py-2 text-xs"
         style="background:color-mix(in srgb,var(--danger) 8%,transparent);color:var(--danger)">
         <lucide-icon [img]="ShieldCheckIcon" size="14" class="shrink-0"></lucide-icon>
-        Esta factura ya fue registrada en Verifactu y no puede editarse.
+        {{ verifactuBloqueo() }}.
       </div>
     } @else if (verifactuEnabled()) {
       <div class="mx-5 mb-3 flex items-center gap-2 rounded-lg px-3 py-2 text-xs"

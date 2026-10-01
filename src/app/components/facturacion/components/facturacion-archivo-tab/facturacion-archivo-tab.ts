@@ -1,8 +1,8 @@
 import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
 import { DecimalPipe, SlicePipe } from '@angular/common';
-import { LucideAngularModule, FileCheck, Download, Link, ShieldCheck, ShieldAlert, ShieldX, CheckCircle2 } from 'lucide-angular';
+import { LucideAngularModule, FileCheck, Download, Link, RefreshCw, CheckCircle2 } from 'lucide-angular';
 import type { Invoice } from '../../../../core/services/invoice.service';
-import type { VerifactuEstado } from '../../../../interfaces/verifactu.interface';
+import { colorTono, vistaVerifactu, type VistaVerifactu } from '../../../../core/verifactu/verifactu-ui';
 import { Caso } from '../../../../interfaces';
 
 @Component({
@@ -21,13 +21,12 @@ export class FacturacionArchivoTabComponent {
   readonly reabrirCaso = output<Caso>();
   readonly downloadPdf = output<string | undefined>();
   readonly copyPdfLink = output<string | undefined>();
+  readonly retryVerifactu = output<string>();
 
   readonly FileCheckIcon = FileCheck;
   readonly DownloadIcon = Download;
   readonly LinkIcon = Link;
-  readonly ShieldCheckIcon = ShieldCheck;
-  readonly ShieldAlertIcon = ShieldAlert;
-  readonly ShieldXIcon = ShieldX;
+  readonly RefreshCwIcon = RefreshCw;
   readonly CheckCircle2Icon = CheckCircle2;
 
   pdfUrl(facturaId: string | undefined): string | undefined {
@@ -35,23 +34,14 @@ export class FacturacionArchivoTabComponent {
     return this.invoiceMap().get(facturaId)?.pdfUrl;
   }
 
-  verifactuEstado(facturaId?: string): VerifactuEstado | undefined {
-    if (!facturaId) return undefined;
-    return this.invoiceMap().get(facturaId)?.verifactu;
+  /** Vista del registro Verifactu de la factura del caso; `Date.now()` se lee al renderizar. */
+  verifactuVista(facturaId?: string): VistaVerifactu | null {
+    if (!facturaId) return null;
+    const invoice = this.invoiceMap().get(facturaId);
+    return invoice ? vistaVerifactu(invoice, Date.now()) : null;
   }
 
-  verifactuBadgeColor(facturaId?: string): string {
-    const estado = this.verifactuEstado(facturaId)?.estado;
-    if (estado === 'enviado') return 'var(--success)';
-    if (estado === 'pendiente') return 'var(--warning)';
-    if (estado === 'error') return 'var(--danger)';
-    return 'var(--text-faint)';
-  }
-
-  verifactuBadgeIcon(facturaId?: string) {
-    const estado = this.verifactuEstado(facturaId)?.estado;
-    if (estado === 'enviado') return this.ShieldCheckIcon;
-    if (estado === 'error') return this.ShieldXIcon;
-    return this.ShieldAlertIcon;
+  verifactuColor(vista: VistaVerifactu): string {
+    return colorTono(vista.tono);
   }
 }
