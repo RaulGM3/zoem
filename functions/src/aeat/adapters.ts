@@ -6,6 +6,7 @@ import * as forge from 'node-forge';
 import * as https from 'https';
 import { aplicarPatchVerifactu } from './chain';
 import { HTTP_TIMEOUT_MS } from './config';
+import { ErrorCredenciales } from './credenciales';
 import type { HttpRespuesta } from './parseResponse';
 import type { ChainStore, ChainTx, Credenciales, CredentialReader, DocReader, SoapSender, VerifactuPatch } from './ports';
 import { certSecretName, getSecret } from './secretManager';
@@ -93,10 +94,30 @@ export const leerCredenciales: CredentialReader = async (companyId): Promise<Cre
   const pfx = await getSecret(secretName);
   const password = (await getSecret(`${secretName}-pwd`)).toString('utf-8');
 
-  const p12 = forge.pkcs12.pkcs12FromAsn1(forge.asn1.fromDer(pfx.toString('binary')), password);
-  const cert = p12.getBags({ bagType: forge.pki.oids.certBag })[forge.pki.oids.certBag]?.[0]?.cert;
-  const key = p12.getBags({ bagType: forge.pki.oids.pkcs8ShroudedKeyBag })[forge.pki.oids.pkcs8ShroudedKeyBag]?.[0]?.key;
-  if (!cert || !key) throw new Error('El PKCS#12 no contiene certificado o clave privada');
+  // Cualquier fallo al abrir el PKCS#12 (DER roto, contraseña errónea, sin cert/clave) es del certificado, no del sistema.
+  let cert: forge.pki.Certificate | undefined;
+  let key: forge.pki.PrivateKey | undefined;
+  try {
+    const p12 = forge.pkcs12.pkcs12FromAsn1(forge.asn1.fromDer(pfx.toString('binary')), password);
+    cert = p12.getBags({ bagType: forge.pki.oids.certBag })[forge.pki.oids.certBag]?.[0]?.cert;
+    key = p12.getBags({ bagType: forge.pki.oids.pkcs8ShroudedKeyBag })[forge.pki.oids.pkcs8ShroudedKeyBag]?.[0]?.key;
+  } catch (err) {
+    throw new ErrorCredenciales('certificado_invalido', `No se pudo abrir el PKCS#12: ${err instanceof Error ? err.message : 'error desconocido'}`);
+  }
+  if (!cert || !key) {
+    console.error('[Verifactu:debug] leerCredenciales -> el PKCS#12 no trae cert o clave', { secretName, hayCert: !!cert, hayClave: !!key });
+    throw new ErrorCredenciales('certificado_invalido', 'El PKCS#12 no contiene certificado o clave privada');
+  }
+  // Solo metadatos públicos del certificado: nunca la clave ni la contraseña.
+  const ahora = new Date();
+  console.log('[Verifactu:debug] leerCredenciales -> certificado', {
+    secretName,
+    subject: cert.subject.attributes.map((a) => `${a.shortName ?? a.name}=${String(a.value)}`).join(', '),
+    issuer: cert.issuer.attributes.map((a) => `${a.shortName ?? a.name}=${String(a.value)}`).join(', '),
+    notBefore: cert.validity.notBefore.toISOString(),
+    notAfter: cert.validity.notAfter.toISOString(),
+    vigente: ahora >= cert.validity.notBefore && ahora <= cert.validity.notAfter,
+  });
   return { certPem: forge.pki.certificateToPem(cert), keyPem: forge.pki.privateKeyToPem(key) };
 };
 
@@ -108,6 +129,7 @@ export const enviarSoap: SoapSender = (endpoint, xml, creds) =>
   new Promise<HttpRespuesta>((resolve, reject) => {
     const url = new URL(endpoint);
     const cuerpo = Buffer.from(xml, 'utf-8');
+    console.log('[Verifactu:debug] enviarSoap -> POST', { endpoint, bytes: cuerpo.byteLength });
     const req = https.request(
       {
         hostname: url.hostname,
@@ -129,8 +151,15 @@ export const enviarSoap: SoapSender = (endpoint, xml, creds) =>
         res.on('error', reject);
       },
     );
-    req.setTimeout(HTTP_TIMEOUT_MS, () => req.destroy(new Error(`Timeout de ${HTTP_TIMEOUT_MS} ms hablando con AEAT`)));
-    req.on('error', reject);
+    req.setTimeout(HTTP_TIMEOUT_MS, () => {
+      console.error('[Verifactu:debug] enviarSoap -> TIMEOUT', { endpoint, ms: HTTP_TIMEOUT_MS });
+      req.destroy(new Error(`Timeout de ${HTTP_TIMEOUT_MS} ms hablando con AEAT`));
+    });
+    req.on('error', (err: NodeJS.ErrnoException) => {
+      // Aquí caen los fallos de mTLS (cert rechazado, handshake), DNS y conexión.
+      console.error('[Verifactu:debug] enviarSoap -> error de red/TLS', { endpoint, code: err.code, message: err.message });
+      reject(err);
+    });
     req.write(cuerpo);
     req.end();
   });

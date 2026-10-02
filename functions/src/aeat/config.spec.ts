@@ -11,6 +11,7 @@ import {
   impuestoDeEmpresa,
   numeroInstalacion,
 } from './config';
+import { validarNif } from './nif';
 
 const CAS_IVA = [
   'andalucia',
@@ -53,11 +54,15 @@ describe('SISTEMA_INFORMATICO', () => {
     expect(SISTEMA_INFORMATICO.nif.length).toBeGreaterThan(0);
   });
 
-  it('los valores del productor están marcados PROVISIONAL en el fichero fuente', () => {
+  it('el productor es Víctor de Frutos con un NIF válido (AEAT rechaza un NIF inventado con 4109)', () => {
+    expect(SISTEMA_INFORMATICO.nif).toBe('47287107G');
+    expect(SISTEMA_INFORMATICO.nombreRazon).toBe('DE FRUTOS DE FRUTOS VICTOR');
+    expect(validarNif(SISTEMA_INFORMATICO.nif).ok).toBe(true);
+  });
+
+  it('no quedan valores del productor marcados como provisionales', () => {
     const fuente = readFileSync(join(__dirname, 'config.ts'), 'utf8');
-    expect(fuente).toContain('PROVISIONAL');
-    // Cada valor provisional (NombreRazon, NIF, IdSistemaInformatico, IndicadorMultiplesOT) lleva su marca.
-    expect(fuente.match(/PROVISIONAL/g)!.length).toBeGreaterThanOrEqual(4);
+    expect(fuente).not.toContain('PROVISIONAL');
   });
 });
 

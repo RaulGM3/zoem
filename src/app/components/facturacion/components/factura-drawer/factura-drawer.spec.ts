@@ -26,7 +26,6 @@ describe('FacturaDrawerComponent — causa de exención por línea (D10)', () =>
   const causas = (): HTMLSelectElement[] => Array.from(raiz().querySelectorAll<HTMLSelectElement>('select[id^="causa-exencion-"]'));
   const selectIvaLinea = (i: number): HTMLSelectElement =>
     raiz().querySelector<HTMLSelectElement>(`select[aria-label="Tipo de IVA línea ${i + 1}"]`)!;
-  const selectIvaGlobal = (): HTMLSelectElement => raiz().querySelector<HTMLSelectElement>('#ivaRate')!;
 
   async function estabilizar(): Promise<void> {
     fixture.detectChanges();
@@ -86,10 +85,9 @@ describe('FacturaDrawerComponent — causa de exención por línea (D10)', () =>
     expect(causas()[0].id).toBe('causa-exencion-0');
   });
 
-  it('una línea que hereda el tipo global exento (0%) también pide causa', async () => {
-    await montar([linea()], 21);
-    expect(causas()).toHaveLength(0);
-    await elegir(selectIvaGlobal(), 'Exento (0%)');
+  it('una línea guardada sin tipo propio en una factura exenta (0%) toma 0% y pide causa', async () => {
+    await montar([linea()], 0);
+    expect((selectIvaLinea(0).selectedOptions[0]?.textContent ?? '').trim()).toBe('Exento (0%)');
     expect(causas()).toHaveLength(1);
   });
 
@@ -701,5 +699,128 @@ describe('FacturaDrawerComponent — buscador de contactos y guardado en el cont
   it('fuera de una rectificativa no aparece el texto de ayuda', async () => {
     await montar({ cliente: { nombre: 'Puntual', tipoId: 'nif' } });
     expect(raiz().textContent).not.toContain('La rectificativa mantiene');
+  });
+});
+
+describe('FacturaDrawerComponent — selector de clientes del caso', () => {
+  let fixture: ComponentFixture<FacturaDrawerComponent>;
+
+  const raiz = (): HTMLElement => fixture.nativeElement as HTMLElement;
+  const campo = <T extends HTMLElement>(id: string): T => raiz().querySelector<T>(`#${id}`)!;
+  const selector = (): HTMLSelectElement | null => raiz().querySelector<HTMLSelectElement>('#cliente-caso');
+
+  const ANA = { id: 'c-1', type: 'persona_fisica', nombre: 'Ana', apellidos: 'Pérez', nifType: 'dni', nif: '12345678Z' } as Contact;
+  const ACME = {
+    id: 'c-2', type: 'persona_juridica', razonSocial: 'Acme SL', cifType: 'cif', cif: 'B12345674',
+    direccionFiscal: { calle: 'Gran Vía', numero: '1', municipio: 'Madrid' },
+  } as Contact;
+
+  async function estabilizar(): Promise<void> {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  async function montar(o: { contactosCaso?: Contact[]; contacto?: Contact | null; rectificativa?: boolean } = {}): Promise<void> {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({ imports: [FacturaDrawerComponent] }).compileComponents();
+    fixture = TestBed.createComponent(FacturaDrawerComponent);
+    fixture.componentRef.setInput('initialLineas', [linea()]);
+    fixture.componentRef.setInput('rectificativa', o.rectificativa ?? false);
+    if (o.contactosCaso) fixture.componentRef.setInput('contactosCaso', o.contactosCaso);
+    if (o.contacto) {
+      fixture.componentRef.setInput('contactoVinculado', o.contacto);
+      fixture.componentRef.setInput('initialCliente', { nombre: 'Ana Pérez', tipoId: 'nif', nif: '12345678Z', contactoId: o.contacto.id });
+    }
+    await estabilizar();
+  }
+
+  it('lista los clientes del caso en un select etiquetado, con el contacto vinculado seleccionado', async () => {
+    await montar({ contactosCaso: [ANA, ACME], contacto: ANA });
+    const sel = selector()!;
+    expect(sel).not.toBeNull();
+    expect(raiz().querySelector('label[for="cliente-caso"]')?.textContent).toContain('Cliente del caso');
+    const textos = Array.from(sel.options).map((o) => (o.textContent ?? '').trim());
+    expect(textos.some((t) => t.includes('Ana Pérez'))).toBe(true);
+    expect(textos.some((t) => t.includes('Acme SL'))).toBe(true);
+    expect(sel.value).toBe('c-1');
+  });
+
+  it('elegir otro cliente del caso rellena nombre, NIF y dirección y lo vincula', async () => {
+    await montar({ contactosCaso: [ANA, ACME], contacto: ANA });
+    const sel = selector()!;
+    sel.value = 'c-2';
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+    await estabilizar();
+    expect(campo<HTMLInputElement>('cliente-nombre').value).toBe('Acme SL');
+    expect(campo<HTMLInputElement>('cliente-nif').value).toBe('B12345674');
+    expect(campo<HTMLInputElement>('cliente-direccion').value).toBe('Gran Vía, 1, Madrid');
+    expect(raiz().textContent).toContain('Contacto: Acme SL');
+  });
+
+  it('sin clientes del caso no hay select', async () => {
+    await montar();
+    expect(selector()).toBeNull();
+  });
+
+  it('en una rectificativa (solo lectura) no hay select', async () => {
+    await montar({ contactosCaso: [ANA, ACME], contacto: ANA, rectificativa: true });
+    expect(selector()).toBeNull();
+  });
+});
+
+describe('FacturaDrawerComponent — IVA 10% por defecto en líneas nuevas', () => {
+  let fixture: ComponentFixture<FacturaDrawerComponent>;
+
+  const raiz = (): HTMLElement => fixture.nativeElement as HTMLElement;
+  const selectIvaLinea = (i: number): HTMLSelectElement =>
+    raiz().querySelector<HTMLSelectElement>(`select[aria-label="Tipo de IVA línea ${i + 1}"]`)!;
+  const textoElegido = (s: HTMLSelectElement): string => (s.selectedOptions[0]?.textContent ?? '').trim();
+
+  async function montar(lineas: InvoiceLinea[]): Promise<void> {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({ imports: [FacturaDrawerComponent] }).compileComponents();
+    fixture = TestBed.createComponent(FacturaDrawerComponent);
+    fixture.componentRef.setInput('initialLineas', lineas);
+    fixture.componentRef.setInput('defaultIvaRate', 21);
+    fixture.componentRef.setInput('initialCliente', CLIENTE_BASE);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  it('la línea vacía inicial sale con 10% al marcar IVA', async () => {
+    await montar([]);
+    raiz().querySelector<HTMLInputElement>('input[type="checkbox"][formcontrolname="aplicaIva"]')!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(textoElegido(selectIvaLinea(0))).toBe('10%');
+  });
+
+  it('una línea añadida sale con 10%', async () => {
+    await montar([linea({ ivaRate: 0.21 })]);
+    fixture.componentInstance.addLinea();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(textoElegido(selectIvaLinea(1))).toBe('10%');
+  });
+
+  it('una línea guardada sin tipo propio toma el tipo de su factura (no cambia importes ya emitidos)', async () => {
+    await montar([linea()]);
+    expect(textoElegido(selectIvaLinea(0))).toBe('21%');
+  });
+
+  it('una línea guardada sin IVA y sin tipo propio sale con 10% al marcar IVA', async () => {
+    await montar([linea({ aplicaIva: false })]);
+    raiz().querySelector<HTMLInputElement>('input[type="checkbox"][formcontrolname="aplicaIva"]')!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(textoElegido(selectIvaLinea(0))).toBe('10%');
+  });
+
+  it('el select de IVA por línea no ofrece la opción Global', async () => {
+    await montar([linea()]);
+    const textos = Array.from(selectIvaLinea(0).options).map((o) => (o.textContent ?? '').trim());
+    expect(textos).not.toContain('Global');
   });
 });

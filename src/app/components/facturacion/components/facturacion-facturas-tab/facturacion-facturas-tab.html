@@ -135,7 +135,7 @@
                     style="color:var(--text-muted)"
                     (mouseenter)="$any($event.currentTarget).style.color='var(--brand)'"
                     (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)'"
-                    aria-label="Editar factura">
+                    aria-label="Editar factura" title="Editar factura">
                     <lucide-icon [img]="PencilIcon" size="14"></lucide-icon>
                   </button>
                 }
@@ -145,7 +145,7 @@
                     style="color:var(--text-muted)"
                     (mouseenter)="$any($event.currentTarget).style.color='var(--brand)'"
                     (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)'"
-                    [attr.aria-label]="'Cambiar número de la factura ' + inv.invoiceNumber">
+                    [attr.aria-label]="'Cambiar número de la factura ' + inv.invoiceNumber" title="Cambiar número">
                     <lucide-icon [img]="HashIcon" size="14"></lucide-icon>
                   </button>
                 }
@@ -155,14 +155,14 @@
                     style="color:var(--text-muted)"
                     (mouseenter)="$any($event.currentTarget).style.color='var(--brand)'"
                     (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)'"
-                    aria-label="Descargar PDF">
+                    aria-label="Descargar PDF" title="Descargar PDF">
                     <lucide-icon [img]="DownloadIcon" size="14"></lucide-icon>
                   </button>
                   <button (click)="copyPdfLink.emit(inv.id)" class="rounded p-1.5 transition-colors"
                     style="color:var(--text-muted)"
                     (mouseenter)="$any($event.currentTarget).style.color='var(--brand)'"
                     (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)'"
-                    aria-label="Copiar enlace PDF">
+                    aria-label="Copiar enlace PDF" title="Copiar enlace PDF">
                     <lucide-icon [img]="LinkIcon" size="14"></lucide-icon>
                   </button>
                 }
@@ -172,7 +172,7 @@
                     style="color:var(--text-muted)"
                     (mouseenter)="$any($event.currentTarget).style.color='var(--success)'"
                     (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)'"
-                    aria-label="Marcar como pagada">
+                    aria-label="Marcar como pagada" title="Marcar como pagada">
                     <lucide-icon [img]="CircleDollarSignIcon" size="14"></lucide-icon>
                   </button>
                 }
@@ -182,7 +182,7 @@
                     style="color:var(--text-muted)"
                     (mouseenter)="$any($event.currentTarget).style.color='var(--brand)'"
                     (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)'"
-                    aria-label="Finalizar borrador">
+                    aria-label="Finalizar borrador" title="Finalizar borrador">
                     <lucide-icon [img]="CheckCircle2Icon" size="14"></lucide-icon>
                   </button>
                 }
@@ -192,7 +192,7 @@
                     style="color:var(--text-muted)"
                     (mouseenter)="$any($event.currentTarget).style.color='var(--warning)'"
                     (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)'"
-                    aria-label="Crear rectificativa">
+                    aria-label="Crear rectificativa" title="Crear rectificativa">
                     <lucide-icon [img]="RotateCcwIcon" size="14"></lucide-icon>
                   </button>
                 }
@@ -202,7 +202,7 @@
                     style="color:var(--text-muted)"
                     (mouseenter)="$any($event.currentTarget).style.color='var(--warning)'"
                     (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)'"
-                    [attr.aria-label]="'Reintentar envío a Verifactu de la factura ' + inv.invoiceNumber">
+                    [attr.aria-label]="'Reintentar envío a Verifactu de la factura ' + inv.invoiceNumber" title="Reintentar envío a Verifactu">
                     <lucide-icon [img]="RefreshCwIcon" size="14"></lucide-icon>
                   </button>
                 }
@@ -212,7 +212,7 @@
                     style="color:var(--text-muted)"
                     (mouseenter)="$any($event.currentTarget).style.color='var(--danger)'"
                     (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)'"
-                    aria-label="Anular factura">
+                    aria-label="Anular factura" title="Anular factura">
                     <lucide-icon [img]="BanIcon" size="14"></lucide-icon>
                   </button>
                 }

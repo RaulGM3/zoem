@@ -140,12 +140,37 @@ export class InvoiceService {
   }
 
   async createInvoice(data: Omit<Invoice, 'id' | 'companyId' | 'createdAt' | 'updatedAt' | 'verifactu'>): Promise<string> {
-    const ref = await addDoc(collection(this.firestore, 'invoices'), stripUndefinedDeep({
-      ...data,
+    console.log('[Invoice:debug] createInvoice -> escribiendo en Firestore', {
       companyId: this.companyId,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    }));
+      invoiceNumber: data.invoiceNumber,
+      tipoFactura: data.tipoFactura,
+      status: data.status,
+      issueDate: data.issueDate,
+      amount: data.amount,
+      vat: data.vat,
+      total: data.total,
+      ivaRate: data.ivaRate,
+      cliente: {
+        nombre: data.clienteNombre,
+        nif: data.clienteNif,
+        tipoId: data.clienteTipoId,
+        contactoId: data.clienteContactoId,
+      },
+      lineas: data.lineas,
+    });
+    let ref;
+    try {
+      ref = await addDoc(collection(this.firestore, 'invoices'), stripUndefinedDeep({
+        ...data,
+        companyId: this.companyId,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }));
+    } catch (err) {
+      console.error('[Invoice:debug] createInvoice -> addDoc FALLÓ', err);
+      throw err;
+    }
+    console.log('[Invoice:debug] createInvoice -> creada', { invoiceId: ref.id, invoiceNumber: data.invoiceNumber });
     await this.loadInvoices();
     return ref.id;
   }
@@ -163,7 +188,9 @@ export class InvoiceService {
       .map((i) => i.invoiceNumber)
       .filter((n) => n?.startsWith(prefix))
       .reduce((acc, n) => Math.max(acc, Number(n.slice(prefix.length)) || 0), 0);
-    return `${prefix}${String(max + 1).padStart(4, '0')}`;
+    const numero = `${prefix}${String(max + 1).padStart(4, '0')}`;
+    console.log('[Invoice:debug] nextInvoiceNumber', { tipo, prefix, maxEnMemoria: max, facturasEnMemoria: this.invoices().length, numero });
+    return numero;
   }
 
   /**
@@ -222,9 +249,26 @@ export class InvoiceService {
    */
   async enviarVerifactu(invoiceId: string, tipo: TipoEnvioVerifactu): Promise<VerifactuSubmitResponse> {
     const fn = httpsCallable<VerifactuSolicitud, VerifactuSubmitResponse>(this.functions, 'verifactuSubmit');
+    const solicitud = { companyId: this.companyId, invoiceId, tipo };
+    console.log('[Verifactu:debug] enviarVerifactu -> llamando al callable verifactuSubmit', solicitud);
+    const inicio = Date.now();
     try {
-      const result = await fn({ companyId: this.companyId, invoiceId, tipo });
+      const result = await fn(solicitud);
+      console.log('[Verifactu:debug] enviarVerifactu -> respuesta del callable', {
+        ms: Date.now() - inicio,
+        data: result.data,
+      });
       return result.data;
+    } catch (err) {
+      // FirebaseError de un callable: `code` (functions/xxx), `message` y `details`.
+      const e = err as { code?: string; message?: string; details?: unknown };
+      console.error('[Verifactu:debug] enviarVerifactu -> el callable LANZÓ', {
+        ms: Date.now() - inicio,
+        code: e.code,
+        message: e.message,
+        details: e.details,
+      });
+      throw err;
     } finally {
       // El servidor escribió el estado (también cuando falla): refrescamos la lista.
       await this.loadInvoices().catch((err) => console.error('[Verifactu] No se pudo recargar facturas:', err));
@@ -237,22 +281,56 @@ export class InvoiceService {
    * generar el PDF: la factura existe y el estado de error ya lo guarda el servidor.
    */
   private async emitirFactura(invoiceId: string, invoice: Invoice): Promise<void> {
+    const company = this.companyService.activeCompany();
+    console.log('[Invoice:debug] emitirFactura -> inicio', {
+      invoiceId,
+      invoiceNumber: invoice.invoiceNumber,
+      verifactuActivo: this.verifactuActivo,
+      companyVerifactu: company?.verifactu,
+      companyCif: company?.cif,
+    });
     let actual = invoice;
     if (this.verifactuActivo) {
       try {
         await this.enviarVerifactu(invoiceId, 'alta');
-        actual = (await this.getInvoice(invoiceId)) ?? invoice;
+        const recargada = await this.getInvoice(invoiceId);
+        if (!recargada) console.warn('[Invoice:debug] emitirFactura -> getInvoice devolvió null tras el callable', { invoiceId });
+        actual = recargada ?? invoice;
       } catch (err) {
         console.error('[Verifactu] El callable verifactuSubmit falló:', err);
       }
+      console.log('[Verifactu:debug] emitirFactura -> estado verifactu tras el callable', {
+        invoiceId,
+        estado: actual.verifactu?.estado,
+        qrUrl: actual.verifactu?.qrUrl,
+        errorKind: actual.verifactu?.errorKind,
+        errorMessage: actual.verifactu?.errorMessage,
+        avisoMessage: actual.verifactu?.avisoMessage,
+        verifactu: actual.verifactu,
+      });
+      if (!actual.verifactu?.qrUrl) {
+        console.warn('[Verifactu:debug] emitirFactura -> SIN qrUrl: el PDF se generará SIN QR', { invoiceId });
+      }
+    } else {
+      console.log('[Verifactu:debug] emitirFactura -> Verifactu desactivado en la empresa activa: no se llama al callable');
     }
     await this.generarPdf(invoiceId, actual);
   }
 
   private async generarPdf(invoiceId: string, invoice: Invoice): Promise<void> {
-    if (!this.companyService.activeCompany()?.id) return;
+    if (!this.companyService.activeCompany()?.id) {
+      console.warn('[PDF:debug] generarPdf -> sin empresa activa: NO se genera el PDF', { invoiceId });
+      return;
+    }
+    console.log('[PDF:debug] generarPdf -> generando', {
+      invoiceId,
+      invoiceNumber: invoice.invoiceNumber,
+      total: invoice.total,
+      qrUrl: invoice.verifactu?.qrUrl,
+    });
     try {
       const pdfUrl = await this.pdfService.generateAndUpload(invoice);
+      console.log('[PDF:debug] generarPdf -> subido', { invoiceId, pdfUrl });
       await this.updateInvoice(invoiceId, { pdfUrl });
     } catch (err) {
       console.error('[PDF] Error generando PDF de factura:', err);
@@ -398,6 +476,12 @@ export class InvoiceService {
     const invoice = await this.getInvoice(invoiceId);
     if (!invoice) throw new Error('Factura no encontrada');
     const tipo = tipoReintento(invoice);
+    console.log('[Verifactu:debug] retryVerifactu', {
+      invoiceId,
+      tipoReintento: tipo,
+      verifactuActivo: this.verifactuActivo,
+      verifactu: invoice.verifactu,
+    });
     if (!tipo) throw new Error('Solo se puede reintentar facturas con error o pendientes de la AEAT');
     if (!this.verifactuActivo) throw new Error('Verifactu no está configurado para esta empresa');
 

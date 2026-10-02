@@ -13,6 +13,7 @@ import type { EntradaCadena, TipoRegistro } from './chain';
 import { esSandbox, soapEndpoint } from './endpoints';
 import { parseRespuesta } from './parseResponse';
 import type { Resultado } from './parseResponse';
+import { MENSAJE_SIN_CERTIFICADO, clasificarErrorCredenciales, mensajeCredenciales } from './credenciales';
 import type { ChainStore, Clock, Credenciales, CredentialReader, DocReader, SoapSender } from './ports';
 import { validarPrecondiciones } from './preconditions';
 import type { CodigoPrecondicion } from './preconditions';
@@ -46,6 +47,12 @@ export interface OpcionesDrenaje {
 }
 
 const iso = (d: Date): string => d.toISOString();
+
+/** Mensaje legible de cualquier error (los `catch` de este módulo no deben tragarse el motivo). */
+function detalleError(err: unknown): { message: string; code?: unknown; stack?: string } {
+  if (err instanceof Error) return { message: err.message, code: (err as { code?: unknown }).code, stack: err.stack };
+  return { message: String(err) };
+}
 
 /** Sandbox salvo que la empresa diga explícitamente `sandbox: false` (lectura SIEMPRE en servidor). */
 export function endpointDe(company: CompanyDoc): string {
@@ -85,8 +92,15 @@ async function resultadoFinal(deps: EnvioDeps, solicitud: SolicitudEnvio): Promi
   return resultado;
 }
 
-/** Mensaje único de certificado ausente: lo usa el callable (error) y el drenaje (aviso en un pendiente). */
-export const MENSAJE_SIN_CERTIFICADO = 'Certificado AEAT no configurado para esta empresa.';
+export { MENSAJE_SIN_CERTIFICADO };
+
+/** Clasifica el fallo, lo deja en el log (motivo + código/mensaje, nunca material del certificado) y devuelve el texto para el usuario. */
+function mensajeFalloCredenciales(err: unknown): string {
+  const motivo = clasificarErrorCredenciales(err);
+  const { message, code } = detalleError(err);
+  console.error('[Verifactu] credenciales no disponibles', { motivo, code, message });
+  return mensajeCredenciales(motivo);
+}
 
 /**
  * Envía el XML almacenado (fuera de tx) y liquida el resultado en otra tx. Un fallo de red es
@@ -101,28 +115,59 @@ async function enviarYLiquidar(
   credenciales?: Credenciales,
 ): Promise<void> {
   let resultado: Resultado = { tipo: 'unknown' };
-  let sinCertificado = false;
+  let avisoCredenciales: string | undefined;
+  const endpoint = endpointDe(company);
+  console.log('[Verifactu:debug] enviarYLiquidar -> inicio', {
+    companyId,
+    invoiceId: pending.invoiceId,
+    tipo: pending.tipo,
+    attempts: pending.attempts,
+    huella: pending.huella,
+    endpoint,
+    sandbox: company.verifactu?.sandbox,
+  });
+  console.log('[Verifactu:debug] enviarYLiquidar -> XML enviado a AEAT:\n' + pending.xml);
   try {
     let creds = credenciales;
     if (!creds) {
       try {
         creds = await deps.credentials(companyId);
-      } catch {
-        sinCertificado = true;
+      } catch (err) {
+        console.error('[Verifactu:debug] enviarYLiquidar -> NO se pudieron leer las credenciales', detalleError(err));
+        avisoCredenciales = mensajeFalloCredenciales(err);
       }
     }
-    if (creds) resultado = parseRespuesta(await deps.sender(endpointDe(company), pending.xml, creds));
-  } catch {
+    if (creds) {
+      const inicio = Date.now();
+      const http = await deps.sender(endpoint, pending.xml, creds);
+      console.log('[Verifactu:debug] enviarYLiquidar -> respuesta HTTP de AEAT', {
+        ms: Date.now() - inicio,
+        status: http.status,
+      });
+      console.log('[Verifactu:debug] enviarYLiquidar -> body de AEAT:\n' + http.body);
+      resultado = parseRespuesta(http);
+      console.log('[Verifactu:debug] enviarYLiquidar -> respuesta interpretada', resultado);
+      if (resultado.tipo === 'unknown') {
+        console.warn('[Verifactu:debug] enviarYLiquidar -> respuesta NO reconocida (unknown): el pending queda atascado con backoff');
+      }
+    }
+  } catch (err) {
+    console.error('[Verifactu:debug] enviarYLiquidar -> fallo de red/TLS enviando a AEAT (se trata como unknown)', detalleError(err));
     resultado = { tipo: 'unknown' };
   }
   await deps.store.runTx(companyId, async (tx) => {
     const head = await tx.getHead();
     const decision = decidirLiquidacion(head, pending.huella, resultado, deps.clock());
-    if (sinCertificado && decision.accion.tipo === 'atascado') {
+    console.log('[Verifactu:debug] enviarYLiquidar -> decisión de liquidación', {
+      accion: decision.accion,
+      invoicePatches: decision.invoicePatches,
+      sinCertificado: avisoCredenciales !== undefined,
+    });
+    if (avisoCredenciales !== undefined && decision.accion.tipo === 'atascado') {
       decision.invoicePatches.push({
         invoiceId: pending.invoiceId,
         tipo: pending.tipo,
-        patch: { estado: 'pendiente', avisoMessage: MENSAJE_SIN_CERTIFICADO },
+        patch: { estado: 'pendiente', avisoMessage: avisoCredenciales },
       });
     }
     await aplicarDecision(tx, decision);
@@ -161,10 +206,22 @@ async function descartarCabeza(
 export async function drenarEmpresa(deps: EnvioDeps, companyId: string, opciones: OpcionesDrenaje = {}): Promise<void> {
   const forzar = opciones.forzar ?? false;
   const company = await deps.docs.getCompany(companyId);
-  if (!company?.verifactu?.enabled) return;
+  if (!company?.verifactu?.enabled) {
+    console.log('[Verifactu:debug] drenarEmpresa -> Verifactu desactivado, no se drena', { companyId });
+    return;
+  }
 
   const previa = await deps.store.runTx(companyId, (tx) => tx.getHead());
   const accion = siguienteEnCola(previa, deps.clock(), forzar);
+  console.log('[Verifactu:debug] drenarEmpresa -> estado de la cola', {
+    companyId,
+    forzar,
+    accion: accion.tipo,
+    pending: previa?.pending ? { invoiceId: previa.pending.invoiceId, tipo: previa.pending.tipo, attempts: previa.pending.attempts } : null,
+    queue: previa?.queue,
+    nextSendAt: previa?.nextSendAt,
+    drainAt: previa?.drainAt,
+  });
   if (accion.tipo === 'nada' || accion.tipo === 'esperar') return;
 
   let precarga: { entrada: QueueEntry; original?: InvoiceDoc } | undefined;
@@ -178,6 +235,10 @@ export async function drenarEmpresa(deps: EnvioDeps, companyId: string, opciones
     const original = await cargarOriginal(deps.docs, invoice, entrada.tipo);
     const precondicion = validarPrecondiciones(invoice, company, entrada.tipo, original);
     if (!precondicion.ok) {
+      console.warn('[Verifactu:debug] drenarEmpresa -> precondición rota en la cabeza de la cola: se descarta', {
+        invoiceId: entrada.invoiceId,
+        precondicion,
+      });
       await descartarCabeza(deps, companyId, entrada, precondicion.mensaje);
       return;
     }
@@ -220,17 +281,47 @@ export async function drenarEmpresa(deps: EnvioDeps, companyId: string, opciones
  */
 export async function procesarEnvio(deps: EnvioDeps, solicitud: SolicitudEnvio): Promise<ResultadoEnvio> {
   const { companyId, invoiceId, tipo } = solicitud;
+  console.log('[Verifactu:debug] procesarEnvio -> solicitud', solicitud);
 
   const company = await deps.docs.getCompany(companyId);
-  if (!company?.verifactu?.enabled) return { sent: false, motivo: 'verifactu_desactivado' };
+  console.log('[Verifactu:debug] procesarEnvio -> empresa', {
+    existe: company !== null,
+    name: company?.name,
+    cif: company?.cif,
+    ca: company?.ca,
+    verifactu: company?.verifactu,
+  });
+  if (!company?.verifactu?.enabled) {
+    console.warn('[Verifactu:debug] procesarEnvio -> SALE: Verifactu desactivado en la empresa (servidor)');
+    return { sent: false, motivo: 'verifactu_desactivado' };
+  }
 
   const invoice = await deps.docs.getInvoice(companyId, invoiceId);
-  if (!invoice) return { sent: false, motivo: 'factura_no_encontrada' };
+  if (!invoice) {
+    console.warn('[Verifactu:debug] procesarEnvio -> SALE: factura no encontrada (o de otra empresa)', { invoiceId });
+    return { sent: false, motivo: 'factura_no_encontrada' };
+  }
+  console.log('[Verifactu:debug] procesarEnvio -> factura', {
+    invoiceNumber: invoice.invoiceNumber,
+    tipoFactura: invoice.tipoFactura,
+    issueDate: invoice.issueDate,
+    total: invoice.total,
+    ivaRate: invoice.ivaRate,
+    clienteNombre: invoice.clienteNombre,
+    clienteNif: invoice.clienteNif,
+    clienteTipoId: invoice.clienteTipoId,
+    lineas: invoice.lineas,
+    verifactu: invoice.verifactu,
+  });
 
   const estado = estadoDe(invoice, tipo)?.estado;
-  if (estado === 'enviado') return resultadoFinal(deps, solicitud);
+  if (estado === 'enviado') {
+    console.log('[Verifactu:debug] procesarEnvio -> SALE: ya estaba enviada');
+    return resultadoFinal(deps, solicitud);
+  }
 
   if (estado === 'pendiente' || estado === 'en_cola') {
+    console.log('[Verifactu:debug] procesarEnvio -> ya en curso: solo drenaje forzado', { estado });
     await drenarSinFallar(deps, companyId, { forzar: true });
     return resultadoFinal(deps, solicitud);
   }
@@ -238,15 +329,19 @@ export async function procesarEnvio(deps: EnvioDeps, solicitud: SolicitudEnvio):
   const original = await cargarOriginal(deps.docs, invoice, tipo);
   const precondicion = validarPrecondiciones(invoice, company, tipo, original);
   if (!precondicion.ok) {
+    console.warn('[Verifactu:debug] procesarEnvio -> SALE: precondición rota', precondicion);
     await marcarError(deps, companyId, invoiceId, tipo, 'precondicion', precondicion.mensaje);
     return { sent: false, motivo: 'precondicion', codigo: precondicion.codigo, mensaje: precondicion.mensaje, estado: 'error' };
   }
+  console.log('[Verifactu:debug] procesarEnvio -> precondiciones OK');
 
   let credenciales: Credenciales;
   try {
     credenciales = await deps.credentials(companyId);
-  } catch {
-    const mensaje = MENSAJE_SIN_CERTIFICADO;
+    console.log('[Verifactu:debug] procesarEnvio -> credenciales leídas (certificado + clave en PEM)');
+  } catch (err) {
+    console.error('[Verifactu:debug] procesarEnvio -> SALE: no se pudieron leer las credenciales', detalleError(err));
+    const mensaje = mensajeFalloCredenciales(err);
     await marcarError(deps, companyId, invoiceId, tipo, 'configuracion', mensaje);
     return { sent: false, motivo: 'certificado', mensaje, estado: 'error' };
   }
@@ -256,15 +351,34 @@ export async function procesarEnvio(deps: EnvioDeps, solicitud: SolicitudEnvio):
     const actual = await tx.getInvoice(invoiceId);
     if (!actual) return null;
     const decision = decidirEntrada(head, { invoice: actual, company, tipo, original }, deps.clock());
+    console.log('[Verifactu:debug] procesarEnvio -> decisión de entrada en la cadena', {
+      accion: decision.accion.tipo,
+      headPrevio: head
+        ? { last: head.last, pending: head.pending?.invoiceId ?? null, queue: head.queue, nextSendAt: head.nextSendAt, drainAt: head.drainAt }
+        : null,
+      invoicePatches: decision.invoicePatches,
+    });
+    // Datos con los que se construye el QR, para comparar con la `qrUrl` del patch.
+    const qrPatch = decision.invoicePatches.find((p) => p.invoiceId === invoiceId)?.patch.qrUrl;
+    console.log('[Verifactu:debug] procesarEnvio -> QR', {
+      qrUrl: qrPatch,
+      entradas: { nifEmisor: company.cif, numSerie: actual.invoiceNumber, issueDate: actual.issueDate, totalFactura: actual.total },
+    });
+    if (decision.accion.tipo !== 'noop' && tipo === 'alta' && !qrPatch) {
+      console.warn('[Verifactu:debug] procesarEnvio -> el patch NO lleva qrUrl (¿impuesto de la CA no soportado?)', { ca: company.ca });
+    }
     await aplicarDecision(tx, decision);
     return decision.accion;
   });
 
+  if (accion === null) console.warn('[Verifactu:debug] procesarEnvio -> la factura desapareció dentro de la transacción');
   if (accion?.tipo === 'enviar') {
     await enviarYLiquidar(deps, companyId, company, accion.pending, credenciales);
   }
   await drenarSinFallar(deps, companyId);
-  return resultadoFinal(deps, solicitud);
+  const final = await resultadoFinal(deps, solicitud);
+  console.log('[Verifactu:debug] procesarEnvio -> resultado final', final);
+  return final;
 }
 
 /** El drenaje de cortesía al final del callable nunca debe romper la respuesta ya calculada. */
@@ -272,6 +386,6 @@ async function drenarSinFallar(deps: EnvioDeps, companyId: string, opciones: Opc
   try {
     await drenarEmpresa(deps, companyId, opciones);
   } catch (err) {
-    console.error('[Verifactu] drenaje fallido', companyId, err instanceof Error ? err.message : 'error desconocido');
+    console.error('[Verifactu] drenaje fallido', companyId, detalleError(err));
   }
 }

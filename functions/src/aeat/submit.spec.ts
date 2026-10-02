@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { drenarEmpresa, procesarEnvio } from './submit';
 import type { EnvioDeps } from './submit';
 import { endpointDe } from './submit';
+import { ErrorCredenciales } from './credenciales';
 import { FakeChainStore, FakeClock, FakeSender, credencialesFalsas } from './testing/fakes';
 import {
   respuestaCorrecto,
@@ -40,6 +41,8 @@ function empresa(over: Partial<CompanyDoc> = {}): CompanyDoc {
 interface Entorno {
   /** Mutable: permite quitar/devolver el certificado a mitad de un test. */
   certificado: { disponible: boolean };
+  /** Si se fija, `credentials` lanza este error (en vez del genérico de certificado ausente). */
+  fallo: { error: unknown };
   store: FakeChainStore;
   sender: FakeSender;
   clock: FakeClock;
@@ -53,17 +56,19 @@ function montar(opciones: { empresa?: CompanyDoc; facturas?: InvoiceDoc[]; sinCe
   const sender = new FakeSender();
   const clock = new FakeClock(T0);
   const certificado = { disponible: !opciones.sinCertificado };
+  const fallo: { error: unknown } = { error: undefined };
   const deps: EnvioDeps = {
     store,
     docs: store,
     sender: sender.enviar,
     credentials: async () => {
+      if (fallo.error) throw fallo.error;
       if (!certificado.disponible) throw new Error('secret no encontrado');
       return credencialesFalsas;
     },
     clock: clock.ahora,
   };
-  return { certificado, store, sender, clock, deps };
+  return { certificado, fallo, store, sender, clock, deps };
 }
 
 const alta = (invoiceId: string) => ({ companyId: CO, invoiceId, tipo: 'alta' as const });
@@ -203,6 +208,41 @@ describe('procesarEnvio: precondiciones y desactivado (4.2)', () => {
     expect(e.sender.llamadas).toHaveLength(0);
     expect(e.store.head(CO)).toBeNull();
     expect(e.store.factura(CO, 'inv1')?.verifactu).toMatchObject({ estado: 'error', errorKind: 'configuracion' });
+  });
+
+  const casosCredenciales: [string, unknown, string][] = [
+    ['gRPC NOT_FOUND', { code: 5 }, 'No hay ningún certificado AEAT guardado para esta empresa. Súbelo en Facturación → Configuración.'],
+    [
+      'gRPC PERMISSION_DENIED',
+      Object.assign(new Error('7 PERMISSION_DENIED'), { code: 7 }),
+      'El servidor no tiene permiso para leer el certificado AEAT. Es un problema de configuración del sistema, no de tu certificado: avisa al administrador.',
+    ],
+    [
+      'PKCS#12 inválido',
+      new ErrorCredenciales('certificado_invalido', 'pwd'),
+      'El certificado AEAT guardado no se puede abrir (contraseña incorrecta o archivo dañado). Vuelve a subirlo.',
+    ],
+    ['desconocido', new Error('boom'), 'Certificado AEAT no configurado para esta empresa.'],
+  ];
+
+  it.each(casosCredenciales)('callable: fallo de credenciales (%s) -> mensaje específico', async (_n, error, mensaje) => {
+    const e = montar();
+    e.fallo.error = error;
+    const r = await procesarEnvio(e.deps, alta('inv1'));
+    expect(r).toMatchObject({ sent: false, motivo: 'certificado', mensaje, estado: 'error' });
+    expect(e.store.factura(CO, 'inv1')?.verifactu).toMatchObject({ estado: 'error', errorKind: 'configuracion', errorMessage: mensaje });
+  });
+
+  it.each(casosCredenciales)('drenaje: fallo de credenciales (%s) -> aviso específico en pendiente', async (_n, error, mensaje) => {
+    const e = montar();
+    e.sender.encolar(new Error('ETIMEDOUT'));
+    await procesarEnvio(e.deps, alta('inv1'));
+    e.fallo.error = error;
+    e.clock.avanzarS(61);
+    await drenarEmpresa(e.deps, CO);
+    const v = e.store.factura(CO, 'inv1')?.verifactu;
+    expect(v?.estado).toBe('pendiente');
+    expect(v?.avisoMessage).toBe(mensaje);
   });
 
   it('factura inexistente: factura_no_encontrada sin tocar nada', async () => {

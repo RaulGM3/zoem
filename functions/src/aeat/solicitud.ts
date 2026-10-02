@@ -30,12 +30,24 @@ export async function manejarSolicitud(
   uid: string | undefined,
   data: unknown,
 ): Promise<ResultadoEnvio> {
+  console.log('[Verifactu:debug] manejarSolicitud -> entrada', { uid, data });
   if (!uid) throw new HttpsError('unauthenticated', 'Autenticación requerida');
   const solicitud = validarEntrada(data);
   // Las Cloud Functions BYPASSEAN las rules: la autorización de tenant se hace aquí.
-  await autorizar(uid, solicitud.companyId);
+  try {
+    await autorizar(uid, solicitud.companyId);
+  } catch (err) {
+    console.error('[Verifactu:debug] manejarSolicitud -> autorización DENEGADA', { uid, companyId: solicitud.companyId, err });
+    throw err;
+  }
 
-  const resultado = await procesarEnvio(deps, solicitud);
+  let resultado: ResultadoEnvio;
+  try {
+    resultado = await procesarEnvio(deps, solicitud);
+  } catch (err) {
+    console.error('[Verifactu:debug] manejarSolicitud -> procesarEnvio LANZÓ', solicitud, err);
+    throw err;
+  }
   if (resultado.motivo === 'factura_no_encontrada') {
     throw new HttpsError('not-found', 'Factura no encontrada para esta empresa');
   }

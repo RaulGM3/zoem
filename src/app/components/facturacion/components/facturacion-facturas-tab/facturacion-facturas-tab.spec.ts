@@ -223,4 +223,19 @@ describe('FacturacionFacturasTabComponent — Verifactu (R9.2, R9.3, R9.4)', () 
     ];
     expect(violaciones, `\n${formatearViolaciones(violaciones)}\n`).toEqual([]);
   });
+
+  it('cada botón de acción tiene un tooltip (title) que describe la acción', async () => {
+    await montar([
+      factura('F-1', { estado: 'error', tipoRegistro: 'alta', errorMessage: 'Falta NIF' }),
+      factura('F-5', { estado: 'enviado', tipoRegistro: 'alta', csv: 'C' }, { pdfUrl: 'https://x/f5.pdf' }),
+      factura('F-7', undefined, { status: 'borrador' }),
+      factura('F-8'),
+    ]);
+    const botones = Array.from(el().querySelectorAll<HTMLButtonElement>('tbody button'));
+    expect(botones.length).toBeGreaterThan(4);
+    for (const b of botones) {
+      expect(b.getAttribute('title')?.trim(), `title de "${b.getAttribute('aria-label')}"`).toBeTruthy();
+    }
+    expect(botonPorEtiqueta(fila('F-5'), /^Descargar PDF$/)!.getAttribute('title')).toBe('Descargar PDF');
+  });
 });

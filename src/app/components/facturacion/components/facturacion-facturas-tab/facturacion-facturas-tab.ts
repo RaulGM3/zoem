@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy, input, output, signal, computed, effect, untracked } from '@angular/core';
-import { DecimalPipe, DatePipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   LucideAngularModule,
@@ -43,7 +43,7 @@ interface SeguimientoReintento {
 @Component({
   selector: 'app-facturacion-facturas-tab',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LucideAngularModule, DecimalPipe, DatePipe, FormsModule],
+  imports: [LucideAngularModule, DecimalPipe, FormsModule],
   templateUrl: './facturacion-facturas-tab.html',
 })
 export class FacturacionFacturasTabComponent {

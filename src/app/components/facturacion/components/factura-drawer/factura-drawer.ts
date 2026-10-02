@@ -28,6 +28,7 @@ import {
   CAUSAS_EXENCION,
   CAUSA_EXENCION_LABELS,
   esLineaExenta,
+  IVA_LINEA_NUEVA,
   opcionesIva,
 } from '../../../../interfaces/iva';
 import type { CausaExencion } from '../../../../interfaces/verifactu.interface';
@@ -63,6 +64,15 @@ interface IvaGroup {
   cuota: number;
 }
 
+/**
+ * Ya no existe el IVA "global" por línea: cada línea lleva su tipo. Las líneas guardadas sin tipo
+ * propio toman el de su factura si llevan IVA (mismo importe) o el de línea nueva si no lo llevan.
+ */
+function conTipoPropio(l: InvoiceLinea, tipoFacturaPct: number): InvoiceLinea {
+  if (l.ivaRate != null) return l;
+  return { ...l, ivaRate: l.aplicaIva ? tipoFacturaPct / 100 : IVA_LINEA_NUEVA };
+}
+
 @Component({
   selector: 'app-factura-drawer',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -96,6 +106,8 @@ export class FacturaDrawerComponent {
   readonly contactoVinculado = input<Contact | null>(null);
   /** Contactos entre los que buscar (los carga el padre cuando se le pide con `contactosSolicitados`). */
   readonly contactos = input<Contact[]>([]);
+  /** Clientes asociados al caso: se elige en un select de cuál se sacan nombre, NIF y dirección. */
+  readonly contactosCaso = input<Contact[]>([]);
   /** Muestra el buscador de contactos (facturas con o sin caso; nunca en una rectificativa). */
   readonly permitirBuscarContacto = input(false);
   /** Rectificativa: hereda el cliente de la original, la sección es de solo lectura. */
@@ -117,6 +129,7 @@ export class FacturaDrawerComponent {
   /** La sección Cliente no se puede editar: registro Verifactu vivo o rectificativa. */
   readonly soloLectura = computed(() => this.verifactuLocked() || this.rectificativa());
   readonly puedeBuscarContacto = computed(() => this.permitirBuscarContacto() && !this.soloLectura());
+  readonly puedeElegirClienteCaso = computed(() => this.contactosCaso().length > 0 && !this.soloLectura());
   readonly puedeGuardarEnContacto = computed(() => this.contacto() !== null && !this.soloLectura());
 
   // --- Buscador de contactos (combobox ARIA con listbox) ---
@@ -297,10 +310,10 @@ export class FacturaDrawerComponent {
       this.form.patchValue({ ivaRate: rate, issueDate: issue, dueDate: due, notes }, { emitEvent: false });
       this.lineasArray.clear({ emitEvent: false });
       for (const l of lineas) {
-        this.lineasArray.push(this.createLineaGroup(normalizeLinea(l)), { emitEvent: false });
+        this.lineasArray.push(this.createLineaGroup(conTipoPropio(normalizeLinea(l), rate)), { emitEvent: false });
       }
       if (this.lineasArray.length === 0) {
-        this.lineasArray.push(this.createLineaGroup(normalizeLinea({})), { emitEvent: false });
+        this.lineasArray.push(this.createLineaGroup(normalizeLinea({ ivaRate: IVA_LINEA_NUEVA })), { emitEvent: false });
       }
       this.syncCausasExencion();
       this.formValue.set(this.form.getRawValue());
@@ -317,6 +330,7 @@ export class FacturaDrawerComponent {
         precioUnitario: 0,
         base: 0,
         aplicaIva: true,
+        ivaRate: IVA_LINEA_NUEVA,
       }),
     );
   }
@@ -423,6 +437,12 @@ export class FacturaDrawerComponent {
   }
 
   /** Vincula el contacto y precarga el cliente con sus datos (el usuario puede corregirlos después). */
+  /** Cambio en el select "Cliente del caso". */
+  elegirClienteCaso(id: string): void {
+    const c = this.contactosCaso().find((x) => x.id === id);
+    if (c) this.seleccionarContacto(c);
+  }
+
   seleccionarContacto(c: Contact): void {
     const cliente = clienteDesdeContacto(c);
     this.form.controls.cliente.patchValue(

@@ -11,6 +11,9 @@ import type { CausaExencion } from './verifactu.interface';
 /** Tipos de IVA vigentes en España (general, reducido, superreducido, exento/no sujeto). */
 export const TIPOS_IVA = [21, 10, 4, 0] as const;
 
+/** Tipo de IVA (fracción) con el que nacen las líneas nuevas de una factura. */
+export const IVA_LINEA_NUEVA = 0.1;
+
 export type TipoIva = (typeof TIPOS_IVA)[number];
 
 /**

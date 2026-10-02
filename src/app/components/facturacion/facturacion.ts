@@ -33,6 +33,7 @@ import { CierreModalComponent } from './components/cierre-modal/cierre-modal';
 import { FacturacionFacturasTabComponent } from './components/facturacion-facturas-tab/facturacion-facturas-tab';
 import { EditarNumeroModalComponent } from './components/editar-numero-modal/editar-numero-modal';
 import { normalizeLinea } from '../../core/services/invoice.service';
+import { IVA_LINEA_NUEVA } from '../../interfaces/iva';
 
 type FacturacionTab = 'casos' | 'archivo' | 'facturas' | 'horas' | 'configuracion';
 
@@ -165,6 +166,8 @@ export class FacturacionComponent implements OnInit {
   /** Cliente con el que se precarga la sección Cliente del drawer, y contacto del que viene (si lo hay). */
   readonly drawerCliente = signal<ClienteFactura | null>(null);
   readonly drawerContacto = signal<Contact | null>(null);
+  /** Clientes del caso (los que siguen existiendo), para elegir de cuál se saca el NIF. */
+  readonly drawerContactosCaso = signal<Contact[]>([]);
   /** Contactos para el buscador del drawer (se cargan la primera vez que se busca). */
   readonly contactos = this.contactService.contacts;
 
@@ -197,7 +200,7 @@ export class FacturacionComponent implements OnInit {
     const r = caso.resumenFinanciero;
     this.drawerLineas.set(
       [
-        { concepto: 'Honorarios', descripcion: '', cantidad: 1, precioUnitario: r.totalHonorarios, base: r.totalHonorarios, aplicaIva: true },
+        { concepto: 'Honorarios', descripcion: '', cantidad: 1, precioUnitario: r.totalHonorarios, base: r.totalHonorarios, aplicaIva: true, ivaRate: IVA_LINEA_NUEVA },
         { concepto: 'Suplidos', descripcion: '', cantidad: 1, precioUnitario: r.totalSuplidos, base: r.totalSuplidos, aplicaIva: false },
         { concepto: 'Ingresos', descripcion: '', cantidad: 1, precioUnitario: r.totalIngresos, base: r.totalIngresos, aplicaIva: false },
       ].filter(l => l.precioUnitario > 0),
@@ -209,21 +212,34 @@ export class FacturacionComponent implements OnInit {
     this.drawerRectificativa.set(false);
     this.drawerCliente.set(null);
     this.drawerContacto.set(null);
+    this.drawerContactosCaso.set([]);
     this.facturaCaso.set(caso);
-    void this.precargarContacto(caso.contactoIds?.[0], () => this.facturaCaso() === caso);
+    void this.precargarContactosCaso(caso.contactoIds ?? [], () => this.facturaCaso() === caso);
   }
 
   /**
-   * Resuelve el contacto en segundo plano y precarga la sección Cliente. `sigueAbierto` evita
+   * Resuelve en segundo plano TODOS los contactos del caso y precarga la sección Cliente con el
+   * primero que siga existiendo. `contactoIds` puede conservar ids de contactos borrados (el
+   * detalle del caso los oculta), así que no basta con mirar el primero. `sigueAbierto` evita
    * aplicar un resultado tardío a un drawer que ya se cerró o se reabrió para otra factura.
-   * Un contacto borrado o ilegible no impide facturar: el cliente se escribe a mano.
+   * Si ninguno se puede leer no se impide facturar: el cliente se escribe a mano.
    */
-  private async precargarContacto(contactoId: string | undefined, sigueAbierto: () => boolean): Promise<void> {
-    if (!contactoId) return;
-    const contacto = await this.contactService.getContact(contactoId).catch(() => null);
-    if (!contacto || !sigueAbierto()) return;
-    this.drawerContacto.set(contacto);
-    this.drawerCliente.set(clienteDesdeContacto(contacto));
+  private async precargarContactosCaso(contactoIds: string[], sigueAbierto: () => boolean): Promise<void> {
+    if (contactoIds.length === 0) return;
+    const leidos = await Promise.all(
+      contactoIds.map((id) => this.contactService.getContact(id).catch(() => null)),
+    );
+    const perdidos = contactoIds.filter((_, i) => !leidos[i]);
+    if (perdidos.length > 0) {
+      console.warn(`Contactos del caso no disponibles (borrados o sin acceso): ${perdidos.join(', ')}`);
+    }
+    if (!sigueAbierto()) return;
+    const contactos = leidos.filter((c): c is Contact => c !== null);
+    this.drawerContactosCaso.set(contactos);
+    const [primero] = contactos;
+    if (!primero) return;
+    this.drawerContacto.set(primero);
+    this.drawerCliente.set(clienteDesdeContacto(primero));
   }
 
   /** Abre el drawer para crear una factura standalone (sin caso). */
@@ -236,6 +252,7 @@ export class FacturacionComponent implements OnInit {
     this.drawerRectificativa.set(false);
     this.drawerCliente.set(null);
     this.drawerContacto.set(null);
+    this.drawerContactosCaso.set([]);
     // Usamos un Caso "fantasma" para abrir el drawer — el drawer solo lee titulo
     this.facturaCaso.set({ id: '', titulo: 'Factura libre' } as Caso);
   }
@@ -251,6 +268,7 @@ export class FacturacionComponent implements OnInit {
     // La factura conserva su propia copia del cliente: se precarga el snapshot, no el contacto.
     this.drawerCliente.set(clienteDesdeFactura(invoice));
     this.drawerContacto.set(null);
+    this.drawerContactosCaso.set([]);
     const caso = { id: invoice.casoId ?? '', titulo: invoice.casoTitulo ?? invoice.invoiceNumber } as Caso;
     this.facturaCaso.set(caso);
     void this.precargarContactoVinculado(invoice.clienteContactoId, () => this.facturaCaso() === caso);
@@ -271,6 +289,7 @@ export class FacturacionComponent implements OnInit {
     this.drawerRectificativa.set(false);
     this.drawerCliente.set(null);
     this.drawerContacto.set(null);
+    this.drawerContactosCaso.set([]);
   }
 
   async confirmarFactura(payload: InvoiceFormPayload): Promise<void> {
@@ -600,6 +619,7 @@ export class FacturacionComponent implements OnInit {
     // La rectificativa hereda el cliente de la original (lo copia el servicio).
     this.drawerCliente.set(clienteDesdeFactura(invoice));
     this.drawerContacto.set(null);
+    this.drawerContactosCaso.set([]);
     this.facturaCaso.set({ id: invoice.casoId ?? '', titulo: invoice.casoTitulo ?? invoice.invoiceNumber } as Caso);
   }
 

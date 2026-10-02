@@ -1,4 +1,5 @@
 import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
+import { ErrorCredenciales } from './credenciales';
 
 const client = new SecretManagerServiceClient();
 const PROJECT_ID = process.env['GCLOUD_PROJECT'] ?? '';
@@ -26,6 +27,6 @@ export async function getSecret(name: string): Promise<Buffer> {
   console.log(`[SecretManager] accessSecretVersion: ${versionName}`);
   const [version] = await client.accessSecretVersion({ name: versionName });
   const data = version.payload?.data;
-  if (!data) throw new Error(`Secret vacío: ${name}`);
+  if (!data || data.length === 0) throw new ErrorCredenciales('certificado_invalido', `Secret vacío: ${name}`);
   return Buffer.from(data as Uint8Array);
 }

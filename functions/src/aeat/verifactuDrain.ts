@@ -1,6 +1,7 @@
 import * as admin from 'firebase-admin';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { crearDeps } from './adapters';
+import { cuentaServicioVerifactu } from './config';
 import { drenarEmpresa } from './submit';
 
 /** Máximo de empresas por tick; el resto se atiende en el siguiente (cada minuto). */
@@ -12,7 +13,13 @@ const MAX_EMPRESAS_POR_TICK = 25;
  * Consulta collection-group `verifactuChain.drainAt` (ver fieldOverrides en firestore.indexes.json).
  */
 export const verifactuDrain = onSchedule(
-  { schedule: 'every 1 minutes', timeoutSeconds: 300, retryCount: 0 },
+  {
+    schedule: 'every 1 minutes',
+    timeoutSeconds: 300,
+    retryCount: 0,
+    // Misma cuenta dedicada que verifactuSubmit: necesita leer el certificado en Secret Manager.
+    serviceAccount: cuentaServicioVerifactu(),
+  },
   async () => {
     const ahora = new Date().toISOString();
     const snap = await admin
