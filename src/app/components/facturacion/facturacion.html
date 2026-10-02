@@ -27,7 +27,7 @@
 </div>
 
 <!-- KPI Cards -->
-<app-facturacion-kpi-cards [totales]="totales()" />
+<app-facturacion-kpi-cards [resumen]="resumen()" [verifactuActivo]="verifactuActivo()" />
 
 <!-- Tabs -->
 <div class="rounded-xl overflow-hidden" style="border:1px solid var(--border);background:var(--surface)">
@@ -51,8 +51,6 @@
       [invoiceMap]="invoiceMap()"
       (abrirFactura)="abrirFactura($event)"
       (abrirCierre)="abrirCierre($event)"
-      (downloadPdf)="downloadPdf($event)"
-      (copyPdfLink)="copyPdfLink($event)"
     />
   }
 

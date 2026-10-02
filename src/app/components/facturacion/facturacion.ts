@@ -34,6 +34,13 @@ import { FacturacionFacturasTabComponent } from './components/facturacion-factur
 import { EditarNumeroModalComponent } from './components/editar-numero-modal/editar-numero-modal';
 import { normalizeLinea } from '../../core/services/invoice.service';
 import { IVA_LINEA_NUEVA } from '../../interfaces/iva';
+import { resumenFacturacion } from '../../core/facturacion/resumen-facturacion';
+
+/** YYYY-MM-DD en hora local: a medianoche `toISOString()` (UTC) daría el día anterior. */
+function fechaLocalHoy(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 type FacturacionTab = 'casos' | 'archivo' | 'facturas' | 'horas' | 'configuracion';
 
@@ -134,19 +141,9 @@ export class FacturacionComponent implements OnInit {
     this.casos().filter(c => c.estado === 'cerrado' || c.estado === 'archivado')
   );
 
-  readonly totales = computed(() =>
-    this.casosAbiertos().reduce(
-      (acc, c) => {
-        const r = c.resumenFinanciero;
-        acc.ingresos += r.totalIngresos;
-        acc.suplidos += r.totalSuplidos;
-        acc.honorarios += r.totalHonorarios;
-        acc.saldo += r.saldo;
-        return acc;
-      },
-      { ingresos: 0, suplidos: 0, honorarios: 0, saldo: 0 }
-    )
-  );
+  /** Panel: Verifactu, IVA y cobros del mes en curso (saldo, honorarios y suplidos viven en Tesorería). */
+  readonly resumen = computed(() => resumenFacturacion(this.invoiceService.invoices(), fechaLocalHoy()));
+  readonly verifactuActivo = computed(() => this.companyService.activeCompany()?.verifactu?.enabled ?? false);
 
   readonly canCreateFactura = computed(() => this.perm.can('Facturación', 'crear'));
   readonly canEditCasos = computed(() => this.perm.can('Casos', 'editar'));

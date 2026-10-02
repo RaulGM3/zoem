@@ -1,13 +1,15 @@
-import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { LucideAngularModule, Receipt, CheckCircle2, FileCheck, Download, Link } from 'lucide-angular';
+import { RouterLink } from '@angular/router';
+import { LucideAngularModule, Receipt, CheckCircle2, FileCheck, ChevronDown, ExternalLink } from 'lucide-angular';
 import type { Invoice } from '../../../../core/services/invoice.service';
+import { estiloEstadoFactura, etiquetaEstadoFactura } from '../../../../core/facturacion/estado-factura';
 import { Caso, gestoriaCompleta } from '../../../../interfaces';
 
 @Component({
   selector: 'app-facturacion-casos-tab',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LucideAngularModule, DecimalPipe],
+  imports: [LucideAngularModule, DecimalPipe, RouterLink],
   templateUrl: './facturacion-casos-tab.html',
 })
 export class FacturacionCasosTabComponent {
@@ -19,14 +21,30 @@ export class FacturacionCasosTabComponent {
 
   readonly abrirFactura = output<Caso>();
   readonly abrirCierre = output<Caso>();
-  readonly downloadPdf = output<string | undefined>();
-  readonly copyPdfLink = output<string | undefined>();
 
   readonly ReceiptIcon = Receipt;
   readonly CheckCircle2Icon = CheckCircle2;
   readonly FileCheckIcon = FileCheck;
-  readonly DownloadIcon = Download;
-  readonly LinkIcon = Link;
+  readonly ChevronDownIcon = ChevronDown;
+  readonly ExternalLinkIcon = ExternalLink;
+
+  readonly estadoEstilo = estiloEstadoFactura;
+  readonly estadoEtiqueta = etiquetaEstadoFactura;
+
+  /** Casos con la lista de facturas desplegada. */
+  private readonly expandidos = signal<ReadonlySet<string>>(new Set());
+
+  expandido(casoId: string): boolean {
+    return this.expandidos().has(casoId);
+  }
+
+  toggleFacturas(casoId: string): void {
+    this.expandidos.update((actual) => {
+      const siguiente = new Set(actual);
+      if (!siguiente.delete(casoId)) siguiente.add(casoId);
+      return siguiente;
+    });
+  }
 
   /** Devuelve los IDs de factura del caso (soporta facturaIds[] y legacy facturaId). */
   invoiceIds(caso: Caso): string[] {
@@ -38,13 +56,8 @@ export class FacturacionCasosTabComponent {
     return this.invoiceIds(caso).length;
   }
 
-  invoiceNumber(facturaId: string): string {
-    return this.invoiceMap().get(facturaId)?.invoiceNumber ?? facturaId;
-  }
-
-  pdfUrl(facturaId: string | undefined): string | undefined {
-    if (!facturaId) return undefined;
-    return this.invoiceMap().get(facturaId)?.pdfUrl;
+  invoice(facturaId: string): Invoice | undefined {
+    return this.invoiceMap().get(facturaId);
   }
 
   esEjecutado(caso: Caso): boolean {

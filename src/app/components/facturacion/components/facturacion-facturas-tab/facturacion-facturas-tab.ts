@@ -22,14 +22,7 @@ import {
   vistaVerifactu,
   type VistaVerifactu,
 } from '../../../../core/verifactu/verifactu-ui';
-
-const STATUS_CONFIG: Record<InvoiceStatus, { label: string; bg: string; color: string }> = {
-  borrador:  { label: 'Borrador',  bg: 'color-mix(in srgb,var(--text-faint) 12%,transparent)', color: 'var(--text-muted)' },
-  pendiente: { label: 'Pendiente', bg: 'color-mix(in srgb,var(--warning) 12%,transparent)',    color: 'var(--warning)' },
-  pagada:    { label: 'Pagada',    bg: 'color-mix(in srgb,var(--success) 12%,transparent)',    color: 'var(--success)' },
-  vencida:   { label: 'Vencida',   bg: 'color-mix(in srgb,var(--danger) 12%,transparent)',     color: 'var(--danger)' },
-  anulada:   { label: 'Anulada',   bg: 'color-mix(in srgb,var(--text-faint) 12%,transparent)', color: 'var(--text-faint)' },
-};
+import { estiloEstadoFactura, etiquetaEstadoFactura } from '../../../../core/facturacion/estado-factura';
 
 type StatusFilter = InvoiceStatus | 'todos';
 
@@ -144,14 +137,8 @@ export class FacturacionFacturasTabComponent {
     };
   });
 
-  statusStyle(status: InvoiceStatus): { background: string; color: string } {
-    const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG['pendiente'];
-    return { background: cfg.bg, color: cfg.color };
-  }
-
-  statusLabel(status: InvoiceStatus): string {
-    return STATUS_CONFIG[status]?.label ?? status;
-  }
+  readonly statusStyle = estiloEstadoFactura;
+  readonly statusLabel = etiquetaEstadoFactura;
 
   canEdit(invoice: Invoice): boolean {
     return !verifactuBloqueada(invoice) && invoice.status !== 'anulada';

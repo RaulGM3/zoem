@@ -8,7 +8,7 @@
         <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Honorarios</th>
         <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Saldo</th>
         <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Gestoría</th>
-        <th class="px-4 py-3"></th>
+        <th class="px-4 py-3"><span class="sr-only">Acciones</span></th>
       </tr>
     </thead>
     <tbody>
@@ -17,7 +17,8 @@
           (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
           (mouseleave)="$any($event.currentTarget).style.background=''">
           <td class="px-5 py-4">
-            <p class="font-semibold" style="color:var(--text-strong)">{{ caso.titulo }}</p>
+            <a [routerLink]="['/casos', caso.id]" class="font-semibold hover:underline focus-visible:underline"
+              style="color:var(--text-strong)">{{ caso.titulo }}</a>
             <p class="text-xs" style="color:var(--text-faint)">{{ caso.tipo }}</p>
           </td>
           <td class="px-4 py-4 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.totalIngresos | number:'1.0-0' }}€</td>
@@ -39,22 +40,17 @@
           <td class="px-4 py-4">
             <div class="flex items-center justify-end gap-2">
               @if (invoiceCount(caso) > 0) {
-                <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium"
+                <button type="button" (click)="toggleFacturas(caso.id)"
+                  [attr.aria-expanded]="expandido(caso.id)"
+                  [attr.aria-controls]="'facturas-caso-' + caso.id"
+                  [title]="expandido(caso.id) ? 'Ocultar facturas' : 'Ver facturas'"
+                  class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium"
                   style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">
-                  <lucide-icon [img]="FileCheckIcon" size="13"></lucide-icon>
+                  <lucide-icon [img]="FileCheckIcon" size="13" aria-hidden="true"></lucide-icon>
                   {{ invoiceCount(caso) === 1 ? '1 factura' : invoiceCount(caso) + ' facturas' }}
-                </span>
-                @for (fId of invoiceIds(caso); track fId) {
-                  @if (pdfUrl(fId)) {
-                    <button (click)="downloadPdf.emit(fId)" [title]="'Descargar PDF ' + invoiceNumber(fId)"
-                      class="inline-flex items-center justify-center rounded-lg p-1.5 transition-colors duration-150"
-                      style="border:1px solid var(--border);color:var(--text-muted)"
-                      (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-                      (mouseleave)="$any($event.currentTarget).style.background=''">
-                      <lucide-icon [img]="DownloadIcon" size="14"></lucide-icon>
-                    </button>
-                  }
-                }
+                  <lucide-icon [img]="ChevronDownIcon" size="13" aria-hidden="true"
+                    class="transition-transform duration-150" [class.rotate-180]="expandido(caso.id)"></lucide-icon>
+                </button>
               }
               @if (canCreate()) {
                 <button (click)="abrirFactura.emit(caso)"
@@ -80,6 +76,40 @@
             </div>
           </td>
         </tr>
+        @if (expandido(caso.id)) {
+          <tr [id]="'facturas-caso-' + caso.id" style="border-bottom:1px solid var(--border-soft);background:var(--surface-2)">
+            <td colspan="7" class="px-5 py-3">
+              <ul class="flex flex-col gap-2" [attr.aria-label]="'Facturas de ' + caso.titulo">
+                @for (fId of invoiceIds(caso); track fId) {
+                  @let inv = invoice(fId);
+                  <li class="flex flex-wrap items-center gap-3 rounded-lg px-3 py-2" style="background:var(--surface);border:1px solid var(--border)">
+                    <span class="font-medium tabular-nums" style="color:var(--text-strong);font-family:var(--font-mono)">{{ inv?.invoiceNumber ?? fId }}</span>
+                    @if (inv) {
+                      <span class="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium"
+                        [style.background]="estadoEstilo(inv.status).background"
+                        [style.color]="estadoEstilo(inv.status).color">{{ estadoEtiqueta(inv.status) }}</span>
+                      <span class="text-xs tabular-nums" style="color:var(--text-muted);font-family:var(--font-mono)">{{ inv.total | number:'1.2-2' }} €</span>
+                    }
+                    <span class="ml-auto">
+                      @if (inv?.pdfUrl) {
+                        <a [href]="inv!.pdfUrl" target="_blank" rel="noopener noreferrer"
+                          [attr.aria-label]="'Abrir PDF de la factura ' + inv!.invoiceNumber + ' (se abre en una pestaña nueva)'"
+                          class="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150"
+                          style="border:1px solid var(--border);color:var(--text-body)"
+                          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+                          (mouseleave)="$any($event.currentTarget).style.background=''">
+                          <lucide-icon [img]="ExternalLinkIcon" size="14" aria-hidden="true"></lucide-icon> Abrir
+                        </a>
+                      } @else {
+                        <span class="text-xs" style="color:var(--text-muted)">PDF no disponible</span>
+                      }
+                    </span>
+                  </li>
+                }
+              </ul>
+            </td>
+          </tr>
+        }
       }
       @if (casos().length === 0) {
         <tr>
