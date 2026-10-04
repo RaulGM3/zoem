@@ -46,9 +46,12 @@ describe('DemoLayoutComponent (mobile)', () => {
     fixture.detectChanges();
   });
 
-  it('uses dynamic viewport height on the shell', () => {
+  it('uses dynamic viewport height minus the safe-area insets on the shell', () => {
     const root = (fixture.nativeElement as HTMLElement).firstElementChild as HTMLElement;
-    expect(root.classList.contains('h-dvh')).toBe(true);
+    // body already carries the safe-area padding; a plain h-dvh would overflow on notched devices
+    expect(
+      root.classList.contains('h-[calc(100dvh-var(--safe-area-top)-var(--safe-area-bottom))]'),
+    ).toBe(true);
     expect(root.classList.contains('h-screen')).toBe(false);
   });
 
