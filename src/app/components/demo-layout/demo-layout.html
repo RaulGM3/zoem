@@ -1,4 +1,4 @@
-<div class="flex h-screen overflow-hidden" style="background:var(--bg)">
+<div class="flex h-dvh overflow-hidden" style="background:var(--bg)">
 
   <!-- Desktop Sidebar -->
   <aside [class]="sidebarClass()" style="background:var(--sidebar);border-right:1px solid var(--border)">
@@ -46,12 +46,10 @@
                 [routerLink]="item.href"
                 routerLinkActive="nav-item-active"
                 [routerLinkActiveOptions]="{exact: item.href === '/'}"
-                class="relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150"
+                class="relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 hover:bg-[var(--surface-2)]"
                 style="color:var(--text-body)"
                 [class.justify-center]="sidebarCollapsed()"
                 [title]="sidebarCollapsed() ? item.name : ''"
-                (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-                (mouseleave)="$any($event.currentTarget).style.background=''"
               >
                 <lucide-icon [img]="item.icon" size="18" class="shrink-0"></lucide-icon>
                 @if (!sidebarCollapsed()) {
@@ -118,7 +116,7 @@
       style="background:var(--surface);border-bottom:1px solid var(--border)">
 
       <!-- Mobile menu toggle -->
-      <button class="inline-flex items-center justify-center rounded-xl p-2 lg:hidden transition-colors duration-150"
+      <button class="tap-target inline-flex items-center justify-center rounded-xl p-2 lg:hidden transition-colors duration-150"
         style="color:var(--text-muted)"
         aria-label="Abrir menú"
         (click)="sidebarOpen.set(true)">
@@ -189,6 +187,17 @@
 
       <!-- Right actions -->
       <div class="flex items-center gap-1">
+        <!-- Mobile search toggle -->
+        <button
+          type="button"
+          data-test="mobile-search-toggle"
+          class="tap-target inline-flex items-center justify-center rounded-xl p-2 md:hidden transition-colors duration-150"
+          style="color:var(--text-muted)"
+          aria-label="Buscar"
+          [attr.aria-expanded]="mobileSearchOpen()"
+          (click)="toggleMobileSearch()">
+          <span class="material-symbols-outlined" aria-hidden="true">search</span>
+        </button>
         <!-- Theme toggle -->
         <button
           class="inline-flex items-center justify-center rounded-xl p-2 transition-colors duration-150"
@@ -206,6 +215,25 @@
       </div>
     </header>
 
+    <!-- Mobile search row -->
+    @if (mobileSearchOpen()) {
+      <div class="px-4 py-2 md:hidden" style="background:var(--surface);border-bottom:1px solid var(--border)">
+        <input
+          #mobileSearchInput
+          data-test="mobile-search-input"
+          type="search"
+          aria-label="Búsqueda global"
+          [value]="searchSvc.term()"
+          [placeholder]="searchSvc.activeMeta()?.placeholder ?? 'Buscar contactos, casos, personal...'"
+          (input)="searchSvc.setTerm($any($event.target).value)"
+          (keydown.enter)="submitSearch()"
+          (keydown.escape)="closeMobileSearch()"
+          class="w-full rounded-xl px-3 py-2 text-sm min-h-11 focus:outline-none focus:ring-2"
+          style="background:var(--surface-2);border:1px solid var(--border);color:var(--text);font-family:var(--font-ui);--tw-ring-color:color-mix(in srgb,var(--brand) 20%,transparent)"
+        />
+      </div>
+    }
+
     <!-- Page Content -->
     <main class="flex-1 overflow-x-hidden overflow-y-auto p-4 lg:p-6">
       <router-outlet />
@@ -216,12 +244,19 @@
   @if (sidebarOpen()) {
     <div class="fixed inset-0 z-50 lg:hidden">
       <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" (click)="sidebarOpen.set(false)"></div>
-      <div class="absolute left-0 top-0 h-full w-64 flex flex-col shadow-xl"
+      <div class="pt-safe pb-safe absolute left-0 top-0 h-full w-64 flex flex-col shadow-xl"
+        data-test="mobile-drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Menú de navegación"
+        appFocusTrap
+        (escapeKey)="sidebarOpen.set(false)"
         style="background:var(--surface-sidebar)">
         <div class="flex h-16 items-center justify-between px-4" style="border-bottom:1px solid var(--border)">
           <img src="vertey transparent png.png" alt="Vertey" class="h-7 w-auto" />
-          <button class="rounded-xl p-1.5 transition-colors duration-150"
+          <button class="tap-target inline-flex items-center justify-center rounded-xl p-1.5 transition-colors duration-150"
             style="color:var(--text-muted)"
+            aria-label="Cerrar menú"
             (click)="sidebarOpen.set(false)">
             <span class="material-symbols-outlined">close</span>
           </button>

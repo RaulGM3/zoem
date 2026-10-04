@@ -5,6 +5,7 @@ import { filter } from 'rxjs';
 import { SearchService, type SearchCategory } from '../../core/services/search.service';
 import { AuthService } from '../../auth/auth.service';
 import { PermissionService } from '../../core/services/permission.service';
+import { FocusTrapDirective } from '../../shared/directives/focus-trap.directive';
 import { ThemeService } from '../../core/services/theme.service';
 import type { Modulo } from '../../core/permissions/permissions';
 import type { FirmRole } from '../../interfaces/member';
@@ -60,7 +61,7 @@ export interface NavCategory {
 @Component({
   selector: 'app-demo-layout',
   imports: [
-    RouterOutlet, RouterLink, RouterLinkActive, LucideAngularModule, AgenteLanzadorComponent,
+    RouterOutlet, RouterLink, RouterLinkActive, LucideAngularModule, AgenteLanzadorComponent, FocusTrapDirective,
   ],
   templateUrl: './demo-layout.html',
 })
@@ -84,7 +85,9 @@ export class DemoLayoutComponent {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   readonly searchMenuOpen = signal(false);
+  readonly mobileSearchOpen = signal(false);
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
+  private readonly mobileSearchInput = viewChild<ElementRef<HTMLInputElement>>('mobileSearchInput');
 
   constructor() {
     // Sync active search category to current route on every navigation.
@@ -121,6 +124,21 @@ export class DemoLayoutComponent {
     this.searchMenuOpen.set(false);
     this.searchSvc.clear();
     this.searchInput()?.nativeElement.blur();
+  }
+
+  toggleMobileSearch(): void {
+    if (this.mobileSearchOpen()) {
+      this.closeMobileSearch();
+      return;
+    }
+    this.mobileSearchOpen.set(true);
+    // El input se renderiza tras el cambio de señal; foco en el siguiente microtask.
+    queueMicrotask(() => this.mobileSearchInput()?.nativeElement.focus());
+  }
+
+  closeMobileSearch(): void {
+    this.mobileSearchOpen.set(false);
+    this.searchSvc.clear();
   }
 
   submitSearch(): void {
