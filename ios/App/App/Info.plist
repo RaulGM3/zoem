@@ -28,6 +28,16 @@
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Vertey necesita la cámara para adjuntar fotos de documentos a tus casos.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Vertey necesita el micrófono para dictar notas y transcribirlas.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Vertey necesita acceso a tus fotos para adjuntar documentos a tus casos.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>armv7</string>

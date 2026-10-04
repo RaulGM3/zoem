@@ -17,6 +17,7 @@ const { mockSetDoc, mockDeleteDoc, mockDoc, listeners, mockPush } = vi.hoisted((
     mockPush: {
       requestPermissions: vi.fn().mockResolvedValue({ receive: 'granted' }),
       register: vi.fn().mockResolvedValue(undefined),
+      createChannel: vi.fn().mockResolvedValue(undefined),
       addListener: vi.fn((name: string, cb: (arg: unknown) => void) => {
         listeners[name] = cb;
         return Promise.resolve({ remove: vi.fn() });
@@ -38,75 +39,120 @@ vi.mock('@angular/fire/auth', () => ({ Auth: class MockAuth {} }));
 
 vi.mock('@capacitor/push-notifications', () => ({ PushNotifications: mockPush }));
 
+interface FakePlatform {
+  isNative: boolean;
+  isAndroid: boolean;
+  platform: string;
+}
+
+const IOS: FakePlatform = { isNative: true, isAndroid: false, platform: 'ios' };
+const ANDROID: FakePlatform = { isNative: true, isAndroid: true, platform: 'android' };
+const WEB: FakePlatform = { isNative: false, isAndroid: false, platform: 'web' };
+
 describe('PushNotificationService', () => {
-  let service: PushNotificationService;
   let currentUser: { uid: string } | null;
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-    for (const k of Object.keys(listeners)) delete listeners[k];
-    currentUser = { uid: 'u1' };
-
+  function setup(platform: FakePlatform = IOS): PushNotificationService {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       providers: [
         PushNotificationService,
-        { provide: PlatformService, useValue: { isNative: true, platform: 'ios' } },
+        { provide: PlatformService, useValue: platform },
         { provide: Auth, useValue: { get currentUser() { return currentUser; } } },
         { provide: Firestore, useValue: {} },
         { provide: Router, useValue: { navigateByUrl: vi.fn() } },
         { provide: ToastService, useValue: { info: vi.fn() } },
       ],
     });
-    service = TestBed.inject(PushNotificationService);
+    return TestBed.inject(PushNotificationService);
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockPush.requestPermissions.mockResolvedValue({ receive: 'granted' });
+    for (const k of Object.keys(listeners)) delete listeners[k];
+    currentUser = { uid: 'u1' };
   });
 
-  it('guarda el token con lastSeenAt usando merge', async () => {
-    await service.init();
-    listeners['registration']({ value: 'tok-1' });
-    await vi.waitFor(() => expect(mockSetDoc).toHaveBeenCalled());
+  describe('init', () => {
+    it('does nothing on web', async () => {
+      await setup(WEB).init();
+      expect(mockPush.requestPermissions).not.toHaveBeenCalled();
+      expect(mockPush.createChannel).not.toHaveBeenCalled();
+    });
 
-    const [ref, data, options] = mockSetDoc.mock.calls[0];
-    expect(ref).toBe('ref:tok-1');
-    expect(data).toMatchObject({ token: 'tok-1', platform: 'ios', lastSeenAt: '__ts__' });
-    expect(options).toEqual({ merge: true });
+    it('creates the default high-importance channel on Android', async () => {
+      await setup(ANDROID).init();
+      expect(mockPush.createChannel).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'general', importance: 4 }),
+      );
+      expect(mockPush.register).toHaveBeenCalled();
+    });
+
+    it('does not create a channel on iOS', async () => {
+      await setup(IOS).init();
+      expect(mockPush.createChannel).not.toHaveBeenCalled();
+      expect(mockPush.register).toHaveBeenCalled();
+    });
+
+    it('does not register when permission is denied', async () => {
+      mockPush.requestPermissions.mockResolvedValue({ receive: 'denied' });
+      await setup(ANDROID).init();
+      expect(mockPush.register).not.toHaveBeenCalled();
+    });
+
+    it('init repetido (re-login) no duplica listeners', async () => {
+      const service = setup();
+      await service.init();
+      await service.init();
+      const registrationCalls = mockPush.addListener.mock.calls.filter((c) => c[0] === 'registration');
+      expect(registrationCalls).toHaveLength(1);
+    });
   });
 
-  it('unregister borra el doc del token guardado', async () => {
-    await service.init();
-    listeners['registration']({ value: 'tok-1' });
-    await vi.waitFor(() => expect(mockSetDoc).toHaveBeenCalled());
+  describe('token', () => {
+    let service: PushNotificationService;
 
-    await service.unregister();
-    expect(mockDeleteDoc).toHaveBeenCalledWith('ref:tok-1');
-  });
+    async function registerToken(): Promise<void> {
+      await service.init();
+      listeners['registration']({ value: 'tok-1' });
+      await vi.waitFor(() => expect(mockSetDoc).toHaveBeenCalled());
+    }
 
-  it('unregister sin token registrado no hace nada', async () => {
-    await service.unregister();
-    expect(mockDeleteDoc).not.toHaveBeenCalled();
-  });
+    beforeEach(() => {
+      service = setup();
+    });
 
-  it('unregister olvida el token: una segunda llamada no vuelve a borrar', async () => {
-    await service.init();
-    listeners['registration']({ value: 'tok-1' });
-    await vi.waitFor(() => expect(mockSetDoc).toHaveBeenCalled());
-    await service.unregister();
-    await service.unregister();
-    expect(mockDeleteDoc).toHaveBeenCalledTimes(1);
-  });
+    it('guarda el token con lastSeenAt usando merge', async () => {
+      await registerToken();
+      const [ref, data, options] = mockSetDoc.mock.calls[0];
+      expect(ref).toBe('ref:tok-1');
+      expect(data).toMatchObject({ token: 'tok-1', platform: 'ios', lastSeenAt: '__ts__' });
+      expect(options).toEqual({ merge: true });
+    });
 
-  it('unregister no lanza si el borrado falla', async () => {
-    await service.init();
-    listeners['registration']({ value: 'tok-1' });
-    await vi.waitFor(() => expect(mockSetDoc).toHaveBeenCalled());
-    mockDeleteDoc.mockRejectedValueOnce(new Error('offline'));
-    await expect(service.unregister()).resolves.toBeUndefined();
-  });
+    it('unregister borra el doc del token guardado', async () => {
+      await registerToken();
+      await service.unregister();
+      expect(mockDeleteDoc).toHaveBeenCalledWith('ref:tok-1');
+    });
 
-  it('init repetido (re-login) no duplica listeners', async () => {
-    await service.init();
-    await service.init();
-    const registrationCalls = mockPush.addListener.mock.calls.filter((c) => c[0] === 'registration');
-    expect(registrationCalls).toHaveLength(1);
+    it('unregister sin token registrado no hace nada', async () => {
+      await service.unregister();
+      expect(mockDeleteDoc).not.toHaveBeenCalled();
+    });
+
+    it('unregister olvida el token: una segunda llamada no vuelve a borrar', async () => {
+      await registerToken();
+      await service.unregister();
+      await service.unregister();
+      expect(mockDeleteDoc).toHaveBeenCalledTimes(1);
+    });
+
+    it('unregister no lanza si el borrado falla', async () => {
+      await registerToken();
+      mockDeleteDoc.mockRejectedValueOnce(new Error('offline'));
+      await expect(service.unregister()).resolves.toBeUndefined();
+    });
   });
 });

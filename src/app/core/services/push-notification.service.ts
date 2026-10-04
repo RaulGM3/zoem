@@ -18,6 +18,9 @@ import {
 import { PlatformService } from './platform.service';
 import { ToastService } from './toast.service';
 
+/** Debe coincidir con default_notification_channel_id en AndroidManifest.xml. */
+const DEFAULT_CHANNEL_ID = 'general';
+
 @Injectable({ providedIn: 'root' })
 export class PushNotificationService {
   private readonly platform = inject(PlatformService);
@@ -34,6 +37,17 @@ export class PushNotificationService {
 
     const permission = await PushNotifications.requestPermissions();
     if (permission.receive !== 'granted') return;
+
+    if (this.platform.isAndroid) {
+      await PushNotifications.createChannel({
+        id: DEFAULT_CHANNEL_ID,
+        name: 'General',
+        description: 'Notificaciones generales de Vertey',
+        importance: 4,
+        visibility: 1,
+        vibration: true,
+      });
+    }
 
     await PushNotifications.register();
     this.registerListeners();
