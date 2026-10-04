@@ -2,34 +2,46 @@
   <!-- Controls row -->
   <div class="mb-2 flex items-center gap-2">
     <button
+      type="button"
       (click)="prevClicked.emit()"
-      class="rounded-lg p-1.5 transition-colors duration-150"
-      style="color:var(--text-faint)"
-      (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-body)'"
-      (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+      aria-label="Anterior"
+      class="inline-flex items-center justify-center rounded-lg p-1.5 text-[var(--text-faint)] transition-colors duration-150 hover:bg-[var(--surface-2)] hover:text-[var(--text-body)] max-sm:tap-target"
     >
-      <lucide-icon [img]="ChevronLeftIcon" size="18"></lucide-icon>
+      <lucide-icon [img]="ChevronLeftIcon" size="18" aria-hidden="true"></lucide-icon>
     </button>
-    <span class="flex-1 text-center text-sm font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">{{ weekMonthLabel() }}</span>
+    <span class="min-w-0 flex-1 truncate text-center text-sm font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">{{ weekMonthLabel() }}</span>
     <button
+      type="button"
       (click)="nextClicked.emit()"
-      class="rounded-lg p-1.5 transition-colors duration-150"
-      style="color:var(--text-faint)"
-      (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-body)'"
-      (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+      aria-label="Siguiente"
+      class="inline-flex items-center justify-center rounded-lg p-1.5 text-[var(--text-faint)] transition-colors duration-150 hover:bg-[var(--surface-2)] hover:text-[var(--text-body)] max-sm:tap-target"
     >
-      <lucide-icon [img]="ChevronRightIcon" size="18"></lucide-icon>
+      <lucide-icon [img]="ChevronRightIcon" size="18" aria-hidden="true"></lucide-icon>
     </button>
+    @if (isMobile()) {
+      <button
+        type="button"
+        (click)="todayClicked.emit()"
+        aria-label="Ir a hoy"
+        class="tap-target inline-flex items-center justify-center rounded-lg p-1.5 text-[var(--text-faint)] transition-colors duration-150 hover:bg-[var(--surface-2)] hover:text-[var(--text-body)]"
+      >
+        <lucide-icon [img]="CalendarCheckIcon" size="18" aria-hidden="true"></lucide-icon>
+      </button>
+    }
     <div class="flex overflow-hidden rounded-lg" style="border:1px solid var(--border)">
       <button
+        type="button"
         (click)="viewModeChanged.emit('week')"
-        class="px-2.5 py-1 text-xs font-medium transition-colors duration-150"
+        [attr.aria-pressed]="viewMode() === 'week'"
+        class="px-2.5 py-1 text-xs font-medium transition-colors duration-150 max-sm:tap-target"
         [style.background]="viewMode() === 'week' ? 'var(--brand)' : 'var(--surface)'"
         [style.color]="viewMode() === 'week' ? '#fff' : 'var(--text-muted)'"
       >Sem</button>
       <button
+        type="button"
         (click)="viewModeChanged.emit('month')"
-        class="px-2.5 py-1 text-xs font-medium transition-colors duration-150"
+        [attr.aria-pressed]="viewMode() === 'month'"
+        class="px-2.5 py-1 text-xs font-medium transition-colors duration-150 max-sm:tap-target"
         [style.background]="viewMode() === 'month' ? 'var(--brand)' : 'var(--surface)'"
         [style.color]="viewMode() === 'month' ? '#fff' : 'var(--text-muted)'"
       >Mes</button>
@@ -76,7 +88,7 @@
       @for (day of monthDays(); track day.date) {
         <button
           (click)="dateToggled.emit(day.date)"
-          class="flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-xs transition-colors duration-150"
+          class="flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-xs transition-colors duration-150 max-sm:min-h-11"
           [style.background]="day.isSelected ? 'var(--brand)' : day.isToday ? 'color-mix(in srgb,var(--brand) 10%,transparent)' : ''"
           [style.color]="day.isSelected ? '#fff' : day.isToday ? 'var(--brand)' : day.isCurrentMonth ? 'var(--text-body)' : 'var(--text-faint)'"
         >

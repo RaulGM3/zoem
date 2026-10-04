@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, input, output, signal } from '@angular/core';
-import { LucideAngularModule, X, Trash2, Plus } from 'lucide-angular';
-import { FocusTrapDirective } from '../../../../shared/directives/focus-trap.directive';
+import { LucideAngularModule, Trash2, Plus } from 'lucide-angular';
+import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 import { HorasEditorComponent, RegistrosChange } from '../horas-editor/horas-editor';
 import type { CalendarItem, ItemColor } from '../../calendario.types';
 import type { CompanyMember, EventoEstado, HitoEstado } from '../../../../interfaces';
@@ -30,6 +30,9 @@ const COLOR_SWATCH: Record<ItemColor, string> = {
   slate:  'bg-slate-400 ring-slate-400',
 };
 
+const INACTIVE_ESTADO_BTN =
+  'border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:bg-[var(--surface-2)]';
+
 const ALL_COLORS: readonly ItemColor[] = ['violet', 'indigo', 'blue', 'green', 'amber', 'red', 'pink', 'slate'];
 
 /**
@@ -39,7 +42,7 @@ const ALL_COLORS: readonly ItemColor[] = ['violet', 'indigo', 'blue', 'green', '
  */
 @Component({
   selector: 'app-item-detalle-dialog',
-  imports: [LucideAngularModule, FocusTrapDirective, HorasEditorComponent],
+  imports: [LucideAngularModule, OverlayShellComponent, HorasEditorComponent],
   templateUrl: './item-detalle-dialog.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -56,7 +59,6 @@ export class ItemDetalleDialogComponent {
   readonly registrosChanged = output<RegistrosChange>();
   readonly eventoDeleted = output<{ id: string }>();
 
-  readonly XIcon = X;
   readonly Trash2Icon = Trash2;
   readonly PlusIcon = Plus;
 
@@ -105,12 +107,12 @@ export class ItemDetalleDialogComponent {
   }
 
   getHitoEstadoBtnClass(estado: HitoEstado, isActive: boolean): string {
-    if (!isActive) return '';
+    if (!isActive) return INACTIVE_ESTADO_BTN;
     return `${HITO_ESTADO_BADGE_CLASS[estado]} ring-2 ring-offset-1 ring-current/30`;
   }
 
   getEventoEstadoBtnClass(estado: EventoEstado, isActive: boolean): string {
-    if (!isActive) return '';
+    if (!isActive) return INACTIVE_ESTADO_BTN;
     return `${EVENTO_ESTADO_BADGE_CLASS[estado]} ring-2 ring-offset-1 ring-current/30`;
   }
 

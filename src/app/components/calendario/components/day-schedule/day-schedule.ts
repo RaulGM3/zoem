@@ -2,6 +2,7 @@ import {
   Component, ChangeDetectionStrategy, input, output,
   signal, computed, viewChild, ElementRef, effect, inject, DestroyRef,
 } from '@angular/core';
+import { BreakpointService } from '../../../../core/services/breakpoint.service';
 import { LucideAngularModule, X, Clock, Scissors, Euro, Flag, CalendarClock } from 'lucide-angular';
 import { ItemDetalleDialogComponent } from '../item-detalle-dialog/item-detalle-dialog';
 import type { CalendarItem, EventGroup, ItemColor } from '../../calendario.types';
@@ -223,6 +224,12 @@ export class DayScheduleComponent {
   readonly CalendarClockIcon = CalendarClock;
 
   private readonly destroyRef = inject(DestroyRef);
+  private readonly breakpoint = inject(BreakpointService);
+
+  /** Drag & resize solo en escritorio: en móvil el gesto táctil es scroll y tap. */
+  readonly dragEnabled = computed(() => !this.breakpoint.isMobile());
+  /** El último pointerdown no inició drag (táctil/móvil): el `click` posterior abre el detalle. */
+  private tapPending = false;
   /**
    * Fecha de "hoy" reactiva (no un snapshot congelado al construir el
    * componente) — se recalcula periódicamente para que `isHitoOverdue` no
@@ -450,6 +457,7 @@ export class DayScheduleComponent {
   }
 
   onRegistroPointerDown(event: PointerEvent, gr: GridRegistro): void {
+    if (!this.canDrag(event)) { this.tapPending = true; return; }
     if (gr.reg.facturado) return; // los facturados son inmutables
     if ((event.target as HTMLElement).closest('.resize-handle')) return;
     event.preventDefault();
@@ -706,6 +714,22 @@ export class DayScheduleComponent {
     this.selectedItemId.set(item.id);
   }
 
+  /**
+   * Tap/click sobre un bloque. En escritorio el detalle lo abre el drag sin
+   * movimiento (`finalizeDrag`); aquí solo se atiende el click que NO pasó por
+   * el drag: móvil o puntero táctil.
+   */
+  onBlockClick(item: CalendarItem): void {
+    if (this.dragEnabled() && !this.tapPending) return;
+    this.tapPending = false;
+    this.openItem(item);
+  }
+
+  /** Solo se arrastra con ratón/lápiz en escritorio; el táctil queda libre para hacer scroll. */
+  private canDrag(event: PointerEvent): boolean {
+    return this.dragEnabled() && event.pointerType !== 'touch';
+  }
+
   /** Encuentra el primer slot libre desde las 09:00 para no solapar eventos existentes */
   private findAvailableSlot(item: CalendarItem): number {
     const scheduled = this.scheduledItemsForDate(item.date);
@@ -767,6 +791,7 @@ export class DayScheduleComponent {
   // ── drag: mover ──────────────────────────────────────────────────────
 
   onItemPointerDown(event: PointerEvent, item: CalendarItem): void {
+    if (!this.canDrag(event)) { this.tapPending = true; return; }
     if ((event.target as HTMLElement).closest('.resize-handle')) return;
     event.preventDefault();
     event.stopPropagation();

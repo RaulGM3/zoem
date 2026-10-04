@@ -15,10 +15,7 @@
       <div class="flex flex-wrap gap-2">
         @for (item of unscheduledItems(); track item.id) {
           <button
-            class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150"
-            style="border:1px solid var(--border);background:var(--surface);color:var(--text-body)"
-            (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 8%,transparent)';$any($event.currentTarget).style.borderColor='color-mix(in srgb,var(--brand) 30%,transparent)'"
-            (mouseleave)="$any($event.currentTarget).style.background='var(--surface)';$any($event.currentTarget).style.borderColor='var(--border)'"
+            class="flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--text-body)] transition-colors duration-150 hover:border-[color-mix(in_srgb,var(--brand)_30%,transparent)] hover:bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] max-sm:tap-target"
             (click)="scheduleItem(item)"
             [attr.aria-label]="'Programar ' + item.title"
           >
@@ -124,13 +121,15 @@
                     [style.width]="getItemWidth(item)"
                     [style.top.px]="isDragging ? getDragTop() : getItemTop(item)"
                     [style.height.px]="isResizingItem(item) ? getResizeHeight() : getItemHeight(item)"
-                    [style.cursor]="isDragging ? 'grabbing' : 'grab'"
+                    [style.cursor]="!dragEnabled() ? 'pointer' : isDragging ? 'grabbing' : 'grab'"
                     (pointerdown)="onItemPointerDown($event, item)"
+                    (click)="onBlockClick(item)"
+                    data-agenda-block
                     (keydown.enter)="openItem(item)"
                     (keydown.space)="$event.preventDefault(); openItem(item)"
-                    role="button"
-                    tabindex="0"
-                    [attr.aria-label]="item.title + (item.horaInicio ? ' — ' + item.horaInicio : '')"
+                    [attr.role]="dragEnabled() ? 'button' : null"
+                    [attr.tabindex]="dragEnabled() ? 0 : null"
+                    [attr.aria-label]="dragEnabled() ? item.title + (item.horaInicio ? ' — ' + item.horaInicio : '') : null"
                   >
                     <div class="flex h-full flex-col gap-1 overflow-hidden p-1.5 pb-4">
                       <!-- Fila 1: icono + título + estado -->
@@ -141,9 +140,18 @@
                           class="mt-px shrink-0 opacity-70"
                           aria-label="Evento"
                         ></lucide-icon>
-                        <p class="min-w-0 flex-1 truncate text-[11px] font-semibold leading-tight">
-                          {{ item.title }}
-                        </p>
+                        @if (dragEnabled()) {
+                          <p class="min-w-0 flex-1 truncate text-[11px] font-semibold leading-tight">
+                            {{ item.title }}
+                          </p>
+                        } @else {
+                          <button
+                            type="button"
+                            class="min-w-0 flex-1 truncate text-left text-[11px] font-semibold leading-tight"
+                            (click)="$event.stopPropagation(); openItem(item)"
+                            [attr.aria-label]="item.title + (item.horaInicio ? ' — ' + item.horaInicio : '')"
+                          >{{ item.title }}</button>
+                        }
                         @if (item.eventoEstado) {
                           <span
                             class="max-w-20 shrink-0 truncate rounded-md px-2 py-0.5 text-[10px] font-semibold leading-none"
@@ -159,10 +167,7 @@
                           @else { {{ getTimeLabel(item) }} }
                         </p>
                         <button
-                          class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors active:scale-95"
-                          style="background:color-mix(in srgb,var(--danger) 18%,transparent);color:var(--danger)"
-                          (mouseenter)="$event.stopPropagation();$any($event.currentTarget).style.background='var(--danger)';$any($event.currentTarget).style.color='white'"
-                          (mouseleave)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 18%,transparent)';$any($event.currentTarget).style.color='var(--danger)'"
+                          class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[color-mix(in_srgb,var(--danger)_18%,transparent)] text-[var(--danger)] transition-colors hover:bg-[var(--danger)] hover:text-white active:scale-95 max-sm:h-9 max-sm:w-9"
                           (pointerdown)="$event.stopPropagation()"
                           (click)="unscheduleItem($event, item)"
                           [attr.aria-label]="'Quitar ' + item.title + ' del horario'"
@@ -172,6 +177,7 @@
                       </div>
                     </div>
                     <!-- Handle de resize -->
+                    @if (dragEnabled()) {
                     <div
                       class="resize-handle absolute inset-x-0 bottom-0 flex h-3 cursor-ns-resize items-center justify-center"
                       (pointerdown)="onResizePointerDown($event, item)"
@@ -186,6 +192,7 @@
                     >
                       <div class="h-0.5 w-6 rounded-full bg-current opacity-30"></div>
                     </div>
+                    }
                   </div>
                 }
               }
@@ -214,19 +221,30 @@
                     [style.width]="getRegWidth(gr.reg)"
                     [style.top.px]="getRegTop(gr.reg)"
                     [style.height.px]="getRegHeight(gr.reg)"
-                    [style.cursor]="regDragging ? 'grabbing' : 'grab'"
+                    [style.cursor]="!dragEnabled() ? 'pointer' : regDragging ? 'grabbing' : 'grab'"
                     (pointerdown)="onRegistroPointerDown($event, gr)"
+                    (click)="onBlockClick(gr.item)"
+                    data-agenda-block
                     (keydown.enter)="openItem(gr.item)"
                     (keydown.space)="$event.preventDefault(); openItem(gr.item)"
-                    role="button"
-                    tabindex="0"
-                    [attr.aria-label]="gr.title + ' — ' + getRegTimeLabel(gr.reg)"
+                    [attr.role]="dragEnabled() ? 'button' : null"
+                    [attr.tabindex]="dragEnabled() ? 0 : null"
+                    [attr.aria-label]="dragEnabled() ? gr.title + ' — ' + getRegTimeLabel(gr.reg) : null"
                   >
                     <div class="flex h-full flex-col gap-1 overflow-hidden p-1.5 pb-4">
                       <!-- Fila 1: icono + título + estado -->
                       <div class="flex shrink-0 items-start gap-1">
                         <lucide-icon [img]="FlagIcon" size="11" class="mt-px shrink-0 opacity-70" aria-label="Hito"></lucide-icon>
-                        <p class="min-w-0 flex-1 truncate text-[11px] font-semibold leading-tight">{{ gr.title }}</p>
+                        @if (dragEnabled()) {
+                          <p class="min-w-0 flex-1 truncate text-[11px] font-semibold leading-tight">{{ gr.title }}</p>
+                        } @else {
+                          <button
+                            type="button"
+                            class="min-w-0 flex-1 truncate text-left text-[11px] font-semibold leading-tight"
+                            (click)="$event.stopPropagation(); openItem(gr.item)"
+                            [attr.aria-label]="gr.title + ' — ' + getRegTimeLabel(gr.reg)"
+                          >{{ gr.title }}</button>
+                        }
                         @if (gr.reg.facturado) {
                           <span class="shrink-0 rounded-md px-2 py-1 text-[10px] font-semibold leading-none" style="background:color-mix(in srgb,var(--success) 20%,transparent);color:var(--success)" title="Horas facturadas">€ Facturado</span>
                         }
@@ -247,10 +265,7 @@
                         </p>
                         @if (!gr.reg.facturado) {
                           <button
-                            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors active:scale-95"
-                            style="background:color-mix(in srgb,var(--brand) 18%,transparent);color:var(--brand)"
-                            (mouseenter)="$event.stopPropagation();$any($event.currentTarget).style.background='var(--brand)';$any($event.currentTarget).style.color='white'"
-                            (mouseleave)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 18%,transparent)';$any($event.currentTarget).style.color='var(--brand)'"
+                            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[color-mix(in_srgb,var(--brand)_18%,transparent)] text-[var(--brand)] transition-colors hover:bg-[var(--brand)] hover:text-white active:scale-95 max-sm:h-9 max-sm:w-9"
                             (pointerdown)="$event.stopPropagation()"
                             (click)="splitRegistro($event, gr)"
                             [attr.aria-label]="'Separar horas de ' + gr.title"
@@ -260,11 +275,8 @@
                           </button>
                           @let isLastRegistro = (gr.item.registrosHoras?.length ?? 0) <= 1;
                           <button
-                            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors active:scale-95 disabled:cursor-not-allowed"
-                            [style.background]="isLastRegistro ? 'var(--surface-2)' : 'color-mix(in srgb,var(--danger) 18%,transparent)'"
-                            [style.color]="isLastRegistro ? 'var(--text-faint)' : 'var(--danger)'"
-                            (mouseenter)="$event.stopPropagation();!isLastRegistro && ($any($event.currentTarget).style.background='var(--danger)');!isLastRegistro && ($any($event.currentTarget).style.color='white')"
-                            (mouseleave)="!isLastRegistro && ($any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 18%,transparent)');!isLastRegistro && ($any($event.currentTarget).style.color='var(--danger)')"
+                            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors active:scale-95 disabled:cursor-not-allowed max-sm:h-9 max-sm:w-9"
+                            [class]="isLastRegistro ? 'bg-[var(--surface-2)] text-[var(--text-faint)]' : 'bg-[color-mix(in_srgb,var(--danger)_18%,transparent)] text-[var(--danger)] hover:bg-[var(--danger)] hover:text-white'"
                             [disabled]="isLastRegistro"
                             (pointerdown)="$event.stopPropagation()"
                             (click)="removeRegistro($event, gr)"
@@ -276,7 +288,7 @@
                         }
                       </div>
                     </div>
-                    @if (!gr.reg.facturado) {
+                    @if (!gr.reg.facturado && dragEnabled()) {
                       <div
                         class="resize-handle absolute inset-x-0 bottom-0 flex h-3 cursor-ns-resize items-center justify-center"
                         (pointerdown)="onRegistroResizePointerDown($event, gr)"

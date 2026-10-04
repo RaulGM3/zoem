@@ -2,7 +2,8 @@ import {
   Component, ChangeDetectionStrategy,
   input, output, signal, computed, effect, inject,
 } from '@angular/core';
-import { LucideAngularModule, X } from 'lucide-angular';
+import { BreakpointService } from '../../../../core/services/breakpoint.service';
+import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 import { UsersService } from '../../../../core/services/users';
 import type { CreateEventoData, EventoColor, EventoPrioridad, EventoRecurrencia, RecurrenciaFinTipo } from '../../../../interfaces';
 import { EVENTO_COLORS, PRIORIDAD_CONFIG, RECURRENCIA_LABELS } from '../../../../interfaces';
@@ -10,7 +11,7 @@ import type { CompanyMember } from '../../../../interfaces/member';
 
 @Component({
   selector: 'app-nuevo-evento-drawer',
-  imports: [LucideAngularModule],
+  imports: [OverlayShellComponent],
   templateUrl: './nuevo-evento-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -23,7 +24,7 @@ export class NuevoEventoDrawerComponent {
   readonly saved = output<CreateEventoData>();
   readonly closed = output<void>();
 
-  readonly XIcon = X;
+  protected readonly isMobile = inject(BreakpointService).isMobile;
 
   readonly eventoColors = Object.entries(EVENTO_COLORS) as [EventoColor, (typeof EVENTO_COLORS)[EventoColor]][];
   readonly prioridades = Object.entries(PRIORIDAD_CONFIG) as [EventoPrioridad, (typeof PRIORIDAD_CONFIG)[EventoPrioridad]][];

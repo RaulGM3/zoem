@@ -1,46 +1,18 @@
 @let item = this.item();
 
-<div
-  class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm"
-  (click)="close()"
-  appFocusTrap
-  (escapeKey)="close()"
-  role="dialog"
-  aria-modal="true"
-  [attr.aria-label]="'Detalle de ' + item.title"
->
-  <div
-    class="w-full max-w-md overflow-hidden rounded-2xl shadow-2xl"
-    style="background:var(--surface)"
-    (click)="$event.stopPropagation()"
-  >
-    <!-- Header -->
-    <div class="flex items-start gap-3 p-5 pb-4" style="border-bottom:1px solid var(--border)">
+<app-overlay-shell [open]="true" [title]="'Detalle de ' + item.title" variant="modal" (closed)="close()">
+  <div class="space-y-5 p-5">
+    <!-- Resumen -->
+    <div class="flex items-start gap-3">
       <div class="mt-1 h-3 w-3 shrink-0 rounded-full" [class]="getModalHeaderColor(item)"></div>
-      <div class="min-w-0 flex-1">
-        <h2 id="modal-event-title" class="text-sm font-semibold leading-tight" style="color:var(--text-strong)">
-          {{ item.title }}
-        </h2>
-        <p class="mt-0.5 text-xs" style="color:var(--text-faint)">
-          {{ getTimeLabel(item) }}
-          @if (getTimeLabel(item)) { · }
-          {{ getItemTypeLabel(item) }}
-          @if (item.client) { · {{ item.client }} }
-        </p>
-      </div>
-      <button
-        class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors duration-150"
-        style="color:var(--text-faint)"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-body)'"
-        (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
-        (click)="close()"
-        aria-label="Cerrar"
-      >
-        <lucide-icon [img]="XIcon" size="14"></lucide-icon>
-      </button>
+      <p class="min-w-0 flex-1 text-xs" data-item-resumen style="color:var(--text-faint)">
+        {{ getTimeLabel(item) }}
+        @if (getTimeLabel(item)) { · }
+        {{ getItemTypeLabel(item) }}
+        @if (item.client) { · {{ item.client }} }
+      </p>
     </div>
 
-    <div class="space-y-5 p-5">
       <!-- Estado del hito -->
       @if (item.hitoEstado !== undefined) {
         <div>
@@ -48,13 +20,8 @@
           <div class="flex flex-wrap gap-2">
             @for (estado of HITO_ESTADOS; track estado) {
               <button
-                class="rounded-lg px-3 py-1.5 text-xs font-medium transition-all"
+                class="rounded-lg px-3 py-1.5 text-xs font-medium transition-all max-sm:tap-target"
                 [class]="getHitoEstadoBtnClass(estado, item.hitoEstado === estado)"
-                [style.background]="item.hitoEstado === estado ? '' : 'var(--surface)'"
-                [style.border]="item.hitoEstado === estado ? '' : '1px solid var(--border)'"
-                [style.color]="item.hitoEstado === estado ? '' : 'var(--text-muted)'"
-                (mouseenter)="item.hitoEstado !== estado && ($any($event.currentTarget).style.background='var(--surface-2)')"
-                (mouseleave)="item.hitoEstado !== estado && ($any($event.currentTarget).style.background='var(--surface)')"
                 (click)="setHitoEstado(estado)"
               >{{ getHitoEstadoFullLabel(estado) }}</button>
             }
@@ -78,13 +45,8 @@
           <div class="flex flex-wrap gap-2">
             @for (estado of EVENTO_ESTADOS; track estado) {
               <button
-                class="rounded-lg px-3 py-1.5 text-xs font-medium transition-all"
+                class="rounded-lg px-3 py-1.5 text-xs font-medium transition-all max-sm:tap-target"
                 [class]="getEventoEstadoBtnClass(estado, item.eventoEstado === estado)"
-                [style.background]="item.eventoEstado === estado ? '' : 'var(--surface)'"
-                [style.border]="item.eventoEstado === estado ? '' : '1px solid var(--border)'"
-                [style.color]="item.eventoEstado === estado ? '' : 'var(--text-muted)'"
-                (mouseenter)="item.eventoEstado !== estado && ($any($event.currentTarget).style.background='var(--surface-2)')"
-                (mouseleave)="item.eventoEstado !== estado && ($any($event.currentTarget).style.background='var(--surface)')"
                 (click)="setEventoEstado(estado)"
               >{{ getEventoEstadoLabel(estado) }}</button>
             }
@@ -115,10 +77,7 @@
             class="form-input flex-1 text-xs"
           />
           <button
-            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white transition-colors duration-150 disabled:opacity-40"
-            style="background:var(--brand)"
-            (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-            (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'"
+            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--brand)] text-white transition-colors duration-150 hover:bg-[var(--brand-hover)] disabled:opacity-40 max-sm:tap-target"
             (click)="addAnnotation()"
             [disabled]="!newAnnotationText().trim()"
             aria-label="Añadir anotación"
@@ -136,10 +95,7 @@
                 <div class="flex shrink-0 flex-col items-end gap-1">
                   <span class="text-[10px]" style="color:var(--text-faint)">{{ formatAnnotationDate(nota.creadaEn) }}</span>
                   <button
-                    class="transition-colors duration-150"
-                    style="color:var(--text-faint)"
-                    (mouseenter)="$any($event.currentTarget).style.color='var(--danger)'"
-                    (mouseleave)="$any($event.currentTarget).style.color='var(--text-faint)'"
+                    class="text-[var(--text-faint)] transition-colors duration-150 hover:text-[var(--danger)] max-sm:tap-target max-sm:inline-flex max-sm:items-center max-sm:justify-end"
                     (click)="deleteAnnotation(nota.id)"
                     [attr.aria-label]="'Eliminar anotación: ' + nota.texto"
                   >
@@ -156,10 +112,10 @@
       <!-- Color -->
       <div>
         <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider" style="color:var(--text-faint)">Color</p>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
           <!-- Reset a color por tipo -->
           <button
-            class="h-7 w-7 shrink-0 rounded-full border-2 border-dashed transition-all hover:scale-110"
+            class="h-7 w-7 shrink-0 rounded-full max-sm:h-9 max-sm:w-9 border-2 border-dashed transition-all hover:scale-110"
             style="border-color:var(--border);background:var(--surface)"
             [class]="!item.color ? 'ring-2 ring-offset-2 ring-slate-300 scale-110' : ''"
             (click)="setItemColor(null)"
@@ -167,7 +123,7 @@
           ></button>
           @for (color of ALL_COLORS; track color) {
             <button
-              class="h-7 w-7 shrink-0 rounded-full transition-all hover:scale-110"
+              class="h-7 w-7 shrink-0 rounded-full transition-all hover:scale-110 max-sm:h-9 max-sm:w-9"
               [class]="getColorSwatchClass(color, item.color === color)"
               (click)="setItemColor(color)"
               [attr.aria-label]="'Color ' + color"
@@ -175,65 +131,41 @@
           }
         </div>
       </div>
-    </div>
-
-    <!-- Footer: eliminar evento (solo para eventos, no hitos) -->
-    @if (item.hitoEstado === undefined) {
-      <div class="flex justify-end px-5 pb-4" style="border-top:1px solid var(--border)">
-        <button
-          class="mt-4 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150"
-          style="color:var(--danger)"
-          (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 8%,transparent)'"
-          (mouseleave)="$any($event.currentTarget).style.background=''"
-          (click)="requestDeleteEvento()"
-          aria-label="Eliminar evento"
-        >
-          <lucide-icon [img]="Trash2Icon" size="13"></lucide-icon>
-          Eliminar evento
-        </button>
-      </div>
-    }
-
   </div>
-</div>
+
+  @if (item.hitoEstado === undefined) {
+    <div footer class="flex justify-end px-5 py-3">
+      <button
+        class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--danger)_8%,transparent)] max-sm:tap-target max-sm:justify-center"
+        style="color:var(--danger)"
+        (click)="requestDeleteEvento()"
+        aria-label="Eliminar evento"
+      >
+        <lucide-icon [img]="Trash2Icon" size="13"></lucide-icon>
+        Eliminar evento
+      </button>
+    </div>
+  }
+</app-overlay-shell>
 
 <!-- Dialog de confirmación de borrado -->
 @if (confirmingDelete()) {
-  <div
-    class="fixed inset-0 z-60 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
-    (click)="cancelDelete()"
-    appFocusTrap
-    (escapeKey)="cancelDelete()"
-    role="dialog"
-    aria-modal="true"
-    aria-label="Confirmar eliminación de evento"
-  >
-    <div
-      class="w-full max-w-sm overflow-hidden rounded-2xl p-6 shadow-2xl"
-      style="background:var(--surface)"
-      (click)="$event.stopPropagation()"
-    >
-      <div class="mb-4 flex h-10 w-10 items-center justify-center rounded-full" style="background:color-mix(in srgb,var(--danger) 12%,transparent)">
-        <lucide-icon [img]="Trash2Icon" size="18" style="color:var(--danger)"></lucide-icon>
-      </div>
+  <app-overlay-shell [open]="true" title="Confirmar eliminación de evento" variant="modal" (closed)="cancelDelete()">
+    <div class="p-5">
       <h3 class="mb-1 text-sm font-semibold" style="color:var(--text-strong)">¿Eliminar este evento?</h3>
-      <p class="mb-5 text-xs" style="color:var(--text-faint)">Esta acción no se puede deshacer.</p>
-      <div class="flex gap-2">
-        <button
-          class="flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors duration-150"
-          style="background:var(--surface-2);color:var(--text-body)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--border)'"
-          (mouseleave)="$any($event.currentTarget).style.background='var(--surface-2)'"
-          (click)="cancelDelete()"
-        >Cancelar</button>
-        <button
-          class="flex-1 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors duration-150"
-          style="background:var(--danger)"
-          (mouseenter)="$any($event.currentTarget).style.filter='brightness(1.1)'"
-          (mouseleave)="$any($event.currentTarget).style.filter=''"
-          (click)="confirmDeleteEvento()"
-        >Eliminar</button>
-      </div>
+      <p class="text-xs" style="color:var(--text-faint)">Esta acción no se puede deshacer.</p>
     </div>
-  </div>
+    <div footer class="flex gap-2 px-5 py-3">
+      <button
+        class="flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors duration-150 hover:bg-[var(--border)] max-sm:tap-target"
+        style="background:var(--surface-2);color:var(--text-body)"
+        (click)="cancelDelete()"
+      >Cancelar</button>
+      <button
+        class="flex-1 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors duration-150 hover:brightness-110 max-sm:tap-target"
+        style="background:var(--danger)"
+        (click)="confirmDeleteEvento()"
+      >Eliminar</button>
+    </div>
+  </app-overlay-shell>
 }

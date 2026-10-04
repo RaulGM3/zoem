@@ -1,31 +1,11 @@
-@if (visible()) {
-  <div
-    class="fixed inset-0 z-40 bg-black/30"
-    (click)="closed.emit()"
-    aria-hidden="true"
-  ></div>
-
-  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-    <aside
-      class="pointer-events-auto bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="evento-drawer-title"
-    >
-      <!-- Header -->
-      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-        <h2 id="evento-drawer-title" class="text-lg font-semibold text-slate-800">Nuevo evento</h2>
-        <button
-          (click)="closed.emit()"
-          class="p-1.5 rounded-lg hover:bg-slate-100"
-          aria-label="Cerrar"
-        >
-          <lucide-icon [img]="XIcon" class="w-5 h-5 text-slate-700" />
-        </button>
-      </div>
-
-      <!-- Body -->
-      <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+<app-overlay-shell
+  [open]="visible()"
+  title="Nuevo evento"
+  [variant]="isMobile() ? 'drawer' : 'modal'"
+  size="lg"
+  (closed)="closed.emit()"
+>
+  <div class="px-6 py-5 space-y-5">
 
         <!-- Nombre -->
         <div class="space-y-1.5">
@@ -53,6 +33,7 @@
                 ? 'relative w-10 h-5 rounded-full bg-violet-500 transition-colors'
                 : 'relative w-10 h-5 rounded-full bg-slate-200 transition-colors'"
               role="switch"
+              aria-label="Todo el día"
               [attr.aria-checked]="todoDia()"
             >
               <span
@@ -64,8 +45,8 @@
             <span class="text-sm text-slate-600">Todo el día</span>
           </div>
 
-          <div class="grid grid-cols-3 gap-3">
-            <div class="space-y-1">
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div class="col-span-2 space-y-1 sm:col-span-1">
               <label for="ev-fecha" class="text-xs font-medium text-slate-700">Fecha *</label>
               <input
                 id="ev-fecha"
@@ -178,7 +159,7 @@
         </div>
 
         <!-- Lugar + Link -->
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div class="space-y-1.5">
             <label for="ev-lugar" class="text-sm font-medium text-slate-700">Lugar</label>
             <input
@@ -264,6 +245,7 @@
                 ? 'relative w-10 h-5 rounded-full bg-violet-500 transition-colors shrink-0'
                 : 'relative w-10 h-5 rounded-full bg-slate-200 transition-colors shrink-0'"
               role="switch"
+              aria-label="Toda la compañía"
               [attr.aria-checked]="todaLaCompania()"
             >
               <span
@@ -326,14 +308,12 @@
           }
         </div>
 
-      </div>
-
-      <!-- Footer -->
-      <div class="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+  </div>
+  <div footer class="flex justify-end gap-3 px-6 py-4">
         <button
           type="button"
           (click)="closed.emit()"
-          class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+          class="rounded-lg border border-slate-200 px-4 py-2 text-sm max-sm:tap-target font-medium text-slate-600 hover:bg-slate-50"
         >
           Cancelar
         </button>
@@ -341,7 +321,7 @@
           type="button"
           (click)="submit()"
           [disabled]="!canSubmit() || saving()"
-          class="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed"
+          class="rounded-lg bg-violet-600 px-4 py-2 text-sm max-sm:tap-target font-semibold text-white hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           @if (saving()) {
             Guardando…
@@ -350,6 +330,4 @@
           }
         </button>
       </div>
-    </aside>
-  </div>
-}
+</app-overlay-shell>
