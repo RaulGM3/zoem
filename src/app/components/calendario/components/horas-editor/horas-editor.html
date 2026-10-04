@@ -4,10 +4,7 @@
     <p class="text-[11px] font-semibold uppercase tracking-wider" style="color:var(--text-faint)">Horas trabajadas</p>
     @if (horasEditor() === null) {
       <button
-        class="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium transition-colors duration-150"
-        style="background:color-mix(in srgb,var(--brand) 8%,transparent);color:var(--brand)"
-        (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 16%,transparent)'"
-        (mouseleave)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 8%,transparent)'"
+        class="flex items-center gap-1 rounded-lg bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] px-2 py-1 text-[11px] font-medium text-[var(--brand)] transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--brand)_16%,transparent)] max-sm:tap-target max-sm:justify-center"
         (click)="openHorasEditor()"
       >
         <lucide-icon [img]="ClockIcon" size="12"></lucide-icon>
@@ -24,7 +21,7 @@
              style="border:1px solid var(--border);background:var(--surface-2)"
              [class.opacity-60]="r.facturado">
           <select
-            class="form-select min-w-0 flex-1 py-1 text-[11px]"
+            class="form-select min-w-0 flex-1 py-1 text-[11px] max-sm:w-full max-sm:basis-full"
             [value]="r.userId" [disabled]="r.facturado"
             (change)="updateBloqueField(r.id, 'userId', $event)"
             aria-label="Miembro">
@@ -34,32 +31,26 @@
           </select>
           <input type="date" [value]="r.fecha" [disabled]="r.facturado"
             (change)="updateBloqueField(r.id, 'fecha', $event)"
-            class="form-input py-1 text-[11px]"
+            class="form-input py-1 text-[11px] max-sm:min-w-0 max-sm:flex-1"
             aria-label="Fecha" />
           <input type="time" [value]="r.horaInicio" [disabled]="r.facturado"
             (change)="updateBloqueField(r.id, 'horaInicio', $event)"
-            class="form-input py-1 text-[11px]"
+            class="form-input py-1 text-[11px] max-sm:min-w-0 max-sm:flex-1"
             aria-label="Hora inicio" />
           <span class="text-[11px]" style="color:var(--text-faint)">–</span>
           <input type="time" [value]="r.horaFin" [disabled]="r.facturado"
             (change)="updateBloqueField(r.id, 'horaFin', $event)"
-            class="form-input py-1 text-[11px]"
+            class="form-input py-1 text-[11px] max-sm:min-w-0 max-sm:flex-1"
             aria-label="Hora fin" />
           <span class="ml-auto text-[11px] font-medium" style="color:var(--text-muted)">{{ bloqueHoras(r) }}h</span>
           @if (r.facturado) {
             <span class="rounded px-1.5 py-0.5 text-[9px] font-semibold" style="background:color-mix(in srgb,var(--success) 15%,transparent);color:var(--success)">Facturado</span>
           } @else {
-            <button class="flex h-6 w-6 items-center justify-center rounded transition-colors duration-150"
-              style="color:var(--text-faint)"
-              (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 12%,transparent)';$any($event.currentTarget).style.color='var(--brand)'"
-              (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+            <button class="flex h-6 w-6 items-center justify-center rounded text-[var(--text-faint)] transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] hover:text-[var(--brand)] max-sm:tap-target"
               (click)="splitBloque(r.id)" [attr.aria-label]="'Separar bloque en otro día'">
               <lucide-icon [img]="ScissorsIcon" size="12"></lucide-icon>
             </button>
-            <button class="flex h-6 w-6 items-center justify-center rounded transition-colors duration-150"
-              style="color:var(--text-faint)"
-              (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 12%,transparent)';$any($event.currentTarget).style.color='var(--danger)'"
-              (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+            <button class="flex h-6 w-6 items-center justify-center rounded text-[var(--text-faint)] transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--danger)_12%,transparent)] hover:text-[var(--danger)] max-sm:tap-target"
               (click)="removeBloque(r.id)" [attr.aria-label]="'Eliminar bloque'">
               <lucide-icon [img]="Trash2Icon" size="12"></lucide-icon>
             </button>
@@ -68,7 +59,7 @@
       }
 
       <div class="flex items-center justify-between pt-1">
-        <button class="flex items-center gap-1 text-[11px] font-medium hover:underline" style="color:var(--brand)"
+        <button class="flex items-center gap-1 text-[11px] font-medium hover:underline max-sm:tap-target" style="color:var(--brand)"
           (click)="addBloque()">
           <lucide-icon [img]="PlusIcon" size="12"></lucide-icon> Añadir bloque
         </button>
@@ -76,15 +67,9 @@
       </div>
 
       <div class="flex justify-end gap-2 pt-1">
-        <button class="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150"
-          style="color:var(--text-muted)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-          (mouseleave)="$any($event.currentTarget).style.background=''"
+        <button class="rounded-lg px-3 py-1.5 text-xs font-medium text-[var(--text-muted)] transition-colors duration-150 hover:bg-[var(--surface-2)] max-sm:tap-target"
           (click)="cancelHorasEditor()">Cancelar</button>
-        <button class="rounded-lg px-3 py-1.5 text-xs font-medium text-white transition-colors duration-150"
-          style="background:var(--brand)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-          (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'"
+        <button class="rounded-lg bg-[var(--brand)] px-3 py-1.5 text-xs font-medium text-white transition-colors duration-150 hover:bg-[var(--brand-hover)] max-sm:tap-target"
           (click)="saveHoras()">Guardar horas</button>
       </div>
     </div>
