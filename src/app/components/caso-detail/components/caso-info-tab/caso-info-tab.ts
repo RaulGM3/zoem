@@ -56,6 +56,23 @@ export class CasoInfoTabComponent {
   readonly editEncargadoId = signal('');
 
   readonly activeMembers = computed(() => this.members().filter(m => m.estado === 'activo'));
+  /**
+   * Opciones del select: miembros activos + el encargado actual aunque ya no esté
+   * activo (o no exista). Sin esto el select caería a "Sin asignar" y guardar
+   * cualquier otro cambio desasignaría el caso en silencio.
+   */
+  readonly encargadoOptions = computed<readonly { value: string; label: string }[]>(() => {
+    const options = this.activeMembers().map(m => ({ value: m.userId, label: this.memberLabel(m) }));
+    const actual = this.caso().encargadoId;
+    if (actual && !options.some(o => o.value === actual)) {
+      const m = this.members().find(x => x.userId === actual);
+      options.push({
+        value: actual,
+        label: m ? `${this.memberLabel(m)} (inactivo)` : 'Usuario no disponible',
+      });
+    }
+    return options;
+  });
   readonly encargadoNombre = computed(() => {
     const id = this.caso().encargadoId;
     const m = id ? this.members().find(x => x.userId === id) : undefined;

@@ -83,6 +83,29 @@ describe('CasoInfoTabComponent — encargado', () => {
     expect(emitted!.encargadoId).toBeUndefined();
   });
 
+  it('edición: un encargado actual no activo sigue seleccionado y guardar no lo borra', async () => {
+    await montar(true, { ...CASO, encargadoId: 'u4' });
+    const sel = el().querySelector<HTMLSelectElement>('#caso-encargado')!;
+    const labels = Array.from(sel.options).map(o => o.textContent!.trim());
+    expect(labels).toEqual(['Sin asignar', 'Ana Lopez', 'Beto', 'Dani (inactivo)']);
+    expect(sel.value).toBe('u4');
+    let emitted: CasoInfoFormData | undefined;
+    fixture.componentInstance.saveInfo.subscribe(d => (emitted = d));
+    fixture.componentInstance.submit();
+    expect(emitted?.encargadoId).toBe('u4');
+  });
+
+  it('edición: un encargado actual que ya no es miembro no se borra al guardar', async () => {
+    await montar(true, { ...CASO, encargadoId: 'zzz' });
+    const sel = el().querySelector<HTMLSelectElement>('#caso-encargado')!;
+    expect(sel.value).toBe('zzz');
+    expect(sel.options[sel.selectedIndex].textContent!.trim()).toBe('Usuario no disponible');
+    let emitted: CasoInfoFormData | undefined;
+    fixture.componentInstance.saveInfo.subscribe(d => (emitted = d));
+    fixture.componentInstance.submit();
+    expect(emitted?.encargadoId).toBe('zzz');
+  });
+
   it('edición: sin violaciones axe', async () => {
     await montar(true);
     const v = await analizarA11y(el());

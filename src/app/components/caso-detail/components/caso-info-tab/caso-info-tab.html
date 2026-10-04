@@ -49,8 +49,8 @@
         <label class="form-label" for="caso-encargado">Encargado</label>
         <select id="caso-encargado" [value]="editEncargadoId()" (change)="editEncargadoId.set($any($event.target).value)" class="form-select">
           <option value="" [selected]="!editEncargadoId()">Sin asignar</option>
-          @for (m of activeMembers(); track m.userId) {
-            <option [value]="m.userId" [selected]="m.userId === editEncargadoId()">{{ memberLabel(m) }}</option>
+          @for (o of encargadoOptions(); track o.value) {
+            <option [value]="o.value" [selected]="o.value === editEncargadoId()">{{ o.label }}</option>
           }
         </select>
       </div>
