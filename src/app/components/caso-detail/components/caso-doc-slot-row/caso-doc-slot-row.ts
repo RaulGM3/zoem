@@ -1,8 +1,10 @@
-import { Component, ChangeDetectionStrategy, ElementRef, input, output, viewChild } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ElementRef, computed, inject, input, output, viewChild } from '@angular/core';
 import {
   LucideAngularModule, CheckCircle2, FileText, FilePen, Loader, Upload, Trash2, Eye, History, Lock,
 } from 'lucide-angular';
 import type { CasoDocSlot } from '../../../../interfaces';
+import { BreakpointService } from '../../../../core/services/breakpoint.service';
+import { ActionMenuComponent, type MenuAction } from '../../../../shared/components/action-menu/action-menu';
 
 /**
  * Fila de un documento requerido por la plantilla (slot) en la pestaña de
@@ -11,7 +13,7 @@ import type { CasoDocSlot } from '../../../../interfaces';
 @Component({
   selector: 'app-caso-doc-slot-row',
   host: { class: 'block' },
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, ActionMenuComponent],
   templateUrl: './caso-doc-slot-row.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -30,6 +32,34 @@ export class CasoDocSlotRowComponent {
   readonly history = output<void>();
   readonly access = output<void>();
   readonly remove = output<void>();
+
+  protected readonly bp = inject(BreakpointService);
+
+  /** Clases de los botones de icono de escritorio (hover vía Tailwind, sin handlers inline). */
+  protected readonly iconBtn =
+    'p-1.5 rounded-lg transition-colors duration-150 text-[color:var(--text-faint)] hover:bg-[var(--surface-2)] hover:text-[color:var(--text-muted)]';
+
+  /** Acciones del menú móvil (⋯) de un slot subido: mismas que los iconos de escritorio. */
+  readonly acciones = computed<MenuAction[]>(() => {
+    const s = this.slot();
+    if (s.docTemplateId || s.status !== 'subido') return [];
+    const out: MenuAction[] = [];
+    if (s.downloadUrl || (s.clasificado && s.storagePath)) out.push({ id: 'preview', label: 'Previsualizar', icon: Eye });
+    out.push({ id: 'history', label: 'Ver historial', icon: History });
+    if (this.isAdmin()) out.push({ id: 'access', label: 'Gestionar acceso', icon: Lock });
+    if (this.canDelete()) out.push({ id: 'remove', label: 'Quitar documento', icon: Trash2, danger: true, disabled: this.uploading() });
+    return out;
+  });
+
+  /** Ejecuta una acción del menú móvil emitiendo el mismo output que el icono de escritorio. */
+  ejecutar(id: string): void {
+    switch (id) {
+      case 'preview': this.preview.emit(); break;
+      case 'history': this.history.emit(); break;
+      case 'access': this.access.emit(); break;
+      case 'remove': this.remove.emit(); break;
+    }
+  }
 
   readonly CheckCircle2Icon = CheckCircle2;
   readonly FileTextIcon = FileText;

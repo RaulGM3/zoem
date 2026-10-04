@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, input, output, computed, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output, computed, signal, inject } from '@angular/core';
 import { LucideAngularModule, LucideIconData, Plus, Edit2, Trash2, Activity, X, Clock, Euro, Check } from 'lucide-angular';
 import type { CompanyMember, Hito, HitoActividad, HitoEstado } from '../../../../interfaces';
 import {
@@ -8,11 +8,13 @@ import {
 import { HITO_ESTADO_ICON } from '../../../../core/hitos/hito-estado.icons';
 import { describeActividad, HITO_ACTIVIDAD_DOT_CLASS } from '../../../../core/hitos/hito-actividad';
 import { relativeTime } from '../../../../core/format/relative-time';
+import { BreakpointService } from '../../../../core/services/breakpoint.service';
+import { ActionMenuComponent, type MenuAction } from '../../../../shared/components/action-menu/action-menu';
 
 @Component({
   selector: 'app-caso-hitos-tab',
   host: { style: 'display: block' },
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, ActionMenuComponent],
   templateUrl: './caso-hitos-tab.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -30,6 +32,8 @@ export class CasoHitosTabComponent {
   readonly deleteHito = output<string>();
   readonly addHito = output<void>();
   readonly facturarHoras = output<Hito>();
+
+  protected readonly bp = inject(BreakpointService);
 
   readonly PlusIcon = Plus;
   readonly Edit2Icon = Edit2;
@@ -90,6 +94,22 @@ export class CasoHitosTabComponent {
 
   getHitoEstadoLabel(estado: HitoEstado): string {
     return HITO_ESTADO_LABEL[estado];
+  }
+
+  /** Acciones del menú móvil (⋯) de un hito: las mismas que los iconos de escritorio. */
+  acciones(hito: Hito): MenuAction[] {
+    const out: MenuAction[] = [];
+    if (this.tieneHorasPendientes(hito) && this.canEdit()) out.push({ id: 'facturar', label: 'Facturar horas', icon: Euro });
+    if (this.canEdit()) out.push({ id: 'edit', label: 'Editar', icon: Edit2 });
+    if (this.canDelete()) out.push({ id: 'delete', label: 'Eliminar', icon: Trash2, danger: true });
+    return out;
+  }
+
+  /** Ejecuta una acción del menú móvil emitiendo el mismo output que el icono de escritorio. */
+  ejecutar(id: string, hito: Hito): void {
+    if (id === 'facturar') this.facturarHoras.emit(hito);
+    else if (id === 'edit') this.editHito.emit(hito);
+    else if (id === 'delete') this.requestDelete(hito.id);
   }
 
   // ── Confirmación de borrado ─────────────────────────────
