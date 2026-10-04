@@ -183,6 +183,8 @@ export class CasosService {
     const prev = this.casos().find(c => c.id === id);
     await updateDoc(doc(this.firestore, 'companies', this.companyId, 'casos', id), {
       ...stripUndefinedDeep(data),
+      // `encargadoId: undefined` explícito = "Sin asignar" → borra el campo.
+      ...('encargadoId' in data && data.encargadoId === undefined ? { encargadoId: deleteField() } : {}),
       updatedBy: this.currentUid,
       updatedAt: serverTimestamp(),
     });

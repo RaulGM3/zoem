@@ -92,6 +92,16 @@ describe('CasosService: campos de actor (updatedBy/createdBy)', () => {
     expect(payload.updatedBy).toBe('me');
   });
 
+  it('updateCaso con encargadoId undefined explícito borra el campo', async () => {
+    await service.updateCaso('k1', { encargadoId: undefined });
+    expect(mockUpdateDoc.mock.calls[0][1].encargadoId).toBe('__del__');
+  });
+
+  it('updateCaso sin encargadoId no toca el campo', async () => {
+    await service.updateCaso('k1', { titulo: 'N' });
+    expect('encargadoId' in mockUpdateDoc.mock.calls[0][1]).toBe(false);
+  });
+
   it('addHito escribe createdBy', async () => {
     await service.addHito('k1', 'Caso', { titulo: 'H' } as Parameters<CasosService['addHito']>[2]);
     expect(batchSet.mock.calls[0][1].createdBy).toBe('me');

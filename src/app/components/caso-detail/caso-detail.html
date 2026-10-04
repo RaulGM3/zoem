@@ -35,6 +35,7 @@
           [contactSearch]="contactSearch()"
           [noResults]="noContactResults()"
           [canEdit]="canEditCasos()"
+          [members]="usersService.members()"
           (cancelEdit)="editingInfo.set(false)"
           (saveInfo)="onSaveInfo($event)"
           (searchChange)="contactSearch.set($event)"

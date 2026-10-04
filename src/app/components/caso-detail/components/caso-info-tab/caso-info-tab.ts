@@ -1,6 +1,6 @@
-import { Component, ChangeDetectionStrategy, input, output, signal, effect } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output, signal, effect, computed } from '@angular/core';
 import { LucideAngularModule, User, X, Mail, Phone, Hash } from 'lucide-angular';
-import type { Caso, CasoEstado, CasoPrioridad, CasoTipo, Contact } from '../../../../interfaces';
+import type { Caso, CasoEstado, CasoPrioridad, CasoTipo, CompanyMember, Contact } from '../../../../interfaces';
 import { getContactDisplayName } from '../../../../interfaces';
 import { etiquetaDocumentoContacto } from '../../../../core/fiscal/documento-contacto';
 
@@ -11,6 +11,8 @@ export interface CasoInfoFormData {
   estado: CasoEstado;
   prioridad: CasoPrioridad;
   vencimiento?: string;
+  /** `undefined` = Sin asignar (el servicio borra el campo). */
+  encargadoId?: string;
 }
 
 @Component({
@@ -30,6 +32,8 @@ export class CasoInfoTabComponent {
   readonly noResults = input(false);
   /** Gating de permisos (`Casos.editar`): oculta añadir/quitar contactos si no aplica. */
   readonly canEdit = input(true);
+  /** Miembros del despacho (todos los estados); el select solo ofrece los activos. */
+  readonly members = input<CompanyMember[]>([]);
 
   readonly cancelEdit = output<void>();
   readonly saveInfo = output<CasoInfoFormData>();
@@ -49,6 +53,14 @@ export class CasoInfoTabComponent {
   readonly editEstado = signal<CasoEstado>('pendiente');
   readonly editPrioridad = signal<CasoPrioridad>('media');
   readonly editVencimiento = signal('');
+  readonly editEncargadoId = signal('');
+
+  readonly activeMembers = computed(() => this.members().filter(m => m.estado === 'activo'));
+  readonly encargadoNombre = computed(() => {
+    const id = this.caso().encargadoId;
+    const m = id ? this.members().find(x => x.userId === id) : undefined;
+    return m ? this.memberLabel(m) : 'Sin asignar';
+  });
 
   readonly contactToDelete = signal<Contact | null>(null);
 
@@ -66,6 +78,7 @@ export class CasoInfoTabComponent {
         this.editEstado.set(c.estado);
         this.editPrioridad.set(c.prioridad);
         this.editVencimiento.set(c.vencimiento ?? '');
+        this.editEncargadoId.set(c.encargadoId ?? '');
       }
     });
   }
@@ -80,7 +93,12 @@ export class CasoInfoTabComponent {
       estado: this.editEstado(),
       prioridad: this.editPrioridad(),
       vencimiento: this.editVencimiento() || undefined,
+      encargadoId: this.editEncargadoId() || undefined,
     });
+  }
+
+  memberLabel(m: CompanyMember): string {
+    return m.apellido ? `${m.nombre} ${m.apellido}` : m.nombre;
   }
 
   displayName(c: Contact): string {
