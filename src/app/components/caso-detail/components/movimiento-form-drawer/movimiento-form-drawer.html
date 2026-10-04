@@ -1,114 +1,102 @@
-@if (visible()) {
-  <div class="fixed inset-0 z-40 bg-black/30" (click)="closed.emit()" aria-hidden="true"></div>
-  <aside class="fixed right-0 top-0 h-full w-full max-w-sm shadow-2xl z-50 flex flex-col" style="background:var(--surface)"
-    role="dialog" aria-modal="true" aria-labelledby="mov-drawer-title">
-    <div class="flex items-center justify-between px-6 py-4" style="border-bottom:1px solid var(--border)">
-      <h2 id="mov-drawer-title" class="text-base font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">{{ editando() ? 'Editar movimiento' : 'Nuevo movimiento' }}</h2>
-      <button (click)="closed.emit()"
-        class="p-1.5 rounded-lg transition-colors duration-150"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-        (mouseleave)="$any($event.currentTarget).style.background=''"
-        aria-label="Cerrar">
-        <lucide-icon [img]="XIcon" class="w-4 h-4" style="color:var(--text-faint)" />
-      </button>
+<app-overlay-shell
+  [open]="visible()"
+  [title]="editando() ? 'Editar movimiento' : 'Nuevo movimiento'"
+  variant="drawer"
+  size="md"
+  (closed)="closed.emit()"
+>
+  <div class="px-4 py-5 space-y-4 sm:px-6">
+    <div class="space-y-1">
+      <label class="form-label" for="mov-concepto">Concepto <span style="color:var(--danger)" aria-hidden="true">*</span></label>
+      <input id="mov-concepto" type="text" required [value]="formConcepto()" (input)="formConcepto.set($any($event.target).value)"
+        placeholder="Ej. Provisión de fondos"
+        class="form-input" />
     </div>
-    <div class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <div class="space-y-1">
-        <label class="form-label">Concepto <span style="color:var(--danger)">*</span></label>
-        <input type="text" [value]="formConcepto()" (input)="formConcepto.set($any($event.target).value)"
-          placeholder="Ej. Provisión de fondos"
-          class="form-input" />
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        <div class="space-y-1">
-          <label class="form-label">Tipo</label>
-          <select (change)="onTipoChange($any($event.target).value)" class="form-select">
-            @for (t of tipos; track t) { <option [value]="t" [selected]="formTipo() === t">{{ t }}</option> }
-          </select>
-        </div>
-        <div class="space-y-1">
-          <label class="form-label">
-            {{ formIvaIncluido() ? 'Importe total (€)' : 'Base imponible (€)' }}
-            <span style="color:var(--danger)">*</span>
-          </label>
-          <input type="number" min="0" step="0.01" [value]="formImporte()" (input)="formImporte.set($any($event.target).value)" class="form-input" />
-        </div>
+        <label class="form-label" for="mov-tipo">Tipo</label>
+        <select id="mov-tipo" (change)="onTipoChange($any($event.target).value)" class="form-select">
+          @for (t of tipos; track t) { <option [value]="t" [selected]="formTipo() === t">{{ t }}</option> }
+        </select>
       </div>
       <div class="space-y-1">
-        <label class="form-label">IVA</label>
-        <select (change)="formIva.set($any($event.target).value)" class="form-select">
-          @for (o of ivaOpciones; track o) {
-            <option [value]="o" [selected]="formIva() === o">{{ o === 'exento' ? 'Exento / No sujeto' : o + '%' }}</option>
+        <label class="form-label" for="mov-importe">
+          {{ formIvaIncluido() ? 'Importe total (€)' : 'Base imponible (€)' }}
+          <span style="color:var(--danger)" aria-hidden="true">*</span>
+        </label>
+        <input id="mov-importe" type="number" min="0" step="0.01" required [value]="formImporte()" (input)="formImporte.set($any($event.target).value)" class="form-input" />
+      </div>
+    </div>
+    <div class="space-y-1">
+      <label class="form-label" for="mov-iva">IVA</label>
+      <select id="mov-iva" (change)="formIva.set($any($event.target).value)" class="form-select">
+        @for (o of ivaOpciones; track o) {
+          <option [value]="o" [selected]="formIva() === o">{{ o === 'exento' ? 'Exento / No sujeto' : o + '%' }}</option>
+        }
+      </select>
+      @if (formImporte() && desglose().baseImponible > 0) {
+        <div class="flex flex-wrap justify-between gap-x-3 gap-y-1 text-xs pt-1" style="color:var(--text-muted)">
+          <span>Base: <span class="font-medium" style="color:var(--text-body)">{{ desglose().baseImponible | number:'1.2-2' }} €</span></span>
+          <span>Cuota: <span class="font-medium" style="color:var(--text-body)">{{ desglose().cuotaIva | number:'1.2-2' }} €</span></span>
+          @if (!formIvaIncluido()) {
+            <span>Total: <span class="font-semibold" style="color:var(--text-body)">{{ desglose().total | number:'1.2-2' }} €</span></span>
+          }
+        </div>
+      }
+    </div>
+    <!-- Switch IVA incluido (solo cuando aplica IVA real) -->
+    @if (formIva() !== 'exento' && formIva() !== '0') {
+      <div class="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5" style="background:var(--surface-2)">
+        <p class="text-sm" style="color:var(--text-body)">IVA incluido en el precio</p>
+        <button type="button" role="switch" [attr.aria-checked]="formIvaIncluido()"
+          (click)="formIvaIncluido.set(!formIvaIncluido())"
+          class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2"
+          [style.background]="formIvaIncluido() ? 'var(--brand)' : 'var(--border)'"
+          aria-label="IVA incluido en el precio">
+          <span class="inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-200"
+            [style.transform]="formIvaIncluido() ? 'translateX(22px)' : 'translateX(3px)'"></span>
+        </button>
+      </div>
+    }
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="space-y-1">
+        <label class="form-label" for="mov-direccion">Dirección</label>
+        <select id="mov-direccion" (change)="formEsEntrada.set($any($event.target).value === 'true')" class="form-select">
+          <option value="true" [selected]="formEsEntrada()">Entrada (cobrado)</option>
+          <option value="false" [selected]="!formEsEntrada()">Salida (pagado)</option>
+        </select>
+      </div>
+      <div class="space-y-1">
+        <label class="form-label" for="mov-fecha">Fecha</label>
+        <input id="mov-fecha" type="date" [value]="formFecha()" (input)="formFecha.set($any($event.target).value)" class="form-input" />
+      </div>
+    </div>
+    @if (cuentas().length > 0) {
+      <div class="space-y-1">
+        <label class="form-label" for="mov-cuenta">Cuenta / Caja <span style="color:var(--danger)" aria-hidden="true">*</span></label>
+        <select id="mov-cuenta" required [value]="formCuentaId()" (change)="formCuentaId.set($any($event.target).value)" class="form-select">
+          <option value="" disabled selected>Selecciona una cuenta</option>
+          @for (c of cuentas(); track c.id) {
+            <option [value]="c.id">{{ c.nombre }}{{ c.entidad ? ' · ' + c.entidad : '' }}</option>
           }
         </select>
-        @if (formImporte() && desglose().baseImponible > 0) {
-          <div class="flex justify-between text-xs pt-1" style="color:var(--text-muted)">
-            <span>Base: <span class="font-medium" style="color:var(--text-body)">{{ desglose().baseImponible | number:'1.2-2' }} €</span></span>
-            <span>Cuota: <span class="font-medium" style="color:var(--text-body)">{{ desglose().cuotaIva | number:'1.2-2' }} €</span></span>
-            @if (!formIvaIncluido()) {
-              <span>Total: <span class="font-semibold" style="color:var(--text-body)">{{ desglose().total | number:'1.2-2' }} €</span></span>
-            }
-          </div>
-        }
       </div>
-      <!-- Switch IVA incluido (solo cuando aplica IVA real) -->
-      @if (formIva() !== 'exento' && formIva() !== '0') {
-        <div class="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5" style="background:var(--surface-2)">
-          <p class="text-sm" style="color:var(--text-body)">IVA incluido en el precio</p>
-          <button type="button" role="switch" [attr.aria-checked]="formIvaIncluido()"
-            (click)="formIvaIncluido.set(!formIvaIncluido())"
-            class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2"
-            [style.background]="formIvaIncluido() ? 'var(--brand)' : 'var(--border)'"
-            aria-label="IVA incluido en el precio">
-            <span class="inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-200"
-              [style.transform]="formIvaIncluido() ? 'translateX(22px)' : 'translateX(3px)'"></span>
-          </button>
-        </div>
-      }
-      <div class="grid grid-cols-2 gap-3">
-        <div class="space-y-1">
-          <label class="form-label">Dirección</label>
-          <select (change)="formEsEntrada.set($any($event.target).value === 'true')" class="form-select">
-            <option value="true" [selected]="formEsEntrada()">Entrada (cobrado)</option>
-            <option value="false" [selected]="!formEsEntrada()">Salida (pagado)</option>
-          </select>
-        </div>
-        <div class="space-y-1">
-          <label class="form-label">Fecha</label>
-          <input type="date" [value]="formFecha()" (input)="formFecha.set($any($event.target).value)" class="form-input" />
-        </div>
-      </div>
-      @if (cuentas().length > 0) {
-        <div class="space-y-1">
-          <label class="form-label">Cuenta / Caja <span style="color:var(--danger)">*</span></label>
-          <select [value]="formCuentaId()" (change)="formCuentaId.set($any($event.target).value)" class="form-select">
-            <option value="" disabled selected>Selecciona una cuenta</option>
-            @for (c of cuentas(); track c.id) {
-              <option [value]="c.id">{{ c.nombre }}{{ c.entidad ? ' · ' + c.entidad : '' }}</option>
-            }
-          </select>
-        </div>
-      }
-      <div class="space-y-1">
-        <label class="form-label">Notas</label>
-        <textarea rows="2" [value]="formNotas()" (input)="formNotas.set($any($event.target).value)" class="form-input resize-none"></textarea>
-      </div>
+    }
+    <div class="space-y-1">
+      <label class="form-label" for="mov-notas">Notas</label>
+      <textarea id="mov-notas" rows="2" [value]="formNotas()" (input)="formNotas.set($any($event.target).value)" class="form-input resize-none"></textarea>
     </div>
-    <div class="px-6 py-4 flex gap-3 justify-end" style="border-top:1px solid var(--border)">
-      <button (click)="closed.emit()"
-        class="px-4 py-2 text-sm rounded-lg transition-colors duration-150"
-        style="border:1px solid var(--border);color:var(--text-muted)"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-        (mouseleave)="$any($event.currentTarget).style.background=''">
-        Cancelar
-      </button>
-      <button (click)="submit()" [disabled]="saving() || !formConcepto().trim() || !formImporte() || (cuentas().length > 0 && !formCuentaId())"
-        class="px-4 py-2 text-sm text-white rounded-lg transition-colors duration-150 disabled:opacity-50"
-        style="background:var(--brand)"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-        (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
-        {{ saving() ? 'Guardando...' : (editando() ? 'Guardar cambios' : 'Guardar') }}
-      </button>
-    </div>
-  </aside>
-}
+  </div>
+
+  <div footer class="flex gap-3 px-4 py-4 sm:justify-end sm:px-6">
+    <button type="button" (click)="closed.emit()"
+      class="max-sm:tap-target max-sm:flex-1 px-4 py-2 text-sm rounded-lg transition-colors duration-150 hover:bg-[var(--surface-2)]"
+      style="border:1px solid var(--border);color:var(--text-muted)">
+      Cancelar
+    </button>
+    <button type="button" (click)="submit()" [disabled]="saving() || !formConcepto().trim() || !formImporte() || (cuentas().length > 0 && !formCuentaId())"
+      class="max-sm:tap-target max-sm:flex-1 px-4 py-2 text-sm text-white rounded-lg transition-colors duration-150 bg-[var(--brand)] hover:bg-[var(--brand-hover)] disabled:opacity-50">
+      {{ saving() ? 'Guardando...' : (editando() ? 'Guardar cambios' : 'Guardar') }}
+    </button>
+  </div>
+</app-overlay-shell>

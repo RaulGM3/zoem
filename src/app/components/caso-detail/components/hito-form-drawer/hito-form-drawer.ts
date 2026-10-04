@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy, input, output, signal, effect } from '@angular/core';
-import { LucideAngularModule, X } from 'lucide-angular';
+import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 import type { CompanyMember, Hito, HitoEstado } from '../../../../interfaces';
 import { HITO_ESTADOS, HITO_ESTADO_LABEL } from '../../../../core/hitos/hito-estado';
 
@@ -14,7 +14,7 @@ export interface HitoFormData {
 
 @Component({
   selector: 'app-hito-form-drawer',
-  imports: [LucideAngularModule],
+  imports: [OverlayShellComponent],
   templateUrl: './hito-form-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -26,8 +26,6 @@ export class HitoFormDrawerComponent {
 
   readonly saved = output<HitoFormData>();
   readonly closed = output<void>();
-
-  readonly XIcon = X;
 
   readonly formTitulo = signal('');
   readonly formDescripcion = signal('');

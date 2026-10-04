@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, input, output, signal, computed, effect } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { LucideAngularModule, X } from 'lucide-angular';
+import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 import type { CuentaBancaria, GestoriaSlot, MovimientoGestoria, MovimientoTipo, TipoIva } from '../../../../interfaces';
 import { desglosarIva, calcularIvaDesdeBase } from '../../../../interfaces';
 
@@ -23,7 +23,7 @@ type IvaSel = '21' | '10' | '4' | '0' | 'exento';
 
 @Component({
   selector: 'app-movimiento-form-drawer',
-  imports: [LucideAngularModule, DecimalPipe],
+  imports: [OverlayShellComponent, DecimalPipe],
   templateUrl: './movimiento-form-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -40,8 +40,6 @@ export class MovimientoFormDrawerComponent {
 
   readonly saved = output<MovimientoFormData>();
   readonly closed = output<void>();
-
-  readonly XIcon = X;
 
   readonly formConcepto = signal('');
   readonly formTipo = signal<MovimientoTipo>('ingreso');
