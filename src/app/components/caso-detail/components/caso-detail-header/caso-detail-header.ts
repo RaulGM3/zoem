@@ -1,4 +1,5 @@
-import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, input, output } from '@angular/core';
+import { BreakpointService } from '../../../../core/services/breakpoint.service';
 import { LucideAngularModule, ArrowLeft, Edit2 } from 'lucide-angular';
 import { RouterLink } from '@angular/router';
 
@@ -27,6 +28,8 @@ export class CasoDetailHeaderComponent {
   readonly edit = output<void>();
   readonly tabChange = output<CasoTab>();
 
+  protected readonly bp = inject(BreakpointService);
+
   readonly ArrowLeftIcon = ArrowLeft;
   readonly Edit2Icon = Edit2;
 
@@ -36,6 +39,12 @@ export class CasoDetailHeaderComponent {
     ['gestoria', 'Gestoría'],
     ['documentos', 'Documentos'],
   ];
+
+  /** Selector móvil: solo propaga valores que son pestañas válidas. */
+  seleccionarTab(valor: string): void {
+    const tab = this.tabs.find((t) => t[0] === valor);
+    if (tab) this.tabChange.emit(tab[0]);
+  }
 
   getEstadoStyle(estado: string): { background: string; color: string } {
     const mix = (v: string) => `color-mix(in srgb,${v} 12%,transparent)`;
