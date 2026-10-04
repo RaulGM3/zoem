@@ -1,4 +1,5 @@
-import { Component, ChangeDetectionStrategy, input, output, signal, computed, effect, untracked } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output, signal, computed, effect, inject, untracked } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -12,7 +13,16 @@ import {
   RotateCcw,
   Ban,
   Hash,
+  SlidersHorizontal,
 } from 'lucide-angular';
+import { BreakpointService } from '../../../../core/services/breakpoint.service';
+import { ActionMenuComponent, type MenuAction } from '../../../../shared/components/action-menu/action-menu';
+import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
+import {
+  ListCardDirective,
+  ListTableDirective,
+  ResponsiveListComponent,
+} from '../../../../shared/components/responsive-list/responsive-list';
 import type { Invoice, InvoiceStatus } from '../../../../core/services/invoice.service';
 import {
   anuncioCambioVerifactu,
@@ -36,10 +46,15 @@ interface SeguimientoReintento {
 @Component({
   selector: 'app-facturacion-facturas-tab',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LucideAngularModule, DecimalPipe, FormsModule],
+  imports: [
+    LucideAngularModule, DecimalPipe, FormsModule, NgTemplateOutlet, ActionMenuComponent, OverlayShellComponent,
+    ResponsiveListComponent, ListCardDirective, ListTableDirective,
+  ],
   templateUrl: './facturacion-facturas-tab.html',
 })
 export class FacturacionFacturasTabComponent {
+  protected readonly bp = inject(BreakpointService);
+
   readonly invoices = input.required<Invoice[]>();
   readonly loading = input.required<boolean>();
 
@@ -62,6 +77,7 @@ export class FacturacionFacturasTabComponent {
   readonly RotateCcwIcon = RotateCcw;
   readonly BanIcon = Ban;
   readonly HashIcon = Hash;
+  readonly FiltersIcon = SlidersHorizontal;
 
   /** Texto de la ÚNICA región viva de la tabla: solo cambios provocados por el usuario. */
   readonly anuncio = signal('');
@@ -88,6 +104,20 @@ export class FacturacionFacturasTabComponent {
   readonly statusFilter = signal<StatusFilter>('todos');
   readonly dateFrom = signal('');
   readonly dateTo = signal('');
+
+  /** Hoja de filtros (móvil). Comparte las mismas señales que la barra de escritorio. */
+  readonly filtrosAbiertos = signal(false);
+
+  /** Filtros activos que oculta la hoja: estado y rango de fechas (la búsqueda va siempre visible). */
+  readonly filtrosActivos = computed(
+    () => (this.statusFilter() !== 'todos' ? 1 : 0) + (this.dateFrom() ? 1 : 0) + (this.dateTo() ? 1 : 0),
+  );
+
+  limpiarFiltros(): void {
+    this.statusFilter.set('todos');
+    this.dateFrom.set('');
+    this.dateTo.set('');
+  }
 
   readonly statusOptions: { value: StatusFilter; label: string }[] = [
     { value: 'todos', label: 'Todos' },
@@ -190,5 +220,39 @@ export class FacturacionFacturasTabComponent {
 
   verifactuColor(vista: VistaVerifactu): string {
     return colorTono(vista.tono);
+  }
+
+  /** Mismas condiciones (y orden) que los botones de icono de la tabla de escritorio. */
+  accionesFactura(inv: Invoice): MenuAction[] {
+    const acciones: MenuAction[] = [];
+    if (this.canEdit(inv)) acciones.push({ id: 'edit', label: 'Editar factura', icon: Pencil });
+    if (this.canEditNumber(inv)) acciones.push({ id: 'editNumber', label: 'Cambiar número', icon: Hash });
+    if (inv.pdfUrl) {
+      acciones.push({ id: 'download', label: 'Descargar PDF', icon: Download });
+      acciones.push({ id: 'copyLink', label: 'Copiar enlace PDF', icon: Link });
+    }
+    if (this.canMarkPaid(inv)) acciones.push({ id: 'markPaid', label: 'Marcar como pagada', icon: CircleDollarSign });
+    if (this.canFinalize(inv)) acciones.push({ id: 'finalize', label: 'Finalizar borrador', icon: CheckCircle2 });
+    if (this.canRectify(inv)) acciones.push({ id: 'rectify', label: 'Crear rectificativa', icon: RotateCcw });
+    if (this.canRetryVerifactu(inv)) {
+      acciones.push({ id: 'retry', label: 'Reintentar envío a Verifactu', icon: RefreshCw });
+    }
+    if (this.canAnular(inv)) acciones.push({ id: 'anular', label: 'Anular factura', icon: Ban, danger: true });
+    return acciones;
+  }
+
+  /** Despacha la acción elegida en el menú a los mismos handlers/outputs que los botones de escritorio. */
+  ejecutarAccion(inv: Invoice, id: string): void {
+    switch (id) {
+      case 'edit': this.editInvoice.emit(inv); break;
+      case 'editNumber': this.editNumber.emit(inv); break;
+      case 'download': this.downloadPdf.emit(inv.id); break;
+      case 'copyLink': this.copyPdfLink.emit(inv.id); break;
+      case 'markPaid': this.markPaid.emit(inv.id); break;
+      case 'finalize': this.finalizeDraft.emit(inv.id); break;
+      case 'rectify': this.createRectificativa.emit(inv); break;
+      case 'retry': this.reintentar(inv); break;
+      case 'anular': this.anularFactura.emit(inv.id); break;
+    }
   }
 }
