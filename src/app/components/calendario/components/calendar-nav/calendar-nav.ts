@@ -1,8 +1,9 @@
 import {
   Component, ChangeDetectionStrategy,
-  input, output, viewChild, ElementRef,
+  input, output, viewChild, ElementRef, inject,
 } from '@angular/core';
-import { LucideAngularModule, ChevronLeft, ChevronRight } from 'lucide-angular';
+import { LucideAngularModule, ChevronLeft, ChevronRight, CalendarCheck } from 'lucide-angular';
+import { BreakpointService } from '../../../../core/services/breakpoint.service';
 import type { WeekDay, ViewMode } from '../../calendario.types';
 
 @Component({
@@ -13,6 +14,8 @@ import type { WeekDay, ViewMode } from '../../calendario.types';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CalendarNavComponent {
+  protected readonly isMobile = inject(BreakpointService).isMobile;
+
   readonly weekDays = input.required<WeekDay[]>();
   readonly monthDays = input.required<WeekDay[]>();
   readonly viewMode = input.required<ViewMode>();
@@ -21,6 +24,7 @@ export class CalendarNavComponent {
 
   readonly prevClicked = output<void>();
   readonly nextClicked = output<void>();
+  readonly todayClicked = output<void>();
   readonly viewModeChanged = output<ViewMode>();
   readonly dateToggled = output<string>();
   readonly visibleDateChanged = output<string>();
@@ -28,6 +32,7 @@ export class CalendarNavComponent {
 
   readonly ChevronLeftIcon = ChevronLeft;
   readonly ChevronRightIcon = ChevronRight;
+  readonly CalendarCheckIcon = CalendarCheck;
 
   private readonly scrollRef = viewChild<ElementRef<HTMLDivElement>>('scrollRef');
   private pendingMore = false;

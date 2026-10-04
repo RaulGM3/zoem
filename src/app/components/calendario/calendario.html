@@ -1,23 +1,21 @@
 <div class="flex h-full flex-col gap-3">
-  <div class="flex shrink-0 items-center justify-between">
-    <h1 class="text-[22px] font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Calendario</h1>
+  <div class="flex shrink-0 items-center justify-between gap-2">
+    <h1 class="min-w-0 truncate text-[22px] font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Calendario</h1>
     <div class="flex items-center gap-2">
       @if (perm.can('Calendario', 'ver')) {
         <button
           (click)="showSuscribirseDialog.set(true)"
-          class="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors duration-150"
+          aria-label="Suscribirse"
+          class="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors duration-150 max-sm:tap-target max-sm:justify-center max-sm:px-2"
           style="color:var(--text-strong);border:1px solid var(--border)"
         >
-          <lucide-icon [img]="CalendarPlusIcon" size="16"></lucide-icon>
-          Suscribirse
+          <lucide-icon [img]="CalendarPlusIcon" size="16" aria-hidden="true"></lucide-icon>
+          <span class="max-sm:hidden">Suscribirse</span>
         </button>
       }
       <button
         (click)="showDrawer.set(true)"
-        class="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors duration-150"
-        style="background:var(--brand)"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-        (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'"
+        class="flex items-center gap-2 rounded-lg bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-[var(--brand-hover)] max-sm:tap-target max-sm:justify-center max-sm:px-3"
       >
         <lucide-icon [img]="PlusIcon" size="16"></lucide-icon>
         Nuevo evento
@@ -32,6 +30,7 @@
     [viewMode]="viewMode()"
     [weekMonthLabel]="weekMonthLabel()"
     [dayNames]="dayNames"
+    (todayClicked)="goToday()"
     (prevClicked)="prevWeek()"
     (nextClicked)="nextWeek()"
     (viewModeChanged)="setViewMode($event)"
