@@ -1,3 +1,34 @@
+<ng-template #listaFacturas let-caso>
+      <ul class="flex flex-col gap-2" [attr.aria-label]="'Facturas de ' + caso.titulo">
+        @for (fId of invoiceIds(caso); track fId) {
+          @let inv = invoice(fId);
+          <li class="flex flex-wrap items-center gap-3 rounded-lg px-3 py-2" style="background:var(--surface);border:1px solid var(--border)">
+            <span class="font-medium tabular-nums" style="color:var(--text-strong);font-family:var(--font-mono)">{{ inv?.invoiceNumber ?? fId }}</span>
+            @if (inv) {
+              <span class="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium"
+                [style.background]="estadoEstilo(inv.status).background"
+                [style.color]="estadoEstilo(inv.status).color">{{ estadoEtiqueta(inv.status) }}</span>
+              <span class="text-xs tabular-nums" style="color:var(--text-muted);font-family:var(--font-mono)">{{ inv.total | number:'1.2-2' }} €</span>
+            }
+            <span class="ml-auto">
+              @if (inv?.pdfUrl) {
+                <a [href]="inv!.pdfUrl" target="_blank" rel="noopener noreferrer"
+                  [attr.aria-label]="'Abrir PDF de la factura ' + inv!.invoiceNumber + ' (se abre en una pestaña nueva)'"
+                  class="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150 hover:bg-[var(--surface-2)]"
+                  style="border:1px solid var(--border);color:var(--text-body)">
+                  <lucide-icon [img]="ExternalLinkIcon" size="14" aria-hidden="true"></lucide-icon> Abrir
+                </a>
+              } @else {
+                <span class="text-xs" style="color:var(--text-muted)">PDF no disponible</span>
+              }
+            </span>
+          </li>
+        }
+      </ul>
+</ng-template>
+
+<app-responsive-list [items]="casos()" trackBy="id" [emptyText]="loading() ? 'Cargando casos…' : 'No hay casos abiertos'">
+<ng-template [appListTable]="casos()" let-rows>
 <div class="overflow-x-auto">
   <table class="w-full text-sm">
     <thead>
@@ -12,10 +43,8 @@
       </tr>
     </thead>
     <tbody>
-      @for (caso of casos(); track caso.id) {
-        <tr class="transition-colors duration-150" style="border-bottom:1px solid var(--border-soft)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-          (mouseleave)="$any($event.currentTarget).style.background=''">
+      @for (caso of rows; track caso.id) {
+        <tr class="transition-colors duration-150 hover:bg-[var(--surface-2)]" style="border-bottom:1px solid var(--border-soft)">
           <td class="px-5 py-4">
             <a [routerLink]="['/casos', caso.id]" class="font-semibold hover:underline focus-visible:underline"
               style="color:var(--text-strong)">{{ caso.titulo }}</a>
@@ -55,21 +84,16 @@
               @if (canCreate()) {
                 <button (click)="abrirFactura.emit(caso)"
                   [title]="esEjecutado(caso) ? '' : 'Gestoría incompleta (' + slotsLabel(caso) + '). Puedes generar la factura de todas maneras.'"
-                  class="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150"
-                  style="border:1px solid var(--border);color:var(--text-body)"
-                  (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-                  (mouseleave)="$any($event.currentTarget).style.background=''">
+                  class="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150 hover:bg-[var(--surface-2)]"
+                  style="border:1px solid var(--border);color:var(--text-body)">
                   <lucide-icon [img]="ReceiptIcon" size="14"></lucide-icon> {{ invoiceCount(caso) > 0 ? 'Nueva factura' : 'Generar factura' }}
                 </button>
               }
               @if (canCreate()) {
                 <button (click)="abrirCierre.emit(caso)"
                   [title]="esEjecutado(caso) ? '' : 'No se puede cerrar el caso hasta registrar todos los costos de gestoría (' + slotsLabel(caso) + ')'"
-                  class="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors duration-150"
-                  [style.opacity]="esEjecutado(caso) ? 1 : 0.4"
-                  style="background:var(--brand)"
-                  (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-                  (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+                  class="inline-flex items-center gap-1 rounded-lg bg-[var(--brand)] px-3 py-1.5 text-xs font-semibold text-white transition-colors duration-150 hover:bg-[var(--brand-hover)]"
+                  [style.opacity]="esEjecutado(caso) ? 1 : 0.4">
                   <lucide-icon [img]="CheckCircle2Icon" size="14"></lucide-icon> Cerrar caso
                 </button>
               }
@@ -79,45 +103,66 @@
         @if (expandido(caso.id)) {
           <tr [id]="'facturas-caso-' + caso.id" style="border-bottom:1px solid var(--border-soft);background:var(--surface-2)">
             <td colspan="7" class="px-5 py-3">
-              <ul class="flex flex-col gap-2" [attr.aria-label]="'Facturas de ' + caso.titulo">
-                @for (fId of invoiceIds(caso); track fId) {
-                  @let inv = invoice(fId);
-                  <li class="flex flex-wrap items-center gap-3 rounded-lg px-3 py-2" style="background:var(--surface);border:1px solid var(--border)">
-                    <span class="font-medium tabular-nums" style="color:var(--text-strong);font-family:var(--font-mono)">{{ inv?.invoiceNumber ?? fId }}</span>
-                    @if (inv) {
-                      <span class="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium"
-                        [style.background]="estadoEstilo(inv.status).background"
-                        [style.color]="estadoEstilo(inv.status).color">{{ estadoEtiqueta(inv.status) }}</span>
-                      <span class="text-xs tabular-nums" style="color:var(--text-muted);font-family:var(--font-mono)">{{ inv.total | number:'1.2-2' }} €</span>
-                    }
-                    <span class="ml-auto">
-                      @if (inv?.pdfUrl) {
-                        <a [href]="inv!.pdfUrl" target="_blank" rel="noopener noreferrer"
-                          [attr.aria-label]="'Abrir PDF de la factura ' + inv!.invoiceNumber + ' (se abre en una pestaña nueva)'"
-                          class="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150"
-                          style="border:1px solid var(--border);color:var(--text-body)"
-                          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-                          (mouseleave)="$any($event.currentTarget).style.background=''">
-                          <lucide-icon [img]="ExternalLinkIcon" size="14" aria-hidden="true"></lucide-icon> Abrir
-                        </a>
-                      } @else {
-                        <span class="text-xs" style="color:var(--text-muted)">PDF no disponible</span>
-                      }
-                    </span>
-                  </li>
-                }
-              </ul>
+              <ng-container [ngTemplateOutlet]="listaFacturas" [ngTemplateOutletContext]="{ $implicit: caso }" />
             </td>
           </tr>
         }
       }
-      @if (casos().length === 0) {
-        <tr>
-          <td colspan="7" class="px-5 py-12 text-center text-sm" style="color:var(--text-faint)">
-            {{ loading() ? 'Cargando casos…' : 'No hay casos abiertos' }}
-          </td>
-        </tr>
-      }
     </tbody>
   </table>
 </div>
+</ng-template>
+
+<ng-template [appListCard]="casos()" let-caso>
+  <article class="rounded-xl p-3" style="border:1px solid var(--border);background:var(--surface)">
+    <div class="flex items-start justify-between gap-2">
+      <div class="min-w-0">
+        <a [routerLink]="['/casos', caso.id]" class="tap-target inline-flex items-center font-semibold hover:underline focus-visible:underline"
+          style="color:var(--text-strong)">{{ caso.titulo }}</a>
+        <p class="text-xs" style="color:var(--text-faint)">{{ caso.tipo }}</p>
+      </div>
+      <p class="shrink-0 text-lg font-semibold tabular-nums"
+        [style.color]="caso.resumenFinanciero.saldo >= 0 ? 'var(--success)' : 'var(--danger)'"
+        style="font-family:var(--font-mono)"><span class="sr-only">Saldo </span>{{ caso.resumenFinanciero.saldo | number:'1.0-0' }}€</p>
+    </div>
+    <dl class="mt-2 grid grid-cols-3 gap-2 text-xs" style="color:var(--text-muted)">
+      <div><dt>Ingresos</dt><dd class="tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.totalIngresos | number:'1.0-0' }}€</dd></div>
+      <div><dt>Suplidos</dt><dd class="tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.totalSuplidos | number:'1.0-0' }}€</dd></div>
+      <div><dt>Honorarios</dt><dd class="tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.totalHonorarios | number:'1.0-0' }}€</dd></div>
+    </dl>
+    <div class="mt-2 flex items-center gap-2">
+      <span class="h-2.5 w-2.5 shrink-0 rounded-full" [style.background]="esEjecutado(caso) ? 'var(--success)' : 'var(--warning)'"></span>
+      <span class="text-xs" [style.color]="esEjecutado(caso) ? 'var(--success)' : 'var(--text-muted)'">
+        {{ esEjecutado(caso) ? 'Ejecutada' : slotsLabel(caso) }}
+      </span>
+    </div>
+    <div class="mt-2 flex items-center justify-between gap-2">
+      <div>
+        @if (invoiceCount(caso) > 0) {
+          <button type="button" (click)="toggleFacturas(caso.id)"
+            [attr.aria-expanded]="expandido(caso.id)"
+            [attr.aria-controls]="'facturas-caso-' + caso.id"
+            class="tap-target inline-flex items-center gap-1 rounded-full px-3 text-xs font-medium"
+            style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">
+            <lucide-icon [img]="FileCheckIcon" size="13" aria-hidden="true"></lucide-icon>
+            {{ invoiceCount(caso) === 1 ? '1 factura' : invoiceCount(caso) + ' facturas' }}
+            <lucide-icon [img]="ChevronDownIcon" size="13" aria-hidden="true"
+              class="transition-transform duration-150" [class.rotate-180]="expandido(caso.id)"></lucide-icon>
+          </button>
+        }
+      </div>
+      @if (accionesCaso(caso); as acciones) {
+        @if (acciones.length > 0) {
+          <app-action-menu [actions]="acciones" [label]="'Acciones del caso ' + caso.titulo"
+            (selected)="ejecutarAccion(caso, $event)" />
+        }
+      }
+    </div>
+    @if (expandido(caso.id)) {
+      <div [id]="'facturas-caso-' + caso.id" class="mt-2 rounded-lg p-2" style="background:var(--surface-2)">
+        <ng-container [ngTemplateOutlet]="listaFacturas" [ngTemplateOutletContext]="{ $implicit: caso }" />
+      </div>
+    }
+  </article>
+</ng-template>
+</app-responsive-list>

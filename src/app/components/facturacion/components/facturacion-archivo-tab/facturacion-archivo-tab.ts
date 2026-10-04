@@ -1,14 +1,23 @@
 import { Component, ChangeDetectionStrategy, input, output, signal, effect, untracked } from '@angular/core';
-import { DecimalPipe, SlicePipe } from '@angular/common';
+import { DecimalPipe, NgTemplateOutlet, SlicePipe } from '@angular/common';
 import { LucideAngularModule, FileCheck, Download, Link, RefreshCw, CheckCircle2 } from 'lucide-angular';
 import type { Invoice } from '../../../../core/services/invoice.service';
 import { anuncioCambioVerifactu, colorTono, vistaVerifactu, type VistaVerifactu } from '../../../../core/verifactu/verifactu-ui';
 import { Caso } from '../../../../interfaces';
+import { ActionMenuComponent, type MenuAction } from '../../../../shared/components/action-menu/action-menu';
+import {
+  ListCardDirective,
+  ListTableDirective,
+  ResponsiveListComponent,
+} from '../../../../shared/components/responsive-list/responsive-list';
 
 @Component({
   selector: 'app-facturacion-archivo-tab',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LucideAngularModule, DecimalPipe, SlicePipe],
+  imports: [
+    LucideAngularModule, DecimalPipe, SlicePipe, NgTemplateOutlet, ActionMenuComponent,
+    ResponsiveListComponent, ListCardDirective, ListTableDirective,
+  ],
   templateUrl: './facturacion-archivo-tab.html',
 })
 export class FacturacionArchivoTabComponent {
@@ -75,5 +84,30 @@ export class FacturacionArchivoTabComponent {
 
   verifactuColor(vista: VistaVerifactu): string {
     return colorTono(vista.tono);
+  }
+
+  /** Mismas condiciones que los botones de la tabla de escritorio. */
+  accionesCaso(caso: Caso): MenuAction[] {
+    const acciones: MenuAction[] = [];
+    if (this.pdfUrl(caso.facturaId)) {
+      acciones.push({ id: 'download', label: 'Descargar PDF', icon: Download });
+      acciones.push({ id: 'copyLink', label: 'Copiar link de descarga', icon: Link });
+    }
+    if (this.verifactuVista(caso.facturaId)?.reintentable) {
+      acciones.push({ id: 'retry', label: 'Reintentar envío a Verifactu', icon: RefreshCw });
+    }
+    if (this.canReabrir()) {
+      acciones.push({ id: 'reopen', label: 'Reabrir caso', icon: CheckCircle2, disabled: this.saving() });
+    }
+    return acciones;
+  }
+
+  ejecutarAccion(caso: Caso, id: string): void {
+    switch (id) {
+      case 'download': this.downloadPdf.emit(caso.facturaId); break;
+      case 'copyLink': this.copyPdfLink.emit(caso.facturaId); break;
+      case 'retry': this.reintentar(caso); break;
+      case 'reopen': this.reabrirCaso.emit(caso); break;
+    }
   }
 }
