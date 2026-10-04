@@ -9,7 +9,8 @@ import {
   computed,
 } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { LucideAngularModule, X, TriangleAlert } from 'lucide-angular';
+import { LucideAngularModule, TriangleAlert } from 'lucide-angular';
+import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 import type { Invoice } from '../../../../core/services/invoice.service';
 
 /** Serie automática del sistema: `F-YYYY-NNNN` (ordinaria) o `R-YYYY-NNNN` (rectificativa). */
@@ -18,11 +19,8 @@ const SERIE_AUTOMATICA = /^[FR]-\d{4}-\d{4}$/;
 @Component({
   selector: 'app-editar-numero-modal',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LucideAngularModule, ReactiveFormsModule],
+  imports: [LucideAngularModule, ReactiveFormsModule, OverlayShellComponent],
   templateUrl: './editar-numero-modal.html',
-  host: {
-    '(document:keydown.escape)': 'closed.emit()',
-  },
 })
 export class EditarNumeroModalComponent {
   private readonly fb = inject(FormBuilder);
@@ -35,7 +33,6 @@ export class EditarNumeroModalComponent {
   readonly closed = output<void>();
   readonly confirmed = output<string>();
 
-  readonly XIcon = X;
   readonly TriangleAlertIcon = TriangleAlert;
 
   readonly form = this.fb.nonNullable.group({
