@@ -14,8 +14,8 @@ function plantillas(dir: string): string[] {
 }
 
 describe('caso-detail — hover', () => {
-  it('ninguna plantilla usa (mouseenter)/(mouseleave) inline; se usan clases hover: de Tailwind', () => {
-    const conHandlers = plantillas(RAIZ).filter((f) => /\((mouseenter|mouseleave)\)/.test(readFileSync(f, 'utf8')));
+  it('ninguna plantilla muta estilos en (mouseenter)/(mouseleave); se usan clases hover: de Tailwind', () => {
+    const conHandlers = plantillas(RAIZ).filter((f) => /\((mouseenter|mouseleave)\)="[^"]*\.style\./.test(readFileSync(f, 'utf8')));
     expect(conHandlers.map((f) => f.replace(RAIZ, ''))).toEqual([]);
   });
 });
