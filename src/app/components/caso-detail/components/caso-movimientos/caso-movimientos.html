@@ -9,10 +9,10 @@
       }
     </div>
 
-    <div class="flex items-center gap-2">
+    <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
       @if (movimientos().length > 0) {
         <!-- Búsqueda: siempre a la vista, es el filtro que más se usa -->
-        <div class="relative">
+        <div class="relative min-w-0 flex-1 sm:flex-none">
           <lucide-icon [img]="SearchIcon" class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style="color:var(--text-faint)" />
           <input
             type="search"
@@ -20,7 +20,7 @@
             (input)="filtroTexto.set($any($event.target).value)"
             placeholder="Buscar concepto o notas"
             aria-label="Buscar en concepto y notas"
-            class="w-44 sm:w-56 pl-8 pr-2 py-1.5 text-sm rounded-lg transition-colors duration-150"
+            class="w-full sm:w-56 pl-8 pr-2 py-1.5 text-sm rounded-lg transition-colors duration-150"
             style="background:var(--surface-2);border:1px solid var(--border);color:var(--text-body)"
           />
         </div>
@@ -30,7 +30,7 @@
           (click)="mostrarFiltros.set(!mostrarFiltros())"
           [attr.aria-expanded]="mostrarFiltros()"
           aria-controls="mov-filtros"
-          class="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors duration-150"
+          class="tap-target flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors duration-150"
           [style.background]="hayFiltro() ? 'color-mix(in srgb,var(--brand) 12%,transparent)' : 'transparent'"
           [style.color]="hayFiltro() ? 'var(--brand)' : 'var(--text-muted)'"
           [style.border]="'1px solid ' + (hayFiltro() ? 'transparent' : 'var(--border)')"
@@ -42,10 +42,7 @@
 
       @if (canEdit()) {
         <button (click)="addMov.emit()"
-          class="flex items-center gap-1.5 px-3 py-1.5 text-sm text-white rounded-lg transition-colors duration-150"
-          style="background:var(--brand)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-          (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+          class="tap-target flex items-center gap-1.5 px-3 py-1.5 text-sm text-white rounded-lg transition-colors duration-150 bg-[var(--brand)] hover:bg-[var(--brand-hover)]">
           <lucide-icon [img]="PlusIcon" class="w-3.5 h-3.5" />
           Añadir
         </button>
@@ -59,7 +56,7 @@
     <!-- Tipo -->
     @if (tiposDisponibles().length > 1) {
       <div class="flex flex-wrap items-center gap-2">
-        <span class="text-xs uppercase tracking-wide w-20 shrink-0" style="color:var(--text-faint)">Tipo</span>
+        <span class="text-xs uppercase tracking-wide sm:w-20 sm:shrink-0 max-sm:w-full" style="color:var(--text-faint)">Tipo</span>
         @for (t of tiposDisponibles(); track t) {
           @let activo = filtroTipos().includes(t);
           <button
@@ -80,7 +77,7 @@
 
     <!-- Dirección -->
     <div class="flex flex-wrap items-center gap-2">
-      <span class="text-xs uppercase tracking-wide w-20 shrink-0" style="color:var(--text-faint)">Dirección</span>
+      <span class="text-xs uppercase tracking-wide sm:w-20 sm:shrink-0 max-sm:w-full" style="color:var(--text-faint)">Dirección</span>
       @for (d of direcciones; track d.valor) {
         @let activa = filtroDireccion() === d.valor;
         <button
@@ -100,7 +97,7 @@
     <!-- Cuenta -->
     @if (cuentas().length > 0) {
       <div class="flex flex-wrap items-center gap-2">
-        <span class="text-xs uppercase tracking-wide w-20 shrink-0" style="color:var(--text-faint)">Cuenta</span>
+        <span class="text-xs uppercase tracking-wide sm:w-20 sm:shrink-0 max-sm:w-full" style="color:var(--text-faint)">Cuenta</span>
         @for (c of cuentas(); track c.id) {
           @let activa = filtroCuentas().includes(c.id);
           <button
@@ -134,7 +131,7 @@
 
     <!-- Rango de fechas -->
     <div class="flex flex-wrap items-center gap-2">
-      <span class="text-xs uppercase tracking-wide w-20 shrink-0" style="color:var(--text-faint)">Fechas</span>
+      <span class="text-xs uppercase tracking-wide sm:w-20 sm:shrink-0 max-sm:w-full" style="color:var(--text-faint)">Fechas</span>
       <label class="sr-only" for="filtro-desde">Fecha desde</label>
       <input id="filtro-desde" type="date" [value]="filtroDesde()" (input)="filtroDesde.set($any($event.target).value)"
         class="px-2 py-1 text-xs rounded-lg" style="background:var(--surface);border:1px solid var(--border);color:var(--text-body)" />
@@ -144,10 +141,8 @@
         class="px-2 py-1 text-xs rounded-lg" style="background:var(--surface);border:1px solid var(--border);color:var(--text-body)" />
       @for (p of presets; track p.valor) {
         <button type="button" (click)="aplicarPreset(p.valor)"
-          class="px-2.5 py-1 text-xs rounded-full transition-colors duration-150"
-          style="color:var(--text-muted);border:1px solid var(--border)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--surface)'"
-          (mouseleave)="$any($event.currentTarget).style.background=''">
+          class="px-2.5 py-1 text-xs rounded-full transition-colors duration-150 hover:bg-[var(--surface)]"
+          style="color:var(--text-muted);border:1px solid var(--border)">
           {{ p.etiqueta }}
         </button>
       }
@@ -156,9 +151,7 @@
     @if (hayFiltro()) {
       <div class="flex justify-end">
         <button type="button" (click)="limpiarFiltros()"
-          class="flex items-center gap-1 text-xs transition-colors duration-150" style="color:var(--text-faint)"
-          (mouseenter)="$any($event.currentTarget).style.color='var(--danger)'"
-          (mouseleave)="$any($event.currentTarget).style.color='var(--text-faint)'">
+          class="flex items-center gap-1 text-xs transition-colors duration-150 text-[color:var(--text-faint)] hover:text-[color:var(--danger)]">
           <lucide-icon [img]="XIcon" class="w-3 h-3" />
           Limpiar filtros
         </button>
@@ -173,6 +166,90 @@
       <p>Sin movimientos registrados</p>
       <p class="text-xs mt-1">Registra ingresos, suplidos y honorarios de este caso</p>
     </div>
+  } @else if (bp.isMobile()) {
+    <div class="px-3 pt-3">
+      <label for="mov-orden" class="form-label">Ordenar por</label>
+      <select id="mov-orden" class="form-input w-full" (change)="establecerOrden($any($event.target).value)">
+        @for (o of opcionesOrden; track o.valor) {
+          <option [value]="o.valor" [selected]="valorOrden() === o.valor">{{ o.etiqueta }}</option>
+        }
+      </select>
+    </div>
+    @if (movimientosVisibles().length === 0) {
+      <div class="px-4 py-10 text-center text-sm" style="color:var(--text-faint)">
+        <p>Ningún movimiento coincide con los filtros</p>
+        <button type="button" (click)="limpiarFiltros()" class="text-xs mt-1 underline" style="color:var(--brand)">
+          Limpiar filtros
+        </button>
+      </div>
+    } @else {
+      <ul role="list" class="space-y-3 p-3">
+        @for (mov of movimientosVisibles(); track mov.id) {
+          <li>
+        <article class="rounded-xl p-3" style="background:var(--surface);border:1px solid var(--border-soft)">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <p class="text-sm font-medium break-words" style="color:var(--text-body)">{{ mov.concepto }}</p>
+              @if (mov.notas) {
+                <p class="text-xs break-words" style="color:var(--text-faint)">{{ mov.notas }}</p>
+              }
+            </div>
+            <div class="shrink-0 text-right">
+              <p class="text-sm font-semibold tabular-nums"
+                [style.color]="mov.esEntrada ? 'var(--success)' : 'var(--danger)'">
+                {{ mov.esEntrada ? '+' : '−' }}{{ mov.importe | number:'1.2-2' }} €
+              </p>
+              @if (mov.cuotaIva) {
+                <p class="text-xs" style="color:var(--text-faint)">
+                  base {{ mov.baseImponible | number:'1.2-2' }} · IVA {{ mov.cuotaIva | number:'1.2-2' }}
+                  @if (mov.tipoIva) { ({{ mov.tipoIva }}%) }
+                </p>
+              } @else if (mov.ivaExento) {
+                <p class="text-xs" style="color:var(--text-faint)">exento</p>
+              }
+            </div>
+          </div>
+          <div class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs" style="color:var(--text-muted)">
+            <span class="px-2 py-0.5 rounded-full font-medium"
+              [style.background]="getMovTipoStyle(mov.tipo).background"
+              [style.color]="getMovTipoStyle(mov.tipo).color">{{ mov.tipo }}</span>
+            <span>{{ mov.fecha }}</span>
+            @if (mov.cuentaId && cuentaMap().get(mov.cuentaId); as nombre) {
+              <span class="px-2 py-0.5 rounded-full font-medium" style="background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand)">{{ nombre }}</span>
+            }
+          </div>
+          <div class="mt-2 flex items-center justify-between gap-2">
+            <p class="text-xs" style="color:var(--text-muted)">
+              {{ miembros().get(mov.createdBy) ?? '—' }}
+              @if (mov.updatedBy) {
+                <span class="block" style="color:var(--text-faint)">
+                  editado · {{ miembros().get(mov.updatedBy) ?? '—' }}
+                </span>
+              }
+            </p>
+            @if (confirmingDeleteMovId() === mov.id) {
+              <div class="flex items-center gap-1">
+                <span class="text-xs" style="color:var(--danger)">¿Seguro?</span>
+                <button (click)="confirmDeleteMov(mov.id)"
+                  class="tap-target inline-flex items-center justify-center rounded p-1 transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)]"
+                  aria-label="Confirmar eliminación del movimiento">
+                  <lucide-icon [img]="CheckIcon" class="w-4 h-4" style="color:var(--danger)" />
+                </button>
+                <button (click)="cancelDeleteMov()"
+                  class="tap-target inline-flex items-center justify-center rounded p-1 transition-colors duration-150 hover:bg-[var(--surface-2)]"
+                  aria-label="Cancelar">
+                  <lucide-icon [img]="XIcon" class="w-4 h-4" style="color:var(--text-muted)" />
+                </button>
+              </div>
+            } @else if (acciones().length > 0) {
+              <app-action-menu [actions]="acciones()" [label]="'Acciones de ' + mov.concepto" (selected)="ejecutar($event, mov)" />
+            }
+          </div>
+        </article>
+          </li>
+        }
+      </ul>
+    }
   } @else {
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
@@ -201,9 +278,7 @@
         </thead>
         <tbody>
           @for (mov of movimientosVisibles(); track mov.id) {
-            <tr class="group transition-colors duration-150"
-              (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-              (mouseleave)="$any($event.currentTarget).style.background=''"
+            <tr class="group transition-colors duration-150 hover:bg-[var(--surface-2)]"
               style="border-bottom:1px solid var(--border-soft)">
               <td class="px-4 py-3">
                 <p style="color:var(--text-body)">{{ mov.concepto }}</p>
@@ -250,9 +325,7 @@
               <td class="px-4 py-3 text-right whitespace-nowrap">
                 @if (canEdit()) {
                   <button (click)="editMov.emit(mov)"
-                    class="p-1 rounded opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-colors duration-150"
-                    (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-                    (mouseleave)="$any($event.currentTarget).style.background=''"
+                    class="p-1 rounded opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-colors duration-150 hover:bg-[var(--surface-2)]"
                     [attr.aria-label]="'Editar el movimiento ' + mov.concepto">
                     <lucide-icon [img]="PencilIcon" class="w-3.5 h-3.5" style="color:var(--text-faint)" />
                   </button>
@@ -261,24 +334,18 @@
                   @if (confirmingDeleteMovId() === mov.id) {
                     <span class="text-xs mr-1" style="color:var(--danger)">¿Seguro?</span>
                     <button (click)="confirmDeleteMov(mov.id)"
-                      class="p-1 rounded transition-colors duration-150"
-                      (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)'"
-                      (mouseleave)="$any($event.currentTarget).style.background=''"
+                      class="p-1 rounded transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)]"
                       aria-label="Confirmar eliminación del movimiento">
                       <lucide-icon [img]="CheckIcon" class="w-3.5 h-3.5" style="color:var(--danger)" />
                     </button>
                     <button (click)="cancelDeleteMov()"
-                      class="p-1 rounded transition-colors duration-150"
-                      (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-                      (mouseleave)="$any($event.currentTarget).style.background=''"
+                      class="p-1 rounded transition-colors duration-150 hover:bg-[var(--surface-2)]"
                       aria-label="Cancelar">
                       <lucide-icon [img]="XIcon" class="w-3.5 h-3.5" style="color:var(--text-faint)" />
                     </button>
                   } @else {
                     <button (click)="requestDeleteMov(mov.id)"
-                      class="p-1 rounded opacity-0 group-hover:opacity-100 transition-colors duration-150"
-                      (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)'"
-                      (mouseleave)="$any($event.currentTarget).style.background=''"
+                      class="p-1 rounded opacity-0 group-hover:opacity-100 transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)]"
                       aria-label="Eliminar movimiento">
                       <lucide-icon [img]="Trash2Icon" class="w-3.5 h-3.5" style="color:color-mix(in srgb,var(--danger) 70%,transparent)" />
                     </button>
