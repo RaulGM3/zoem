@@ -6,10 +6,11 @@ import type { Contact } from '../../../../interfaces';
 import { getContactDisplayName } from '../../../../interfaces';
 import { ContactService } from '../../../../core/services/contact.service';
 import { UsersService } from '../../../../core/services/users';
+import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 
 @Component({
   selector: 'app-nuevo-caso-drawer',
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, OverlayShellComponent],
   templateUrl: './nuevo-caso-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
