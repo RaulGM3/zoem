@@ -24,7 +24,7 @@
           rel="noopener"
           download
           (click)="downloaded.emit()"
-          class="tap-target inline-flex items-center justify-center p-1.5 rounded-lg transition-colors duration-150 hover:bg-[var(--surface-2)]"
+          class="max-sm:tap-target inline-flex items-center justify-center p-1.5 rounded-lg transition-colors duration-150 hover:bg-[var(--surface-2)]"
           style="color:var(--text-muted)"
           aria-label="Descargar"
         >
@@ -33,12 +33,12 @@
       }
       @if (canDelete() && confirmingDelete()) {
         <button (click)="deleteConfirmed.emit()"
-          class="tap-target inline-flex items-center justify-center p-1.5 rounded-lg transition-colors duration-150 text-[color:var(--danger)] hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)]"
+          class="max-sm:tap-target inline-flex items-center justify-center p-1.5 rounded-lg transition-colors duration-150 text-[color:var(--danger)] hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)]"
           aria-label="Confirmar borrado">
           <lucide-icon [img]="CheckIcon" class="w-4 h-4" />
         </button>
         <button (click)="deleteCancelled.emit()"
-          class="tap-target inline-flex items-center justify-center p-1.5 rounded-lg transition-colors duration-150 text-[color:var(--text-muted)] hover:bg-[var(--surface-2)]"
+          class="max-sm:tap-target inline-flex items-center justify-center p-1.5 rounded-lg transition-colors duration-150 text-[color:var(--text-muted)] hover:bg-[var(--surface-2)]"
           aria-label="Cancelar">
           <lucide-icon [img]="XIcon" class="w-4 h-4" />
         </button>

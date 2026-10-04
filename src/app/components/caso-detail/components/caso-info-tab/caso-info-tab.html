@@ -49,12 +49,12 @@
 
     <div class="flex gap-2 pt-2">
       <button (click)="cancelEdit.emit()"
-        class="tap-target px-4 py-2 text-sm rounded-lg transition-colors duration-150 hover:bg-[var(--surface-2)]"
+        class="max-sm:tap-target px-4 py-2 text-sm rounded-lg transition-colors duration-150 hover:bg-[var(--surface-2)]"
         style="border:1px solid var(--border);color:var(--text-muted)">
         Cancelar
       </button>
       <button (click)="submit()" [disabled]="saving() || !editTitulo().trim()"
-        class="tap-target px-4 py-2 text-sm rounded-lg text-white bg-[var(--brand)] transition-colors duration-150 hover:bg-[var(--brand-hover)] disabled:opacity-50">
+        class="max-sm:tap-target px-4 py-2 text-sm rounded-lg text-white bg-[var(--brand)] transition-colors duration-150 hover:bg-[var(--brand-hover)] disabled:opacity-50">
         {{ saving() ? 'Guardando...' : 'Guardar' }}
       </button>
     </div>
@@ -111,7 +111,7 @@
                 </div>
                 @if (canEdit()) {
                   <button (click)="askRemoveContact(c)"
-                    class="tap-target inline-flex items-center justify-center p-1 rounded transition-colors duration-150 shrink-0 text-[color:var(--text-faint)] hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] hover:text-[color:var(--danger)]"
+                    class="max-sm:tap-target inline-flex items-center justify-center p-1 rounded transition-colors duration-150 shrink-0 text-[color:var(--text-faint)] hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] hover:text-[color:var(--danger)]"
                     [attr.aria-label]="'Quitar ' + displayName(c)">
                     <lucide-icon [img]="XIcon" class="w-3.5 h-3.5" />
                   </button>
@@ -204,14 +204,14 @@
       </p>
       <div class="mt-5 flex gap-3 justify-end">
         <button
-          class="tap-target px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-150 bg-[var(--surface-2)] hover:bg-[var(--border)]"
+          class="max-sm:tap-target px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-150 bg-[var(--surface-2)] hover:bg-[var(--border)]"
           style="color:var(--text-body)"
           (click)="cancelRemoveContact()"
         >
           Cancelar
         </button>
         <button
-          class="tap-target px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors duration-150 bg-[var(--danger)] hover:brightness-90"
+          class="max-sm:tap-target px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors duration-150 bg-[var(--danger)] hover:brightness-90"
           (click)="confirmRemoveContact()"
         >
           Quitar

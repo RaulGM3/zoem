@@ -57,7 +57,7 @@ describe('CasoResumenFinancieroComponent — móvil', () => {
 
   it('el disparador tiene área táctil', async () => {
     await montar(true);
-    expect(disparador().classList.contains('tap-target')).toBe(true);
+    expect(disparador().classList.contains('max-sm:tap-target')).toBe(true);
   });
 
   it('móvil: sin violaciones axe', async () => {

@@ -22,7 +22,7 @@
         <span class="px-2 py-0.5 text-xs rounded-full font-medium" style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">Generado</span>
         <button
           (click)="generate.emit()"
-          class="tap-target flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors duration-150 hover:bg-[var(--surface-2)]"
+          class="max-sm:tap-target flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors duration-150 hover:bg-[var(--surface-2)]"
           style="border:1px solid var(--border);color:var(--text-muted)"
         >
           <lucide-icon [img]="EyeIcon" class="w-3.5 h-3.5" />
@@ -33,7 +33,7 @@
         @if (canEdit()) {
           <button
             (click)="generate.emit()"
-            class="tap-target flex items-center gap-1.5 px-3 py-1.5 text-xs text-white rounded-lg transition-colors duration-150 bg-[var(--brand)] hover:bg-[var(--brand-hover)]"
+            class="max-sm:tap-target flex items-center gap-1.5 px-3 py-1.5 text-xs text-white rounded-lg transition-colors duration-150 bg-[var(--brand)] hover:bg-[var(--brand-hover)]"
           >
             <lucide-icon [img]="FilePenIcon" class="w-3.5 h-3.5" />
             Rellenar
@@ -95,7 +95,7 @@
         <button
           (click)="triggerUpload()"
           [disabled]="uploading()"
-          class="tap-target flex items-center gap-1.5 px-3 py-1.5 text-xs text-white rounded-lg transition-colors duration-150 disabled:opacity-50 bg-[var(--brand)] hover:bg-[var(--brand-hover)]"
+          class="max-sm:tap-target flex items-center gap-1.5 px-3 py-1.5 text-xs text-white rounded-lg transition-colors duration-150 disabled:opacity-50 bg-[var(--brand)] hover:bg-[var(--brand-hover)]"
         >
           @if (uploading()) {
             <lucide-icon [img]="LoaderIcon" class="w-3.5 h-3.5 animate-spin" />

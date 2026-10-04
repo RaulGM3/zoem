@@ -46,9 +46,9 @@ describe('CasoCostosPrevistosComponent — móvil', () => {
   it('los botones de acción tienen área táctil', async () => {
     await montar(true);
     const registrar = Array.from(el().querySelectorAll('button')).find((b) => b.textContent!.trim() === 'Registrar')!;
-    expect(registrar.classList.contains('tap-target')).toBe(true);
+    expect(registrar.classList.contains('max-sm:tap-target')).toBe(true);
     const quitar = el().querySelector<HTMLElement>('[aria-label="Eliminar movimiento registrado"]')!;
-    expect(quitar.classList.contains('tap-target')).toBe(true);
+    expect(quitar.classList.contains('max-sm:tap-target')).toBe(true);
   });
 
   it('la cabecera con progreso envuelve en móvil', async () => {

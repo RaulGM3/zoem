@@ -30,7 +30,7 @@
           (click)="mostrarFiltros.set(!mostrarFiltros())"
           [attr.aria-expanded]="mostrarFiltros()"
           aria-controls="mov-filtros"
-          class="tap-target flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors duration-150"
+          class="max-sm:tap-target flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors duration-150"
           [style.background]="hayFiltro() ? 'color-mix(in srgb,var(--brand) 12%,transparent)' : 'transparent'"
           [style.color]="hayFiltro() ? 'var(--brand)' : 'var(--text-muted)'"
           [style.border]="'1px solid ' + (hayFiltro() ? 'transparent' : 'var(--border)')"
@@ -42,7 +42,7 @@
 
       @if (canEdit()) {
         <button (click)="addMov.emit()"
-          class="tap-target flex items-center gap-1.5 px-3 py-1.5 text-sm text-white rounded-lg transition-colors duration-150 bg-[var(--brand)] hover:bg-[var(--brand-hover)]">
+          class="max-sm:tap-target flex items-center gap-1.5 px-3 py-1.5 text-sm text-white rounded-lg transition-colors duration-150 bg-[var(--brand)] hover:bg-[var(--brand-hover)]">
           <lucide-icon [img]="PlusIcon" class="w-3.5 h-3.5" />
           Añadir
         </button>
@@ -231,12 +231,12 @@
               <div class="flex items-center gap-1">
                 <span class="text-xs" style="color:var(--danger)">¿Seguro?</span>
                 <button (click)="confirmDeleteMov(mov.id)"
-                  class="tap-target inline-flex items-center justify-center rounded p-1 transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)]"
+                  class="max-sm:tap-target inline-flex items-center justify-center rounded p-1 transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)]"
                   aria-label="Confirmar eliminación del movimiento">
                   <lucide-icon [img]="CheckIcon" class="w-4 h-4" style="color:var(--danger)" />
                 </button>
                 <button (click)="cancelDeleteMov()"
-                  class="tap-target inline-flex items-center justify-center rounded p-1 transition-colors duration-150 hover:bg-[var(--surface-2)]"
+                  class="max-sm:tap-target inline-flex items-center justify-center rounded p-1 transition-colors duration-150 hover:bg-[var(--surface-2)]"
                   aria-label="Cancelar">
                   <lucide-icon [img]="XIcon" class="w-4 h-4" style="color:var(--text-muted)" />
                 </button>

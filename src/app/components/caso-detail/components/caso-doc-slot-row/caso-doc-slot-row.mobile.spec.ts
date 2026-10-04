@@ -82,7 +82,7 @@ describe('CasoDocSlotRowComponent — móvil', () => {
   it('móvil: el botón principal "Subir" tiene área táctil', async () => {
     await montar(true, slot({ status: 'pendiente' }));
     const subir = Array.from(el().querySelectorAll('button')).find((b) => b.textContent?.includes('Subir'))!;
-    expect(subir.classList.contains('tap-target')).toBe(true);
+    expect(subir.classList.contains('max-sm:tap-target')).toBe(true);
   });
 
   it('la fila se apila en móvil y se alinea en fila desde sm', async () => {

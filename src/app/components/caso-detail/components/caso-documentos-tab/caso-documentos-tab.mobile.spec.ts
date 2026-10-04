@@ -95,7 +95,7 @@ describe('CasoDocumentosTabComponent — móvil', () => {
     const del = el().querySelector<HTMLButtonElement>('button[aria-label="Eliminar carpeta"]')!;
     expect(del.classList.contains('opacity-0')).toBe(false);
     expect(del.classList.contains('sm:opacity-0')).toBe(true);
-    expect(del.classList.contains('tap-target')).toBe(true);
+    expect(del.classList.contains('max-sm:tap-target')).toBe(true);
   });
 
   it('la barra de acciones envuelve en móvil', async () => {

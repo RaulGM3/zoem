@@ -23,7 +23,7 @@
           (click)="desgloseAbierto.set(!desgloseAbierto())"
           (mouseenter)="abrirPorHover()"
           (focus)="abrirPorHover()"
-          class="tap-target inline-flex items-center justify-center -m-2.5 p-1 rounded-md transition-colors duration-150"
+          class="max-sm:tap-target inline-flex items-center justify-center -m-2.5 p-1 rounded-md transition-colors duration-150"
           [style.color]="desgloseAbierto() ? 'var(--text-body)' : 'var(--text-faint)'"
         >
           <lucide-icon [img]="InfoIcon" class="w-3.5 h-3.5" />
@@ -56,7 +56,7 @@
           <button
             type="button"
             (click)="seleccionarTipo(t.tipo)"
-            class="tap-target w-full flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors duration-150 hover:bg-[var(--surface-2)]"
+            class="max-sm:tap-target w-full flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors duration-150 hover:bg-[var(--surface-2)]"
             [attr.aria-label]="'Filtrar movimientos por ' + t.etiqueta"
           >
             <span class="h-2 w-2 shrink-0 rounded-full" [style.background]="t.color"></span>

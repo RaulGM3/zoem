@@ -73,7 +73,7 @@ describe('CasoDocFileRowComponent — móvil', () => {
   it('móvil: pidiendo confirmación se muestran confirmar/cancelar con área táctil', async () => {
     await montar(true, file(), { confirmingDelete: true });
     expect(el().querySelector('button[aria-label="Confirmar borrado"]')).not.toBeNull();
-    expect(el().querySelector('button[aria-label="Cancelar"]')!.classList.contains('tap-target')).toBe(true);
+    expect(el().querySelector('button[aria-label="Cancelar"]')!.classList.contains('max-sm:tap-target')).toBe(true);
     expect(el().querySelector('button[aria-haspopup="menu"]')).toBeNull();
   });
 
