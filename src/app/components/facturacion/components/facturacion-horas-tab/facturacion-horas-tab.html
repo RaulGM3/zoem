@@ -1,5 +1,5 @@
 <div class="p-5 space-y-4">
-  <div class="grid grid-cols-3 gap-3">
+  <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
     <div class="p-3 rounded-lg text-center" style="background:var(--surface-2)">
       <p class="text-xs" style="color:var(--text-muted)">Horas totales</p>
       <p class="text-xl font-semibold tabular-nums" style="color:var(--text-strong);font-family:var(--font-display)">{{ totalHoras() | number:'1.0-1' }}h</p>
@@ -14,6 +14,8 @@
     </div>
   </div>
 
+  <app-responsive-list [items]="horasFlat()" trackBy="id" emptyText="No hay registros de horas declaradas">
+  <ng-template [appListTable]="horasFlat()" let-rows>
   <div class="overflow-x-auto">
     <table class="w-full text-sm">
       <thead>
@@ -27,10 +29,8 @@
         </tr>
       </thead>
       <tbody>
-        @for (hora of horasFlat(); track hora.id) {
-          <tr class="transition-colors duration-150" style="border-bottom:1px solid var(--border-soft)"
-            (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-            (mouseleave)="$any($event.currentTarget).style.background=''">
+        @for (hora of rows; track hora.id) {
+          <tr class="transition-colors duration-150 hover:bg-[var(--surface-2)]" style="border-bottom:1px solid var(--border-soft)">
             <td class="py-3 text-xs" style="color:var(--text-muted)">{{ hora.fecha }}</td>
             <td class="py-3">
               <p class="font-medium" style="color:var(--text-strong)">{{ hora.casoTitulo }}</p>
@@ -50,14 +50,32 @@
             </td>
           </tr>
         }
-        @if (horasFlat().length === 0) {
-          <tr>
-            <td colspan="6" class="py-12 text-center text-sm" style="color:var(--text-faint)">
-              No hay registros de horas declaradas
-            </td>
-          </tr>
-        }
       </tbody>
     </table>
   </div>
+  </ng-template>
+
+  <ng-template [appListCard]="horasFlat()" let-hora>
+    <article class="rounded-xl p-3" style="border:1px solid var(--border);background:var(--surface)">
+      <div class="flex items-start justify-between gap-2">
+        <div class="min-w-0">
+          <p class="truncate font-medium" style="color:var(--text-strong)">{{ hora.casoTitulo }}</p>
+          <p class="truncate text-xs" style="color:var(--text-faint)">{{ hora.hitoTitulo }}</p>
+        </div>
+        <span class="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium"
+          [style.background]="hora.facturado ? 'color-mix(in srgb,var(--success) 12%,transparent)' : 'color-mix(in srgb,var(--warning) 12%,transparent)'"
+          [style.color]="hora.facturado ? 'var(--success)' : 'var(--warning)'">
+          {{ hora.facturado ? 'Facturado' : 'Pendiente' }}
+        </span>
+      </div>
+      <div class="mt-2 flex items-end justify-between gap-2">
+        <p class="text-xs" style="color:var(--text-muted)">{{ hora.fecha }} · {{ hora.memberName }}</p>
+        <p class="text-right tabular-nums" style="font-family:var(--font-mono)">
+          <span class="font-semibold" style="color:var(--text-strong)">{{ hora.horas | number:'1.0-1' }}h</span>
+          <span class="ml-2 text-sm" style="color:var(--text-body)">{{ hora.importe != null ? (hora.importe | number:'1.0-0') + ' €' : '—' }}</span>
+        </p>
+      </div>
+    </article>
+  </ng-template>
+  </app-responsive-list>
 </div>

@@ -1,5 +1,10 @@
 import { Component, ChangeDetectionStrategy, input } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+import {
+  ListCardDirective,
+  ListTableDirective,
+  ResponsiveListComponent,
+} from '../../../../shared/components/responsive-list/responsive-list';
 
 export interface HoraFlat {
   id: string;
@@ -18,7 +23,7 @@ export interface HoraFlat {
 @Component({
   selector: 'app-facturacion-horas-tab',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, ResponsiveListComponent, ListCardDirective, ListTableDirective],
   templateUrl: './facturacion-horas-tab.html',
 })
 export class FacturacionHorasTabComponent {
