@@ -6,9 +6,12 @@ import { provideAppCheck, initializeAppCheck, ReCaptchaEnterpriseProvider } from
 import { provideAuth, getAuth, connectAuthEmulator } from '@angular/fire/auth';
 import { provideFirestore, getFirestore, connectFirestoreEmulator } from '@angular/fire/firestore';
 import { provideStorage, getStorage, connectStorageEmulator } from '@angular/fire/storage';
+import { provideMessaging, getMessaging } from '@angular/fire/messaging';
 import { provideFunctions, getFunctions, connectFunctionsEmulator } from '@angular/fire/functions';
 
+import { Capacitor } from '@capacitor/core';
 import { routes } from './app.routes';
+import { shouldProvideWebMessaging } from './core/firebase/messaging-providers';
 import { environment } from '../environments/environment';
 
 // Región de Cloud Functions (debe coincidir con setGlobalOptions del backend).
@@ -65,5 +68,9 @@ export const appConfig: ApplicationConfig = {
       }
       return functions;
     }),
+    // Web push (FCM): solo navegador con Service Worker; nativo usa @capacitor/push-notifications.
+    ...(shouldProvideWebMessaging(Capacitor.isNativePlatform(), typeof navigator === 'undefined' ? undefined : navigator)
+      ? [provideMessaging(() => getMessaging())]
+      : []),
   ],
 };
