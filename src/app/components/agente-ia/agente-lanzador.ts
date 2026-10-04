@@ -39,11 +39,11 @@ import { AgentePanelComponent } from './agente-panel';
         (click)="alternar()"
         [attr.aria-expanded]="abierto()"
         [attr.aria-label]="abierto() ? 'Cerrar el asistente Vertey IA' : 'Abrir el asistente Vertey IA'"
-        class="fixed bottom-6 right-6 z-30 w-14 h-14 flex items-center justify-center rounded-full
+        class="fixed z-30 w-14 h-14 flex items-center justify-center rounded-full
                text-on-ia shadow-lg transition-transform hover:scale-105
                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
                focus-visible:ring-[var(--accent-ia)] focus-visible:ring-offset-[var(--bg)]"
-        style="background:var(--ia-solid)"
+        style="background:var(--ia-solid);bottom:calc(1.5rem + env(safe-area-inset-bottom, 0px));right:calc(1.5rem + env(safe-area-inset-right, 0px))"
       >
         <lucide-icon [img]="BotIcon" class="w-6 h-6" aria-hidden="true" />
       </button>
