@@ -1,29 +1,29 @@
 @let slot = this.slot();
 @let completado = slot.status === 'subido' || slot.status === 'generado';
-<div class="flex items-center gap-3 px-4 py-3" style="border-bottom:1px solid var(--border-soft)">
-  <lucide-icon
-    [img]="completado ? CheckCircle2Icon : (slot.docTemplateId ? FilePenIcon : FileTextIcon)"
-    class="w-5 h-5 shrink-0"
-    [style.color]="completado ? 'var(--success)' : (slot.docTemplateId ? 'var(--accent-ia)' : 'var(--text-faint)')"
-  />
-  <div class="flex-1 min-w-0">
-    <p class="text-sm font-medium truncate" style="color:var(--text-body)">{{ slot.name }}</p>
-    @if (slot.description) {
-      <p class="text-xs truncate" style="color:var(--text-faint)">{{ slot.description }}</p>
-    }
+<div class="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-3" style="border-bottom:1px solid var(--border-soft)">
+  <div class="flex flex-1 min-w-0 items-center gap-3">
+    <lucide-icon
+      [img]="completado ? CheckCircle2Icon : (slot.docTemplateId ? FilePenIcon : FileTextIcon)"
+      class="w-5 h-5 shrink-0"
+      [style.color]="completado ? 'var(--success)' : (slot.docTemplateId ? 'var(--accent-ia)' : 'var(--text-faint)')"
+    />
+    <div class="flex-1 min-w-0">
+      <p class="text-sm font-medium break-words sm:truncate" style="color:var(--text-body)">{{ slot.name }}</p>
+      @if (slot.description) {
+        <p class="text-xs break-words sm:truncate" style="color:var(--text-faint)">{{ slot.description }}</p>
+      }
+    </div>
   </div>
 
-  <div class="flex items-center gap-2 shrink-0">
+  <div class="flex items-center justify-end gap-2 sm:shrink-0">
     @if (slot.docTemplateId) {
       <!-- Documento generable desde plantilla: rellenar y congelar -->
       @if (slot.status === 'generado') {
         <span class="px-2 py-0.5 text-xs rounded-full font-medium" style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">Generado</span>
         <button
           (click)="generate.emit()"
-          class="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors duration-150"
+          class="tap-target flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors duration-150 hover:bg-[var(--surface-2)]"
           style="border:1px solid var(--border);color:var(--text-muted)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-          (mouseleave)="$any($event.currentTarget).style.background=''"
         >
           <lucide-icon [img]="EyeIcon" class="w-3.5 h-3.5" />
           Ver
@@ -33,10 +33,7 @@
         @if (canEdit()) {
           <button
             (click)="generate.emit()"
-            class="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white rounded-lg transition-colors duration-150"
-            style="background:var(--brand)"
-            (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-            (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'"
+            class="tap-target flex items-center gap-1.5 px-3 py-1.5 text-xs text-white rounded-lg transition-colors duration-150 bg-[var(--brand)] hover:bg-[var(--brand-hover)]"
           >
             <lucide-icon [img]="FilePenIcon" class="w-3.5 h-3.5" />
             Rellenar
@@ -48,56 +45,49 @@
       @if ((slot.version ?? 1) > 1) {
         <span class="px-1.5 py-0.5 text-[10px] font-bold rounded" style="background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand)">v{{ slot.version }}</span>
       }
-      @if (slot.downloadUrl || (slot.clasificado && slot.storagePath)) {
+      @if (bp.isMobile()) {
+        <app-action-menu [actions]="acciones()" label="Acciones del documento" (selected)="ejecutar($event)" />
+      } @else {
+        @if (slot.downloadUrl || (slot.clasificado && slot.storagePath)) {
+          <button
+            (click)="preview.emit()"
+            [class]="iconBtn"
+            aria-label="Previsualizar"
+          >
+            <lucide-icon [img]="EyeIcon" class="w-4 h-4" />
+          </button>
+        }
         <button
-          (click)="preview.emit()"
-          class="p-1.5 rounded-lg transition-colors duration-150"
-          style="color:var(--text-faint)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-muted)'"
-          (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
-          aria-label="Previsualizar"
+          (click)="history.emit()"
+          [class]="iconBtn"
+          aria-label="Ver historial"
         >
-          <lucide-icon [img]="EyeIcon" class="w-4 h-4" />
+          <lucide-icon [img]="HistoryIcon" class="w-4 h-4" />
         </button>
-      }
-      <button
-        (click)="history.emit()"
-        class="p-1.5 rounded-lg transition-colors duration-150"
-        style="color:var(--text-faint)"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-muted)'"
-        (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
-        aria-label="Ver historial"
-      >
-        <lucide-icon [img]="HistoryIcon" class="w-4 h-4" />
-      </button>
-      @if (isAdmin()) {
-        <button
-          (click)="access.emit()"
-          class="p-1.5 rounded-lg transition-colors duration-150"
-          [style.color]="slot.clasificado ? 'var(--warning)' : 'var(--text-faint)'"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-          (mouseleave)="$any($event.currentTarget).style.background=''"
-          aria-label="Gestionar acceso"
-        >
-          <lucide-icon [img]="LockIcon" class="w-4 h-4" />
-        </button>
-      }
-      @if (canDelete()) {
-        <button
-          (click)="remove.emit()"
-          [disabled]="uploading()"
-          class="p-1.5 rounded-lg transition-colors duration-150 disabled:opacity-50"
-          style="color:var(--text-faint)"
-          (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)';$any($event.currentTarget).style.color='var(--danger)'"
-          (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
-          aria-label="Quitar documento"
-        >
-          @if (uploading()) {
-            <lucide-icon [img]="LoaderIcon" class="w-4 h-4 animate-spin" />
-          } @else {
-            <lucide-icon [img]="Trash2Icon" class="w-4 h-4" />
-          }
-        </button>
+        @if (isAdmin()) {
+          <button
+            (click)="access.emit()"
+            [class]="iconBtn"
+            [style.color]="slot.clasificado ? 'var(--warning)' : null"
+            aria-label="Gestionar acceso"
+          >
+            <lucide-icon [img]="LockIcon" class="w-4 h-4" />
+          </button>
+        }
+        @if (canDelete()) {
+          <button
+            (click)="remove.emit()"
+            [disabled]="uploading()"
+            class="p-1.5 rounded-lg transition-colors duration-150 disabled:opacity-50 text-[color:var(--text-faint)] hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] hover:text-[color:var(--danger)]"
+            aria-label="Quitar documento"
+          >
+            @if (uploading()) {
+              <lucide-icon [img]="LoaderIcon" class="w-4 h-4 animate-spin" />
+            } @else {
+              <lucide-icon [img]="Trash2Icon" class="w-4 h-4" />
+            }
+          </button>
+        }
       }
     } @else {
       <span class="px-2 py-0.5 text-xs rounded-full font-medium" style="background:color-mix(in srgb,var(--warning) 12%,transparent);color:var(--warning)">Pendiente</span>
@@ -105,10 +95,7 @@
         <button
           (click)="triggerUpload()"
           [disabled]="uploading()"
-          class="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white rounded-lg transition-colors duration-150 disabled:opacity-50"
-          style="background:var(--brand)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-          (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'"
+          class="tap-target flex items-center gap-1.5 px-3 py-1.5 text-xs text-white rounded-lg transition-colors duration-150 disabled:opacity-50 bg-[var(--brand)] hover:bg-[var(--brand-hover)]"
         >
           @if (uploading()) {
             <lucide-icon [img]="LoaderIcon" class="w-3.5 h-3.5 animate-spin" />
@@ -121,10 +108,11 @@
         <input
           type="file"
           #fileInput
-        [id]="'upload-slot-' + slot.id"
+          [id]="'upload-slot-' + slot.id"
           class="hidden"
           (change)="onFileSelected($event)"
           aria-hidden="true"
+          tabindex="-1"
         />
       }
     }
