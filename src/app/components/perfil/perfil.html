@@ -98,6 +98,12 @@
           [style.border-bottom]="activeTab() === 'profesional' ? '2px solid var(--brand)' : '2px solid transparent'">
           Profesional
         </button>
+        <button (click)="activeTab.set('notificaciones')" data-test="tab-notificaciones"
+          class="px-5 py-3 text-sm font-medium transition-colors"
+          [style.color]="activeTab() === 'notificaciones' ? 'var(--brand)' : 'var(--text-muted)'"
+          [style.border-bottom]="activeTab() === 'notificaciones' ? '2px solid var(--brand)' : '2px solid transparent'">
+          Notificaciones
+        </button>
       </div>
 
       @if (activeTab() === 'personal') {
@@ -179,6 +185,10 @@
             </select>
           </div>
         </form>
+      }
+
+      @if (activeTab() === 'notificaciones') {
+        <app-notificaciones-prefs />
       }
     </div>
   </div>

@@ -4,12 +4,13 @@ import { LucideAngularModule, User, Building2, Briefcase, Save, CheckCircle2, Lo
 import { AuthService } from '../../auth/auth.service';
 import { UserSyncService } from '../../core/services/user-sync.service';
 import { ToastService } from '../../core/services/toast.service';
+import { NotificacionesPrefsComponent } from './notificaciones-prefs/notificaciones-prefs';
 
-type PerfilTab = 'personal' | 'despacho' | 'profesional';
+type PerfilTab = 'personal' | 'despacho' | 'profesional' | 'notificaciones';
 
 @Component({
   selector: 'app-perfil',
-  imports: [LucideAngularModule, ReactiveFormsModule],
+  imports: [LucideAngularModule, ReactiveFormsModule, NotificacionesPrefsComponent],
   templateUrl: './perfil.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
