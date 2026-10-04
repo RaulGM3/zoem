@@ -76,6 +76,15 @@ service cloud.firestore {
                     || (request.auth.uid == uid
                         && request.resource.data.isSuperUser == resource.data.isSuperUser);
       allow delete: if isSuper();
+
+      // Tokens FCM del dispositivo: solo el propio usuario los gestiona.
+      match /deviceTokens/{token} {
+        allow read, delete: if isSignedIn() && request.auth.uid == uid;
+        allow create, update: if isSignedIn() && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['token', 'platform', 'createdAt', 'lastSeenAt'])
+          && request.resource.data.token == token
+          && request.resource.data.platform in ['ios', 'android', 'web'];
+      }
     }
 
     // ====================================================================
@@ -306,6 +315,16 @@ service cloud.firestore {
         allow update: if isSuper() || isCompanyAdmin(cid)
                       || (canWrite(cid) && resource.data.get('deleted', false) != true);
         allow delete: if isSuper();
+      }
+
+      // ---- Notificaciones in-app (las crea solo el backend con Admin SDK) ---
+      // El destinatario las lee y solo puede marcar `leida`.
+      match /notificaciones/{notifId} {
+        allow read:   if isMember(cid) && resource.data.userId == request.auth.uid;
+        allow update: if isMember(cid) && resource.data.userId == request.auth.uid
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['leida'])
+                      && request.resource.data.leida is bool;
+        allow create, delete: if false;
       }
 
       // ---- Solicitudes de permiso al admin -----------------------------
