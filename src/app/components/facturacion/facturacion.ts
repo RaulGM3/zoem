@@ -17,6 +17,7 @@ import {
   escribirClienteEnContacto,
   type ClienteFactura,
 } from '../../core/facturacion/cliente-factura';
+import { BreakpointService } from '../../core/services/breakpoint.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { ToastService } from '../../core/services/toast.service';
 import { Caso, gestoriaCompleta, Hito } from '../../interfaces';
@@ -72,11 +73,25 @@ export class FacturacionComponent implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
+  protected readonly bp = inject(BreakpointService);
 
   readonly SettingsIcon = Settings;
   readonly PlusIcon = Plus;
 
+  readonly tabs: readonly { id: FacturacionTab; label: string }[] = [
+    { id: 'casos', label: 'Casos abiertos' },
+    { id: 'facturas', label: 'Facturas' },
+    { id: 'archivo', label: 'Archivo' },
+    { id: 'horas', label: 'Registro de Horas' },
+    { id: 'configuracion', label: 'Configuración' },
+  ];
+
   activeTab = signal<FacturacionTab>('casos');
+
+  protected seleccionarTab(id: string): void {
+    const tab = this.tabs.find((t) => t.id === id);
+    if (tab) this.activeTab.set(tab.id);
+  }
 
   // --- Config ---
   readonly savingConfig = signal(false);
