@@ -16,115 +16,123 @@
     }
   </div>
   <div class="flex items-center gap-2 shrink-0">
-    <button
-      (click)="preview.emit()"
-      class="p-1.5 rounded-lg transition-colors duration-150"
-      style="color:var(--text-faint)"
-      (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-muted)'"
-      (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
-      aria-label="Previsualizar"
-    >
-      <lucide-icon [img]="EyeIcon" class="w-4 h-4" />
-    </button>
-    @if (file.clasificado) {
-      <button
-        (click)="downloadClassified.emit()"
-        class="p-1.5 rounded-lg transition-colors duration-150"
-        style="color:var(--text-faint)"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-muted)'"
-        (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
-        aria-label="Descargar (documento clasificado)"
-      >
-        <lucide-icon [img]="DownloadIcon" class="w-4 h-4" />
-      </button>
-    } @else {
-      <a
-        [href]="file.downloadUrl"
-        target="_blank"
-        rel="noopener"
-        download
-        (click)="downloaded.emit()"
-        class="p-1.5 rounded-lg transition-colors duration-150"
-        style="color:var(--text-faint)"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-muted)'"
-        (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
-        aria-label="Descargar"
-      >
-        <lucide-icon [img]="DownloadIcon" class="w-4 h-4" />
-      </a>
-    }
-    @if (canEdit()) {
-      <button
-        (click)="triggerReupload()"
-        class="p-1.5 rounded-lg transition-colors duration-150"
-        style="color:var(--text-faint)"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-muted)'"
-        (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
-        aria-label="Subir nueva versión"
-      >
-        <lucide-icon [img]="RefreshCwIcon" class="w-4 h-4" />
-      </button>
-      <input
-        type="file"
-        #fileInput
-      [id]="'reupload-file-' + file.id"
-        class="hidden"
-        (change)="onReuploadSelected($event)"
-        aria-hidden="true"
-      />
-    }
-    <button
-      (click)="history.emit()"
-      class="p-1.5 rounded-lg transition-colors duration-150"
-      style="color:var(--text-faint)"
-      (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-muted)'"
-      (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
-      aria-label="Ver historial"
-    >
-      <lucide-icon [img]="HistoryIcon" class="w-4 h-4" />
-    </button>
-    @if (isAdmin()) {
-      <button
-        (click)="access.emit()"
-        class="p-1.5 rounded-lg transition-colors duration-150"
-        [style.color]="file.clasificado ? 'var(--warning)' : 'var(--text-faint)'"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-        (mouseleave)="$any($event.currentTarget).style.background=''"
-        aria-label="Gestionar acceso"
-      >
-        <lucide-icon [img]="LockIcon" class="w-4 h-4" />
-      </button>
-    }
-    @if (canDelete()) {
-      @if (confirmingDelete()) {
+    @if (bp.isMobile()) {
+      @if (!file.clasificado) {
+        <a
+          [href]="file.downloadUrl"
+          target="_blank"
+          rel="noopener"
+          download
+          (click)="downloaded.emit()"
+          class="tap-target inline-flex items-center justify-center p-1.5 rounded-lg transition-colors duration-150 hover:bg-[var(--surface-2)]"
+          style="color:var(--text-muted)"
+          aria-label="Descargar"
+        >
+          <lucide-icon [img]="DownloadIcon" class="w-4 h-4" />
+        </a>
+      }
+      @if (canDelete() && confirmingDelete()) {
         <button (click)="deleteConfirmed.emit()"
-          class="p-1.5 rounded-lg transition-colors duration-150"
-          style="color:var(--danger)"
-          (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)'"
-          (mouseleave)="$any($event.currentTarget).style.background=''"
+          class="tap-target inline-flex items-center justify-center p-1.5 rounded-lg transition-colors duration-150 text-[color:var(--danger)] hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)]"
           aria-label="Confirmar borrado">
           <lucide-icon [img]="CheckIcon" class="w-4 h-4" />
         </button>
         <button (click)="deleteCancelled.emit()"
-          class="p-1.5 rounded-lg transition-colors duration-150"
-          style="color:var(--text-faint)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-          (mouseleave)="$any($event.currentTarget).style.background=''"
+          class="tap-target inline-flex items-center justify-center p-1.5 rounded-lg transition-colors duration-150 text-[color:var(--text-muted)] hover:bg-[var(--surface-2)]"
           aria-label="Cancelar">
           <lucide-icon [img]="XIcon" class="w-4 h-4" />
         </button>
       } @else {
+        <app-action-menu [actions]="acciones()" label="Acciones del archivo" (selected)="ejecutar($event)" />
+      }
+    } @else {
+      <button
+        (click)="preview.emit()"
+        [class]="iconBtn"
+        aria-label="Previsualizar"
+      >
+        <lucide-icon [img]="EyeIcon" class="w-4 h-4" />
+      </button>
+      @if (file.clasificado) {
         <button
-          (click)="deleteRequested.emit()"
-          class="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-colors duration-150"
-          style="color:var(--text-faint)"
-          (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)';$any($event.currentTarget).style.color='var(--danger)'"
-          (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
-          aria-label="Eliminar archivo"
+          (click)="downloadClassified.emit()"
+          [class]="iconBtn"
+          aria-label="Descargar (documento clasificado)"
         >
-          <lucide-icon [img]="Trash2Icon" class="w-4 h-4" />
+          <lucide-icon [img]="DownloadIcon" class="w-4 h-4" />
+        </button>
+      } @else {
+        <a
+          [href]="file.downloadUrl"
+          target="_blank"
+          rel="noopener"
+          download
+          (click)="downloaded.emit()"
+          [class]="iconBtn"
+          aria-label="Descargar"
+        >
+          <lucide-icon [img]="DownloadIcon" class="w-4 h-4" />
+        </a>
+      }
+      @if (canEdit()) {
+        <button
+          (click)="triggerReupload()"
+          [class]="iconBtn"
+          aria-label="Subir nueva versión"
+        >
+          <lucide-icon [img]="RefreshCwIcon" class="w-4 h-4" />
         </button>
       }
+      <button
+        (click)="history.emit()"
+        [class]="iconBtn"
+        aria-label="Ver historial"
+      >
+        <lucide-icon [img]="HistoryIcon" class="w-4 h-4" />
+      </button>
+      @if (isAdmin()) {
+        <button
+          (click)="access.emit()"
+          [class]="iconBtn"
+          [style.color]="file.clasificado ? 'var(--warning)' : null"
+          aria-label="Gestionar acceso"
+        >
+          <lucide-icon [img]="LockIcon" class="w-4 h-4" />
+        </button>
+      }
+      @if (canDelete()) {
+        @if (confirmingDelete()) {
+          <button (click)="deleteConfirmed.emit()"
+            class="p-1.5 rounded-lg transition-colors duration-150 text-[color:var(--danger)] hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)]"
+            aria-label="Confirmar borrado">
+            <lucide-icon [img]="CheckIcon" class="w-4 h-4" />
+          </button>
+          <button (click)="deleteCancelled.emit()"
+            [class]="iconBtn"
+            aria-label="Cancelar">
+            <lucide-icon [img]="XIcon" class="w-4 h-4" />
+          </button>
+        } @else {
+          <button
+            (click)="deleteRequested.emit()"
+            class="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-colors duration-150 text-[color:var(--text-faint)] hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] hover:text-[color:var(--danger)]"
+            aria-label="Eliminar archivo"
+          >
+            <lucide-icon [img]="Trash2Icon" class="w-4 h-4" />
+          </button>
+        }
+      }
+    }
+    @if (canEdit()) {
+      <input
+        type="file"
+        #fileInput
+        [id]="'reupload-file-' + file.id"
+        class="hidden"
+        (change)="onReuploadSelected($event)"
+        aria-hidden="true"
+        tabindex="-1"
+      />
     }
   </div>
 </div>
