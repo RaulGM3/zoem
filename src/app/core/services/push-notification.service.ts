@@ -32,7 +32,7 @@ export class PushNotificationService {
   private readonly toast = inject(ToastService);
 
   /** Solo existe en web (app.config lo provee condicionalmente). */
-  private readonly messaging = inject(Messaging, { optional: true });
+  private readonly messaging = this.injectMessaging();
 
   private listenersRegistered = false;
   private savedToken: { uid: string; token: string } | null = null;
@@ -137,6 +137,16 @@ export class PushNotificationService {
       await deleteDoc(this.tokenRef(saved.uid, saved.token));
     } catch (err) {
       console.error('[push] no se pudo borrar el device token:', err);
+    }
+  }
+
+  /** getMessaging() lanza en navegadores no soportados: eso no debe romper la app. */
+  private injectMessaging(): Messaging | null {
+    try {
+      return inject(Messaging, { optional: true });
+    } catch (err) {
+      console.warn('[push] Firebase Messaging no disponible en este navegador:', err);
+      return null;
     }
   }
 

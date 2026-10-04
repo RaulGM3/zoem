@@ -106,6 +106,28 @@ describe('PushNotificationService (web)', () => {
       expect(setup({ withMessaging: false }).webSupported()).toBe(false);
     });
 
+    it('is false (no throw) when the Messaging provider fails to initialize', () => {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          { provide: PlatformService, useValue: WEB },
+          { provide: Auth, useValue: { currentUser: { uid: 'u1' } } },
+          { provide: Firestore, useValue: {} },
+          { provide: Router, useValue: { navigateByUrl: vi.fn() } },
+          { provide: ToastService, useValue: toast },
+          {
+            provide: Messaging,
+            useFactory: () => {
+              throw new Error('messaging/unsupported-browser');
+            },
+          },
+        ],
+      });
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      expect(TestBed.inject(PushNotificationService).webSupported()).toBe(false);
+      warn.mockRestore();
+    });
+
     it('is false without serviceWorker support', () => {
       Reflect.deleteProperty(navigator, 'serviceWorker');
       expect(setup().webSupported()).toBe(false);
