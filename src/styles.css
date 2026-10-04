@@ -211,12 +211,15 @@
   .kpi-card {
     transition: transform 0.16s ease, box-shadow 0.16s ease;
   }
-  .kpi-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 16px 30px -20px rgba(30, 45, 80, 0.3);
-  }
-  .dark .kpi-card:hover {
-    box-shadow: 0 16px 30px -20px rgba(77, 139, 255, 0.25);
+  /* Solo en dispositivos con hover real: en táctil el :hover queda "pegado" tras el tap. */
+  @media (hover: hover) {
+    .kpi-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 16px 30px -20px rgba(30, 45, 80, 0.3);
+    }
+    .dark .kpi-card:hover {
+      box-shadow: 0 16px 30px -20px rgba(77, 139, 255, 0.25);
+    }
   }
 
   /* ─── Pulse "En directo" ─── */
