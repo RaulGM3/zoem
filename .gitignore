@@ -47,6 +47,7 @@ Thumbs.db
 
 /dataconnect
 /src/environments/*
+!/src/environments/environment.example.ts
 /functions/node_modules
 /functions/lib
 .codemap
