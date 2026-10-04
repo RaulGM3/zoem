@@ -199,7 +199,7 @@ import type { LlamadaResumen } from '../../interfaces/llamada.interface';
                   <lucide-icon [img]="ClockIcon" [size]="12" aria-hidden="true" />
                   {{ formatDuration(llamada.duracionSegundos) }}
                 </span>
-                <span>{{ llamada.creadoEn?.toDate() | date: 'dd/MM/yyyy HH:mm' }}</span>
+                <span>{{ llamada.creadoEn.toDate() | date: 'dd/MM/yyyy HH:mm' }}</span>
               </p>
             </article>
           </ng-template>

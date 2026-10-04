@@ -1,4 +1,4 @@
-<div class="flex items-center justify-between">
+<div class="flex flex-wrap items-center justify-between gap-3">
   <div class="flex items-center gap-3">
     <!-- Icon chip 40×40 Vertey -->
     <div class="flex h-10 w-10 items-center justify-center rounded-xl"
@@ -16,10 +16,8 @@
   <div class="flex items-center gap-2">
     <a
       routerLink="/plantillas"
-      class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-xl transition-colors duration-150"
-      style="border:1px solid var(--border);color:var(--text-body);background:var(--surface)"
-      (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-      (mouseleave)="$any($event.currentTarget).style.background='var(--surface)'"
+      class="tap-target flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-xl bg-[var(--surface)] transition-colors duration-150 hover:bg-[var(--surface-2)]"
+      style="border:1px solid var(--border);color:var(--text-body)"
     >
       <lucide-icon [img]="LayersIcon" class="w-4 h-4" />
       Plantillas
@@ -27,10 +25,7 @@
     @if (canCreate()) {
       <button
         (click)="newCasoClick.emit()"
-        class="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl transition-all duration-150"
-        style="background:var(--brand)"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-        (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'"
+        class="tap-target flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl bg-[var(--brand)] transition-all duration-150 hover:bg-[var(--brand-hover)]"
       >
         <span class="material-symbols-outlined" style="font-size:16px">add</span>
         Nuevo caso
