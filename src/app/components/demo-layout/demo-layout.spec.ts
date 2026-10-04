@@ -7,9 +7,13 @@ import { AgenteLanzadorComponent } from '../agente-ia/agente-lanzador';
 import { AuthService } from '../../auth/auth.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { SearchService } from '../../core/services/search.service';
+import { NotificacionesPanelComponent } from '../../shared/components/notificaciones-panel/notificaciones-panel';
 
 @Component({ selector: 'app-agente-lanzador', template: '' })
 class AgenteLanzadorStub {}
+
+@Component({ selector: 'app-notificaciones-panel', template: '' })
+class NotificacionesPanelStub {}
 
 const fakePerm = {
   userRole: () => null,
@@ -38,8 +42,8 @@ describe('DemoLayoutComponent (mobile)', () => {
       ],
     });
     TestBed.overrideComponent(DemoLayoutComponent, {
-      remove: { imports: [AgenteLanzadorComponent] },
-      add: { imports: [AgenteLanzadorStub] },
+      remove: { imports: [AgenteLanzadorComponent, NotificacionesPanelComponent] },
+      add: { imports: [AgenteLanzadorStub, NotificacionesPanelStub] },
     });
     await TestBed.compileComponents();
     fixture = TestBed.createComponent(DemoLayoutComponent);
@@ -53,6 +57,12 @@ describe('DemoLayoutComponent (mobile)', () => {
       root.classList.contains('h-[calc(100dvh-var(--safe-area-top)-var(--safe-area-bottom))]'),
     ).toBe(true);
     expect(root.classList.contains('h-screen')).toBe(false);
+  });
+
+  it('hosts the notifications panel in the header instead of a static bell button', () => {
+    const header = q(fixture, 'header')!;
+    expect(header.querySelector('app-notificaciones-panel')).not.toBeNull();
+    expect(header.querySelector('button[aria-label="Notificaciones"]')).toBeNull();
   });
 
   it('drawer is absent until opened', () => {
