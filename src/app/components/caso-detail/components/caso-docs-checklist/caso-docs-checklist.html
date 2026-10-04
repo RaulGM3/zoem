@@ -1,4 +1,4 @@
-<aside class="w-72 shrink-0 sticky top-4 space-y-2" aria-label="Documentos pendientes">
+<aside class="w-full sm:w-72 sm:shrink-0 sm:sticky sm:top-4 space-y-2" aria-label="Documentos pendientes">
   <div class="rounded-xl overflow-hidden" style="border:1px solid var(--border);background:var(--surface)">
 
     <!-- Cabecera -->
@@ -22,10 +22,8 @@
         <button
           (click)="slotSelected.emit(slot)"
           [disabled]="busy()"
-          class="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors duration-150 disabled:opacity-50 group"
+          class="tap-target w-full flex items-center gap-3 px-4 py-3 text-left transition-colors duration-150 disabled:opacity-50 group hover:bg-[var(--surface-2)]"
           style="border-bottom:1px solid var(--border-soft)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-          (mouseleave)="$any($event.currentTarget).style.background=''"
         >
           <lucide-icon
             [img]="slot.docTemplateId ? FilePenIcon : FileTextIcon"

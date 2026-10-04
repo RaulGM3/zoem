@@ -8,9 +8,9 @@
       [style.color]="completado ? 'var(--success)' : (slot.docTemplateId ? 'var(--accent-ia)' : 'var(--text-faint)')"
     />
     <div class="flex-1 min-w-0">
-      <p class="text-sm font-medium break-words sm:truncate" style="color:var(--text-body)">{{ slot.name }}</p>
+      <p class="text-sm font-medium truncate max-sm:whitespace-normal" style="color:var(--text-body)">{{ slot.name }}</p>
       @if (slot.description) {
-        <p class="text-xs break-words sm:truncate" style="color:var(--text-faint)">{{ slot.description }}</p>
+        <p class="text-xs truncate max-sm:whitespace-normal" style="color:var(--text-faint)">{{ slot.description }}</p>
       }
     </div>
   </div>
