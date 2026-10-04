@@ -84,6 +84,10 @@ describe('ContactosComponent', () => {
     Array.from(raiz.querySelectorAll('button')).find(b => b.textContent?.replace(/\s+/g, ' ').includes(texto));
   const tarjetas = (): HTMLElement[] => qa('[role="group"][aria-label^="Ficha de"]');
   const tarjeta = (nombre: string): HTMLElement => q(`[role="group"][aria-label="Ficha de ${nombre}"]`);
+  const nombreDialogo = (): string | null | undefined => {
+    const id = drawer()!.getAttribute('aria-labelledby');
+    return el().querySelector(`#${id}`)?.textContent?.trim();
+  };
   const drawer = (): HTMLElement | null => el().querySelector('[role="dialog"]');
   const dialogosEstado = (): EstadoDialogStubComponent[] =>
     fixture.debugElement.queryAll(By.directive(EstadoDialogStubComponent)).map(d => d.componentInstance);
@@ -300,7 +304,7 @@ describe('ContactosComponent', () => {
 
       await click(boton('Nuevo Contacto'));
       expect(valor('nombre')).toBe('');
-      await click(q('.fixed.inset-0.bg-black\\/40'));
+      await click(q('[data-overlay-backdrop]'));
       expect(drawer()).toBeNull();
 
       await click(boton('Nuevo Contacto'));
@@ -312,11 +316,11 @@ describe('ContactosComponent', () => {
     it('tras editar, un alta nueva abre vacía y en el paso 1', async () => {
       await crear();
       await click(tarjeta('Ana López').querySelector<HTMLButtonElement>('[aria-label="Editar contacto"]'));
-      expect(drawer()!.getAttribute('aria-label')).toBe('Editar contacto');
+      expect(nombreDialogo()).toBe('Editar contacto');
       expect(valor('nombre')).toBe('Ana');
       await click(boton('Cancelar', drawer()!));
       await click(boton('Nuevo Contacto'));
-      expect(drawer()!.getAttribute('aria-label')).toBe('Nuevo contacto');
+      expect(nombreDialogo()).toBe('Nuevo contacto');
       expect(valor('nombre')).toBe('');
       expect(existe('calle')).toBe(false);
     });
@@ -353,7 +357,7 @@ describe('ContactosComponent', () => {
       history.replaceState({ nombre: 'Eva', apellidos: 'Ruiz', mobile: '611222333', notes: 'Desde recepción' }, '');
       queryParams.next(convertToParamMap({ newContact: '1' }));
       await crear();
-      expect(drawer()!.getAttribute('aria-label')).toBe('Nuevo contacto');
+      expect(nombreDialogo()).toBe('Nuevo contacto');
       expect([valor('nombre'), valor('apellidos'), valor('mobile'), valor('notes')])
         .toEqual(['Eva', 'Ruiz', '611222333', 'Desde recepción']);
       expect(valor('status')).toBe('activo');
@@ -388,7 +392,7 @@ describe('ContactosComponent', () => {
       expect(drawer()).toBeNull();
       isLoading.set(false);
       await estable();
-      expect(drawer()!.getAttribute('aria-label')).toBe('Editar contacto');
+      expect(nombreDialogo()).toBe('Editar contacto');
       expect(valor('nombre')).toBe('Ana');
       expect(navigate).toHaveBeenCalledWith([], expect.objectContaining({ queryParams: {}, replaceUrl: true }));
     });
