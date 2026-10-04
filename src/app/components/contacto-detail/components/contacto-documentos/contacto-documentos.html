@@ -1,6 +1,6 @@
 <div class="rounded-xl p-5" style="background:var(--surface);border:1px solid var(--border)">
   <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-3">
       <h3 class="text-sm font-semibold" style="color:var(--text-body)">Documentos ({{ totalDocumentos() }})</h3>
       <!-- Breadcrumb -->
       <nav class="flex items-center gap-1 text-sm min-w-0" aria-label="Ruta de carpetas">
@@ -22,20 +22,15 @@
     </div>
 
     <!-- Actions -->
-    <div class="flex items-center gap-2 shrink-0">
+    <div class="flex flex-wrap items-center gap-2">
       @if (perm.can('Contactos', 'crear')) {
         <button (click)="isCreatingFolder.set(true)"
-          class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150"
-          style="border:1px solid var(--border);color:var(--text-body)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-          (mouseleave)="$any($event.currentTarget).style.background=''">
+          class="tap-target inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150 hover:bg-[var(--surface-2)]"
+          style="border:1px solid var(--border);color:var(--text-body)">
           <lucide-icon [img]="FolderPlusIcon" size="13"></lucide-icon>
           Nueva carpeta
         </button>
-        <label class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white cursor-pointer transition-colors duration-150"
-          style="background:var(--brand)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-          (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+        <label class="tap-target inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand)] px-3 py-1.5 text-xs font-semibold text-white cursor-pointer transition-colors duration-150 hover:bg-[var(--brand-hover)]">
           <lucide-icon [img]="UploadIcon" size="13"></lucide-icon>
           Subir archivo
           <input type="file" multiple class="hidden" (change)="onFileSelected($event)" />
@@ -62,16 +57,12 @@
         aria-label="Nombre de la nueva carpeta"
       />
       <button (click)="createFolder()" [disabled]="!newFolderName().trim()"
-        class="p-1 rounded disabled:opacity-40 transition-colors duration-150" style="color:var(--success)"
-        (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--success) 12%,transparent)'"
-        (mouseleave)="$any($event.currentTarget).style.background=''"
+        class="p-1 rounded text-[var(--success)] disabled:opacity-40 transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--success)_12%,transparent)]"
         aria-label="Crear carpeta">
         <lucide-icon [img]="CheckIcon" size="16"></lucide-icon>
       </button>
       <button (click)="isCreatingFolder.set(false); newFolderName.set('')"
-        class="p-1 rounded transition-colors duration-150" style="color:var(--text-faint)"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-        (mouseleave)="$any($event.currentTarget).style.background=''"
+        class="p-1 rounded text-[var(--text-faint)] transition-colors duration-150 hover:bg-[var(--surface-2)]"
         aria-label="Cancelar">
         <lucide-icon [img]="XIcon" size="16"></lucide-icon>
       </button>
@@ -89,10 +80,7 @@
         <p class="text-xs font-semibold uppercase tracking-wider mb-2" style="color:var(--text-faint)">Carpetas</p>
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
           @for (folder of currentFolders(); track folder.id) {
-            <div class="group relative rounded-lg transition-colors duration-150"
-              style="border:1px solid var(--border);background:var(--surface-2)"
-              (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 8%,transparent)';$any($event.currentTarget).style.borderColor='color-mix(in srgb,var(--brand) 25%,transparent)'"
-              (mouseleave)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.borderColor='var(--border)'">
+            <div data-carpeta class="group relative rounded-lg border border-[var(--border)] bg-[var(--surface-2)] transition-colors duration-150 hover:border-[color-mix(in_srgb,var(--brand)_25%,transparent)] hover:bg-[color-mix(in_srgb,var(--brand)_8%,transparent)]">
 
               @if (renamingFolderId() === folder.id) {
                 <div class="p-3 flex items-center gap-2">
@@ -122,7 +110,7 @@
                   <p class="text-[10px]" style="color:var(--text-faint)">Se eliminará todo su contenido.</p>
                   <div class="flex gap-2">
                     <button (click)="deleteFolder(folder.id)"
-                      class="px-3 py-1 text-white text-xs rounded-lg transition-colors duration-150" style="background:var(--danger)">
+                      class="tap-target px-3 py-1 text-white text-xs rounded-lg transition-colors duration-150" style="background:var(--danger)">
                       Eliminar
                     </button>
                     <button (click)="deletingFolderId.set(null)"
@@ -133,30 +121,35 @@
                 </div>
 
               } @else {
-                <button (click)="navigateToFolder(folder)" class="w-full p-3 text-left" [attr.aria-label]="'Abrir carpeta ' + folder.name">
+                <button (click)="navigateToFolder(folder)" class="w-full p-3 text-left" [class.pr-12]="bp.isMobile() && accionesCarpeta().length > 0" [attr.aria-label]="'Abrir carpeta ' + folder.name">
                   <div class="flex items-center gap-2">
                     <lucide-icon [img]="FolderIcon" size="18" class="shrink-0" style="color:var(--brand)"></lucide-icon>
                     <span class="text-sm font-medium truncate" style="color:var(--text-body)">{{ folder.name }}</span>
                   </div>
                 </button>
+                @if (bp.isMobile()) {
+                  @if (accionesCarpeta().length > 0) {
+                    <div class="absolute right-0 top-0">
+                      <app-action-menu [actions]="accionesCarpeta()" [label]="'Acciones de la carpeta ' + folder.name"
+                        (selected)="onAccionCarpeta($event, folder)" />
+                    </div>
+                  }
+                } @else {
                 <div class="absolute top-1.5 right-1.5 hidden group-hover:flex gap-0.5 rounded shadow-sm p-0.5" style="background:var(--surface);border:1px solid var(--border)">
                   @if (perm.can('Contactos', 'editar')) {
-                    <button (click)="startRename(folder)" class="p-1 rounded transition-colors duration-150" style="color:var(--text-faint)"
-                      (mouseenter)="$any($event.currentTarget).style.color='var(--text-body)'"
-                      (mouseleave)="$any($event.currentTarget).style.color='var(--text-faint)'"
+                    <button (click)="startRename(folder)" class="p-1 rounded text-[var(--text-faint)] transition-colors duration-150 hover:text-[var(--text-body)]"
                       aria-label="Renombrar carpeta">
                       <lucide-icon [img]="PencilIcon" size="12"></lucide-icon>
                     </button>
                   }
                   @if (perm.can('Contactos', 'eliminar')) {
-                    <button (click)="deletingFolderId.set(folder.id)" class="p-1 rounded transition-colors duration-150" style="color:var(--text-faint)"
-                      (mouseenter)="$any($event.currentTarget).style.color='var(--danger)'"
-                      (mouseleave)="$any($event.currentTarget).style.color='var(--text-faint)'"
+                    <button (click)="deletingFolderId.set(folder.id)" class="p-1 rounded text-[var(--text-faint)] transition-colors duration-150 hover:text-[var(--danger)]"
                       aria-label="Eliminar carpeta">
                       <lucide-icon [img]="Trash2Icon" size="12"></lucide-icon>
                     </button>
                   }
                 </div>
+                }
               }
 
             </div>
@@ -169,8 +162,10 @@
     @if (currentFiles().length > 0) {
       <div>
         <p class="text-xs font-semibold uppercase tracking-wider mb-2" style="color:var(--text-faint)">Archivos</p>
+        <app-responsive-list [items]="currentFiles()" trackBy="id">
+          <ng-template [appListTable]="currentFiles()" let-rows>
         <div class="space-y-1.5">
-          @for (file of currentFiles(); track file.id) {
+          @for (file of rows; track file.id) {
             @if (deletingFileId() === file.id) {
               <div class="flex items-center justify-between p-3 rounded-lg"
                 style="background:color-mix(in srgb,var(--danger) 8%,transparent);border:1px solid color-mix(in srgb,var(--danger) 25%,transparent)">
@@ -187,10 +182,7 @@
                 </div>
               </div>
             } @else {
-              <div class="flex items-center justify-between p-3 rounded-lg group transition-colors duration-150"
-                style="border:1px solid var(--border)"
-                (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-                (mouseleave)="$any($event.currentTarget).style.background=''">
+              <div class="flex items-center justify-between p-3 rounded-lg border border-[var(--border)] group transition-colors duration-150 hover:bg-[var(--surface-2)]">
                 <div class="flex items-center gap-3 min-w-0">
                   <span class="text-xl shrink-0" aria-hidden="true">{{ getFileIcon(file.mimeType) }}</span>
                   <div class="min-w-0">
@@ -198,19 +190,15 @@
                     <p class="text-xs" style="color:var(--text-faint)">{{ formatFileSize(file.sizeBytes) }}</p>
                   </div>
                 </div>
-                <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
                   <a [href]="file.downloadUrl" target="_blank" rel="noopener"
-                    class="p-1.5 rounded transition-colors duration-150" style="color:var(--text-faint)"
-                    (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--brand)'"
-                    (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+                    class="p-1.5 rounded text-[var(--text-faint)] transition-colors duration-150 hover:bg-[var(--surface-2)] hover:text-[var(--brand)]"
                     [attr.aria-label]="'Descargar ' + file.name">
                     <lucide-icon [img]="DownloadIcon" size="14"></lucide-icon>
                   </a>
                   @if (perm.can('Contactos', 'eliminar')) {
                     <button (click)="deletingFileId.set(file.id)"
-                      class="p-1.5 rounded transition-colors duration-150" style="color:var(--text-faint)"
-                      (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)';$any($event.currentTarget).style.color='var(--danger)'"
-                      (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+                      class="p-1.5 rounded text-[var(--text-faint)] transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] hover:text-[var(--danger)]"
                       [attr.aria-label]="'Eliminar ' + file.name">
                       <lucide-icon [img]="Trash2Icon" size="14"></lucide-icon>
                     </button>
@@ -220,6 +208,33 @@
             }
           }
         </div>
+          </ng-template>
+
+          <ng-template [appListCard]="currentFiles()" let-file>
+            @if (deletingFileId() === file.id) {
+              <div class="flex flex-col gap-2 rounded-lg p-3"
+                style="background:color-mix(in srgb,var(--danger) 8%,transparent);border:1px solid color-mix(in srgb,var(--danger) 25%,transparent)">
+                <p class="text-sm font-medium" style="color:var(--danger)">¿Eliminar "{{ file.name }}"?</p>
+                <div class="flex gap-2">
+                  <button type="button" (click)="deleteFile(file)"
+                    class="tap-target rounded-lg px-4 text-sm text-white" style="background:var(--danger)">Eliminar</button>
+                  <button type="button" (click)="deletingFileId.set(null)"
+                    class="tap-target rounded-lg px-4 text-sm" style="border:1px solid var(--border);color:var(--text-body);background:var(--surface)">Cancelar</button>
+                </div>
+              </div>
+            } @else {
+              <div class="flex items-center gap-3 rounded-lg p-3" style="border:1px solid var(--border)">
+                <span class="text-xl shrink-0" aria-hidden="true">{{ getFileIcon(file.mimeType) }}</span>
+                <div class="min-w-0 flex-1">
+                  <p class="truncate text-sm font-medium" style="color:var(--text-body)">{{ file.name }}</p>
+                  <p class="text-xs" style="color:var(--text-faint)">{{ formatFileSize(file.sizeBytes) }}</p>
+                </div>
+                <app-action-menu [actions]="accionesArchivo()" [label]="'Acciones de ' + file.name"
+                  (selected)="onAccionArchivo($event, file)" />
+              </div>
+            }
+          </ng-template>
+        </app-responsive-list>
       </div>
     }
 
