@@ -84,7 +84,7 @@ describe('ContactosComponent', () => {
     Array.from(raiz.querySelectorAll('button')).find(b => b.textContent?.replace(/\s+/g, ' ').includes(texto));
   const tarjetas = (): HTMLElement[] => qa('[role="group"][aria-label^="Ficha de"]');
   const tarjeta = (nombre: string): HTMLElement => q(`[role="group"][aria-label="Ficha de ${nombre}"]`);
-  const drawer = (): HTMLElement | null => el().querySelector('aside[role="dialog"]');
+  const drawer = (): HTMLElement | null => el().querySelector('[role="dialog"]');
   const dialogosEstado = (): EstadoDialogStubComponent[] =>
     fixture.debugElement.queryAll(By.directive(EstadoDialogStubComponent)).map(d => d.componentInstance);
 
