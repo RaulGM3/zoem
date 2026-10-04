@@ -1,28 +1,10 @@
-<div class="fixed inset-0 z-50 flex justify-end bg-black/40" (click)="closed.emit()">
-  <div class="flex h-full w-full max-w-lg flex-col overflow-y-auto shadow-2xl"
-    style="background:var(--surface)" (click)="$event.stopPropagation()">
-
-    <!-- Header -->
-    <div class="flex items-center justify-between px-5 py-4"
-      style="border-bottom:1px solid var(--border)">
-      <div>
-        <h2 class="text-base font-semibold"
-          style="color:var(--text-strong);font-family:var(--font-display)">{{ headerTitle() }}</h2>
-        @if (caso()) {
-          <p class="text-xs" style="color:var(--text-faint)">{{ caso()!.titulo }}</p>
-        }
-      </div>
-      <button (click)="closed.emit()" class="rounded-xl p-1.5 transition-colors duration-150"
-        style="color:var(--text-muted)"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-        (mouseleave)="$any($event.currentTarget).style.background=''"
-        aria-label="Cerrar">
-        <lucide-icon [img]="XIcon" size="18"></lucide-icon>
-      </button>
-    </div>
-
+<app-overlay-shell [open]="true" [title]="headerTitle()" variant="drawer" (closed)="closed.emit()">
     <!-- Body -->
-    <div class="flex-1 space-y-5 overflow-y-auto p-5" [formGroup]="form">
+    <div class="space-y-5 p-5" [formGroup]="form">
+
+      @if (caso()) {
+        <p class="-mb-2 text-xs" style="color:var(--text-faint)">{{ caso()!.titulo }}</p>
+      }
 
       <!-- Cliente -->
       <fieldset formGroupName="cliente" class="space-y-3">
@@ -73,7 +55,7 @@
               [value]="query()"
               (input)="onBuscarInput($any($event.target).value)"
               (keydown)="onBuscarKeydown($event)"
-              (focus)="contactosSolicitados.emit()"
+              (focus)="onBuscarFocus($event)"
               (blur)="cerrarLista()" />
             <ul id="cliente-buscar-lista" role="listbox" aria-label="Contactos encontrados"
               class="absolute left-0 right-0 z-10 mt-1 max-h-56 overflow-y-auto rounded-lg shadow-lg"
@@ -111,7 +93,7 @@
           }
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label for="cliente-tipoId" class="form-label">Tipo de documento</label>
             <select id="cliente-tipoId" formControlName="tipoId" class="form-select">
@@ -163,7 +145,7 @@
       </fieldset>
 
       <!-- Dates -->
-      <div class="grid grid-cols-2 gap-3">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <label for="issueDate" class="form-label">Fecha emisión</label>
           <input id="issueDate" type="date" formControlName="issueDate" class="form-input w-full" />
@@ -191,24 +173,21 @@
               <div class="flex items-center gap-0.5 shrink-0">
                 <button type="button" (click)="moveLinea(i, 'up')"
                   [disabled]="i === 0"
-                  class="rounded p-1 disabled:opacity-30 transition-colors"
+                  class="tap-target inline-flex items-center justify-center rounded p-1 disabled:opacity-30 transition-colors"
                   style="color:var(--text-muted)"
                   aria-label="Mover arriba">
                   <lucide-icon [img]="ChevronUpIcon" size="14"></lucide-icon>
                 </button>
                 <button type="button" (click)="moveLinea(i, 'down')"
                   [disabled]="i === lineasArray.length - 1"
-                  class="rounded p-1 disabled:opacity-30 transition-colors"
+                  class="tap-target inline-flex items-center justify-center rounded p-1 disabled:opacity-30 transition-colors"
                   style="color:var(--text-muted)"
                   aria-label="Mover abajo">
                   <lucide-icon [img]="ChevronDownIcon" size="14"></lucide-icon>
                 </button>
                 <button type="button" (click)="removeLinea(i)"
                   [disabled]="lineasArray.length <= 1"
-                  class="rounded p-1 disabled:opacity-30 transition-colors"
-                  style="color:var(--text-muted)"
-                  (mouseenter)="lineasArray.length > 1 && ($any($event.currentTarget).style.color='var(--danger)')"
-                  (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)'"
+                  class="tap-target inline-flex items-center justify-center rounded p-1 text-[color:var(--text-muted)] transition-colors enabled:hover:text-[color:var(--danger)] disabled:opacity-30"
                   aria-label="Eliminar línea">
                   <lucide-icon [img]="Trash2Icon" size="14"></lucide-icon>
                 </button>
@@ -222,7 +201,7 @@
               style="color:var(--text-muted)"></textarea>
 
             <!-- Row 3: Cantidad, Precio unitario, Subtotal -->
-            <div class="grid grid-cols-[1fr_1fr_auto] items-center gap-2">
+            <div class="grid grid-cols-2 items-center gap-2 sm:grid-cols-[1fr_1fr_auto]">
               <div>
                 <label class="text-[10px] uppercase tracking-wider block mb-0.5"
                   style="color:var(--text-faint)">Cantidad</label>
@@ -237,7 +216,7 @@
                   class="form-input w-full text-right text-sm"
                   [attr.aria-label]="'Precio unitario línea ' + (i + 1)" />
               </div>
-              <div class="text-right pt-3.5">
+              <div class="col-span-2 text-right sm:col-span-1 sm:pt-3.5">
                 <span class="text-sm tabular-nums font-medium"
                   style="color:var(--text-strong);font-family:var(--font-mono)">
                   {{ lineSubtotal(i) | number:'1.2-2' }}&nbsp;€
@@ -293,10 +272,7 @@
 
         <!-- Add line button -->
         <button type="button" (click)="addLinea()"
-          class="flex w-full items-center justify-center gap-1.5 rounded-lg border-2 border-dashed py-2.5 text-xs font-medium transition-colors duration-150"
-          style="border-color:var(--border);color:var(--text-muted)"
-          (mouseenter)="$any($event.currentTarget).style.borderColor='var(--brand)';$any($event.currentTarget).style.color='var(--brand)'"
-          (mouseleave)="$any($event.currentTarget).style.borderColor='var(--border)';$any($event.currentTarget).style.color='var(--text-muted)'">
+          class="tap-target flex w-full items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-[var(--border)] py-2.5 text-xs font-medium text-[color:var(--text-muted)] transition-colors duration-150 hover:border-[var(--brand)] hover:text-[color:var(--brand)]">
           <lucide-icon [img]="PlusIcon" size="14"></lucide-icon>
           Agregar línea
         </button>
@@ -345,37 +321,32 @@
       </div>
     </div>
 
-    <!-- Verifactu banner -->
+    <!-- Footer -->
+    <div footer>
     @if (verifactuLocked()) {
-      <div class="mx-5 mb-3 flex items-center gap-2 rounded-lg px-3 py-2 text-xs"
+      <div class="mx-5 mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-xs"
         style="background:color-mix(in srgb,var(--danger) 8%,transparent);color:var(--danger)">
         <lucide-icon [img]="ShieldCheckIcon" size="14" class="shrink-0"></lucide-icon>
         {{ verifactuBloqueo() }}.
       </div>
     } @else if (verifactuEnabled()) {
-      <div class="mx-5 mb-3 flex items-center gap-2 rounded-lg px-3 py-2 text-xs"
+      <div class="mx-5 mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-xs"
         style="background:color-mix(in srgb,var(--brand) 8%,transparent);color:var(--brand)">
         <lucide-icon [img]="ShieldCheckIcon" size="14" class="shrink-0"></lucide-icon>
         Esta factura se registrará automáticamente en Verifactu (AEAT).
       </div>
     }
 
-    <!-- Footer -->
-    <div class="flex gap-3 px-5 py-4" style="border-top:1px solid var(--border)">
-      <button (click)="closed.emit()"
-        class="flex-1 rounded-lg py-2.5 text-sm font-medium transition-colors duration-150"
-        style="border:1px solid var(--border);color:var(--text-body)"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-        (mouseleave)="$any($event.currentTarget).style.background=''">
-        Cancelar
-      </button>
-      <button (click)="onConfirm()" [disabled]="saving() || verifactuLocked()"
-        class="flex-1 rounded-lg py-2.5 text-sm font-semibold text-white disabled:opacity-50 transition-colors duration-150"
-        style="background:var(--brand)"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-        (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
-        {{ confirmLabel() }}
-      </button>
+      <div class="flex gap-3 px-5 py-4">
+        <button type="button" (click)="closed.emit()"
+          class="tap-target flex-1 rounded-lg py-2.5 text-sm font-medium transition-colors duration-150 hover:bg-[var(--surface-2)]"
+          style="border:1px solid var(--border);color:var(--text-body)">
+          Cancelar
+        </button>
+        <button type="button" (click)="onConfirm()" [disabled]="saving() || verifactuLocked()"
+          class="tap-target flex-1 rounded-lg bg-[var(--brand)] py-2.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-[var(--brand-hover)] disabled:opacity-50">
+          {{ confirmLabel() }}
+        </button>
+      </div>
     </div>
-  </div>
-</div>
+</app-overlay-shell>
