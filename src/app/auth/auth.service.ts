@@ -79,6 +79,8 @@ export class AuthService {
   }
 
   async logout(): Promise<void> {
+    // Antes del signOut: las rules de deviceTokens exigen sesión activa.
+    await this.pushNotifications.unregister();
     await signOut(this.auth);
   }
 }

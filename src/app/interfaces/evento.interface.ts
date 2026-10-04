@@ -97,8 +97,10 @@ export interface Evento {
   /** Presente sólo si el evento nació de un cambio de estado de contacto. */
   origen?: EventoOrigenSeguimiento;
   creadoPor: string;
+  /** uid de quien hizo la última edición. */
+  updatedBy?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
 
-export type CreateEventoData = Omit<Evento, 'id' | 'companyId' | 'creadoPor' | 'createdAt' | 'updatedAt'>;
+export type CreateEventoData = Omit<Evento, 'id' | 'companyId' | 'creadoPor' | 'updatedBy' | 'createdAt' | 'updatedAt'>;

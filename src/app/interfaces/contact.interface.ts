@@ -94,6 +94,10 @@ interface ContactBase extends SoftDeletable {
   activeProjects?: number;
   totalBilled?: number;
   lastContact?: Timestamp | string;
+  /** uid de quien creó el contacto. */
+  createdBy?: string;
+  /** uid de quien hizo la última edición. */
+  updatedBy?: string;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 }

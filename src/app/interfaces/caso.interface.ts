@@ -46,6 +46,10 @@ export interface Hito {
   registrosHoras?: RegistroHoraHito[]; // horas reales declaradas (cobro por horas)
   anotaciones?: Anotacion[]; // notas libres del calendario
   calendarColor?: string | null;
+  /** uid de quien creó el hito (lo usa el backend para no notificar al propio autor). */
+  createdBy?: string;
+  /** uid de quien hizo la última edición. */
+  updatedBy?: string;
   estadoActualizadoPor?: string; // userId de quién cambió el estado por última vez
   estadoActualizadoEn?: string;  // ISO datetime del último cambio de estado
 }
@@ -113,6 +117,10 @@ export interface Caso {
   cierreSaldoBancario?: number;
   encargadoId?: string;
   vencimiento?: string;
+  /** uid de quien creó el caso. */
+  createdBy?: string;
+  /** uid de quien hizo la última edición (el backend lo usa como actor en notificaciones). */
+  updatedBy?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

@@ -69,6 +69,11 @@ export class CasosService {
     return id;
   }
 
+  /** uid del usuario actual; el backend lo usa para no notificar al propio autor del cambio. */
+  private get currentUid(): string | undefined {
+    return this.auth.currentUser?.uid;
+  }
+
   private get casosRef() {
     return collection(this.firestore, 'companies', this.companyId, 'casos');
   }
@@ -136,6 +141,7 @@ export class CasosService {
             ...(h.asignadoA ? { asignadoA: h.asignadoA } : {}),
             estado: 'pendiente' as const,
             orden: h.orden,
+            createdBy: this.currentUid,
           };
         });
       }
@@ -144,6 +150,8 @@ export class CasosService {
     const ref = await addDoc(collection(this.firestore, 'companies', companyId, 'casos'), {
       ...stripUndefinedDeep(data),
       companyId,
+      createdBy: this.currentUid,
+      updatedBy: this.currentUid,
       resumenFinanciero: { ...RESUMEN_FINANCIERO_VACIO },
       // Todos los hitos de plantilla nacen 'pendiente': completados siempre 0 aquí.
       hitosResumen: { total: hitosToCreate.length, completados: 0 },
@@ -171,10 +179,11 @@ export class CasosService {
     return ref.id;
   }
 
-  async updateCaso(id: string, data: Partial<Pick<Caso, 'titulo' | 'descripcion' | 'tipo' | 'estado' | 'prioridad' | 'contactoIds' | 'vencimiento'>>): Promise<void> {
+  async updateCaso(id: string, data: Partial<Pick<Caso, 'titulo' | 'descripcion' | 'tipo' | 'estado' | 'prioridad' | 'contactoIds' | 'vencimiento' | 'encargadoId'>>): Promise<void> {
     const prev = this.casos().find(c => c.id === id);
     await updateDoc(doc(this.firestore, 'companies', this.companyId, 'casos', id), {
       ...stripUndefinedDeep(data),
+      updatedBy: this.currentUid,
       updatedAt: serverTimestamp(),
     });
     this.casos.update(list =>
@@ -214,7 +223,7 @@ export class CasosService {
   }
 
   async addHito(casoId: string, casoTitulo: string, data: Omit<Hito, 'id' | 'casoId' | 'casoTitulo'>, autorId?: string): Promise<Hito> {
-    const hito: Omit<Hito, 'id'> = { casoId, casoTitulo, ...data };
+    const hito: Omit<Hito, 'id'> = { casoId, casoTitulo, ...data, createdBy: this.currentUid };
     const batch = writeBatch(this.firestore);
     const hitoRef = doc(this.hitosRef);
     batch.set(hitoRef, stripUndefinedDeep(hito) as object);
@@ -235,7 +244,7 @@ export class CasosService {
    */
   async updateHito(casoId: string, hitoId: string, data: Partial<Omit<Hito, 'id'>>, actividad?: ActividadInput): Promise<void> {
     const batch = writeBatch(this.firestore);
-    batch.update(doc(this.hitosRef, hitoId), stripUndefinedDeep(data) as object);
+    batch.update(doc(this.hitosRef, hitoId), stripUndefinedDeep({ ...data, updatedBy: this.currentUid }) as object);
     if (actividad) {
       batch.set(doc(this.actividadRef), this.buildActividad(casoId, hitoId, actividad));
     }
