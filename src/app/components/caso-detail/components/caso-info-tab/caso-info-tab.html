@@ -45,6 +45,15 @@
         <label class="form-label" for="caso-edit-venc">Vencimiento</label>
         <input id="caso-edit-venc" type="date" [value]="editVencimiento()" (input)="editVencimiento.set($any($event.target).value)" class="form-input" />
       </div>
+      <div class="space-y-1">
+        <label class="form-label" for="caso-encargado">Encargado</label>
+        <select id="caso-encargado" [value]="editEncargadoId()" (change)="editEncargadoId.set($any($event.target).value)" class="form-select">
+          <option value="" [selected]="!editEncargadoId()">Sin asignar</option>
+          @for (m of activeMembers(); track m.userId) {
+            <option [value]="m.userId" [selected]="m.userId === editEncargadoId()">{{ memberLabel(m) }}</option>
+          }
+        </select>
+      </div>
     </div>
 
     <div class="flex gap-2 pt-2">
@@ -90,6 +99,10 @@
         <div>
           <dt class="text-xs uppercase tracking-wide" style="color:var(--text-faint)">Vencimiento</dt>
           <dd class="mt-1" style="color:var(--text-body)">{{ caso().vencimiento ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs uppercase tracking-wide" style="color:var(--text-faint)">Encargado</dt>
+          <dd class="mt-1" style="color:var(--text-body)">{{ encargadoNombre() }}</dd>
         </div>
       </dl>
     </div>
