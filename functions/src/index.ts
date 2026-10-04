@@ -209,8 +209,16 @@ export { verifactuDrain } from './aeat/verifactuDrain';
 // ─── Generación de documentos ────────────────────────────────────────────────
 export { generateDocx } from './htmlToDocx';
 
-// ─── Push Notifications ──────────────────────────────────────────────────────
-export { sendPushNotification } from './notifications';
+// ─── Notificaciones (in-app + push) ──────────────────────────────────────────
+// Triggers de asignación. El callable sendPushNotification se eliminó: permitía
+// a cualquier usuario autenticado enviar push a cualquier userId.
+export {
+  onLlamadaCreated,
+  onCasoWritten,
+  onContactoWritten,
+  onEventoWritten,
+  onHitoWritten,
+} from './notificaciones/triggers';
 
 // ─── Documentos clasificados ─────────────────────────────────────────────────
 // URL firmada de corta vida + auditoría server-side (no falsificable).
