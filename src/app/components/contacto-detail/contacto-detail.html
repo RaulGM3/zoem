@@ -1,17 +1,14 @@
 @if (contacto(); as c) {
-<div class="p-6 space-y-6">
+<div data-detalle class="p-4 space-y-6 sm:p-6">
   <!-- Header -->
-  <div class="flex items-center justify-between">
-    <div class="flex items-center gap-3">
+  <div data-cabecera class="flex items-center justify-between gap-2">
+    <div class="flex min-w-0 flex-wrap items-center gap-3">
       <button (click)="volver()"
-        class="p-2 rounded-lg transition-colors duration-150"
-        style="color:var(--text-muted)"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-        (mouseleave)="$any($event.currentTarget).style.background=''"
+        class="tap-target p-2 rounded-lg text-[var(--text-muted)] transition-colors duration-150 hover:bg-[var(--surface-2)]"
         aria-label="Volver">
         <lucide-icon [img]="ArrowLeftIcon" class="w-5 h-5" />
       </button>
-      <h1 class="text-xl font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">{{ getDisplayName(c) }}</h1>
+      <h1 class="min-w-0 truncate text-xl font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">{{ getDisplayName(c) }}</h1>
       @if (perm.can('Contactos', 'editar')) {
         <button type="button"
           (click)="$event.stopPropagation(); abrirEstado()"
@@ -27,16 +24,39 @@
         </span>
       }
     </div>
-    @if (perm.can('Contactos', 'editar')) {
+    @if (bp.isMobile()) {
+      @if (accionesContacto().length > 0) {
+        <app-action-menu [actions]="accionesContacto()" label="Acciones del contacto" (selected)="onAccion($event)" />
+      }
+    } @else if (perm.can('Contactos', 'editar')) {
       <button (click)="onEditar()"
-        class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-colors duration-150"
-        style="border:1px solid var(--border);color:var(--text-body)"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-        (mouseleave)="$any($event.currentTarget).style.background=''">
+        class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-colors duration-150 hover:bg-[var(--surface-2)]"
+        style="border:1px solid var(--border);color:var(--text-body)">
         <lucide-icon [img]="EditIcon" class="w-4 h-4" />Editar
       </button>
     }
   </div>
+
+  @if (bp.isMobile() && (telefonoRapido(c) || c.email)) {
+    <div data-acciones-rapidas class="flex gap-2">
+      @if (telefonoRapido(c); as tel) {
+        <a [href]="'tel:' + tel"
+          class="tap-target inline-flex flex-1 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium"
+          style="border:1px solid var(--border);color:var(--text-body)"
+          [attr.aria-label]="'Llamar a ' + tel">
+          <lucide-icon [img]="PhoneIcon" class="w-4 h-4" aria-hidden="true" />Llamar
+        </a>
+      }
+      @if (c.email) {
+        <a [href]="'mailto:' + c.email"
+          class="tap-target inline-flex flex-1 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium"
+          style="border:1px solid var(--border);color:var(--text-body)"
+          [attr.aria-label]="'Enviar email a ' + c.email">
+          <lucide-icon [img]="MailIcon" class="w-4 h-4" aria-hidden="true" />Email
+        </a>
+      }
+    </div>
+  }
 
   <div class="grid lg:grid-cols-3 gap-6">
     <!-- Columna izquierda -->
@@ -137,16 +157,13 @@
 
       <!-- Facturas -->
       <div class="rounded-xl p-5" style="background:var(--surface);border:1px solid var(--border)">
-        <h3 class="text-sm font-semibold mb-3" style="color:var(--text-body)">Facturas ({{ facturas().length }})</h3>
+        <h2 class="text-sm font-semibold mb-3" style="color:var(--text-body)">Facturas ({{ facturas().length }})</h2>
         @if (facturas().length === 0) {
           <p class="text-sm text-center py-6" style="color:var(--text-faint)">Sin facturas asociadas</p>
         }
         <div class="space-y-2">
           @for (f of facturas(); track f.id) {
-            <div class="flex items-center justify-between p-3 rounded-lg transition-colors duration-150"
-              style="border:1px solid var(--border)"
-              (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-              (mouseleave)="$any($event.currentTarget).style.background=''">
+            <div class="flex items-center justify-between gap-2 p-3 rounded-lg border border-[var(--border)] transition-colors duration-150 hover:bg-[var(--surface-2)]">
               <div>
                 <p class="font-medium text-sm" style="color:var(--text-strong)">#{{ f.number }}</p>
                 <p class="text-xs" style="color:var(--text-faint)">{{ f.issueDate }}</p>
@@ -166,18 +183,15 @@
 
       <!-- Casos -->
       <div class="rounded-xl p-5" style="background:var(--surface);border:1px solid var(--border)">
-        <h3 class="text-sm font-semibold mb-3" style="color:var(--text-body)">Casos ({{ casos().length }})</h3>
+        <h2 class="text-sm font-semibold mb-3" style="color:var(--text-body)">Casos ({{ casos().length }})</h2>
         @if (casos().length === 0) {
           <p class="text-sm text-center py-6" style="color:var(--text-faint)">Sin casos asociados</p>
         }
         <div class="space-y-2">
           @for (caso of casos(); track caso.id) {
             <button type="button" (click)="verCaso(caso)"
-              class="w-full text-left rounded-lg p-4 transition-colors duration-150"
-              style="border:1px solid var(--border)"
-              (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.borderColor='color-mix(in srgb,var(--brand) 30%,var(--border))'"
-              (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.borderColor='var(--border)'">
-              <div class="flex items-start justify-between gap-3 mb-1">
+              class="w-full text-left rounded-lg border border-[var(--border)] p-4 transition-colors duration-150 hover:border-[color-mix(in_srgb,var(--brand)_30%,var(--border))] hover:bg-[var(--surface-2)]">
+              <div class="mb-1 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                 <div class="min-w-0">
                   <p class="font-medium truncate" style="color:var(--text-strong)">{{ caso.titulo }}</p>
                   <p class="text-xs" style="color:var(--text-faint)">{{ caso.tipo }}@if (caso.vencimiento) { · Vence {{ caso.vencimiento }} }</p>
@@ -199,7 +213,7 @@
       <div class="rounded-xl p-5" style="background:var(--surface);border:1px solid var(--border)">
         <div class="flex items-center gap-2 mb-3">
           <lucide-icon [img]="CalendarClockIcon" class="w-4 h-4" style="color:var(--brand)" />
-          <h3 class="text-sm font-semibold" style="color:var(--text-body)">Seguimientos ({{ seguimientos().length }})</h3>
+          <h2 class="text-sm font-semibold" style="color:var(--text-body)">Seguimientos ({{ seguimientos().length }})</h2>
         </div>
         @if (seguimientos().length === 0) {
           <p class="text-sm text-center py-6" style="color:var(--text-faint)">
@@ -239,10 +253,8 @@
                 </span>
               } @else if (puedeGestionar(s)) {
                 <button type="button" (click)="completarSeguimiento(s)"
-                  class="shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors duration-150"
-                  style="border:1px solid var(--border);color:var(--success)"
-                  (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--success) 10%,transparent)'"
-                  (mouseleave)="$any($event.currentTarget).style.background=''"
+                  class="tap-target shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold text-[var(--success)] transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--success)_10%,transparent)]"
+                  style="border:1px solid var(--border)"
                   [attr.aria-label]="'Marcar como completado: ' + s.entregable">
                   Completar
                 </button>
@@ -254,7 +266,7 @@
 
       <!-- Notas -->
       <div class="rounded-xl p-5" style="background:var(--surface);border:1px solid var(--border)">
-        <h3 class="text-sm font-semibold mb-3" style="color:var(--text-body)">Notas</h3>
+        <h2 class="text-sm font-semibold mb-3" style="color:var(--text-body)">Notas</h2>
         <textarea
           [value]="notesDraft()"
           (input)="onNotesInput($any($event.target).value)"
@@ -281,7 +293,7 @@
   }
 </div>
 } @else {
-  <div class="p-6 text-center" style="color:var(--text-muted)">
+  <div class="p-4 text-center sm:p-6" style="color:var(--text-muted)">
     <p>Contacto no encontrado.</p>
     <button (click)="volver()" class="mt-3 text-sm hover:underline" style="color:var(--brand)">Volver a contactos</button>
   </div>

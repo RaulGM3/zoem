@@ -1,36 +1,6 @@
-@if (visible()) {
-  <!-- Backdrop -->
-  <div class="fixed inset-0 bg-black/40 z-40" (click)="close()" aria-hidden="true"></div>
-
-  <!-- Modal -->
-  <div class="fixed inset-0 z-50 flex items-center justify-center p-4" style="pointer-events:none">
-    <aside
-      class="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl shadow-2xl"
-      style="background:var(--surface);border:1px solid var(--border);pointer-events:auto"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Importar contactos desde Excel"
-      appFocusTrap
-      (escapeKey)="close()"
-    >
-      <!-- Header -->
-      <div class="flex items-center justify-between px-6 py-4 shrink-0"
-        style="border-bottom:1px solid var(--border)">
-        <h2 class="text-base font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">
-          Importar contactos desde Excel
-        </h2>
-        <button (click)="close()"
-          class="rounded-xl p-1.5 transition-colors duration-150"
-          style="color:var(--text-muted)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-          (mouseleave)="$any($event.currentTarget).style.background=''"
-          aria-label="Cerrar">
-          <lucide-icon [img]="XIcon" size="20" />
-        </button>
-      </div>
-
+<app-overlay-shell [open]="visible()" title="Importar contactos desde Excel" variant="drawer" size="lg" (closed)="close()">
       <!-- Step indicator -->
-      <div class="flex items-center px-6 py-3 shrink-0 gap-1" style="border-bottom:1px solid var(--border)">
+      <div class="flex items-center px-5 py-3 shrink-0 gap-1" style="border-bottom:1px solid var(--border)">
         @for (i of [1, 2, 3, 4]; track i) {
           <div class="flex items-center gap-1.5 shrink-0">
             <span class="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold transition-all"
@@ -55,7 +25,7 @@
       </div>
 
       <!-- Body -->
-      <div class="flex-1 overflow-y-auto px-6 py-5">
+      <div class="px-5 py-5">
 
         <!-- Step 1: Subir archivo -->
         @if (step() === 1) {
@@ -63,10 +33,7 @@
 
             <!-- Upload zone -->
             <label for="excel-upload"
-              class="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed cursor-pointer py-10 transition-colors duration-150"
-              style="border-color:var(--border)"
-              (mouseenter)="$any($event.currentTarget).style.borderColor='var(--brand)'"
-              (mouseleave)="$any($event.currentTarget).style.borderColor='var(--border)'"
+              class="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-[var(--border)] cursor-pointer py-10 transition-colors duration-150 hover:border-[var(--brand)] focus-within:border-[var(--brand)]"
               (dragover)="$event.preventDefault()"
               (drop)="onDrop($any($event))">
               <lucide-icon [img]="UploadIcon" size="32" style="color:var(--text-faint)" />
@@ -143,15 +110,15 @@
               </div>
               <div class="flex flex-col gap-1.5">
                 @for (col of rawHeaders(); track col) {
-                  <div class="flex items-center gap-3 rounded-lg px-3 py-2"
+                  <div class="flex flex-col gap-2 rounded-lg px-3 py-2 sm:flex-row sm:items-center sm:gap-3"
                     [style.background]="columnMap()[col] ? 'color-mix(in srgb,var(--brand) 5%,var(--surface-2))' : 'var(--surface-2)'">
                     <!-- Columna del Excel -->
                     <span class="text-sm font-medium flex-1 min-w-0 truncate" style="color:var(--text-strong)">
                       {{ col }}
                     </span>
-                    <span class="text-xs shrink-0 px-1" style="color:var(--text-faint)">→</span>
+                    <span class="hidden text-xs shrink-0 px-1 sm:inline" style="color:var(--text-faint)" aria-hidden="true">→</span>
                     <!-- Campo destino en Zoem -->
-                    <select class="form-select shrink-0" style="width:auto;min-width:185px;font-size:12px"
+                    <select class="form-select w-full shrink-0 sm:w-auto sm:min-w-[185px]" style="font-size:12px"
                       (change)="setColumnMap(col, $any($event.target).value)">
                       <option value="" [selected]="!columnMap()[col]">— No importar —</option>
                       @for (f of fieldDefs; track f.key) {
@@ -189,14 +156,14 @@
 
             <div class="flex flex-col gap-2">
               @for (name of uniqueAssignedNames(); track name) {
-                <div class="flex items-center gap-3 rounded-lg px-3 py-2.5"
+                <div class="flex flex-col gap-2 rounded-lg px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3"
                   style="background:var(--surface-2);border:1px solid var(--border)">
                   <lucide-icon [img]="UsersIcon" size="14" style="color:var(--text-faint)" />
                   <span class="text-sm font-medium flex-1 truncate" style="color:var(--text-strong)">
                     {{ name }}
                   </span>
-                  <span class="text-xs px-2" style="color:var(--text-faint)">→</span>
-                  <select class="form-select shrink-0" style="width:auto;min-width:170px;font-size:12px"
+                  <span class="hidden text-xs px-2 sm:inline" style="color:var(--text-faint)" aria-hidden="true">→</span>
+                  <select class="form-select w-full shrink-0 sm:w-auto sm:min-w-[170px]" style="font-size:12px"
                     (change)="setUserMap(name, $any($event.target).value)">
                     <option value="" [selected]="!userMap()[name]">— No asignar —</option>
                     @for (m of usersService.members(); track m.userId) {
@@ -216,7 +183,7 @@
           <div class="flex flex-col gap-5">
 
             <!-- Summary cards -->
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div class="rounded-xl p-4"
                 style="background:color-mix(in srgb,var(--success) 10%,transparent);border:1px solid color-mix(in srgb,var(--success) 20%,transparent)">
                 <p class="text-2xl font-bold" style="color:var(--success)">{{ validPayloads().length }}</p>
@@ -314,14 +281,12 @@
       </div>
 
       <!-- Footer -->
-      <div class="shrink-0 flex items-center gap-3 px-6 py-4" style="border-top:1px solid var(--border)">
+      <div footer class="flex items-center gap-3 px-5 py-4">
         @if (step() > 1) {
           <button (click)="prevStep()"
             [disabled]="importing()"
-            class="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors duration-150"
-            style="background:var(--surface-2);color:var(--text-muted)"
-            (mouseenter)="$any($event.currentTarget).style.background='var(--border)'"
-            (mouseleave)="$any($event.currentTarget).style.background='var(--surface-2)'">
+            class="tap-target inline-flex items-center gap-1.5 rounded-xl bg-[var(--surface-2)] px-4 py-2.5 text-sm font-medium transition-colors duration-150 hover:bg-[var(--border)]"
+            style="color:var(--text-muted)">
             <lucide-icon [img]="ChevronLeftIcon" size="14" />
             Atrás
           </button>
@@ -332,19 +297,13 @@
         @if (step() < 4) {
           <button (click)="nextStep()"
             [disabled]="!canNext()"
-            class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
-            style="background:var(--brand)"
-            (mouseenter)="canNext() && ($any($event.currentTarget).style.background='var(--brand-hover)')"
-            (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+            class="tap-target inline-flex items-center gap-2 rounded-xl bg-[var(--brand)] px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 enabled:hover:bg-[var(--brand-hover)] disabled:opacity-40 disabled:cursor-not-allowed">
             Siguiente
           </button>
         } @else {
           <button (click)="runImport()"
             [disabled]="importing() || validPayloads().length === 0"
-            class="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
-            style="background:var(--brand)"
-            (mouseenter)="!importing() && ($any($event.currentTarget).style.background='var(--brand-hover)')"
-            (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+            class="tap-target inline-flex items-center gap-2 rounded-xl bg-[var(--brand)] px-5 py-2.5 text-sm font-semibold text-white transition-all duration-150 enabled:hover:bg-[var(--brand-hover)] disabled:opacity-40 disabled:cursor-not-allowed">
             @if (importing()) {
               <lucide-icon [img]="LoaderIcon" size="14" class="animate-spin" />
               Importando...
@@ -354,6 +313,4 @@
           </button>
         }
       </div>
-    </aside>
-  </div>
-}
+</app-overlay-shell>

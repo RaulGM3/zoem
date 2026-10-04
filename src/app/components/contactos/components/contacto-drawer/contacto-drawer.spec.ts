@@ -49,7 +49,11 @@ describe('ContactoDrawerComponent', () => {
   const qa = <T extends HTMLElement>(selector: string): T[] => Array.from(el().querySelectorAll<T>(selector));
   const boton = (texto: string, raiz: HTMLElement = el()): HTMLButtonElement | undefined =>
     Array.from(raiz.querySelectorAll('button')).find(b => b.textContent?.replace(/\s+/g, ' ').includes(texto));
-  const drawer = (): HTMLElement | null => el().querySelector('aside[role="dialog"]');
+  const nombreDialogo = (): string | null | undefined => {
+    const id = drawer()!.getAttribute('aria-labelledby');
+    return el().querySelector(`#${id}`)?.textContent?.trim();
+  };
+  const drawer = (): HTMLElement | null => el().querySelector('[role="dialog"]');
   /** El drawer no se desmonta solo: pide al padre que lo cierre. */
   const cerrado = (): boolean => cierres + guardados.length > 0;
   const payloadCreado = () => contactService.createContact.mock.calls[0][0];
@@ -127,7 +131,7 @@ describe('ContactoDrawerComponent', () => {
   describe('alta', () => {
     it('abre en el paso 1 con los valores por defecto', async () => {
       await abrirNuevo();
-      expect(drawer()!.getAttribute('aria-label')).toBe('Nuevo contacto');
+      expect(nombreDialogo()).toBe('Nuevo contacto');
       expect(valor('status')).toBe('activo');
       expect(valor('nifType')).toBe('dni');
       expect(existe('nombre')).toBe(true);
@@ -261,7 +265,7 @@ describe('ContactoDrawerComponent', () => {
   describe('edición', () => {
     it('muestra todos los campos de una persona física con sus datos', async () => {
       await abrirEdicion('Ana López');
-      expect(drawer()!.getAttribute('aria-label')).toBe('Editar contacto');
+      expect(nombreDialogo()).toBe('Editar contacto');
       expect(drawer()!.textContent).not.toContain('Datos principales');
       expect([valor('nombre'), valor('apellidos'), valor('nifType'), valor('nif')]).toEqual(['Ana', 'López', 'nie', 'X1234567L']);
       expect([valor('nacionalidad'), valor('estadoCivil')]).toEqual(['FR', 'soltero']);
@@ -330,7 +334,7 @@ describe('ContactoDrawerComponent', () => {
     it('emite closed con Cerrar, con el fondo y con Escape', async () => {
       await abrirNuevo();
       await click(drawer()!.querySelector<HTMLButtonElement>('[aria-label="Cerrar"]'));
-      await click(q('.fixed.inset-0.bg-black\\/40'));
+      await click(q('[data-overlay-backdrop]'));
       drawer()!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       expect(cierres).toBe(3);
       expect(guardados).toHaveLength(0);
@@ -358,7 +362,7 @@ describe('ContactoDrawerComponent', () => {
   describe('datos de partida', () => {
     it('precarga el alta con los datos recibidos', async () => {
       await abrir({ prefill: { nombre: 'Eva', apellidos: 'Ruiz', mobile: '611222333', notes: 'Desde recepción' } });
-      expect(drawer()!.getAttribute('aria-label')).toBe('Nuevo contacto');
+      expect(nombreDialogo()).toBe('Nuevo contacto');
       expect([valor('nombre'), valor('apellidos'), valor('mobile'), valor('notes')])
         .toEqual(['Eva', 'Ruiz', '611222333', 'Desde recepción']);
       expect(valor('status')).toBe('activo');

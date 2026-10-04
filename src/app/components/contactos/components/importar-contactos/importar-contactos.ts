@@ -15,7 +15,7 @@ import {
   PersonaFisica, PersonaJuridica, ContactStatus, CanalEntrada,
   CONTACT_STATUS_LABELS, CANAL_ENTRADA_LABELS,
 } from '../../../../interfaces';
-import { FocusTrapDirective } from '../../../../shared/directives/focus-trap.directive';
+import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 
 type DestField =
   | 'nombre' | 'apellidos' | 'razonSocial'
@@ -34,7 +34,7 @@ const VALID_CANALES = new Set<string>(Object.keys(CANAL_ENTRADA_LABELS));
 @Component({
   selector: 'app-importar-contactos',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LucideAngularModule, FocusTrapDirective],
+  imports: [LucideAngularModule, OverlayShellComponent],
   templateUrl: './importar-contactos.html',
 })
 export class ImportarContactosComponent {

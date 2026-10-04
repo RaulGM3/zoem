@@ -6,7 +6,7 @@ import {
   LucideAngularModule,
   Users, Plus, Phone, Mail, Building2,
   Edit, Trash2, ChevronRight, ChevronLeft, UserPlus, TrendingUp,
-  GitMerge, Shield, Brain, ArrowRight, X, Check, StickyNote, Briefcase,
+  GitMerge, Shield, Brain, ArrowRight, X, Check, StickyNote, Briefcase, SlidersHorizontal,
 } from 'lucide-angular';
 // import { PIPELINE_DEALS } from '../../data/dummy-data'; // dummy data — tab oculto
 import { ContactService } from '../../core/services/contact.service';
@@ -24,6 +24,12 @@ import { ContactoDrawerComponent, type ContactoPrefill } from './components/cont
 import {
   EstadoContactoDialogComponent, type CambioEstadoResult,
 } from '../../shared/components/estado-contacto-dialog/estado-contacto-dialog';
+import { BreakpointService } from '../../core/services/breakpoint.service';
+import { ActionMenuComponent, type MenuAction } from '../../shared/components/action-menu/action-menu';
+import { OverlayShellComponent } from '../../shared/components/overlay-shell/overlay-shell';
+import {
+  ListCardDirective, ListTableDirective, ResponsiveListComponent,
+} from '../../shared/components/responsive-list/responsive-list';
 import { SeguimientoContactoService } from '../../core/services/seguimiento-contacto.service';
 
 type ContactosTab = 'contactos' | 'pipeline' | 'rgpd' | 'herramientas';
@@ -31,7 +37,11 @@ type ContactosTab = 'contactos' | 'pipeline' | 'rgpd' | 'herramientas';
 @Component({
   selector: 'app-contactos',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, LucideAngularModule, DecimalPipe, ImportarContactosComponent, ContactoDrawerComponent, EstadoContactoDialogComponent],
+  imports: [
+    RouterLink, LucideAngularModule, DecimalPipe, ImportarContactosComponent, ContactoDrawerComponent,
+    EstadoContactoDialogComponent, ActionMenuComponent, OverlayShellComponent,
+    ResponsiveListComponent, ListCardDirective, ListTableDirective,
+  ],
   templateUrl: './contactos.html',
 })
 export class ContactosComponent {
@@ -54,10 +64,12 @@ export class ContactosComponent {
   readonly CheckIcon = Check;
   readonly StickyNoteIcon = StickyNote;
   readonly BriefcaseIcon = Briefcase;
+  readonly FiltersIcon = SlidersHorizontal;
 
   readonly contactService = inject(ContactService);
   readonly usersService = inject(UsersService);
   readonly perm = inject(PermissionService);
+  protected readonly bp = inject(BreakpointService);
   private readonly toast = inject(ToastService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -73,6 +85,10 @@ export class ContactosComponent {
   filterType = signal('');
   /** Drawer de alta/edición abierto (null = cerrado) y sus datos de partida. */
   readonly drawer = signal<{ contact: Contact | null; prefill: ContactoPrefill | null } | null>(null);
+  /** Hoja de filtros (móvil). Comparte las mismas señales que los selects de escritorio. */
+  readonly filtrosAbiertos = signal(false);
+  /** Filtros activos que oculta la hoja (la búsqueda vive en el header global). */
+  readonly filtrosActivos = computed(() => (this.filterStatus() ? 1 : 0) + (this.filterType() ? 1 : 0));
   showImportDrawer = signal(false);
   deleteConfirmId = signal<string | null>(null);
 
@@ -256,6 +272,37 @@ export class ContactosComponent {
 
   getSector(c: Contact): string | undefined {
     return c.type === 'persona_fisica' ? c.profesion : c.sectorActividad;
+  }
+
+  limpiarFiltros(): void {
+    this.filterStatus.set('');
+    this.filterType.set('');
+  }
+
+  /** Documento fiscal (NIF/CIF) para la tarjeta móvil. */
+  documento(c: Contact): string | undefined {
+    return c.type === 'persona_fisica' ? c.nif : c.cif;
+  }
+
+  /** Nombre del responsable asignado, si lo hay. */
+  responsable(c: Contact): string | undefined {
+    if (!c.assignedTo) return undefined;
+    const m = this.usersService.members().find((x) => x.userId === c.assignedTo);
+    return m ? [m.nombre, m.apellido].filter(Boolean).join(' ') : undefined;
+  }
+
+  /** Acciones del menú móvil. Misma lógica de permisos que los botones de escritorio. */
+  accionesContacto(): MenuAction[] {
+    const acciones: MenuAction[] = [{ id: 'caso', label: 'Abrir caso', icon: Briefcase }];
+    if (this.perm.can('Contactos', 'editar')) acciones.push({ id: 'edit', label: 'Editar contacto', icon: Edit });
+    if (this.perm.can('Contactos', 'eliminar')) acciones.push({ id: 'delete', label: 'Eliminar contacto', icon: Trash2, danger: true });
+    return acciones;
+  }
+
+  onAccion(id: string, c: Contact): void {
+    if (id === 'caso') this.abrirCaso(c.id);
+    else if (id === 'edit') this.openEdit(c);
+    else if (id === 'delete') this.deleteConfirmId.set(c.id);
   }
 
   getPhone(c: Contact): string | undefined {
