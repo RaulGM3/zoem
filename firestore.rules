@@ -61,6 +61,21 @@ service cloud.firestore {
       return isActiveMember(cid) && memberData(cid).role != 'Viewer';
     }
 
+    // Valida notificationPrefs en users/{uid}: si el update NO lo toca, pasa;
+    // si lo toca, debe ser un mapa con claves ⊆ permitidas y valores bool.
+    function notificationPrefsValid() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['notificationPrefs'])
+        || (request.resource.data.notificationPrefs is map
+            && request.resource.data.notificationPrefs.keys()
+                 .hasOnly(['llamadas', 'casos', 'contactos', 'eventos', 'hitos', 'push'])
+            && (!('llamadas' in request.resource.data.notificationPrefs) || request.resource.data.notificationPrefs.llamadas is bool)
+            && (!('casos' in request.resource.data.notificationPrefs) || request.resource.data.notificationPrefs.casos is bool)
+            && (!('contactos' in request.resource.data.notificationPrefs) || request.resource.data.notificationPrefs.contactos is bool)
+            && (!('eventos' in request.resource.data.notificationPrefs) || request.resource.data.notificationPrefs.eventos is bool)
+            && (!('hitos' in request.resource.data.notificationPrefs) || request.resource.data.notificationPrefs.hitos is bool)
+            && (!('push' in request.resource.data.notificationPrefs) || request.resource.data.notificationPrefs.push is bool));
+    }
+
     // ====================================================================
     // users/{uid}
     // ====================================================================
@@ -72,9 +87,11 @@ service cloud.firestore {
                     || (request.auth.uid == uid
                         && request.resource.data.isSuperUser == false);
       // El dueño edita su perfil pero NO puede tocar isSuperUser
+      // notificationPrefs: mapa con claves permitidas y valores booleanos (si se toca).
       allow update: if isSuper()
                     || (request.auth.uid == uid
-                        && request.resource.data.isSuperUser == resource.data.isSuperUser);
+                        && request.resource.data.isSuperUser == resource.data.isSuperUser
+                        && notificationPrefsValid());
       allow delete: if isSuper();
 
       // Tokens FCM del dispositivo: solo el propio usuario los gestiona.
