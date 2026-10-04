@@ -2,6 +2,8 @@
   @if (loading()) {
     <div class="p-10 text-center text-sm" style="color:var(--text-faint)">Cargando casos...</div>
   } @else {
+    <app-responsive-list [items]="casos()" trackBy="id" emptyText="No se encontraron casos">
+    <ng-template [appListTable]="casos()" let-rows>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
 
@@ -25,23 +27,13 @@
         </thead>
 
         <tbody>
-          @if (casos().length === 0) {
-            <tr>
-              <td colspan="7" class="px-4 py-10 text-center text-sm" style="color:var(--text-faint)">
-                No se encontraron casos
-              </td>
-            </tr>
-          }
-
-          @for (caso of casos(); track caso.id) {
+          @for (caso of rows; track caso.id) {
             <tr
-              class="cursor-pointer transition-colors duration-150"
+              class="cursor-pointer transition-colors duration-150 hover:bg-[var(--surface-2)]"
               style="border-bottom:1px solid var(--border)"
               (click)="casoClick.emit(caso)"
               (keydown.enter)="casoClick.emit(caso)"
               (keydown.space)="$event.preventDefault(); casoClick.emit(caso)"
-              (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-              (mouseleave)="$any($event.currentTarget).style.background=''"
               tabindex="0"
               role="link"
               [attr.aria-label]="'Ver caso: ' + caso.titulo"
@@ -96,13 +88,11 @@
               <!-- Más acciones -->
               <td class="px-4 py-3">
                 <button
-                  class="p-1.5 rounded-lg transition-colors duration-150"
+                  class="p-1.5 rounded-lg transition-colors duration-150 hover:bg-[var(--surface-2)]"
                   style="color:var(--text-faint)"
                   aria-label="Más acciones"
                   (click)="toggleDropdown(caso, $event)"
                   (keydown)="$event.stopPropagation()"
-                  (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-                  (mouseleave)="$any($event.currentTarget).style.background=''"
                 >
                   <lucide-icon [img]="MoreHorizontalIcon" class="w-4 h-4" />
                 </button>
@@ -112,6 +102,41 @@
         </tbody>
       </table>
     </div>
+    </ng-template>
+
+    <!-- Móvil: tarjetas -->
+    <ng-template [appListCard]="casos()" let-caso>
+      <article class="flex items-start gap-1 p-3" style="border-bottom:1px solid var(--border)">
+        <button type="button" data-caso-abrir
+          class="min-w-0 flex-1 rounded-lg p-1 text-left"
+          [attr.aria-label]="'Ver caso: ' + caso.titulo"
+          (click)="casoClick.emit(caso)">
+          <span class="flex items-center gap-2">
+            <span class="h-2 w-2 shrink-0 rounded-full" [style.background]="getPriorityColor(caso.prioridad)"></span>
+            <span class="truncate text-[14px] font-bold" style="color:var(--text-strong)">{{ caso.titulo }}</span>
+          </span>
+          @if (subtitulos()[caso.id]; as subtitulo) {
+            <span class="mt-0.5 block truncate text-[12.5px]" style="color:var(--text-muted)">{{ subtitulo }}</span>
+          }
+          <span class="mt-2 flex flex-wrap items-center gap-1.5">
+            <span class="rounded-full px-2 py-0.5 text-[11px] font-bold" [style]="getEstadoStyle(caso.estado)">{{ caso.estado }}</span>
+            <span class="rounded-full px-2 py-0.5 text-[11px] font-bold" [style]="getTipoStyle(caso.tipo)">{{ caso.tipo }}</span>
+            <span class="rounded-full px-2 py-0.5 text-[11px] font-bold"
+              style="background:var(--surface-2);color:var(--text-body)">Prioridad {{ caso.prioridad }}</span>
+          </span>
+          <span class="mt-2 flex items-center justify-between text-[13px]">
+            <span [style]="getVencimientoStyle(getDiasVencimiento(caso.vencimiento))">Vence: {{ caso.vencimiento ?? '—' }}</span>
+            <span class="font-bold tabular-nums" style="font-family:var(--font-mono)"
+              [style.color]="caso.resumenFinanciero.saldo >= 0 ? 'var(--success)' : 'var(--danger)'">
+              {{ caso.resumenFinanciero.saldo | number:'1.2-2' }} €
+            </span>
+          </span>
+        </button>
+        <app-action-menu [actions]="accionesCaso()" [label]="'Acciones del caso ' + caso.titulo"
+          (selected)="ejecutarAccion(caso, $event)" />
+      </article>
+    </ng-template>
+    </app-responsive-list>
   }
 </div>
 
@@ -126,11 +151,9 @@
   >
     @if (canDelete()) {
       <button
-        class="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium transition-colors duration-150"
+        class="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--danger)_8%,transparent)]"
         style="color:var(--danger)"
         (click)="openDeleteDialog($event)"
-        (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 8%,transparent)'"
-        (mouseleave)="$any($event.currentTarget).style.background=''"
         aria-label="Eliminar caso"
       >
         <lucide-icon [img]="TrashIcon" class="w-4 h-4" />
