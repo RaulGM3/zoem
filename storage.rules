@@ -53,10 +53,36 @@ service firebase.storage {
     // gap documentado hasta que esa matriz fina se sincronice a custom
     // claims — ver el mismo comentario en firestore.rules junto a
     // match /docTemplates/{templateId}.
+    //
+    // OJO: las reglas de Storage se SUMAN (basta con que una permita). Por eso
+    // el bloque genérico excluye acciones_envios/ y ahí manda su propia regla
+    // más estricta. `{allPaths=**}` se liga como `path` (sin .matches), así que
+    // el nombre se mira con `request.resource.name` (create/update).
+    function esEnvioAccion(name) {
+      return name.matches('companies/[^/]+/acciones_envios/.*');
+    }
     match /companies/{cid}/{allPaths=**} {
       allow read:           if isSuper() || isActiveMember(cid);
-      allow create, update: if isSuper() || (canWrite(cid) && withinSizeLimit());
+      allow create, update: if !esEnvioAccion(request.resource.name)
+                            && (isSuper() || (canWrite(cid) && withinSizeLimit()));
       allow delete:         if isSuper();
+    }
+
+    // .docx que una acción adjunta al mensaje (lo firma accionDocUrl). Solo
+    // se CREA desde cliente: sin sobrescritura ni borrado (el id es el del
+    // registro, único), 10 MB máx., content-type docx, sin subcarpetas.
+    match /companies/{cid}/acciones_envios/{file} {
+      allow read:   if isSuper() || isActiveMember(cid);
+      // `resource == null`: solo objetos nuevos (el emulator trata un overwrite
+      // como `create` si no se comprueba).
+      allow create: if resource == null
+                    && (isSuper()
+                    || (canWrite(cid)
+                        && request.resource.size < 10 * 1024 * 1024
+                        && request.resource.contentType ==
+                           'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                        && file.matches('[A-Za-z0-9_-]+[.]docx')));
+      allow update, delete: if false;
     }
 
     // Default fail-closed: nada fuera de companies/ es accesible.

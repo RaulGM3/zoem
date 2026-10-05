@@ -276,6 +276,72 @@ service cloud.firestore {
       }
       match /casoPlantillas/{doc=**} { allow read: if isSuper() || isMember(cid); allow write: if isSuper() || canWrite(cid); }
 
+      // ---- Acciones (mensajes plantilla con documento opcional) --------
+      // Catálogo de la empresa: lo lee cualquier miembro (se ejecutan desde
+      // contactos/casos); solo Admin/Gestor lo gobiernan. Esquema cerrado
+      // (keys.hasOnly) para que no se cuelen campos arbitrarios.
+      function accionValida() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['companyId', 'nombre', 'ambito', 'asunto', 'cuerpo',
+                                 'docTemplateId', 'canales', 'activa', 'plantillaId',
+                                 'hitoPlantillaId', 'createdBy', 'createdAt', 'updatedAt'])
+          && d.keys().hasAll(['companyId', 'nombre', 'ambito', 'asunto', 'cuerpo', 'canales',
+                              'activa', 'createdBy', 'createdAt', 'updatedAt'])
+          && d.companyId == cid
+          && d.nombre is string && d.nombre.size() > 0 && d.nombre.size() <= 200
+          && d.ambito in ['contacto', 'caso']
+          && d.asunto is string && d.asunto.size() <= 500
+          && d.cuerpo is string && d.cuerpo.size() <= 10000
+          && d.canales is list && d.canales.size() >= 1 && d.canales.size() <= 4
+          && d.canales.hasOnly(['gmail', 'outlook', 'mail', 'whatsapp'])
+          && d.activa is bool
+          && (!('docTemplateId' in d) || (d.docTemplateId is string && d.docTemplateId.size() <= 200))
+          && (!('plantillaId' in d) || (d.plantillaId is string && d.plantillaId.size() <= 200))
+          && (!('hitoPlantillaId' in d) || (d.hitoPlantillaId is string && d.hitoPlantillaId.size() <= 200))
+          && d.updatedAt == request.time;
+      }
+      match /acciones/{accionId} {
+        allow read:   if isSuper() || isMember(cid);
+        allow create: if isSuper()
+                      || (isManager(cid)
+                          && accionValida()
+                          && request.resource.data.createdBy == request.auth.uid
+                          && request.resource.data.createdAt == request.time);
+        allow update: if isSuper()
+                      || (isManager(cid)
+                          && accionValida()
+                          && request.resource.data.createdBy == resource.data.createdBy
+                          && request.resource.data.createdAt == resource.data.createdAt);
+        allow delete: if isSuper() || isManager(cid);
+      }
+
+      // Log de ejecuciones de acciones: append-only. Lo crea quien ejecuta
+      // (miembro activo no-Viewer) a su nombre; nadie lo edita ni borra.
+      match /accion_registros/{registroId} {
+        allow read:   if isSuper() || isMember(cid);
+        allow create: if isSuper()
+                      || (canWrite(cid)
+                          && request.resource.data.keys().hasOnly(['companyId', 'accionId', 'accionNombre',
+                               'contactoIds', 'casoId', 'hitoId', 'canal', 'docPath', 'createdBy', 'createdAt'])
+                          && request.resource.data.keys().hasAll(['companyId', 'accionId', 'accionNombre',
+                               'contactoIds', 'canal', 'createdBy', 'createdAt'])
+                          && request.resource.data.companyId == cid
+                          && request.resource.data.createdBy == request.auth.uid
+                          && request.resource.data.createdAt == request.time
+                          && request.resource.data.accionId is string
+                          && request.resource.data.accionNombre is string
+                          && request.resource.data.accionNombre.size() <= 200
+                          && request.resource.data.contactoIds is list
+                          && request.resource.data.contactoIds.size() <= 100
+                          && request.resource.data.canal in ['gmail', 'outlook', 'mail', 'whatsapp']
+                          && (!('casoId' in request.resource.data) || request.resource.data.casoId is string)
+                          && (!('hitoId' in request.resource.data) || request.resource.data.hitoId is string)
+                          && (!('docPath' in request.resource.data)
+                              || (request.resource.data.docPath is string
+                                  && request.resource.data.docPath.matches('companies/' + cid + '/acciones_envios/[A-Za-z0-9_-]+[.]docx'))));
+        allow update, delete: if false;
+      }
+
       // ---- Cadena Verifactu (cola, cabeza, registro pendiente) --------
       // Estado interno del servidor: ningún cliente lo lee ni escribe (el Admin SDK
       // de las Cloud Functions ignora las reglas). Explícito aunque el default ya deniega.

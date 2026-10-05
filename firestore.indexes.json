@@ -109,6 +109,22 @@
         { "fieldPath": "agentId", "order": "ASCENDING" },
         { "fieldPath": "creadoEn", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "accion_registros",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "contactoIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "accion_registros",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "casoId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [
