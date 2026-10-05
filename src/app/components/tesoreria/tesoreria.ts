@@ -29,10 +29,20 @@ import { ConciliacionTabComponent } from './components/conciliacion-tab/concilia
 import { ReportesTabComponent } from './components/reportes-tab/reportes-tab';
 import { MovimientoGeneralDrawerComponent } from './components/movimiento-general-drawer/movimiento-general-drawer';
 import { MovimientoGestoria } from '../../interfaces';
+import { BreakpointService } from '../../core/services/breakpoint.service';
+import { ActionMenuComponent, type MenuAction } from '../../shared/components/action-menu/action-menu';
 
 const COTEJO_TOLERANCIA = 0.01;
 
 export type TabTesoreria = 'resumen' | 'movimientos' | 'conciliacion' | 'reportes' | 'casos';
+
+const TABS: readonly { id: TabTesoreria; label: string }[] = [
+  { id: 'resumen', label: 'Resumen' },
+  { id: 'movimientos', label: 'Movimientos' },
+  { id: 'conciliacion', label: 'Conciliación' },
+  { id: 'reportes', label: 'Reportes' },
+  { id: 'casos', label: 'Casos' },
+];
 
 /** Redondea a 2 decimales para evitar drift de coma flotante en acumulaciones de dinero. */
 function round2(n: number): number {
@@ -63,7 +73,7 @@ const TIPOS_REPORTE: readonly MovimientoTipo[] = Object.keys(TIPOS_REPORTE_EXHAU
     CuentasDrawerComponent,
     TesoreriaResumenTabComponent, TesoreriaCasosTabComponent,
     CierreCajaModalComponent, ConciliacionTabComponent, ReportesTabComponent,
-    MovimientoGeneralDrawerComponent,
+    MovimientoGeneralDrawerComponent, ActionMenuComponent,
   ],
   templateUrl: './tesoreria.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -79,6 +89,7 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
   private readonly firestore = inject(Firestore);
   private readonly usersService = inject(UsersService);
   readonly perm = inject(PermissionService);
+  protected readonly bp = inject(BreakpointService);
 
   readonly importandoExtracto = signal(false);
 
@@ -94,6 +105,7 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
   readonly LockIcon = Lock;
   readonly PlusIcon = Plus;
 
+  readonly tabs = TABS;
   readonly activeTab = signal<TabTesoreria>('resumen');
   readonly casos = this.casosService.casos;
   readonly selectedCaso = signal<Caso | null>(null);
@@ -109,6 +121,14 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
   readonly editandoMovimientoGeneral = signal<MovimientoGestoria | null>(null);
 
   readonly cierres = this.cierreCajaService.cierres;
+
+  /** Acciones secundarias de la cabecera; en móvil van al menú "⋯". */
+  readonly accionesCabecera = computed<MenuAction[]>(() => {
+    const acciones: MenuAction[] = [];
+    if (this.perm.can('Tesorería', 'editar')) acciones.push({ id: 'cuentas', label: 'Cuentas', icon: Settings });
+    if (this.perm.can('Tesorería', 'crear')) acciones.push({ id: 'movimiento-general', label: 'Movimiento general', icon: Plus });
+    return acciones;
+  });
 
   readonly lineasExtracto = this.conciliacionService.lineas;
 
@@ -342,6 +362,20 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
       totalMovimientos: this.movimientosEnRango().length,
     };
   });
+
+  seleccionarTab(id: string): void {
+    const tab = TABS.find(t => t.id === id);
+    if (tab) this.activeTab.set(tab.id);
+  }
+
+  ejecutarAccionCabecera(id: string): void {
+    if (id === 'cuentas') {
+      this.showCuentasDrawer.set(true);
+    } else if (id === 'movimiento-general') {
+      this.editandoMovimientoGeneral.set(null);
+      this.showMovimientoGeneralDrawer.set(true);
+    }
+  }
 
   exportarCsv(): void {
     const nombresCaso = this.casoNombresMap();

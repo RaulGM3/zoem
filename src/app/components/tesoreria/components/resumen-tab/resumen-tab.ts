@@ -1,11 +1,12 @@
-import { Component, ChangeDetectionStrategy, input, output, signal, effect, computed } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
+import { Component, ChangeDetectionStrategy, input, output, signal, effect, computed, inject } from '@angular/core';
+import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import {
   LucideAngularModule, Landmark, Wallet, CheckCircle2, AlertTriangle, Save, Scale, History, X,
   Lock, ChevronDown,
 } from 'lucide-angular';
 import type { CierreCaja, CuentaBancaria, MovimientoGestoria, TesoreriaResumen } from '../../../../interfaces';
-import { FocusTrapDirective } from '../../../../shared/directives/focus-trap.directive';
+import { BreakpointService } from '../../../../core/services/breakpoint.service';
+import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 
 export type FiltroAprobado = 'pendientes' | 'aprobados' | 'todos';
 
@@ -32,11 +33,13 @@ export type MovimientoEnriquecido = MovimientoGestoria & { casoNombre: string };
 @Component({
   selector: 'app-tesoreria-resumen-tab',
   host: { class: 'block space-y-6' },
-  imports: [LucideAngularModule, DecimalPipe, FocusTrapDirective],
+  imports: [LucideAngularModule, DecimalPipe, NgTemplateOutlet, OverlayShellComponent],
   templateUrl: './resumen-tab.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TesoreriaResumenTabComponent {
+  protected readonly bp = inject(BreakpointService);
+
   readonly cotejos = input.required<CotejoCuenta[]>();
   readonly movimientosPorCuenta = input.required<Map<string, MovimientoEnriquecido[]>>();
   readonly resumenHistorico = input.required<TesoreriaResumen | null>();

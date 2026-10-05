@@ -2,9 +2,9 @@
 
   <!-- Header -->
   <div class="flex items-center justify-between px-4 py-3" style="border-bottom:1px solid var(--border)">
-    <div class="flex items-center gap-2">
-      <lucide-icon [img]="ClipboardCheckIcon" class="w-4 h-4" style="color:var(--text-muted)" />
-      <h3 class="text-sm font-semibold" style="color:var(--text-strong)">Revisión de movimientos</h3>
+    <div class="flex flex-wrap items-center gap-2">
+      <lucide-icon [img]="ClipboardCheckIcon" class="w-4 h-4" style="color:var(--text-muted)" aria-hidden="true" />
+      <h2 class="text-sm font-semibold" style="color:var(--text-strong)">Revisión de movimientos</h2>
       @if (progreso().total > 0) {
         <span class="text-xs font-bold px-2 py-0.5 rounded-full"
           [style.background]="progreso().aprobados === progreso().total
@@ -22,8 +22,9 @@
   <!-- Filtros -->
   <div class="flex gap-1 px-4 py-2.5" style="border-bottom:1px solid var(--border);background:var(--surface-2)">
     @for (f of [['pendientes','Pendientes'],['aprobados','Aprobados'],['todos','Todos']]; track f[0]) {
-      <button type="button" (click)="filtro.set($any(f[0]))"
-        class="px-3 py-1 text-xs font-semibold rounded-full transition-all duration-150"
+      <button type="button" (click)="filtro.set($any(f[0]))" data-filtro
+        [attr.aria-pressed]="filtro() === f[0]"
+        class="max-sm:tap-target px-3 py-1 text-xs font-semibold rounded-full transition-all duration-150"
         [style.background]="filtro() === f[0] ? 'var(--brand)' : 'transparent'"
         [style.color]="filtro() === f[0] ? 'white' : 'var(--text-muted)'">
         {{ f[1] }}
@@ -46,14 +47,12 @@
   } @else {
     <ul>
       @for (mov of movimientosFiltrados(); track mov.id) {
-        <li class="flex items-center gap-3 px-4 py-3 transition-colors duration-150"
-          style="border-bottom:1px solid var(--border)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-          (mouseleave)="$any($event.currentTarget).style.background=''">
+        <li class="flex items-center gap-3 px-4 py-3 transition-colors duration-150 hover:bg-[var(--surface-2)]"
+          style="border-bottom:1px solid var(--border)">
 
           <!-- Toggle aprobación -->
           <button type="button" (click)="toggleAprobado(mov)" [disabled]="toggling() === mov.id"
-            class="shrink-0 transition-all duration-150 disabled:opacity-50 rounded-full flex items-center justify-center w-7 h-7"
+            class="max-sm:tap-target shrink-0 transition-all duration-150 disabled:opacity-50 rounded-full flex items-center justify-center w-7 h-7"
             [attr.aria-label]="mov.aprobado ? 'Quitar aprobación' : 'Aprobar movimiento'"
             [attr.title]="mov.aprobado ? 'Aprobado — clic para desaprobar' : 'Clic para aprobar'"
             (mouseenter)="hoveringAprobacion.set(mov.id)"
@@ -63,7 +62,7 @@
               : (hoveringAprobacion() === mov.id ? 'color-mix(in srgb,var(--success) 12%,transparent)' : 'color-mix(in srgb,var(--text-muted) 8%,transparent)')">
             <lucide-icon
               [img]="(mov.aprobado || hoveringAprobacion() === mov.id) ? CheckCircle2Icon : CircleIcon"
-              class="w-5 h-5 transition-colors duration-150"
+              class="w-5 h-5 transition-colors duration-150" aria-hidden="true"
               [style.color]="mov.aprobado ? 'var(--success)' : (hoveringAprobacion() === mov.id ? 'var(--success)' : 'var(--text-muted)')" />
           </button>
 
@@ -88,8 +87,9 @@
                     }
                   </select>
                   <button type="button" (click)="editandoMovId.set(null)"
+                    class="max-sm:tap-target inline-flex items-center justify-center"
                     style="color:var(--text-faint)" aria-label="Cancelar">
-                    <lucide-icon [img]="XIcon" class="w-3.5 h-3.5" />
+                    <lucide-icon [img]="XIcon" class="w-3.5 h-3.5" aria-hidden="true" />
                   </button>
                 </span>
               } @else {
@@ -106,10 +106,10 @@
                     </span>
                   }
                   <button type="button" (click)="editandoMovId.set(mov.id)"
-                    class="opacity-0 group-hover:opacity-100 transition-opacity ml-0.5"
+                    class="max-sm:tap-target inline-flex items-center justify-center ml-0.5 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                     style="color:var(--text-faint)"
                     aria-label="Cambiar cuenta">
-                    <lucide-icon [img]="PencilIcon" class="w-3 h-3" />
+                    <lucide-icon [img]="PencilIcon" class="w-3 h-3" aria-hidden="true" />
                   </button>
                 </span>
               }
@@ -132,17 +132,15 @@
 
   <!-- Footer: Aprobar todos -->
   @if (!loading() && puedeAprobarTodos()) {
-    <div class="px-4 py-3 flex items-center justify-between gap-3"
+    <div data-aprobar-todos class="px-4 py-3 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between"
       style="border-top:1px solid var(--border);background:color-mix(in srgb,var(--success) 6%,transparent)">
       <p class="text-xs" style="color:var(--success)">
         El cotejo está conciliado. Puedes confirmar todos los movimientos pendientes.
       </p>
       <button type="button" (click)="aprobarTodos()" [disabled]="aprobandoTodos()"
-        class="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 shrink-0 transition-all duration-150"
-        style="background:var(--success)"
-        (mouseenter)="$any($event.currentTarget).style.opacity='0.85'"
-        (mouseleave)="$any($event.currentTarget).style.opacity='1'">
-        <lucide-icon [img]="CheckCheckIcon" class="w-4 h-4" />
+        class="max-sm:tap-target inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 shrink-0 transition-all duration-150 hover:opacity-85"
+        style="background:var(--success)">
+        <lucide-icon [img]="CheckCheckIcon" class="w-4 h-4" aria-hidden="true" />
         {{ aprobandoTodos() ? 'Aprobando...' : 'Aprobar todos' }}
       </button>
     </div>

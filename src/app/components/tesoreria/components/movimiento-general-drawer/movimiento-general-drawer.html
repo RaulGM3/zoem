@@ -1,34 +1,11 @@
-@if (visible()) {
-  <!-- Backdrop -->
-  <div class="fixed inset-0 z-40" style="background:rgba(0,0,0,0.3)" (click)="closed.emit()" aria-hidden="true"></div>
-
-  <!-- Drawer -->
-  <aside role="dialog" aria-modal="true" [attr.aria-label]="modoEdicion() ? 'Editar movimiento general' : 'Nuevo movimiento general'"
-    class="fixed right-0 top-0 bottom-0 z-50 flex flex-col w-full max-w-md shadow-2xl"
-    style="background:var(--surface);border-left:1px solid var(--border)"
-    appFocusTrap (escapeKey)="closed.emit()">
-
-    <!-- Header -->
-    <div class="flex items-center justify-between gap-3 px-5 py-4" style="border-bottom:1px solid var(--border)">
-      <div>
-        <h2 class="text-base font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">
-          {{ modoEdicion() ? 'Editar movimiento' : 'Nuevo movimiento general' }}
-        </h2>
-        <p class="text-xs mt-0.5" style="color:var(--text-muted)">
-          Gastos de oficina, saldos iniciales, ajustes de balance
-        </p>
-      </div>
-      <button type="button" (click)="closed.emit()" class="rounded-lg p-1.5 transition-colors duration-150"
-        style="color:var(--text-muted)"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-        (mouseleave)="$any($event.currentTarget).style.background=''"
-        aria-label="Cerrar">
-        <lucide-icon [img]="XIcon" class="w-4 h-4" />
-      </button>
-    </div>
+<app-overlay-shell [open]="visible()" [title]="modoEdicion() ? 'Editar movimiento' : 'Nuevo movimiento general'"
+  variant="drawer" size="md" (closed)="closed.emit()">
+    <p class="px-4 pt-4 text-xs sm:px-5" style="color:var(--text-muted)">
+      Gastos de oficina, saldos iniciales, ajustes de balance
+    </p>
 
     <!-- Form -->
-    <div class="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+    <div class="px-4 py-4 space-y-4 sm:px-5">
 
       <!-- Tipo -->
       <div>
@@ -44,16 +21,17 @@
 
       <!-- Dirección (entrada / salida) -->
       <div>
-        <label class="form-label">Dirección</label>
-        <div class="mt-1 flex rounded-xl overflow-hidden text-sm font-semibold" style="border:1px solid var(--border)">
-          <button type="button" (click)="formEsEntrada.set(true)"
-            class="flex-1 py-2 transition-colors duration-150"
+        <span id="mg-direccion" class="form-label">Dirección</span>
+        <div class="mt-1 flex rounded-xl overflow-hidden text-sm font-semibold" style="border:1px solid var(--border)"
+          role="group" aria-labelledby="mg-direccion">
+          <button type="button" (click)="formEsEntrada.set(true)" data-direccion [attr.aria-pressed]="formEsEntrada()"
+            class="max-sm:tap-target flex-1 py-2 transition-colors duration-150"
             [style.background]="formEsEntrada() ? 'color-mix(in srgb,var(--success) 10%,transparent)' : 'transparent'"
             [style.color]="formEsEntrada() ? 'var(--success)' : 'var(--text-muted)'">
             Entrada
           </button>
-          <button type="button" (click)="formEsEntrada.set(false)"
-            class="flex-1 py-2 transition-colors duration-150"
+          <button type="button" (click)="formEsEntrada.set(false)" data-direccion [attr.aria-pressed]="!formEsEntrada()"
+            class="max-sm:tap-target flex-1 py-2 transition-colors duration-150"
             style="border-left:1px solid var(--border)"
             [style.background]="!formEsEntrada() ? 'color-mix(in srgb,var(--danger) 10%,transparent)' : 'transparent'"
             [style.color]="!formEsEntrada() ? 'var(--danger)' : 'var(--text-muted)'">
@@ -72,7 +50,7 @@
       </div>
 
       <!-- Importe + IVA -->
-      <div class="grid grid-cols-2 gap-3">
+      <div class="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2">
         <div>
           <label class="form-label" for="mg-importe">
             {{ formIvaIncluido() ? 'Importe total (€)' : 'Base imponible (€)' }}
@@ -83,7 +61,7 @@
               placeholder="0.00"
               [value]="formImporte()"
               (input)="formImporte.set($any($event.target).value)" />
-            <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs" style="color:var(--text-faint)">€</span>
+            <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs" style="color:var(--text-faint)" aria-hidden="true">€</span>
           </div>
         </div>
         <div>
@@ -173,36 +151,26 @@
 
     </div>
 
-    <!-- Footer -->
-    <div class="px-5 py-4 flex items-center gap-3" style="border-top:1px solid var(--border)">
+    <div footer class="flex flex-wrap gap-3 px-4 py-4 sm:flex-nowrap sm:px-5">
       @if (modoEdicion()) {
         <button type="button" (click)="eliminar()" [disabled]="deleting() || saving()"
-          class="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold transition-all duration-150 disabled:opacity-50"
-          style="color:var(--danger);border:1px solid var(--border)"
-          (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 8%,transparent)'"
-          (mouseleave)="$any($event.currentTarget).style.background=''">
-          <lucide-icon [img]="Trash2Icon" class="w-4 h-4" />
+          class="max-sm:tap-target max-sm:w-full inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors duration-150 disabled:opacity-50 hover:bg-[color-mix(in_srgb,var(--danger)_8%,transparent)]"
+          style="color:var(--danger);border:1px solid var(--border)">
+          <lucide-icon [img]="Trash2Icon" class="w-4 h-4" aria-hidden="true" />
           Eliminar
         </button>
       }
       <button type="button" (click)="closed.emit()"
-        class="ml-auto rounded-xl px-4 py-2 text-sm font-medium transition-colors duration-150"
-        style="border:1px solid var(--border);color:var(--text-body)"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-        (mouseleave)="$any($event.currentTarget).style.background=''">
+        class="max-sm:tap-target max-sm:flex-1 rounded-xl px-4 py-2 text-sm font-medium transition-colors duration-150 sm:ml-auto hover:bg-[var(--surface-2)]"
+        style="border:1px solid var(--border);color:var(--text-body)">
         Cancelar
       </button>
       <button type="button" (click)="submit()" [disabled]="!canSubmit() || saving()"
-        class="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white transition-all duration-150 disabled:opacity-50"
-        style="background:var(--brand)"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-        (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+        class="max-sm:tap-target max-sm:flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 disabled:opacity-50 bg-[var(--brand)] hover:bg-[var(--brand-hover)]">
         @if (saving()) {
           <span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-hidden="true"></span>
         }
         {{ modoEdicion() ? 'Guardar cambios' : 'Registrar' }}
       </button>
     </div>
-
-  </aside>
-}
+</app-overlay-shell>

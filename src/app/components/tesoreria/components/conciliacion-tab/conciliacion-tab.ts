@@ -1,9 +1,12 @@
 import { Component, ChangeDetectionStrategy, input, output, signal, computed } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
+import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import {
   LucideAngularModule, Upload, Wand2, Link2, Unlink, EyeOff, CheckCircle2, AlertTriangle,
 } from 'lucide-angular';
 import type { CuentaBancaria, LineaExtracto } from '../../../../interfaces';
+import {
+  ResponsiveListComponent, ListCardDirective, ListTableDirective,
+} from '../../../../shared/components/responsive-list/responsive-list';
 
 /** Movimiento enriquecido disponible para casar manualmente. */
 export interface MovimientoConciliable {
@@ -20,7 +23,7 @@ export interface MovimientoConciliable {
 @Component({
   selector: 'app-conciliacion-tab',
   host: { style: 'display: block' },
-  imports: [LucideAngularModule, DecimalPipe],
+  imports: [LucideAngularModule, DecimalPipe, NgTemplateOutlet, ResponsiveListComponent, ListCardDirective, ListTableDirective],
   templateUrl: './conciliacion-tab.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

@@ -4,11 +4,11 @@ import {
   LucideAngularModule, X, CheckCircle2, AlertTriangle, Landmark, Wallet, Lock,
 } from 'lucide-angular';
 import type { CierreCuenta } from '../../../../interfaces';
-import { FocusTrapDirective } from '../../../../shared/directives/focus-trap.directive';
+import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 
 @Component({
   selector: 'app-cierre-caja-modal',
-  imports: [LucideAngularModule, DecimalPipe, FocusTrapDirective],
+  imports: [LucideAngularModule, DecimalPipe, OverlayShellComponent],
   templateUrl: './cierre-caja-modal.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

@@ -1,64 +1,79 @@
-<div class="p-6 space-y-6">
+<div class="space-y-4 sm:space-y-6 sm:p-6">
 
   <!-- Header -->
-  <div class="flex items-center justify-between gap-3 flex-wrap">
-    <div class="flex items-center gap-3">
-      <div class="flex h-10 w-10 items-center justify-center rounded-xl"
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex min-w-0 items-center gap-3">
+      <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
         style="background:color-mix(in srgb,var(--accent-ia) 12%,transparent)">
-        <lucide-icon [img]="WalletIcon" class="w-5 h-5" style="color:var(--accent-ia)" />
+        <lucide-icon [img]="WalletIcon" class="w-5 h-5" style="color:var(--accent-ia)" aria-hidden="true" />
       </div>
-      <div>
+      <div class="min-w-0">
         <h1 class="text-[19px] font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Tesorería</h1>
         <p class="text-sm" style="color:var(--text-muted)">Contabilidad de casos y cotejo con el banco</p>
       </div>
     </div>
     <div class="flex items-center gap-2">
-      @if (perm.can('Tesorería', 'editar')) {
-        <button type="button" (click)="showCuentasDrawer.set(true)"
-          class="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors duration-150"
-          style="border:1px solid var(--border);color:var(--text-body);background:var(--surface)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-          (mouseleave)="$any($event.currentTarget).style.background='var(--surface)'">
-          <lucide-icon [img]="SettingsIcon" class="w-4 h-4" />
-          Cuentas
-        </button>
+      @if (!bp.isMobile()) {
+        @if (perm.can('Tesorería', 'editar')) {
+          <button type="button" (click)="showCuentasDrawer.set(true)" data-header-secundario
+            class="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors duration-150 bg-[var(--surface)] hover:bg-[var(--surface-2)]"
+            style="border:1px solid var(--border);color:var(--text-body)">
+            <lucide-icon [img]="SettingsIcon" class="w-4 h-4" aria-hidden="true" />
+            Cuentas
+          </button>
+        }
+        @if (perm.can('Tesorería', 'crear')) {
+          <button type="button" (click)="ejecutarAccionCabecera('movimiento-general')" data-header-secundario
+            class="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors duration-150 bg-[var(--surface)] hover:bg-[var(--surface-2)]"
+            style="border:1px solid var(--border);color:var(--text-body)">
+            <lucide-icon [img]="PlusIcon" class="w-4 h-4" aria-hidden="true" />
+            Mov. general
+          </button>
+        }
       }
       @if (perm.can('Tesorería', 'crear')) {
-        <button type="button" (click)="editandoMovimientoGeneral.set(null); showMovimientoGeneralDrawer.set(true)"
-          class="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors duration-150"
-          style="border:1px solid var(--border);color:var(--text-body);background:var(--surface)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-          (mouseleave)="$any($event.currentTarget).style.background='var(--surface)'">
-          <lucide-icon [img]="PlusIcon" class="w-4 h-4" />
-          Mov. general
-        </button>
-        <button type="button" (click)="showCierreModal.set(true)"
-          class="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-white transition-all duration-150"
-          style="background:var(--brand)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-          (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
-          <lucide-icon [img]="LockIcon" class="w-4 h-4" />
+        <button type="button" (click)="showCierreModal.set(true)" data-cierre-caja
+          class="max-sm:tap-target inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-white transition-colors duration-150 sm:flex-none bg-[var(--brand)] hover:bg-[var(--brand-hover)]">
+          <lucide-icon [img]="LockIcon" class="w-4 h-4" aria-hidden="true" />
           Cierre de caja
         </button>
+      }
+      @if (bp.isMobile() && accionesCabecera().length > 0) {
+        <app-action-menu [actions]="accionesCabecera()" label="Más acciones de tesorería"
+          (selected)="ejecutarAccionCabecera($event)" />
       }
     </div>
   </div>
 
   <!-- Tabs -->
-  <div class="flex overflow-x-auto" style="border-bottom:1px solid var(--border)">
-    @for (tab of [['resumen','Resumen'],['movimientos','Movimientos'],['conciliacion','Conciliación'],['reportes','Reportes'],['casos','Casos']]; track tab[0]) {
-      <button type="button" (click)="activeTab.set($any(tab[0]))"
-        class="px-4 py-3 text-sm font-semibold whitespace-nowrap transition-colors duration-150"
-        [style.color]="activeTab() === tab[0] ? 'var(--brand)' : 'var(--text-muted)'"
-        [style.border-bottom]="activeTab() === tab[0] ? '2px solid var(--brand)' : '2px solid transparent'">
-        {{ tab[1] }}
-        @if (tab[0] === 'movimientos' && movimientosPendientes() > 0) {
-          <span class="ml-1.5 inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full font-bold text-white"
-            style="background:var(--warning)">{{ movimientosPendientes() }}</span>
+  @if (bp.isMobile()) {
+    <div>
+      <label for="tesoreria-seccion" class="form-label">Sección</label>
+      <select id="tesoreria-seccion" class="form-input w-full" (change)="seleccionarTab($any($event.target).value)">
+        @for (tab of tabs; track tab.id) {
+          <option [value]="tab.id" [selected]="activeTab() === tab.id">
+            {{ tab.label }}{{ tab.id === 'movimientos' && movimientosPendientes() > 0 ? ' (' + movimientosPendientes() + ' pendientes)' : '' }}
+          </option>
         }
-      </button>
-    }
-  </div>
+      </select>
+    </div>
+  } @else {
+    <div class="flex overflow-x-auto" style="border-bottom:1px solid var(--border)">
+      @for (tab of tabs; track tab.id) {
+        <button type="button" (click)="activeTab.set(tab.id)" data-tab
+          [attr.aria-current]="activeTab() === tab.id ? 'page' : null"
+          class="px-4 py-3 text-sm font-semibold whitespace-nowrap transition-colors duration-150"
+          [style.color]="activeTab() === tab.id ? 'var(--brand)' : 'var(--text-muted)'"
+          [style.border-bottom]="activeTab() === tab.id ? '2px solid var(--brand)' : '2px solid transparent'">
+          {{ tab.label }}
+          @if (tab.id === 'movimientos' && movimientosPendientes() > 0) {
+            <span class="ml-1.5 inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full font-bold text-white"
+              style="background:var(--warning)">{{ movimientosPendientes() }}</span>
+          }
+        </button>
+      }
+    </div>
+  }
 
   <!-- Tab content -->
   @switch (activeTab()) {
