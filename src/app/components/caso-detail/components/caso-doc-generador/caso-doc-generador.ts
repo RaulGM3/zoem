@@ -8,6 +8,7 @@ import { DocTemplateService } from '../../../../core/services/doc-template.servi
 import { DocGenerationService } from '../../../../core/services/doc-generation.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { ErrorService } from '../../../../core/services/error.service';
+import { prefillVariables } from '../../../../core/acciones/prefill-variables';
 import { translateFirebaseError } from '../../../../core/firebase/firebase-error';
 import type { CasoDocSlot, DocTemplate, TemplateVariable } from '../../../../interfaces';
 
@@ -291,7 +292,7 @@ export class CasoDocGeneradorComponent {
       this.template.set(t);
       if (t) {
         this.values.set(
-          slot.generatedValues ?? this.prefill(t.variables, this.casoContext())
+          slot.generatedValues ?? prefillVariables(t.variables, this.casoContext())
         );
       }
     } catch (err) {
@@ -333,21 +334,6 @@ export class CasoDocGeneradorComponent {
   retryLoadTemplate(): void {
     this.loading.set(true);
     void this.loadTemplate(this.slot());
-  }
-
-  /** Pre-rellena por coincidencia laxa entre clave/etiqueta de la variable y el contexto del caso. */
-  private prefill(variables: TemplateVariable[], context: Record<string, string>): Record<string, string> {
-    const out: Record<string, string> = {};
-    for (const v of variables) {
-      const haystack = `${v.key} ${v.label ?? ''}`.toLowerCase();
-      for (const [token, value] of Object.entries(context)) {
-        if (value && haystack.includes(token)) {
-          out[v.key] = value;
-          break;
-        }
-      }
-    }
-    return out;
   }
 
   // HTML interpolado final (valores escapados sobre la plantilla de confianza).
