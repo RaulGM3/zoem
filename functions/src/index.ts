@@ -216,6 +216,10 @@ export { sendPushNotification } from './notifications';
 // URL firmada de corta vida + auditoría server-side (no falsificable).
 export { getClassifiedDocUrl } from './classifiedDocUrl';
 
+// ─── Acciones (mensajes con documento adjunto) ───────────────────────────────
+// URL firmada de lectura para el .docx adjunto, abierta por el destinatario.
+export { accionDocUrl } from './accionDocUrl';
+
 // ─── Custom claims (Storage rules) ───────────────────────────────────────────
 // Sincroniza companyId/role/estado/isSuperUser en el JWT para que las Storage
 // rules puedan verificar membresía sin firestore.get() (que solo lee (default)).
