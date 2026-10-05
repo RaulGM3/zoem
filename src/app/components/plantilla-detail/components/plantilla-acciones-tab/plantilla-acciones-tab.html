@@ -1,0 +1,75 @@
+<div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-6 space-y-4">
+  <div class="flex items-start justify-between gap-3 flex-wrap">
+    <p class="text-sm text-slate-700 max-w-prose">
+      Acciones que se sugieren al completar un hito de esta plantilla, por ejemplo «Avisar al cliente».
+    </p>
+    @if (canEdit()) {
+      <button type="button" data-testid="nueva-accion" (click)="nueva()"
+        class="flex items-center gap-2 px-4 py-2 min-h-11 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700">
+        <lucide-icon [img]="PlusIcon" class="w-4 h-4" />
+        Nueva acción
+      </button>
+    }
+  </div>
+
+  @if (cargando()) {
+    <p class="text-sm text-slate-700" role="status">Cargando acciones...</p>
+  } @else if (errorCarga()) {
+    <p class="text-sm text-red-700" role="alert">
+      No se pudieron cargar las acciones.
+      <button type="button" (click)="recargar()" class="underline min-h-11 px-2">Reintentar</button>
+    </p>
+  } @else if (acciones().length === 0) {
+    <p class="text-sm text-slate-700">Esta plantilla aún no tiene acciones.</p>
+  } @else {
+    <ul class="space-y-2" aria-label="Acciones de la plantilla">
+      @for (a of acciones(); track a.id) {
+        <li class="rounded-lg border border-slate-200 p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div class="min-w-0">
+            <p class="font-medium text-slate-800 truncate">
+              {{ a.nombre }}
+              @if (!a.activa) { <span class="ml-1 text-xs text-slate-700">(inactiva)</span> }
+            </p>
+            <p class="text-xs text-slate-700">
+              @if (tituloHito(a.hitoPlantillaId); as t) { Hito: {{ t }} · } @else { Solo manual · }
+              {{ canalesTexto(a) }}
+            </p>
+          </div>
+          @if (canEdit()) {
+            <div class="flex items-center gap-1 shrink-0">
+              <button type="button" (click)="editar(a)" [attr.aria-label]="'Editar ' + a.nombre"
+                class="p-2 min-w-11 min-h-11 flex items-center justify-center rounded-lg text-slate-700 hover:bg-slate-100">
+                <lucide-icon [img]="PencilIcon" class="w-4 h-4" />
+              </button>
+              @if (confirmandoId() === a.id) {
+                <button type="button" [attr.data-testid]="'confirmar-eliminar-' + a.id" (click)="eliminar(a.id)"
+                  class="px-3 min-h-11 text-sm text-white rounded-lg bg-red-600">Confirmar</button>
+                <button type="button" (click)="confirmandoId.set(null)"
+                  class="px-3 min-h-11 text-sm rounded-lg border border-slate-200 text-slate-700">Cancelar</button>
+              } @else {
+                <button type="button" [attr.data-testid]="'eliminar-' + a.id" (click)="confirmandoId.set(a.id)"
+                  [attr.aria-label]="'Eliminar ' + a.nombre"
+                  class="p-2 min-w-11 min-h-11 flex items-center justify-center rounded-lg text-red-700 hover:bg-red-50">
+                  <lucide-icon [img]="TrashIcon" class="w-4 h-4" />
+                </button>
+              }
+            </div>
+          }
+        </li>
+      }
+    </ul>
+  }
+</div>
+
+@if (drawer() !== undefined) {
+  <app-accion-form-drawer
+    [accion]="drawer() ?? null"
+    [saving]="saving()"
+    [docTemplates]="plantillasListas()"
+    ambitoFijo="caso"
+    [plantillaId]="plantillaId()"
+    [hitosPlantilla]="hitos()"
+    (saved)="onGuardar($event)"
+    (closed)="cerrar()"
+  />
+}

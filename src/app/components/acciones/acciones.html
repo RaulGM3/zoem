@@ -1,0 +1,104 @@
+<div class="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-5">
+  <div class="flex items-start justify-between gap-3 flex-wrap">
+    <div class="min-w-0">
+      <h1 class="text-xl font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Acciones</h1>
+      <p class="text-sm" style="color:var(--text-muted)">
+        Plantillas de mensaje (con documento opcional) que se ejecutan desde un contacto o un caso.
+      </p>
+    </div>
+    @if (canEdit()) {
+      <button type="button" data-testid="nueva-accion" (click)="nueva()"
+        class="flex items-center gap-2 px-4 py-2 min-h-11 text-sm text-white rounded-lg" style="background:var(--brand)">
+        <lucide-icon [img]="PlusIcon" class="w-4 h-4" />
+        Nueva acción
+      </button>
+    }
+  </div>
+
+  @if (loading()) {
+    <p class="text-sm" style="color:var(--text-faint)" role="status">Cargando acciones...</p>
+  } @else if (acciones().length === 0) {
+    <div class="rounded-xl p-8 text-center" style="background:var(--surface);border:1px solid var(--border)">
+      <p class="text-sm" style="color:var(--text-muted)">
+        Aún no hay acciones. Crea una, por ejemplo «Enviar presupuesto», para lanzarla desde un contacto o un caso.
+      </p>
+    </div>
+  } @else {
+    <ul class="space-y-3" aria-label="Acciones de la empresa">
+      @for (a of acciones(); track a.id) {
+        <li class="rounded-xl p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+          style="background:var(--surface);border:1px solid var(--border)">
+          <div class="min-w-0 space-y-1.5">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-medium truncate" style="color:var(--text-strong)">{{ a.nombre }}</span>
+              <span class="px-2 py-0.5 text-xs rounded-full font-medium"
+                style="background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand)">
+                {{ a.ambito === 'caso' ? 'Caso' : 'Contacto' }}
+              </span>
+              @if (a.plantillaId) {
+                <span class="px-2 py-0.5 text-xs rounded-full" style="background:var(--surface-2);color:var(--text-muted)">
+                  Ligada a plantilla de caso
+                </span>
+              }
+              @if (!a.activa) {
+                <span class="px-2 py-0.5 text-xs rounded-full" style="background:var(--surface-2);color:var(--text-muted)">Inactiva</span>
+              }
+            </div>
+            <p class="text-xs" style="color:var(--text-muted)">
+              Canales: {{ canalesTexto(a) }}
+            </p>
+            @if (nombreDoc(a.docTemplateId); as doc) {
+              <p class="text-xs flex items-center gap-1" style="color:var(--text-muted)">
+                <lucide-icon [img]="FileTextIcon" class="w-3.5 h-3.5" />
+                Documento: {{ doc }}
+              </p>
+            }
+          </div>
+
+          @if (canEdit()) {
+            <div class="flex items-center gap-2 shrink-0">
+              <button type="button" role="switch" [attr.aria-checked]="a.activa"
+                [attr.aria-label]="'Activa: ' + a.nombre"
+                (click)="alternarActiva(a)"
+                class="relative w-11 h-6 rounded-full transition-colors shrink-0"
+                [style.background]="a.activa ? 'var(--brand)' : 'var(--border-strong, var(--text-faint))'">
+                <span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform"
+                  [style.transform]="a.activa ? 'translateX(20px)' : 'translateX(0)'"></span>
+              </button>
+              <button type="button" (click)="editar(a)" [attr.aria-label]="'Editar ' + a.nombre"
+                class="p-2 min-w-11 min-h-11 flex items-center justify-center rounded-lg" style="color:var(--text-muted)">
+                <lucide-icon [img]="PencilIcon" class="w-4 h-4" />
+              </button>
+              @if (confirmandoId() === a.id) {
+                <button type="button" [attr.data-testid]="'confirmar-eliminar-' + a.id" (click)="eliminar(a.id)"
+                  class="px-3 min-h-11 text-sm text-white rounded-lg" style="background:var(--danger)">
+                  Confirmar
+                </button>
+                <button type="button" (click)="confirmandoId.set(null)"
+                  class="px-3 min-h-11 text-sm rounded-lg" style="border:1px solid var(--border);color:var(--text-muted)">
+                  Cancelar
+                </button>
+              } @else {
+                <button type="button" [attr.data-testid]="'eliminar-' + a.id" (click)="confirmandoId.set(a.id)"
+                  [attr.aria-label]="'Eliminar ' + a.nombre"
+                  class="p-2 min-w-11 min-h-11 flex items-center justify-center rounded-lg" style="color:var(--danger)">
+                  <lucide-icon [img]="TrashIcon" class="w-4 h-4" />
+                </button>
+              }
+            </div>
+          }
+        </li>
+      }
+    </ul>
+  }
+</div>
+
+@if (drawer() !== undefined) {
+  <app-accion-form-drawer
+    [accion]="drawer() ?? null"
+    [saving]="saving()"
+    [docTemplates]="plantillasListas()"
+    (saved)="onGuardar($event)"
+    (closed)="cerrar()"
+  />
+}

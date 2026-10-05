@@ -24,7 +24,8 @@
         { id: 'datos', label: 'Datos básicos' },
         { id: 'hitos', label: 'Hitos' },
         { id: 'costos', label: 'Estructura de costos' },
-        { id: 'documentos', label: 'Documentos de referencia' }
+        { id: 'documentos', label: 'Documentos de referencia' },
+        { id: 'acciones', label: 'Acciones' }
       ]; track tab.id) {
         <button
           role="tab"
@@ -107,6 +108,12 @@
     <app-plantilla-documentos-tab
       [hidden]="activeTab() !== 'documentos'"
       [plantillaId]="plantilla()!.id"
+    />
+
+    <app-plantilla-acciones-tab
+      [hidden]="activeTab() !== 'acciones'"
+      [plantillaId]="plantilla()!.id"
+      [hitos]="formHitos()"
     />
 
   </div>

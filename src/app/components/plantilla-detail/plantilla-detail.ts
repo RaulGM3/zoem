@@ -14,8 +14,9 @@ import { CasoPlantilla, CasoTipo, HitoPlantilla, PartidaCosto } from '../../inte
 import { PlantillaHitosTabComponent } from './components/plantilla-hitos-tab/plantilla-hitos-tab';
 import { PlantillaCostosTabComponent } from './components/plantilla-costos-tab/plantilla-costos-tab';
 import { PlantillaDocumentosTabComponent } from './components/plantilla-documentos-tab/plantilla-documentos-tab';
+import { PlantillaAccionesTabComponent } from './components/plantilla-acciones-tab/plantilla-acciones-tab';
 
-type Tab = 'datos' | 'hitos' | 'costos' | 'documentos';
+type Tab = 'datos' | 'hitos' | 'costos' | 'documentos' | 'acciones';
 
 const TIPOS_CASO: CasoTipo[] = ['Legal', 'Fiscal', 'Laboral', 'Mercantil', 'Civil'];
 
@@ -23,7 +24,7 @@ const TIPOS_CASO: CasoTipo[] = ['Legal', 'Fiscal', 'Laboral', 'Mercantil', 'Civi
   selector: 'app-plantilla-detail',
   imports: [
     LucideAngularModule, RouterLink,
-    PlantillaHitosTabComponent, PlantillaCostosTabComponent, PlantillaDocumentosTabComponent,
+    PlantillaHitosTabComponent, PlantillaCostosTabComponent, PlantillaDocumentosTabComponent, PlantillaAccionesTabComponent,
   ],
   templateUrl: './plantilla-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

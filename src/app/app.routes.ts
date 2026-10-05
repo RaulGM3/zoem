@@ -127,6 +127,12 @@ export const routes: Routes = [
           import('./components/usuarios/usuarios').then((m) => m.UsuariosComponent),
       },
       {
+        path: 'acciones',
+        canActivate: [permissionGuard('Configuración')],
+        loadComponent: () =>
+          import('./components/acciones/acciones').then((m) => m.AccionesComponent),
+      },
+      {
         path: 'perfil',
         loadComponent: () =>
           import('./components/perfil/perfil').then((m) => m.PerfilComponent),

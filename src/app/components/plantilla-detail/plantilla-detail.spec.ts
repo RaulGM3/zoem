@@ -8,6 +8,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { PlantillaFolderService } from '../../core/services/plantilla-folder.service';
 import { PlantillaFileService } from '../../core/services/plantilla-file.service';
 import { DocTemplateService } from '../../core/services/doc-template.service';
+import { AccionesService } from '../../core/services/acciones.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { UsersService } from '../../core/services/users';
 import type {
@@ -163,7 +164,8 @@ describe('PlantillaDetailComponent', () => {
         { provide: PlantillaFolderService, useValue: folderService },
         { provide: PlantillaFileService, useValue: fileService },
         { provide: DocTemplateService, useValue: { templates: signal(TEMPLATES), loadTemplates: vi.fn().mockResolvedValue(undefined) } },
-        { provide: PermissionService, useValue: { isAdmin } },
+        { provide: PermissionService, useValue: { isAdmin, can: () => true } },
+        { provide: AccionesService, useValue: { listarPorPlantilla: vi.fn().mockResolvedValue([]) } },
         { provide: UsersService, useValue: { members, loadMembers: vi.fn().mockResolvedValue(undefined) } },
       ],
     }).compileComponents();
@@ -195,7 +197,7 @@ describe('PlantillaDetailComponent', () => {
 
     it('abre en la pestaña de datos básicos', async () => {
       await crear();
-      expect(qa('[role="tab"]').map(t => t.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false', 'false']);
+      expect(qa('[role="tab"]').map(t => t.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false', 'false', 'false']);
     });
   });
 
@@ -229,23 +231,26 @@ describe('PlantillaDetailComponent', () => {
 
   describe('pestañas', () => {
     const paneles = (): HTMLElement[] =>
-      ['app-plantilla-hitos-tab', 'app-plantilla-costos-tab', 'app-plantilla-documentos-tab'].map(sel => q(sel));
+      ['app-plantilla-hitos-tab', 'app-plantilla-costos-tab', 'app-plantilla-documentos-tab', 'app-plantilla-acciones-tab'].map(sel => q(sel));
 
     it('solo muestra el contenido de la pestaña activa', async () => {
       await crear();
       expect(el().querySelector('#pd-nombre')).not.toBeNull();
-      expect(paneles().map(p => p.hidden)).toEqual([true, true, true]);
+      expect(paneles().map(p => p.hidden)).toEqual([true, true, true, true]);
 
       await tab('Hitos');
       expect(el().querySelector('#pd-nombre')).toBeNull();
-      expect(paneles().map(p => p.hidden)).toEqual([false, true, true]);
-      expect(qa('[role="tab"]').map(t => t.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false', 'false']);
+      expect(paneles().map(p => p.hidden)).toEqual([false, true, true, true]);
+      expect(qa('[role="tab"]').map(t => t.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false', 'false', 'false']);
 
       await tab('Estructura de costos');
-      expect(paneles().map(p => p.hidden)).toEqual([true, false, true]);
+      expect(paneles().map(p => p.hidden)).toEqual([true, false, true, true]);
 
       await tab('Documentos de referencia');
-      expect(paneles().map(p => p.hidden)).toEqual([true, true, false]);
+      expect(paneles().map(p => p.hidden)).toEqual([true, true, false, true]);
+
+      await tab('Acciones');
+      expect(paneles().map(p => p.hidden)).toEqual([true, true, true, false]);
     });
   });
 
