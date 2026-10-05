@@ -150,6 +150,123 @@ service cloud.firestore {
       match /tesoreria_meta/{doc=**}         { allow read, write: if isSuper() || isManager(cid); }
       match /movimientos_generales/{doc=**}  { allow read, write: if isSuper() || isManager(cid); }
 
+      // ---- Facturas recibidas (libro registro + IVA soportado): Admin + Gestor ----
+      // Doc id = claveFactura(nif, numero) (base64url): no se puede recomputar en rules, así
+      // que la unicidad la garantiza la transacción del cliente (RIESGO RESIDUAL aceptado:
+      // un Admin/Gestor malicioso podría crear con otro id; el create nunca pisa un doc existente).
+      // `qrValidacion` lo escribe SOLO el servidor tras la creación (Admin SDK ignora las rules):
+      // el cliente solo puede crear con 'sin_qr' | 'pendiente' y nunca modificarlo.
+      // Sin delete: se anula vía `estado` (el historial anuladaPor/anuladaAt se conserva al reactivar).
+      match /facturas_recibidas/{facturaId} {
+        function fechaIso(v) {
+          return v is string && v.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+        }
+        // Valores comunes a create y update (tipos, rangos, adjunto dentro del tenant).
+        function valoresValidos(d) {
+          return d.companyId == cid
+            && d.tipoFactura in ['F1', 'F2']
+            && d.claveOperacion == '01'
+            && d.estado in ['registrada', 'anulada']
+            && d.numeroRecepcion is int && d.numeroRecepcion >= 1
+            && d.proveedor is map
+            && d.proveedor.keys().hasOnly(['nombre', 'nif', 'pais'])
+            && d.proveedor.nombre is string && d.proveedor.nombre.size() > 0 && d.proveedor.nombre.size() <= 200
+            && d.proveedor.nif is string && d.proveedor.nif.size() > 0 && d.proveedor.nif.size() <= 20
+            && d.numero is string && d.numero.size() > 0 && d.numero.size() <= 60
+            && fechaIso(d.fechaExpedicion)
+            && fechaIso(d.fechaRegistro)
+            && (!('fechaOperacion' in d) || fechaIso(d.fechaOperacion))
+            && d.periodo303 is map
+            && d.periodo303.keys().hasOnly(['ejercicio', 'trimestre'])
+            && d.periodo303.ejercicio is int
+            && d.periodo303.trimestre in [1, 2, 3, 4]
+            && d.lineasIva is list && d.lineasIva.size() >= 1 && d.lineasIva.size() <= 20
+            && d.total is number && d.total >= 0
+            && d.porcentajeDeducible is number
+            && d.porcentajeDeducible >= 0 && d.porcentajeDeducible <= 100
+            && d.concepto is string && d.concepto.size() <= 500
+            && (!('categoria' in d) || (d.categoria is string && d.categoria.size() <= 100))
+            && (!('adjunto' in d)
+                || (d.adjunto is map
+                    && d.adjunto.storagePath is string
+                    && d.adjunto.storagePath.matches('^companies/' + cid + '/facturas_recibidas/.+')))
+            && (!('movimientoId' in d) || d.movimientoId is string)
+            && (!('casoId' in d) || d.casoId is string)
+            && d.extraccion is map
+            && d.extraccion.origen in ['ia', 'qr', 'manual'];
+        }
+        function clavesEscribibles() {
+          return ['id', 'companyId', 'numeroRecepcion', 'tipoFactura', 'claveOperacion', 'proveedor', 'numero',
+                  'fechaExpedicion', 'fechaOperacion', 'fechaRegistro', 'periodo303', 'lineasIva', 'total',
+                  'porcentajeDeducible', 'concepto', 'categoria', 'adjunto', 'qr', 'qrValidacion', 'extraccion',
+                  'movimientoId', 'casoId', 'estado', 'anuladaPor', 'anuladaAt', 'createdBy', 'createdAt',
+                  'updatedBy', 'updatedAt'];
+        }
+        // Claves que el cliente no puede cambiar nunca. Para corregir proveedor/número: anular y registrar de nuevo.
+        function clavesInmutables() {
+          return ['id', 'proveedor', 'numero', 'numeroRecepcion', 'companyId', 'createdBy', 'createdAt', 'qrValidacion'];
+        }
+        function transicionEstadoValida() {
+          let antes = resource.data.estado;
+          let despues = request.resource.data.estado;
+          return (
+            // anular: queda constancia de quién y cuándo
+            (antes == 'registrada' && despues == 'anulada'
+              && request.resource.data.anuladaPor == request.auth.uid
+              && request.resource.data.anuladaAt == request.time)
+            // reactivar: el historial de anulación se conserva intacto
+            || (antes == 'anulada' && despues == 'registrada'
+              && request.resource.data.get('anuladaPor', null) == resource.data.get('anuladaPor', null)
+              && request.resource.data.get('anuladaAt', null) == resource.data.get('anuladaAt', null))
+            // sin cambio de estado: una anulada no se edita (solo se reactiva)
+            || (antes == 'registrada' && despues == 'registrada'
+              && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['anuladaPor', 'anuladaAt']))
+          );
+        }
+
+        allow read: if isSuper() || isManager(cid);
+
+        allow create: if (isSuper() || isManager(cid))
+          && request.resource.data.keys().hasOnly(clavesEscribibles())
+          && request.resource.data.keys().hasAll(['companyId', 'numeroRecepcion', 'tipoFactura', 'claveOperacion',
+               'proveedor', 'numero', 'fechaExpedicion', 'fechaRegistro', 'periodo303', 'lineasIva', 'total',
+               'porcentajeDeducible', 'concepto', 'qrValidacion', 'extraccion', 'estado', 'createdBy', 'createdAt'])
+          && !request.resource.data.keys().hasAny(['anuladaPor', 'anuladaAt', 'updatedBy', 'updatedAt'])
+          && valoresValidos(request.resource.data)
+          && request.resource.data.estado == 'registrada'
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.qrValidacion is map
+          && request.resource.data.qrValidacion.keys().hasOnly(['estado', 'urlConsulta'])
+          && request.resource.data.qrValidacion.estado in ['sin_qr', 'pendiente']
+          && (!('id' in request.resource.data) || request.resource.data.id == facturaId);
+
+        allow update: if (isSuper() || isManager(cid))
+          && resource.data.companyId == cid
+          && request.resource.data.keys().hasOnly(clavesEscribibles())
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(clavesInmutables())
+          && valoresValidos(request.resource.data)
+          && transicionEstadoValida()
+          && request.resource.data.updatedBy == request.auth.uid
+          && request.resource.data.updatedAt == request.time;
+
+        allow delete: if false;
+      }
+
+      // Contador del número de recepción correlativo (art. 64 RIVA), uno por ejercicio.
+      // Solo se crea con 1 y solo sube de 1 en 1 (la transacción lo incrementa junto a la factura).
+      match /facturas_recibidas_meta/{ejercicio} {
+        allow read: if isSuper() || isManager(cid);
+        allow create: if (isSuper() || isManager(cid))
+          && ejercicio.matches('^[0-9]{4}$')
+          && request.resource.data.keys().hasOnly(['ultimo'])
+          && request.resource.data.ultimo == 1;
+        allow update: if (isSuper() || isManager(cid))
+          && request.resource.data.keys().hasOnly(['ultimo'])
+          && request.resource.data.ultimo == resource.data.ultimo + 1;
+        allow delete: if false;
+      }
+
       // ---- Casos (operativo) -----------------------------------------
       match /casos/{casoId} {
         allow read:  if isSuper() || isMember(cid);

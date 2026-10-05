@@ -117,6 +117,15 @@
         { "fieldPath": "agentId", "order": "ASCENDING" },
         { "fieldPath": "creadoEn", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "facturas_recibidas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "periodo303.ejercicio", "order": "ASCENDING" },
+        { "fieldPath": "periodo303.trimestre", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [

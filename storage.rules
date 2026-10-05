@@ -34,6 +34,19 @@ service firebase.storage {
     function canWrite(cid) {
       return isActiveMember(cid) && request.auth.token.role != 'Viewer';
     }
+    // Admin + Gestor (mismo criterio que firestore.rules isManager), vía custom claim.
+    function isManager(cid) {
+      return isActiveMember(cid) && request.auth.token.role in ['Admin', 'Gestor'];
+    }
+    // `allPaths` es de tipo path (no string, sin .matches ni string()), así que el nombre
+    // completo del objeto se toma de resource.name (lectura) / request.resource.name (escritura).
+    function esFacturaRecibida(nombre) {
+      return nombre.matches('companies/[^/]+/facturas_recibidas/.*');
+    }
+    // Adjuntos de factura: PDF o imagen (la captura nativa devuelve JPEG; HEIC se rechaza en cliente).
+    function tipoAdjuntoValido() {
+      return request.resource.contentType.matches('application/pdf|image/(jpeg|png|webp)');
+    }
     // Límite de tamaño defensivo (50 MB) en subidas.
     function withinSizeLimit() {
       return request.resource == null || request.resource.size < 50 * 1024 * 1024;
@@ -53,9 +66,21 @@ service firebase.storage {
     // gap documentado hasta que esa matriz fina se sincronice a custom
     // claims — ver el mismo comentario en firestore.rules junto a
     // match /docTemplates/{templateId}.
+    //
+    // facturas_recibidas/* queda EXCLUIDO de este match genérico: las `allow` de Storage se
+    // combinan con OR, así que sin la exclusión un Usuario (no manager) leería/subiría esas
+    // facturas por aquí. Tiene su propio match más abajo (solo Admin/Gestor).
     match /companies/{cid}/{allPaths=**} {
-      allow read:           if isSuper() || isActiveMember(cid);
-      allow create, update: if isSuper() || (canWrite(cid) && withinSizeLimit());
+      allow read:           if (isSuper() || isActiveMember(cid)) && !esFacturaRecibida(resource.name);
+      allow create, update: if (isSuper() || (canWrite(cid) && withinSizeLimit())) && !esFacturaRecibida(request.resource.name);
+      allow delete:         if isSuper();
+    }
+
+    // Adjuntos de facturas recibidas (libro de IVA soportado): Admin + Gestor.
+    // Mismo contrato que el match genérico: sin delete de cliente (auditoría).
+    match /companies/{cid}/facturas_recibidas/{facturaPaths=**} {
+      allow read:           if isSuper() || isManager(cid);
+      allow create, update: if isSuper() || (isManager(cid) && withinSizeLimit() && tipoAdjuntoValido());
       allow delete:         if isSuper();
     }
 
