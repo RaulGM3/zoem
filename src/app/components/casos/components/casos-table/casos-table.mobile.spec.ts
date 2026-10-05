@@ -67,10 +67,27 @@ describe('CasosTableComponent — móvil', () => {
     expect(items).toHaveLength(2);
     expect(items[0].textContent).toContain('Caso a');
     expect(items[0].textContent).toContain('Ana Ruiz');
-    expect(items[0].textContent).toContain('en_proceso');
+    expect(items[0].textContent).toContain('En proceso');
     expect(items[0].textContent).toContain('alta');
-    expect(items[0].textContent).toContain('2026-02-01');
+    expect(items[0].textContent).toContain('01/02/2026');
     expect(items[1].textContent).toContain('baja');
+  });
+
+  it('móvil: cada tarjeta es una card independiente, sin caja contenedora', async () => {
+    await montar(true, [caso('a')]);
+    const wrapper = el().firstElementChild as HTMLElement;
+    expect(wrapper.getAttribute('style') ?? '').not.toContain('border');
+    expect(wrapper.className).toContain('sm:border');
+    const card = el().querySelector('ul > li > article') as HTMLElement;
+    expect(card.className).toContain('rounded-xl');
+    expect(card.getAttribute('style')).toContain('border');
+  });
+
+  it('móvil: muestra el progreso de hitos solo si el caso tiene hitos', async () => {
+    await montar(true, [caso('a', { hitosResumen: { total: 3, completados: 1 } }), caso('b')]);
+    const items = el().querySelectorAll('ul > li');
+    expect(items[0].querySelector('[data-caso-hitos]')!.textContent).toContain('1/3');
+    expect(items[1].querySelector('[data-caso-hitos]')).toBeNull();
   });
 
   it('escritorio: tabla y sin tarjetas', async () => {

@@ -264,29 +264,78 @@
       </div>
     </ng-template>
 
-    <!-- Tarjeta (móvil) -->
+    <!-- Tarjeta (móvil): franja de estado, cliente + total arriba, fechas y acción principal abajo -->
     <ng-template [appListCard]="filteredInvoices()" let-inv>
-      <article class="rounded-xl p-3" style="border:1px solid var(--border);background:var(--surface)">
-        <div class="flex items-start justify-between gap-2">
+      @let anulada = inv.status === 'anulada';
+      <article data-factura-card [attr.data-estado]="inv.status"
+        class="rounded-xl p-3" [class.opacity-70]="anulada"
+        style="border:1px solid var(--border);border-left-width:4px;background:var(--surface)"
+        [style.border-left-color]="statusStyle(inv.status).color">
+
+        <!-- Cabecera: quién y cuánto -->
+        <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
-            <p class="font-medium tabular-nums" style="color:var(--text-strong);font-family:var(--font-mono)">
-              {{ inv.invoiceNumber }}
+            <p data-cliente class="truncate text-[15px] font-semibold" style="color:var(--text-strong)">{{ inv.clienteNombre ?? '—' }}</p>
+            <p class="mt-0.5 flex flex-wrap items-center gap-1 text-xs" style="color:var(--text-muted)">
+              <span class="tabular-nums" style="font-family:var(--font-mono)">{{ inv.invoiceNumber }}</span>
               @if (inv.tipoFactura === 'R1') {
-                <span class="ml-1 rounded px-1 py-0.5 text-[9px] font-semibold uppercase"
+                <span class="rounded px-1 py-0.5 text-[9px] font-semibold uppercase"
                   style="background:color-mix(in srgb,var(--warning) 12%,transparent);color:var(--warning)">Rect.</span>
               }
               @if (inv.numeroManual) {
-                <span class="ml-1 rounded px-1 py-0.5 text-[9px] font-semibold uppercase"
+                <span class="rounded px-1 py-0.5 text-[9px] font-semibold uppercase"
                   style="background:color-mix(in srgb,var(--text-faint) 14%,transparent);color:var(--text-muted)">Manual</span>
               }
             </p>
-            <p class="truncate text-sm" style="color:var(--text-body)">{{ inv.clienteNombre ?? '—' }}</p>
             @if (inv.casoTitulo) {
-              <p class="truncate text-[11px]" style="color:var(--text-faint)">{{ inv.casoTitulo }}</p>
+              <p class="truncate text-xs" style="color:var(--text-faint)">{{ inv.casoTitulo }}</p>
             }
           </div>
-          <div class="flex shrink-0 items-center gap-1">
+          <div class="flex shrink-0 flex-col items-end gap-1">
+            <p data-total class="text-lg font-semibold leading-tight tabular-nums" [class.line-through]="anulada"
+              style="color:var(--text-strong);font-family:var(--font-mono)">{{ inv.total | number:'1.2-2' }} €</p>
             <ng-container [ngTemplateOutlet]="estadoTpl" [ngTemplateOutletContext]="{ $implicit: inv }" />
+          </div>
+        </div>
+
+        <!-- Verifactu -->
+        @if (verifactuVista(inv); as vf) {
+          <div class="mt-2 flex items-start gap-1.5 text-xs">
+            <lucide-icon [img]="ShieldCheckIcon" size="14" class="mt-px shrink-0" aria-hidden="true" [style.color]="verifactuColor(vf)"></lucide-icon>
+            <div class="min-w-0">
+              <p>
+                <span class="font-semibold" [style.color]="verifactuColor(vf)">{{ vf.etiqueta }}</span>
+                @if (vf.csv) {
+                  <span class="tabular-nums" style="color:var(--text-muted);font-family:var(--font-mono)"> · CSV: {{ vf.csv }}</span>
+                }
+              </p>
+              @if (vf.detalle) {
+                <p style="color:var(--text-muted)">{{ vf.detalle }}</p>
+              }
+              @if (vf.aviso) {
+                <p style="color:var(--warning)">{{ vf.aviso }}</p>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Pie: fechas + acciones -->
+        <div class="mt-3 flex items-center justify-between gap-2 pt-2" style="border-top:1px solid var(--border-soft)">
+          <p class="flex min-w-0 flex-col text-xs tabular-nums" style="color:var(--text-muted)">
+            <span>{{ fechaCorta(inv.issueDate) }}</span>
+            <span [class.font-semibold]="inv.status === 'vencida'"
+              [style.color]="inv.status === 'vencida' ? 'var(--danger)' : null">vence {{ fechaCorta(inv.dueDate) }}</span>
+          </p>
+          <div class="flex shrink-0 items-center gap-1">
+            @if (accionPrincipal(inv); as principal) {
+              <button type="button" data-accion-principal (click)="ejecutarAccion(inv, principal.id)"
+                [attr.aria-label]="principal.label + ': factura ' + inv.invoiceNumber"
+                class="tap-target inline-flex items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)]"
+                style="border:1px solid var(--border);color:var(--text-body)">
+                <lucide-icon [img]="principal.icon" size="14" aria-hidden="true"></lucide-icon>
+                {{ principal.label }}
+              </button>
+            }
             @if (accionesFactura(inv); as acciones) {
               @if (acciones.length > 0) {
                 <app-action-menu [actions]="acciones" [label]="'Acciones de la factura ' + inv.invoiceNumber"
@@ -294,16 +343,6 @@
               }
             }
           </div>
-        </div>
-        <p class="mt-2 text-lg font-semibold tabular-nums" style="color:var(--text-strong);font-family:var(--font-mono)">
-          {{ inv.total | number:'1.2-2' }} €
-        </p>
-        <dl class="mt-1 grid grid-cols-2 gap-2 text-xs" style="color:var(--text-muted)">
-          <div><dt class="sr-only">Emisión</dt><dd class="tabular-nums">Emisión: {{ inv.issueDate }}</dd></div>
-          <div><dt class="sr-only">Vencimiento</dt><dd class="tabular-nums">Vence: {{ inv.dueDate }}</dd></div>
-        </dl>
-        <div class="mt-2">
-          <ng-container [ngTemplateOutlet]="verifactuTpl" [ngTemplateOutletContext]="{ $implicit: inv, align: 'start' }" />
         </div>
       </article>
     </ng-template>

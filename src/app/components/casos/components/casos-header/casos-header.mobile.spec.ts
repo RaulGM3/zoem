@@ -30,10 +30,18 @@ describe('CasosHeaderComponent — responsive', () => {
     expect(el.querySelector('a')!.className).toContain('tap-target');
     expect(el.querySelector('button')!.className).toContain('tap-target');
   });
+
+  it('en móvil las acciones ocupan una fila completa con botones repartidos', async () => {
+    const el = await montar();
+    const acciones = el.querySelector('[data-casos-acciones]')!;
+    expect(acciones.className).toContain('w-full');
+    expect(acciones.className).toContain('sm:w-auto');
+    expect(el.querySelector('a')!.className).toContain('flex-1');
+  });
 });
 
 describe('CasosFilterBarComponent — responsive', () => {
-  it('apila los selects en móvil (ancho completo) y los alinea en sm+', async () => {
+  it('pone los selects en dos columnas en móvil y los alinea en sm+', async () => {
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({ imports: [CasosFilterBarComponent] }).compileComponents();
     const f = TestBed.createComponent(CasosFilterBarComponent);
@@ -43,9 +51,22 @@ describe('CasosFilterBarComponent — responsive', () => {
     f.componentRef.setInput('tipos', ['Legal']);
     f.detectChanges();
     const el = f.nativeElement as HTMLElement;
-    expect(el.firstElementChild!.className).toContain('grid-cols-1');
+    expect(el.firstElementChild!.className).toContain('grid-cols-2');
     const selects = el.querySelectorAll('select');
     expect(selects).toHaveLength(2);
     selects.forEach((s) => expect(s.className).toContain('w-full'));
+  });
+
+  it('muestra etiquetas legibles para los estados', async () => {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({ imports: [CasosFilterBarComponent] }).compileComponents();
+    const f = TestBed.createComponent(CasosFilterBarComponent);
+    f.componentRef.setInput('filterEstado', '');
+    f.componentRef.setInput('filterTipo', '');
+    f.componentRef.setInput('estados', ['en_proceso']);
+    f.componentRef.setInput('tipos', ['Legal']);
+    f.detectChanges();
+    const opcion = (f.nativeElement as HTMLElement).querySelector<HTMLOptionElement>('option[value="en_proceso"]')!;
+    expect(opcion.textContent!.trim()).toBe('En proceso');
   });
 });

@@ -1,13 +1,13 @@
 import { Component, ChangeDetectionStrategy, input, output, signal } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
-import { LucideAngularModule, MoreHorizontal, Trash2, ExternalLink } from 'lucide-angular';
+import { DatePipe, DecimalPipe } from '@angular/common';
+import { LucideAngularModule, MoreHorizontal, Trash2, ExternalLink, CalendarClock, Flag } from 'lucide-angular';
 import { ActionMenuComponent, type MenuAction } from '../../../../shared/components/action-menu/action-menu';
 import {
   ListCardDirective,
   ListTableDirective,
   ResponsiveListComponent,
 } from '../../../../shared/components/responsive-list/responsive-list';
-import type { Caso } from '../../../../interfaces';
+import { CASO_ESTADO_LABEL, type Caso } from '../../../../interfaces';
 
 @Component({
   selector: 'app-casos-table',
@@ -21,6 +21,7 @@ import type { Caso } from '../../../../interfaces';
   imports: [
     LucideAngularModule,
     DecimalPipe,
+    DatePipe,
     ActionMenuComponent,
     ResponsiveListComponent,
     ListTableDirective,
@@ -41,6 +42,9 @@ export class CasosTableComponent {
 
   readonly MoreHorizontalIcon = MoreHorizontal;
   readonly TrashIcon = Trash2;
+  readonly CalendarIcon = CalendarClock;
+  readonly FlagIcon = Flag;
+  readonly estadoLabel = CASO_ESTADO_LABEL;
 
   /** Longitud máxima del subtítulo antes de truncar. La lista completa queda en el `title`. */
   private readonly MAX_SUBTITULO = 60;

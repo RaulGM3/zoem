@@ -34,6 +34,13 @@ import { SeguimientoContactoService } from '../../core/services/seguimiento-cont
 
 type ContactosTab = 'contactos' | 'pipeline' | 'rgpd' | 'herramientas';
 
+/** Estados que rota la tarjeta KPI ciclable, en orden de click. */
+const KPI_ROTATIVA: readonly { status: ContactStatus; titulo: string; detalle: string }[] = [
+  { status: 'potencial', titulo: 'Potenciales', detalle: 'Por convertir en clientes' },
+  { status: 'pendiente_pago', titulo: 'Pendientes de pago', detalle: 'Esperando el cobro' },
+  { status: 'pendiente_presupuesto', titulo: 'Pendientes de presupuesto', detalle: 'Esperando presupuesto' },
+];
+
 @Component({
   selector: 'app-contactos',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -309,8 +316,22 @@ export class ContactosComponent {
     return  c.mobile;
   }
 
-  totalBilled(): number {
-    return this.contactService.contacts().reduce((sum, c) => sum + (c.totalBilled ?? 0), 0);
+  // ── KPI rotativa: potenciales → pendientes de pago → pendientes de presupuesto ──
+  readonly kpiPasos = KPI_ROTATIVA;
+  readonly kpiIndice = signal(0);
+  readonly kpiRotativa = computed(() => {
+    const paso = KPI_ROTATIVA[this.kpiIndice()];
+    const siguiente = KPI_ROTATIVA[(this.kpiIndice() + 1) % KPI_ROTATIVA.length];
+    return {
+      ...paso,
+      total: this.contactService.contacts().filter((c) => c.status === paso.status).length,
+      color: getContactStatusStyle(paso.status).color,
+      siguiente: siguiente.titulo,
+    };
+  });
+
+  siguienteKpi(): void {
+    this.kpiIndice.update((i) => (i + 1) % KPI_ROTATIVA.length);
   }
 
   activeCount(): number {

@@ -1,4 +1,4 @@
-<div class="grid grid-cols-1 gap-3 sm:flex sm:flex-wrap">
+<div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
   <select
     [value]="filterEstado()"
     (change)="filterEstadoChange.emit($any($event.target).value)"
@@ -8,7 +8,7 @@
   >
     <option value="">Todos los estados</option>
     @for (e of estados(); track e) {
-      <option [value]="e">{{ e }}</option>
+      <option [value]="e">{{ estadoLabel[e] }}</option>
     }
   </select>
 

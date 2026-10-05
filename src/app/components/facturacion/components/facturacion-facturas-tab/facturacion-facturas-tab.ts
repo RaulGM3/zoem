@@ -14,6 +14,7 @@ import {
   Ban,
   Hash,
   SlidersHorizontal,
+  ShieldCheck,
 } from 'lucide-angular';
 import { BreakpointService } from '../../../../core/services/breakpoint.service';
 import { ActionMenuComponent, type MenuAction } from '../../../../shared/components/action-menu/action-menu';
@@ -33,6 +34,7 @@ import {
   type VistaVerifactu,
 } from '../../../../core/verifactu/verifactu-ui';
 import { estiloEstadoFactura, etiquetaEstadoFactura } from '../../../../core/facturacion/estado-factura';
+import { fechaCorta } from '../../../../core/facturacion/fecha-corta';
 
 type StatusFilter = InvoiceStatus | 'todos';
 
@@ -78,6 +80,7 @@ export class FacturacionFacturasTabComponent {
   readonly BanIcon = Ban;
   readonly HashIcon = Hash;
   readonly FiltersIcon = SlidersHorizontal;
+  readonly ShieldCheckIcon = ShieldCheck;
 
   /** Texto de la ÚNICA región viva de la tabla: solo cambios provocados por el usuario. */
   readonly anuncio = signal('');
@@ -169,6 +172,14 @@ export class FacturacionFacturasTabComponent {
 
   readonly statusStyle = estiloEstadoFactura;
   readonly statusLabel = etiquetaEstadoFactura;
+  readonly fechaCorta = fechaCorta;
+
+  /** Acción destacada en la tarjeta móvil (también sigue en el menú ⋯). */
+  accionPrincipal(inv: Invoice): Required<Pick<MenuAction, 'id' | 'label' | 'icon'>> | null {
+    if (this.canFinalize(inv)) return { id: 'finalize', label: 'Finalizar', icon: CheckCircle2 };
+    if (this.canMarkPaid(inv)) return { id: 'markPaid', label: 'Marcar pagada', icon: CircleDollarSign };
+    return null;
+  }
 
   canEdit(invoice: Invoice): boolean {
     return !verifactuBloqueada(invoice) && invoice.status !== 'anulada';

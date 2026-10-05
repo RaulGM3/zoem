@@ -13,10 +13,10 @@
     </div>
   </div>
 
-  <div class="flex items-center gap-2">
+  <div data-casos-acciones class="flex w-full items-center gap-2 sm:w-auto">
     <a
       routerLink="/plantillas"
-      class="tap-target flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-xl bg-[var(--surface)] transition-colors duration-150 hover:bg-[var(--surface-2)]"
+      class="tap-target flex flex-1 items-center justify-center gap-2 px-3 py-2 sm:flex-none text-sm font-medium rounded-xl bg-[var(--surface)] transition-colors duration-150 hover:bg-[var(--surface-2)]"
       style="border:1px solid var(--border);color:var(--text-body)"
     >
       <lucide-icon [img]="LayersIcon" class="w-4 h-4" />
@@ -25,7 +25,7 @@
     @if (canCreate()) {
       <button
         (click)="newCasoClick.emit()"
-        class="tap-target flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl bg-[var(--brand)] transition-all duration-150 hover:bg-[var(--brand-hover)]"
+        class="tap-target flex flex-1 items-center justify-center gap-2 px-4 py-2 sm:flex-none text-sm font-semibold text-white rounded-xl bg-[var(--brand)] transition-all duration-150 hover:bg-[var(--brand-hover)]"
       >
         <span class="material-symbols-outlined" style="font-size:16px">add</span>
         Nuevo caso

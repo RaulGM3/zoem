@@ -188,7 +188,41 @@ describe('ContactosComponent', () => {
       const kpis = qa('.kpi-card').slice(0, 3).map(k => k.textContent?.replace(/\s+/g, ' ').trim());
       expect(kpis[0]).toContain('Total Contactos 2');
       expect(kpis[1]).toContain('Activos 1');
-      expect(kpis[2]).toContain('1,500€');
+      expect(el().textContent).not.toContain('Facturación Total');
+    });
+
+    it('la tercera KPI es un botón que rota entre potenciales, pendientes de pago y de presupuesto', async () => {
+      contacts.set([
+        ANA, ACME,
+        { ...ACME, id: 'c3', status: 'pendiente_pago' } as Contact,
+        { ...ACME, id: 'c4', status: 'pendiente_pago' } as Contact,
+        { ...ACME, id: 'c5', status: 'pendiente_presupuesto' } as Contact,
+        { ...ACME, id: 'c6', status: 'pendiente_presupuesto' } as Contact,
+        { ...ACME, id: 'c7', status: 'pendiente_presupuesto' } as Contact,
+      ]);
+      await crear();
+      const kpi = (): HTMLButtonElement => q<HTMLButtonElement>('button.kpi-card');
+      // Texto accesible: sin la ligadura del icono ni los indicadores aria-hidden.
+      const texto = (): string => {
+        const copia = kpi().cloneNode(true) as HTMLElement;
+        copia.querySelectorAll('[aria-hidden="true"]').forEach(n => n.remove());
+        return copia.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+      };
+
+      expect(kpi().type).toBe('button');
+      expect(texto()).toContain('Potenciales 1');
+      expect(texto()).toContain('Cambiar a Pendientes de pago');
+
+      await click(kpi());
+      expect(texto()).toContain('Pendientes de pago 2');
+      expect(texto()).toContain('Cambiar a Pendientes de presupuesto');
+
+      await click(kpi());
+      expect(texto()).toContain('Pendientes de presupuesto 3');
+      expect(texto()).toContain('Cambiar a Potenciales');
+
+      await click(kpi());
+      expect(texto()).toContain('Potenciales 1');
     });
 
     it('lista los contactos del más reciente al más antiguo con sus datos', async () => {

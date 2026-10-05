@@ -84,6 +84,47 @@ describe('FacturacionFacturasTabComponent — móvil', () => {
       expect(el().textContent).toContain('No hay facturas que coincidan con los filtros');
     });
 
+    it('móvil: la tarjeta lleva el estado como acento visual', async () => {
+      await montar(true, [BORRADOR, EMITIDA, PAGADA]);
+      const estados = Array.from(el().querySelectorAll<HTMLElement>('[data-factura-card]')).map((c) => c.dataset['estado']);
+      expect(estados).toEqual(['borrador', 'pendiente', 'pagada']);
+    });
+
+    it('móvil: cliente y total destacados en la cabecera de la tarjeta', async () => {
+      await montar(true, [EMITIDA]);
+      const card = el().querySelector('[data-factura-card]')!;
+      expect(card.querySelector('[data-cliente]')!.textContent!.trim()).toBe('Cliente SL');
+      expect(card.querySelector('[data-total]')!.textContent).toContain('121.00');
+    });
+
+    it('móvil: fechas legibles en español', async () => {
+      await montar(true, [EMITIDA]);
+      const card = el().querySelector('[data-factura-card]')!;
+      expect(card.textContent).toContain('1 sep 2026');
+      expect(card.textContent).toContain('vence 1 oct 2026');
+    });
+
+    it('móvil: anulada atenuada con total tachado', async () => {
+      await montar(true, [ANULADA]);
+      expect(el().querySelector('[data-total]')!.className).toContain('line-through');
+    });
+
+    it('móvil: acción principal visible según el estado', async () => {
+      await montar(true, [BORRADOR, EMITIDA, PAGADA, ANULADA]);
+      const principales = Array.from(el().querySelectorAll<HTMLElement>('[data-factura-card]')).map(
+        (c) => c.querySelector('[data-accion-principal]')?.textContent?.trim() ?? null,
+      );
+      expect(principales).toEqual(['Finalizar', 'Marcar pagada', null, null]);
+    });
+
+    it('móvil: la acción principal despacha al mismo output', async () => {
+      await montar(true, [EMITIDA]);
+      const emitidos: string[] = [];
+      fixture.componentInstance.markPaid.subscribe((id) => emitidos.push(id));
+      el().querySelector<HTMLButtonElement>('[data-accion-principal]')!.click();
+      expect(emitidos).toEqual(['id-E-1']);
+    });
+
     it('el resumen puede envolver en móvil', async () => {
       await montar(true, [EMITIDA]);
       const resumen = el().querySelector('[data-resumen]')!;

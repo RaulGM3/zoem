@@ -32,6 +32,10 @@ import { InviteDrawerComponent, type InviteFormData } from './components/invite-
 import { UserEditDrawerComponent, type UserEditPatch } from './components/user-edit-drawer/user-edit-drawer';
 import { RoleEditorDrawerComponent } from './components/role-editor-drawer/role-editor-drawer';
 import { ActividadFeedComponent } from '../../shared/components/actividad-feed/actividad-feed';
+import {
+  ResponsiveListComponent, ListCardDirective, ListTableDirective,
+} from '../../shared/components/responsive-list/responsive-list';
+import { BreakpointService } from '../../core/services/breakpoint.service';
 
 type UsuariosTab = 'usuarios' | 'roles' | 'permisos' | 'solicitudes';
 type EditableMatrix = Record<Modulo, Record<FirmRole, RoleCaps>>;
@@ -40,7 +44,7 @@ type EditableMatrix = Record<Modulo, Record<FirmRole, RoleCaps>>;
   selector: 'app-usuarios',
   imports: [
     LucideAngularModule, InviteDrawerComponent, UserEditDrawerComponent, RoleEditorDrawerComponent,
-    ActividadFeedComponent,
+    ActividadFeedComponent, ResponsiveListComponent, ListCardDirective, ListTableDirective,
   ],
   templateUrl: './usuarios.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -66,11 +70,18 @@ export class UsuariosComponent implements OnInit, OnDestroy {
   private readonly companyService = inject(CompanyService);
   private readonly searchSvc = inject(SearchService);
   private readonly actividadService = inject(ActividadService);
+  protected readonly bp = inject(BreakpointService);
 
   private invitationsSub?: Subscription;
   private actividadSub?: Subscription;
 
   activeTab = signal<UsuariosTab>('usuarios');
+  readonly tabs: { id: UsuariosTab; label: string }[] = [
+    { id: 'usuarios', label: 'Usuarios' },
+    { id: 'roles', label: 'Roles' },
+    { id: 'permisos', label: 'Permisos' },
+    { id: 'solicitudes', label: 'Solicitudes' },
+  ];
   /** Búsqueda centralizada en el header — scopeada a "personal". */
   readonly search = this.searchSvc.termFor('personal');
   readonly actividad = signal<Actividad[]>([]);
@@ -90,6 +101,8 @@ export class UsuariosComponent implements OnInit, OnDestroy {
   /** Copia editable; null = sin cambios pendientes, se muestra la matriz efectiva. */
   readonly editedMatrix = signal<EditableMatrix | null>(null);
   readonly matrixSaving = signal(false);
+  /** Rol mostrado en la vista móvil de la matriz (una columna a la vez). */
+  readonly matrixRol = signal<FirmRole>('Gestor');
   readonly matrixDirty = computed(() => this.editedMatrix() !== null);
   readonly displayMatrix = computed<EditableMatrix>(
     () => this.editedMatrix() ?? this.permissionService.effectivePermisos(),
@@ -329,6 +342,11 @@ export class UsuariosComponent implements OnInit, OnDestroy {
   /** Inicial de una capacidad para el badge compacto (V/C/E/B). */
   capInitial(cap: Capability): string {
     return cap === 'ver' ? 'V' : cap === 'crear' ? 'C' : cap === 'editar' ? 'E' : 'B';
+  }
+
+  /** Etiqueta completa de una capacidad para los toggles móviles. */
+  capLabel(cap: Capability): string {
+    return cap === 'ver' ? 'Ver' : cap === 'crear' ? 'Crear' : cap === 'editar' ? 'Editar' : 'Borrar';
   }
 
   // --- Editor de la matriz (solo admin) ---

@@ -37,13 +37,30 @@
     </p>
     <p class="mt-1.5 text-xs" style="color:var(--success)">Con proyectos en curso</p>
   </div>
-  <div class="kpi-card rounded-xl p-5" style="background:var(--surface);border:1px solid var(--border)">
-    <p class="text-[13px] font-medium" style="color:var(--text-muted)">Facturación Total</p>
-    <p class="mt-1 font-semibold tabular-nums" style="font-size:29px;line-height:1;color:var(--text-strong);font-family:var(--font-display)">
-      {{ totalBilled() | number:'1.0-0' }}€
-    </p>
-    <p class="mt-1.5 text-xs" style="color:var(--success)">Facturado histórico</p>
-  </div>
+  <!-- KPI rotativa: cada click pasa al siguiente estado -->
+  <button type="button" (click)="siguienteKpi()"
+    class="kpi-card group cursor-pointer rounded-xl border border-[var(--border)] p-5 text-left transition-colors duration-150 hover:border-[var(--brand)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]"
+    style="background:var(--surface)">
+    <span class="flex items-start justify-between gap-2">
+      <span class="text-[13px] font-medium" style="color:var(--text-muted)" aria-live="polite">{{ kpiRotativa().titulo }}</span>
+      <span class="material-symbols-outlined rounded-md p-0.5 transition-transform duration-200 group-hover:rotate-180"
+        style="font-size:18px;color:var(--text-muted);background:var(--surface-2)" aria-hidden="true">sync_alt</span>
+    </span>
+    <span class="mt-1 block font-semibold tabular-nums" style="font-size:29px;line-height:1;color:var(--text-strong);font-family:var(--font-display)">
+      {{ kpiRotativa().total }}
+    </span>
+    <span class="mt-1.5 flex items-center justify-between gap-2">
+      <span class="text-xs" [style.color]="kpiRotativa().color">{{ kpiRotativa().detalle }}</span>
+      <span class="flex gap-1" aria-hidden="true">
+        @for (paso of kpiPasos; track paso.status; let i = $index) {
+          <span class="h-1.5 rounded-full transition-all duration-200"
+            [class]="i === kpiIndice() ? 'w-4' : 'w-1.5'"
+            [style.background]="i === kpiIndice() ? 'var(--brand)' : 'var(--border)'"></span>
+        }
+      </span>
+    </span>
+    <span class="sr-only">Cambiar a {{ kpiRotativa().siguiente }}</span>
+  </button>
 </div>
 
 <!-- Card contenedor -->
