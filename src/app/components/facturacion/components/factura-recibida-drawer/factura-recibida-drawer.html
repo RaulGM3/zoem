@@ -21,12 +21,29 @@
             [attr.aria-describedby]="errorArchivo() ? 'fr-error-archivo' : null"
             (change)="onArchivo($event)" />
         </div>
-        <div>
-          <label for="fr-foto" class="form-label">Hacer foto</label>
-          <input id="fr-foto" type="file" [accept]="ACCEPT_FOTO" capture="environment" class="form-input w-full text-xs"
-            [attr.aria-describedby]="errorArchivo() ? 'fr-error-archivo' : null"
-            (change)="onArchivo($event)" />
-        </div>
+        @if (nativo) {
+          <div class="flex flex-col gap-2 sm:col-span-1">
+            <button type="button" data-elegir-foto (click)="onFotoNativa('galeria')"
+              class="tap-target inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium"
+              style="background:var(--surface-2);color:var(--text-body)">
+              <lucide-icon [img]="ImageIcon" size="16" aria-hidden="true"></lucide-icon>
+              Elegir foto
+            </button>
+            <button type="button" data-hacer-foto (click)="onFotoNativa('camara')"
+              class="tap-target inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium"
+              style="background:var(--surface-2);color:var(--text-body)">
+              <lucide-icon [img]="CameraIcon" size="16" aria-hidden="true"></lucide-icon>
+              Hacer foto
+            </button>
+          </div>
+        } @else {
+          <div>
+            <label for="fr-foto" class="form-label">Hacer foto</label>
+            <input id="fr-foto" type="file" [accept]="ACCEPT_FOTO" capture="environment" class="form-input w-full text-xs"
+              [attr.aria-describedby]="errorArchivo() ? 'fr-error-archivo' : null"
+              (change)="onArchivo($event)" />
+          </div>
+        }
       </div>
       @if (errorArchivo(); as e) {
         <p id="fr-error-archivo" data-error-archivo class="form-error" role="alert">{{ e }}</p>

@@ -14,7 +14,7 @@ import {
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { LucideAngularModule, Plus, Trash2, Info, Paperclip, X } from 'lucide-angular';
+import { LucideAngularModule, Plus, Trash2, Info, Paperclip, X, Camera, Image } from 'lucide-angular';
 import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 import { CAUSAS_EXENCION, CAUSA_EXENCION_LABELS, opcionesIva } from '../../../../interfaces/iva';
 import type { CausaExencion } from '../../../../interfaces/verifactu.interface';
@@ -23,7 +23,13 @@ import { esFechaIso, trimestre } from '../../../../core/facturas-recibidas/trime
 import { validarFacturaRecibida, type ResultadoValidacionFactura } from '../../../../core/facturas-recibidas/validar-factura-recibida';
 import type { DatosNuevaFactura, VinculoMovimiento } from '../../../../core/services/facturas-recibidas.service';
 import { sugerirMovimientos, type MovimientoCandidato } from '../../../../core/facturas-recibidas/tesoreria-link';
-import { ACCEPT_FACTURA, ACCEPT_FOTO, CapturaArchivoService } from '../../../../core/services/captura-archivo.service';
+import {
+  ACCEPT_FACTURA,
+  ACCEPT_FOTO,
+  CapturaArchivoService,
+  type OrigenFoto,
+  type ResultadoCaptura,
+} from '../../../../core/services/captura-archivo.service';
 import { FacturaExtractionService, type DatosExtraidos } from '../../../../core/services/factura-extraction.service';
 import { QrDecodeService } from '../../../../core/services/qr-decode.service';
 import { contrastarQr, type ResultadoParseQr } from '../../../../core/facturas-recibidas/qr-verifactu';
@@ -85,8 +91,12 @@ export class FacturaRecibidaDrawerComponent {
   protected readonly InfoIcon = Info;
   protected readonly PaperclipIcon = Paperclip;
   protected readonly XIcon = X;
+  protected readonly CameraIcon = Camera;
+  protected readonly ImageIcon = Image;
   protected readonly ACCEPT_FACTURA = ACCEPT_FACTURA;
   protected readonly ACCEPT_FOTO = ACCEPT_FOTO;
+  /** En la app nativa se usa @capacitor/camera en lugar del input con `capture`. */
+  protected readonly nativo = this.captura.esNativo();
 
   protected readonly archivo = signal<File | null>(null);
   protected readonly errorArchivo = signal<string | null>(null);
@@ -349,7 +359,17 @@ export class FacturaRecibidaDrawerComponent {
     input.value = '';
     if (!file) return;
 
-    const resultado = this.captura.validar(file);
+    await this.procesarArchivo(this.captura.validar(file));
+  }
+
+  /** Nativo: cámara o galería con @capacitor/camera. Cancelar no muestra nada; un fallo (p. ej. permiso) sí. */
+  protected async onFotoNativa(origen: OrigenFoto): Promise<void> {
+    const resultado = await this.captura.capturar(origen);
+    if ('cancelado' in resultado) return;
+    await this.procesarArchivo(resultado);
+  }
+
+  private async procesarArchivo(resultado: ResultadoCaptura): Promise<void> {
     if (!resultado.ok) {
       this.errorArchivo.set(resultado.mensaje);
       return;

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { FacturaRecibidaDrawerComponent, type FacturaRecibidaPayload } from './factura-recibida-drawer';
 import { FacturaExtractionService, type DatosExtraidos, type ResultadoExtraccion } from '../../../../core/services/factura-extraction.service';
-import { ACCEPT_FACTURA, ACCEPT_FOTO } from '../../../../core/services/captura-archivo.service';
+import { ACCEPT_FACTURA, ACCEPT_FOTO, CapturaArchivoService, type ResultadoCapturaNativa } from '../../../../core/services/captura-archivo.service';
 import { QrDecodeService } from '../../../../core/services/qr-decode.service';
 import { parseQrVerifactu, type ResultadoParseQr } from '../../../../core/facturas-recibidas/qr-verifactu';
 
@@ -579,5 +579,87 @@ describe('FacturaRecibidaDrawerComponent', () => {
       confirmar();
       expect(emitidos).toHaveLength(0);
     });
+  });
+});
+
+describe('FacturaRecibidaDrawerComponent — captura nativa (@capacitor/camera)', () => {
+  let fixture: ComponentFixture<FacturaRecibidaDrawerComponent>;
+  let capturar: ReturnType<typeof vi.fn>;
+  let extraer: ReturnType<typeof vi.fn>;
+  const el = (): HTMLElement => fixture.nativeElement;
+  const q = <T extends HTMLElement>(sel: string): T | null => el().querySelector<T>(sel);
+
+  async function montar(nativo: boolean): Promise<void> {
+    TestBed.resetTestingModule();
+    capturar = vi.fn();
+    extraer = vi.fn().mockResolvedValue({ ok: false, mensaje: 'sin IA' } satisfies ResultadoExtraccion);
+    await TestBed.configureTestingModule({
+      imports: [FacturaRecibidaDrawerComponent],
+      providers: [
+        { provide: FacturaExtractionService, useValue: { extraer } },
+        { provide: QrDecodeService, useValue: { leer: vi.fn().mockResolvedValue(null) } },
+        { provide: CapturaArchivoService, useValue: { esNativo: () => nativo, capturar, validar: (a: File) => ({ ok: true, archivo: a }) } },
+      ],
+    }).compileComponents();
+    fixture = TestBed.createComponent(FacturaRecibidaDrawerComponent);
+    fixture.componentRef.setInput('fechaHoy', '2026-04-05');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  async function pulsar(sel: string): Promise<void> {
+    q<HTMLButtonElement>(sel)!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  it('en nativo ofrece tres opciones: subir archivo (PDF), elegir foto y hacer foto (sin input de cámara web)', async () => {
+    await montar(true);
+    expect(q('#fr-archivo')).not.toBeNull();
+    expect(q('[data-elegir-foto]')?.textContent).toContain('Elegir foto');
+    expect(q('[data-hacer-foto]')?.textContent).toContain('Hacer foto');
+    expect(q('#fr-foto')).toBeNull();
+  });
+
+  it('en la web mantiene los inputs y no muestra los botones nativos', async () => {
+    await montar(false);
+    expect(q('#fr-archivo')).not.toBeNull();
+    expect(q('#fr-foto')).not.toBeNull();
+    expect(q('[data-elegir-foto]')).toBeNull();
+    expect(q('[data-hacer-foto]')).toBeNull();
+  });
+
+  it.each([
+    ['[data-hacer-foto]', 'camara'],
+    ['[data-elegir-foto]', 'galeria'],
+  ])('%s captura (%s), adjunta el JPEG y lanza la extracción', async (sel, origen) => {
+    await montar(true);
+    const foto = new File([new Uint8Array(10)], 'factura-1.jpg', { type: 'image/jpeg' });
+    capturar.mockResolvedValue({ ok: true, archivo: foto } satisfies ResultadoCapturaNativa);
+    await pulsar(sel);
+    expect(capturar).toHaveBeenCalledWith(origen);
+    expect(q('[data-archivo-adjunto]')?.textContent).toContain('factura-1.jpg');
+    expect(extraer).toHaveBeenCalledWith(foto);
+  });
+
+  it('si el usuario cancela no muestra error ni adjunta nada', async () => {
+    await montar(true);
+    capturar.mockResolvedValue({ ok: false, cancelado: true } satisfies ResultadoCapturaNativa);
+    await pulsar('[data-hacer-foto]');
+    expect(q('[data-error-archivo]')).toBeNull();
+    expect(q('[data-archivo-adjunto]')).toBeNull();
+    expect(extraer).not.toHaveBeenCalled();
+  });
+
+  it('un permiso denegado se anuncia como alerta accesible', async () => {
+    await montar(true);
+    capturar.mockResolvedValue({ ok: false, mensaje: 'Sin permiso para usar la cámara o las fotos.' } satisfies ResultadoCapturaNativa);
+    await pulsar('[data-elegir-foto]');
+    const error = q('[data-error-archivo]')!;
+    expect(error.getAttribute('role')).toBe('alert');
+    expect(error.textContent).toContain('Sin permiso');
+    expect(extraer).not.toHaveBeenCalled();
   });
 });

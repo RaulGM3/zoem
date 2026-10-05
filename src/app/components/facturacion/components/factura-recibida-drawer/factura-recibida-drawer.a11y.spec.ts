@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { FacturaRecibidaDrawerComponent } from './factura-recibida-drawer';
 import { vi } from 'vitest';
+import { CapturaArchivoService } from '../../../../core/services/captura-archivo.service';
 import { QrDecodeService } from '../../../../core/services/qr-decode.service';
 import { parseQrVerifactu } from '../../../../core/facturas-recibidas/qr-verifactu';
 import { extraccionFalsa } from '../../../../../testing/facturas-recibidas';
@@ -29,6 +30,27 @@ describe('FacturaRecibidaDrawerComponent — accesibilidad (axe)', () => {
   it('sin violaciones en el estado inicial', async () => {
     const f = await montar();
     const v = await analizarA11y(f.nativeElement as HTMLElement);
+    expect(v, `\n${formatearViolaciones(v)}\n`).toEqual([]);
+  });
+
+  it('sin violaciones en nativo (botones Elegir foto / Hacer foto) con permiso denegado', async () => {
+    TestBed.resetTestingModule();
+    const capturar = vi.fn().mockResolvedValue({ ok: false, mensaje: 'Sin permiso para usar la cámara o las fotos.' });
+    await TestBed.configureTestingModule({
+      imports: [FacturaRecibidaDrawerComponent],
+      providers: [extraccionFalsa(), { provide: CapturaArchivoService, useValue: { esNativo: () => true, capturar, validar: vi.fn() } }],
+    }).compileComponents();
+    const f = TestBed.createComponent(FacturaRecibidaDrawerComponent);
+    f.componentRef.setInput('fechaHoy', '2026-04-05');
+    f.detectChanges();
+    await f.whenStable();
+    const raiz = f.nativeElement as HTMLElement;
+    raiz.querySelector<HTMLButtonElement>('[data-hacer-foto]')!.click();
+    f.detectChanges();
+    await f.whenStable();
+    f.detectChanges();
+    expect(raiz.querySelector('[data-error-archivo]')?.textContent).toContain('Sin permiso');
+    const v = await analizarA11y(raiz);
     expect(v, `\n${formatearViolaciones(v)}\n`).toEqual([]);
   });
 

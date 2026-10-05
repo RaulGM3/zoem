@@ -26,6 +26,7 @@
     "@angular/router": "^21.2.23",
     "@capacitor/android": "^8.4.1",
     "@capacitor/app": "^8.1.0",
+    "@capacitor/camera": "^8.2.5",
     "@capacitor/cli": "^8.4.1",
     "@capacitor/core": "^8.4.1",
     "@capacitor/ios": "^8.4.1",
