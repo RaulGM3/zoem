@@ -4,6 +4,7 @@ import { signal } from '@angular/core';
 import { Firestore } from '@angular/fire/firestore';
 import { Auth } from '@angular/fire/auth';
 import { Storage } from '@angular/fire/storage';
+import { Functions } from '@angular/fire/functions';
 import {
   FacturaAnuladaExistenteError,
   FacturaDuplicadaError,
@@ -15,7 +16,8 @@ import {
 import { CompanyService } from './company.service';
 import { claveFactura } from '../facturas-recibidas/clave-factura';
 
-const { store, getDocsMock, uploadBytesMock, autoId } = vi.hoisted(() => ({
+const { store, getDocsMock, uploadBytesMock, autoId, httpsCallableMock } = vi.hoisted(() => ({
+  httpsCallableMock: vi.fn(),
   autoId: { n: 0 },
   store: new Map<string, Record<string, unknown>>(),
   getDocsMock: vi.fn(),
@@ -62,6 +64,11 @@ vi.mock('@angular/fire/firestore', () => ({
   },
 }));
 
+vi.mock('@angular/fire/functions', () => ({
+  Functions: class MockFunctions {},
+  httpsCallable: (...args: unknown[]) => httpsCallableMock(...args),
+}));
+
 vi.mock('@angular/fire/storage', () => ({
   Storage: class MockStorage {},
   ref: (_s: unknown, path: string) => ({ fullPath: path }),
@@ -95,17 +102,35 @@ describe('FacturasRecibidasService', () => {
     getDocsMock.mockReset();
     uploadBytesMock.mockReset();
     uploadBytesMock.mockResolvedValue({});
+    httpsCallableMock.mockReset();
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       providers: [
         FacturasRecibidasService,
         { provide: Firestore, useValue: {} },
         { provide: Storage, useValue: {} },
+        { provide: Functions, useValue: { region: 'x' } },
         { provide: Auth, useValue: { currentUser: { uid: 'u1' } } },
         { provide: CompanyService, useValue: { activeCompany: signal({ id: CID, name: 'X' }) } },
       ],
     });
     svc = TestBed.inject(FacturasRecibidasService);
+  });
+
+  describe('validarQr', () => {
+    it('llama al callable validarQrFacturaRecibida con companyId y facturaId y devuelve el resultado', async () => {
+      const fn = vi.fn().mockResolvedValue({ data: { estado: 'encontrada', urlConsulta: 'https://aeat/x' } });
+      httpsCallableMock.mockReturnValue(fn);
+      const r = await svc.validarQr('fac-1');
+      expect(httpsCallableMock).toHaveBeenCalledWith(expect.anything(), 'validarQrFacturaRecibida');
+      expect(fn).toHaveBeenCalledWith({ companyId: CID, facturaId: 'fac-1' });
+      expect(r).toEqual({ estado: 'encontrada', urlConsulta: 'https://aeat/x' });
+    });
+
+    it('propaga el error del callable (el llamante decide el mensaje)', async () => {
+      httpsCallableMock.mockReturnValue(vi.fn().mockRejectedValue({ code: 'functions/permission-denied' }));
+      await expect(svc.validarQr('fac-1')).rejects.toMatchObject({ code: 'functions/permission-denied' });
+    });
   });
 
   describe('registrar (creación)', () => {

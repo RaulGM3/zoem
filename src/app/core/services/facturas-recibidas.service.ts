@@ -13,6 +13,7 @@ import {
 } from '@angular/fire/firestore';
 import { Auth } from '@angular/fire/auth';
 import { Storage, ref, uploadBytes } from '@angular/fire/storage';
+import { Functions, httpsCallable } from '@angular/fire/functions';
 import { CompanyService } from './company.service';
 import { stripUndefinedDeep } from '../firebase/sanitize';
 import { claveFactura } from '../facturas-recibidas/clave-factura';
@@ -20,6 +21,7 @@ import { normalizarNif } from '../fiscal/nif';
 import { movimientoDesdeFactura } from '../facturas-recibidas/tesoreria-link';
 import type {
   EstadoFacturaRecibida,
+  EstadoQr,
   FacturaRecibida,
   FacturasRecibidasMeta,
 } from '../../interfaces/factura-recibida.interface';
@@ -83,6 +85,13 @@ export interface OpcionesRegistro {
   movimiento?: VinculoMovimiento;
 }
 
+/** Respuesta del callable `validarQrFacturaRecibida` (el servidor la persiste además en `qrValidacion`). */
+export interface ResultadoValidarQr {
+  estado: Exclude<EstadoQr, 'sin_qr' | 'pendiente'>;
+  urlConsulta: string;
+  mensaje?: string;
+}
+
 /** Ya existe una factura registrada con el mismo NIF de emisor y número en esta empresa. */
 export class FacturaDuplicadaError extends Error {
   constructor(readonly id: string) {
@@ -125,6 +134,7 @@ export class FacturasRecibidasService {
   private readonly firestore = inject(Firestore);
   private readonly storage = inject(Storage);
   private readonly auth = inject(Auth);
+  private readonly functions = inject(Functions);
   private readonly companyService = inject(CompanyService);
 
   readonly facturas = signal<FacturaRecibida[]>([]);
@@ -315,6 +325,20 @@ export class FacturasRecibidasService {
       casoId: d.casoId,
       movimientoId: d.movimientoId,
     };
+  }
+
+  /**
+   * Pide al servidor que consulte ValidarQR de la AEAT con el QR guardado de la factura. El servidor es dueño de
+   * `qrValidacion` (las rules lo prohíben al cliente): aquí solo se llama y se devuelve el resultado.
+   * Idempotente: reintentar es volver a llamar. Los `HttpsError` se propagan.
+   */
+  async validarQr(facturaId: string): Promise<ResultadoValidarQr> {
+    const fn = httpsCallable<{ companyId: string; facturaId: string }, ResultadoValidarQr>(
+      this.functions,
+      'validarQrFacturaRecibida',
+    );
+    const r = await fn({ companyId: this.companyId, facturaId });
+    return r.data;
   }
 
   async actualizar(id: string, cambios: CambiosFactura): Promise<void> {

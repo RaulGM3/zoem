@@ -4,6 +4,16 @@ import type { CausaExencion } from './verifactu.interface';
 /** Resultado de la verificación del QR contra la AEAT (ValidarQR). Solo el servidor lo cambia tras la creación. */
 export type EstadoQr = 'sin_qr' | 'pendiente' | 'encontrada' | 'no_encontrada' | 'no_verificable' | 'error';
 
+/** Resultado persistido por el servidor (callable `validarQrFacturaRecibida`); al crear solo lleva `estado`. */
+export interface QrValidacion {
+  estado: EstadoQr;
+  at?: Timestamp;
+  /** Enlace de consulta manual en la sede de la AEAT. */
+  urlConsulta?: string;
+  /** Solo en `error`. */
+  mensaje?: string;
+}
+
 export type EstadoFacturaRecibida = 'registrada' | 'anulada';
 
 export type TrimestreIva = 1 | 2 | 3 | 4;
@@ -48,7 +58,7 @@ export interface FacturaRecibida {
   adjunto?: { storagePath: string; nombre: string; mimeType: string; size: number };
   qr?: { url: string; nif: string; numserie: string; fecha: string; importe: number };
   /** Top-level a propósito: las rules solo ven `affectedKeys()` de primer nivel. */
-  qrValidacion: { estado: EstadoQr; at?: Timestamp; urlConsulta?: string };
+  qrValidacion: QrValidacion;
   extraccion: { origen: 'ia' | 'qr' | 'manual'; discrepancias: string[] };
   movimientoId?: string;
   casoId?: string;

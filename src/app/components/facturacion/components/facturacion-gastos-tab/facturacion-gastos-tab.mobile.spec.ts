@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { ComponentFixture } from '@angular/core/testing';
 import { FacturacionGastosTabComponent } from './facturacion-gastos-tab';
-import { crearFake, montarTab, type FakeSvc } from '../../../../../testing/facturas-recibidas';
+import { crearFake, factura, FACTURAS, montarTab, type FakeSvc } from '../../../../../testing/facturas-recibidas';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
 
 describe('FacturacionGastosTabComponent — móvil', () => {
@@ -39,6 +39,19 @@ describe('FacturacionGastosTabComponent — móvil', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     expect(fake.anular).toHaveBeenCalledWith('A');
+  });
+
+  it('QR pendiente: insignia con texto y acción "Validar en AEAT" en el menú ⋯', async () => {
+    const qr = { url: 'https://aeat.example/qr', nif: 'B12345674', numserie: 'F-Q', fecha: '02-04-2026', importe: 121 };
+    fake = crearFake([...FACTURAS, factura({ id: 'P', numeroRecepcion: 10, qr, qrValidacion: { estado: 'pendiente' } })]);
+    ({ fixture } = await montarTab(fake, true));
+    expect(q('article[data-factura-fila="P"] [data-qr-estado]').textContent).toMatch(/pendiente de validar/i);
+    q<HTMLButtonElement>('article[data-factura-fila="P"] app-action-menu button').click();
+    fixture.detectChanges();
+    q<HTMLButtonElement>('[data-action-id="validar-qr"]').click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(fake.validarQr).toHaveBeenCalledWith('P');
   });
 
   it('el botón de registrar es un objetivo táctil y abre el drawer a pantalla completa (diálogo)', async () => {

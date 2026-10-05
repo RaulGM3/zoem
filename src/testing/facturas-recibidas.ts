@@ -60,6 +60,7 @@ export interface FakeSvc {
   cargar: ReturnType<typeof vi.fn>;
   registrar: ReturnType<typeof vi.fn>;
   anular: ReturnType<typeof vi.fn>;
+  validarQr: ReturnType<typeof vi.fn>;
 }
 
 export function crearFake(lista: FacturaRecibida[] = FACTURAS): FakeSvc {
@@ -69,6 +70,7 @@ export function crearFake(lista: FacturaRecibida[] = FACTURAS): FakeSvc {
     cargar: vi.fn().mockResolvedValue(undefined),
     registrar: vi.fn().mockResolvedValue({ id: 'x', numeroRecepcion: 9, reactivada: false }),
     anular: vi.fn().mockResolvedValue(undefined),
+    validarQr: vi.fn().mockResolvedValue({ estado: 'encontrada', urlConsulta: 'https://aeat.example/v' }),
   };
 }
 

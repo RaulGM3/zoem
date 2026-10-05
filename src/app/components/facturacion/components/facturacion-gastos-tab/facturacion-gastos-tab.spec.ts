@@ -5,7 +5,7 @@ import {
   FacturaAnuladaExistenteError,
   FacturaDuplicadaError,
 } from '../../../../core/services/facturas-recibidas.service';
-import { crearFake, montarTab, type FakeSvc } from '../../../../../testing/facturas-recibidas';
+import { crearFake, factura, FACTURAS, montarTab, type FakeSvc } from '../../../../../testing/facturas-recibidas';
 
 describe('FacturacionGastosTabComponent', () => {
   let fake: FakeSvc;
@@ -157,6 +157,136 @@ describe('FacturacionGastosTabComponent', () => {
       fixture.detectChanges();
       expect(toast.fromError).toHaveBeenCalled();
       expect(drawer()).not.toBeNull();
+    });
+  });
+
+  describe('validación del QR en la AEAT', () => {
+    const QR = { url: 'https://aeat.example/qr', nif: 'B12345674', numserie: 'F-Q', fecha: '02-04-2026', importe: 121 };
+    const conQr = (over: Parameters<typeof factura>[0]) => factura({ qr: QR, numeroRecepcion: 10, ...over });
+    const montar = async (lista: ReturnType<typeof factura>[]) => {
+      fake = crearFake([...FACTURAS, ...lista]);
+      ({ fixture, toast } = await montarTab(fake));
+    };
+    const anuncio = () => q('[data-anuncio-qr]').textContent!.trim();
+
+    it('sin QR no hay insignia ni acción; con QR muestra el estado en texto', async () => {
+      await montar([
+        conQr({ id: 'P', qrValidacion: { estado: 'pendiente' } }),
+        conQr({ id: 'E', qrValidacion: { estado: 'encontrada' } }),
+      ]);
+      expect(q('[data-factura-fila="A"]').querySelector('[data-qr-estado]')).toBeNull();
+      expect(q('[data-factura-fila="P"] [data-qr-estado]').textContent).toMatch(/pendiente de validar/i);
+      expect(q('[data-factura-fila="E"] [data-qr-estado]').textContent).toMatch(/validado en la AEAT/i);
+    });
+
+    it('"Validar en AEAT" solo en pendiente o error, y no en encontrada', async () => {
+      await montar([
+        conQr({ id: 'P', qrValidacion: { estado: 'pendiente' } }),
+        conQr({ id: 'X', qrValidacion: { estado: 'error', mensaje: 'Fallo' } }),
+        conQr({ id: 'E', qrValidacion: { estado: 'encontrada' } }),
+      ]);
+      expect(q('[data-validar-qr="P"]').textContent).toMatch(/Validar en AEAT/);
+      expect(q('[data-validar-qr="X"]')).not.toBeNull();
+      expect(el().querySelector('[data-validar-qr="E"]')).toBeNull();
+      expect(el().querySelector('[data-validar-qr="A"]')).toBeNull();
+    });
+
+    it('validar llama al servicio, recarga y anuncia el resultado en la región aria-live', async () => {
+      await montar([conQr({ id: 'P', qrValidacion: { estado: 'pendiente' } })]);
+      const region = q('[data-anuncio-qr]');
+      expect(region.getAttribute('aria-live')).toBe('polite');
+      expect(region.getAttribute('role')).toBe('status');
+      fake.cargar.mockClear();
+      q<HTMLButtonElement>('[data-validar-qr="P"]').click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(fake.validarQr).toHaveBeenCalledWith('P');
+      expect(fake.cargar).toHaveBeenCalledWith(2026);
+      expect(anuncio()).toMatch(/F-P: .*validado en la AEAT/i);
+    });
+
+    it('error del servidor: muestra el mensaje y un enlace seguro a la consulta manual', async () => {
+      await montar([
+        conQr({
+          id: 'X',
+          qrValidacion: { estado: 'error', mensaje: 'La AEAT respondió con HTTP 500.', urlConsulta: 'https://aeat.example/v' },
+        }),
+      ]);
+      const fila = q('[data-factura-fila="X"]');
+      expect(fila.textContent).toContain('La AEAT respondió con HTTP 500.');
+      const a = fila.querySelector<HTMLAnchorElement>('a[data-qr-enlace]')!;
+      expect(a.getAttribute('href')).toBe('https://aeat.example/v');
+      expect(a.target).toBe('_blank');
+      expect(a.rel).toContain('noopener');
+      expect(a.getAttribute('aria-label')).toMatch(/F-X.*AEAT/);
+    });
+
+    it('HttpsError del callable: mensaje amigable en la fila y en el anuncio, sin toast', async () => {
+      await montar([conQr({ id: 'P', qrValidacion: { estado: 'pendiente' } })]);
+      fake.validarQr.mockRejectedValue({ code: 'functions/permission-denied' });
+      q<HTMLButtonElement>('[data-validar-qr="P"]').click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(q('[data-factura-fila="P"]').textContent).toMatch(/No tienes permiso/);
+      expect(anuncio()).toMatch(/No tienes permiso/);
+      expect(toast.fromError).not.toHaveBeenCalled();
+    });
+
+    it('mientras valida, el botón queda deshabilitado (sin dobles envíos)', async () => {
+      await montar([conQr({ id: 'P', qrValidacion: { estado: 'pendiente' } })]);
+      let resolver!: (v: unknown) => void;
+      fake.validarQr.mockReturnValue(new Promise((r) => (resolver = r)));
+      const btn = q<HTMLButtonElement>('[data-validar-qr="P"]');
+      btn.click();
+      fixture.detectChanges();
+      expect(q<HTMLButtonElement>('[data-validar-qr="P"]').disabled).toBe(true);
+      q<HTMLButtonElement>('[data-validar-qr="P"]').click();
+      expect(fake.validarQr).toHaveBeenCalledTimes(1);
+      resolver({ estado: 'encontrada', urlConsulta: 'u' });
+      await fixture.whenStable();
+    });
+
+    describe('tras registrar', () => {
+      const payload = {
+        datos: {
+          tipoFactura: 'F1' as const, proveedor: { nombre: 'P', nif: 'B12345674' }, numero: 'NQ',
+          fechaExpedicion: '2026-04-02', fechaRegistro: '2026-04-05', periodo303: { ejercicio: 2026, trimestre: 2 as const },
+          lineasIva: [{ base: 100, tipo: 21, cuota: 21 }], total: 121, porcentajeDeducible: 100, concepto: '',
+          extraccion: { origen: 'qr' as const, discrepancias: [] as string[] }, qr: QR,
+        },
+        reactivar: false,
+      };
+      const registrarCon = async (nueva: ReturnType<typeof factura>) => {
+        fake.registrar.mockResolvedValue({ id: nueva.id, numeroRecepcion: 11, reactivada: false });
+        fake.cargar.mockImplementation(async () => fake.facturas.set([...FACTURAS, nueva]));
+        q<HTMLButtonElement>('[data-registrar]').click();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.debugElement.query((d) => d.name === 'app-factura-recibida-drawer').componentInstance.confirmed.emit(payload);
+        await fixture.whenStable();
+        fixture.detectChanges();
+      };
+
+      it('con QR y estado pendiente valida automáticamente', async () => {
+        await registrarCon(conQr({ id: 'N', numero: 'NQ', qrValidacion: { estado: 'pendiente' } }));
+        expect(fake.validarQr).toHaveBeenCalledWith('N');
+      });
+
+      it('sin QR no valida', async () => {
+        await registrarCon(factura({ id: 'N', numeroRecepcion: 11 }));
+        expect(fake.validarQr).not.toHaveBeenCalled();
+      });
+
+      it('un fallo de la validación nunca estropea el registro: se queda en la UI, sin toast de error', async () => {
+        fake.validarQr.mockRejectedValue({ code: 'functions/unavailable' });
+        await registrarCon(conQr({ id: 'N', numero: 'NQ', qrValidacion: { estado: 'pendiente' } }));
+        await fixture.whenStable();
+        fixture.detectChanges();
+        expect(toast.success).toHaveBeenCalled();
+        expect(toast.fromError).not.toHaveBeenCalled();
+        expect(fixture.debugElement.query((d) => d.name === 'app-factura-recibida-drawer')).toBeNull();
+        expect(q('[data-factura-fila="N"]').textContent).toMatch(/Sin conexión/);
+      });
     });
   });
 
