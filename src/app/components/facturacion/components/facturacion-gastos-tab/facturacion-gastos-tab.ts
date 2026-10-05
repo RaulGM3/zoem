@@ -1,6 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, OnDestroy, OnInit, signal } from '@angular/core';
 import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
-import { LucideAngularModule, Ban, Plus, Info } from 'lucide-angular';
+import { LucideAngularModule, Ban, Plus, Info, Download } from 'lucide-angular';
 import { ActionMenuComponent, type MenuAction } from '../../../../shared/components/action-menu/action-menu';
 import {
   ListCardDirective,
@@ -11,7 +11,12 @@ import {
   FacturaAnuladaExistenteError,
   FacturaDuplicadaError,
   FacturasRecibidasService,
+  MovimientoNoEncontradoError,
+  MovimientoYaVinculadoError,
 } from '../../../../core/services/facturas-recibidas.service';
+import { CompanyService } from '../../../../core/services/company.service';
+import { GestoriaService } from '../../../../core/services/gestoria.service';
+import { LibroRecibidasExportService } from '../../../../core/services/libro-recibidas-export.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { resumen303 } from '../../../../core/facturas-recibidas/resumen303';
 import { trimestre } from '../../../../core/facturas-recibidas/trimestre';
@@ -31,9 +36,12 @@ import {
   ],
   templateUrl: './facturacion-gastos-tab.html',
 })
-export class FacturacionGastosTabComponent implements OnInit {
+export class FacturacionGastosTabComponent implements OnInit, OnDestroy {
   private readonly service = inject(FacturasRecibidasService);
   private readonly toast = inject(ToastService);
+  private readonly company = inject(CompanyService);
+  private readonly gestoria = inject(GestoriaService);
+  private readonly libro = inject(LibroRecibidasExportService);
 
   /** Fecha de hoy (`yyyy-MM-dd`): fija el periodo inicial y la fecha de registro propuesta. */
   readonly fechaHoy = input.required<string>();
@@ -41,6 +49,7 @@ export class FacturacionGastosTabComponent implements OnInit {
   protected readonly BanIcon = Ban;
   protected readonly PlusIcon = Plus;
   protected readonly InfoIcon = Info;
+  protected readonly DownloadIcon = Download;
   protected readonly fechaCorta = fechaCorta;
   protected readonly trimestres: readonly TrimestreIva[] = [1, 2, 3, 4];
 
@@ -52,6 +61,10 @@ export class FacturacionGastosTabComponent implements OnInit {
   protected readonly guardando = signal(false);
   protected readonly errorServidor = signal<string | null>(null);
   protected readonly reactivacionPendiente = signal(false);
+  protected readonly exportando = signal(false);
+  protected readonly movimientos = this.gestoria.todosMovimientos;
+  /** El tab abrió la escucha de movimientos (el drawer los necesita para sugerir): debe cerrarla. */
+  private escuchandoMovimientos = false;
 
   protected readonly delTrimestre = computed(() =>
     this.service
@@ -69,6 +82,10 @@ export class FacturacionGastosTabComponent implements OnInit {
     this.ejercicio.set(periodo.ejercicio);
     this.trimestreSel.set(periodo.trimestre);
     void this.service.cargar(periodo.ejercicio);
+  }
+
+  ngOnDestroy(): void {
+    if (this.escuchandoMovimientos) this.gestoria.stopTodosMovimientos();
   }
 
   protected onEjercicio(valor: string): void {
@@ -101,6 +118,10 @@ export class FacturacionGastosTabComponent implements OnInit {
   protected abrirDrawer(): void {
     this.errorServidor.set(null);
     this.reactivacionPendiente.set(false);
+    if (!this.escuchandoMovimientos) {
+      this.escuchandoMovimientos = true;
+      this.gestoria.loadTodosMovimientos();
+    }
     this.drawerAbierto.set(true);
   }
 
@@ -118,20 +139,44 @@ export class FacturacionGastosTabComponent implements OnInit {
     }
   }
 
-  protected async registrar({ datos, reactivar, archivo }: FacturaRecibidaPayload): Promise<void> {
+  protected async exportarLibro(): Promise<void> {
+    if (this.exportando() || this.resumen().numFacturas === 0) return;
+    const empresa = this.company.activeCompany();
+    const nif = empresa?.cif?.trim();
+    if (!empresa || !nif) {
+      this.toast.info('Indica el NIF o CIF de tu empresa en su perfil para poder exportar el libro de facturas recibidas.');
+      return;
+    }
+    this.exportando.set(true);
+    try {
+      await this.libro.exportar(
+        this.service.facturas(),
+        { ejercicio: this.ejercicio(), trimestre: this.trimestreSel() },
+        { nif, nombre: empresa.name },
+      );
+    } catch (err) {
+      this.toast.fromError(err, { title: 'No se pudo exportar el libro' });
+    } finally {
+      this.exportando.set(false);
+    }
+  }
+
+  protected async registrar({ datos, reactivar, archivo, movimiento }: FacturaRecibidaPayload): Promise<void> {
     if (this.guardando()) return;
     this.guardando.set(true);
     this.errorServidor.set(null);
     this.reactivacionPendiente.set(false);
     try {
-      const r = await this.service.registrar(datos, { reactivar, archivo });
+      const r = await this.service.registrar(datos, { reactivar, archivo, movimiento });
       this.toast.success(
         r.reactivada ? 'Factura reactivada' : `Factura registrada con el número de recepción ${r.numeroRecepcion}`,
       );
       this.drawerAbierto.set(false);
       await this.service.cargar(this.ejercicio());
     } catch (err) {
-      if (err instanceof FacturaDuplicadaError) this.errorServidor.set(err.message);
+      if (err instanceof FacturaDuplicadaError || err instanceof MovimientoYaVinculadoError || err instanceof MovimientoNoEncontradoError) {
+        this.errorServidor.set(err.message);
+      }
       else if (err instanceof FacturaAnuladaExistenteError) this.reactivacionPendiente.set(true);
       else this.toast.fromError(err, { title: 'No se pudo registrar la factura' });
     } finally {

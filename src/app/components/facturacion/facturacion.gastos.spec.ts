@@ -12,6 +12,7 @@ import { ContactService } from '../../core/services/contact.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { ToastService } from '../../core/services/toast.service';
 import { FacturasRecibidasService } from '../../core/services/facturas-recibidas.service';
+import { GestoriaService } from '../../core/services/gestoria.service';
 import type { FirmRole } from '../../interfaces/member';
 
 type Rol = FirmRole | 'Super';
@@ -36,6 +37,7 @@ async function montar(rol: Rol, mobile = false): Promise<ComponentFixture<Factur
       { provide: UsersService, useValue: { loadMembers: async () => {}, members: signal([]) } },
       { provide: InvoiceService, useValue: { invoices: signal([]), loadInvoices: async () => {} } },
       { provide: InvoicePdfService, useValue: {} },
+      { provide: GestoriaService, useValue: { todosMovimientos: signal([]), loadTodosMovimientos: () => {}, stopTodosMovimientos: () => {} } },
       { provide: CompanyService, useValue: { activeCompany: signal({ id: 'co', name: 'X' }) } },
       { provide: ContactService, useValue: { contacts: signal([]), isLoading: signal(false), getContact: async () => null } },
       {

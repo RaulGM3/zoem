@@ -5,6 +5,10 @@ import { FacturacionGastosTabComponent } from '../app/components/facturacion/com
 import { FacturasRecibidasService } from '../app/core/services/facturas-recibidas.service';
 import { ToastService } from '../app/core/services/toast.service';
 import { FacturaExtractionService } from '../app/core/services/factura-extraction.service';
+import { LibroRecibidasExportService } from '../app/core/services/libro-recibidas-export.service';
+import { CompanyService } from '../app/core/services/company.service';
+import { GestoriaService } from '../app/core/services/gestoria.service';
+import type { MovimientoGestoria } from '../app/interfaces/gestoria.interface';
 import type { FacturaRecibida } from '../app/interfaces/factura-recibida.interface';
 
 export function mockViewport(mobile: boolean): void {
@@ -74,15 +78,24 @@ export const extraccionFalsa = () => ({
   useValue: { extraer: vi.fn().mockResolvedValue({ ok: false, mensaje: 'sin IA en tests' }) },
 });
 
-export async function montarTab(fake: FakeSvc, mobile = false) {
+export async function montarTab(fake: FakeSvc, mobile = false, empresa: { name: string; cif?: string } = { name: 'Mi Empresa SL', cif: 'B12345674' }) {
   TestBed.resetTestingModule();
   mockViewport(mobile);
-  const toast = { success: vi.fn(), fromError: vi.fn() };
+  const toast = { success: vi.fn(), info: vi.fn(), fromError: vi.fn() };
+  const libro = { exportar: vi.fn().mockResolvedValue(true) };
+  const gestoria = {
+    todosMovimientos: signal<MovimientoGestoria[]>([]),
+    loadTodosMovimientos: vi.fn(),
+    stopTodosMovimientos: vi.fn(),
+  };
   await TestBed.configureTestingModule({
     imports: [FacturacionGastosTabComponent],
     providers: [
       { provide: FacturasRecibidasService, useValue: fake },
       { provide: ToastService, useValue: toast },
+      { provide: LibroRecibidasExportService, useValue: libro },
+      { provide: GestoriaService, useValue: gestoria },
+      { provide: CompanyService, useValue: { activeCompany: signal({ id: 'co', ...empresa }) } },
       extraccionFalsa(),
     ],
   }).compileComponents();
@@ -91,5 +104,5 @@ export async function montarTab(fake: FakeSvc, mobile = false) {
   fixture.detectChanges();
   await fixture.whenStable();
   fixture.detectChanges();
-  return { fixture, toast };
+  return { fixture, toast, libro, gestoria };
 }

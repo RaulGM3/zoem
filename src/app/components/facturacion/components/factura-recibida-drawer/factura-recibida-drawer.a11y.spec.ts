@@ -119,4 +119,29 @@ describe('FacturaRecibidaDrawerComponent — accesibilidad (axe)', () => {
     const v = await analizarA11y(raiz);
     expect(v, `\n${formatearViolaciones(v)}\n`).toEqual([]);
   });
+
+  it('sin violaciones con la sección de tesorería: sugerencias y error de selección', async () => {
+    const f = await montar();
+    f.componentRef.setInput('movimientos', [
+      { id: 'm1', tipo: 'gasto', esEntrada: false, importe: 121, fecha: '2026-04-03', concepto: 'Pago proveedor' },
+    ]);
+    const raiz = f.nativeElement as HTMLElement;
+    const poner = async (id: string, valor: string) => {
+      const c = raiz.querySelector<HTMLInputElement>(`#${id}`)!;
+      c.value = valor;
+      c.dispatchEvent(new Event('input', { bubbles: true }));
+      f.detectChanges();
+      await f.whenStable();
+    };
+    await poner('fr-fecha-expedicion', '2026-04-02');
+    await poner('fr-base-0', '100');
+    const r = raiz.querySelector<HTMLInputElement>('#fr-vinculo-vincular')!;
+    r.checked = true;
+    r.dispatchEvent(new Event('change', { bubbles: true }));
+    f.detectChanges();
+    await pulsarConfirmar(f);
+    expect(raiz.querySelector('[data-lista-sugerencias]')?.getAttribute('aria-invalid')).toBe('true');
+    const v = await analizarA11y(raiz);
+    expect(v, `\n${formatearViolaciones(v)}\n`).toEqual([]);
+  });
 });

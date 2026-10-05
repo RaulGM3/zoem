@@ -21,7 +21,8 @@ import type { CausaExencion } from '../../../../interfaces/verifactu.interface';
 import type { PeriodoIva, TrimestreIva } from '../../../../interfaces/factura-recibida.interface';
 import { esFechaIso, trimestre } from '../../../../core/facturas-recibidas/trimestre';
 import { validarFacturaRecibida, type ResultadoValidacionFactura } from '../../../../core/facturas-recibidas/validar-factura-recibida';
-import type { DatosNuevaFactura } from '../../../../core/services/facturas-recibidas.service';
+import type { DatosNuevaFactura, VinculoMovimiento } from '../../../../core/services/facturas-recibidas.service';
+import { sugerirMovimientos, type MovimientoCandidato } from '../../../../core/facturas-recibidas/tesoreria-link';
 import { ACCEPT_FACTURA, ACCEPT_FOTO, CapturaArchivoService } from '../../../../core/services/captura-archivo.service';
 import { FacturaExtractionService, type DatosExtraidos } from '../../../../core/services/factura-extraction.service';
 import { QrDecodeService } from '../../../../core/services/qr-decode.service';
@@ -33,7 +34,11 @@ export interface FacturaRecibidaPayload {
   reactivar: boolean;
   /** Archivo adjunto elegido (se sube a Storage al confirmar, no antes). */
   archivo?: File;
+  /** Gasto de tesorería a crear o movimiento existente a vincular (se escribe junto a la factura). */
+  movimiento?: VinculoMovimiento;
 }
+
+type ModoVinculo = 'ninguno' | 'crear' | 'vincular';
 
 type EstadoExtraccion = 'idle' | 'leyendo' | 'ok' | 'error';
 
@@ -68,6 +73,9 @@ export class FacturaRecibidaDrawerComponent {
   readonly errorServidor = input<string | null>(null);
   /** Existe una factura anulada con la misma clave: se ofrece reactivarla. */
   readonly reactivacionPendiente = input(false);
+
+  /** Movimientos de tesorería entre los que sugerir el pago de la factura. */
+  readonly movimientos = input<readonly MovimientoCandidato[]>([]);
 
   readonly closed = output<void>();
   readonly confirmed = output<FacturaRecibidaPayload>();
@@ -202,6 +210,41 @@ export class FacturaRecibidaDrawerComponent {
   }
 
   protected readonly validacion = computed<ResultadoValidacionFactura>(() => validarFacturaRecibida({ ...this.datos(), claveOperacion: '01' }));
+
+  protected readonly modoVinculo = signal<ModoVinculo>('ninguno');
+  private readonly movElegido = signal<string | null>(null);
+
+  protected readonly sugerencias = computed(() => {
+    const { total, fechaExpedicion } = this.datos();
+    return sugerirMovimientos({ total, fechaExpedicion }, this.movimientos());
+  });
+
+  /** Solo vale la selección si el movimiento sigue siendo una sugerencia con los datos actuales. */
+  protected readonly movVigente = computed(() => this.sugerencias().find((m) => m.id === this.movElegido()) ?? null);
+
+  protected readonly errorVinculo = computed(() =>
+    this.submitted() && this.modoVinculo() === 'vincular' && !this.movVigente()
+      ? this.sugerencias().length === 0
+        ? 'No hay ningún movimiento que vincular: elige otra opción de tesorería.'
+        : 'Elige el movimiento al que vincular la factura.'
+      : null,
+  );
+
+  protected onModoVinculo(modo: ModoVinculo): void {
+    this.modoVinculo.set(modo);
+    this.movElegido.set(null);
+  }
+
+  protected onMovimiento(id: string): void {
+    this.movElegido.set(id);
+  }
+
+  private vinculoParaPayload(): VinculoMovimiento | undefined {
+    const modo = this.modoVinculo();
+    if (modo === 'crear') return { modo };
+    const m = this.movVigente();
+    return modo === 'vincular' && m ? { modo, id: m.id, ...(m.casoId ? { casoId: m.casoId } : {}) } : undefined;
+  }
 
   protected readonly advertencias = computed(() => this.validacion().advertencias);
 
@@ -372,12 +415,17 @@ export class FacturaRecibidaDrawerComponent {
 
   protected onConfirm(reactivar = false): void {
     this.submitted.set(true);
-    if (!this.validacion().ok) {
+    if (!this.validacion().ok || this.errorVinculo()) {
       afterNextRender(() => this.host.nativeElement.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus(), {
         injector: this.injector,
       });
       return;
     }
-    this.confirmed.emit({ datos: this.datos(), reactivar, archivo: this.archivo() ?? undefined });
+    this.confirmed.emit({
+      datos: this.datos(),
+      reactivar,
+      archivo: this.archivo() ?? undefined,
+      movimiento: this.vinculoParaPayload(),
+    });
   }
 }

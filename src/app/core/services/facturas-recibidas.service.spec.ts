@@ -7,13 +7,16 @@ import { Storage } from '@angular/fire/storage';
 import {
   FacturaAnuladaExistenteError,
   FacturaDuplicadaError,
+  MovimientoNoEncontradoError,
+  MovimientoYaVinculadoError,
   FacturasRecibidasService,
   type DatosNuevaFactura,
 } from './facturas-recibidas.service';
 import { CompanyService } from './company.service';
 import { claveFactura } from '../facturas-recibidas/clave-factura';
 
-const { store, getDocsMock, uploadBytesMock } = vi.hoisted(() => ({
+const { store, getDocsMock, uploadBytesMock, autoId } = vi.hoisted(() => ({
+  autoId: { n: 0 },
   store: new Map<string, Record<string, unknown>>(),
   getDocsMock: vi.fn(),
   uploadBytesMock: vi.fn(),
@@ -27,7 +30,14 @@ vi.mock('@angular/fire/firestore', () => ({
   Firestore: class MockFirestore {},
   serverTimestamp: () => '__serverTimestamp__',
   collection: (_fs: unknown, ...segs: string[]) => ({ path: segs.join('/') }),
-  doc: (_fs: unknown, ...segs: string[]) => ({ path: segs.join('/') }),
+  doc: (first: unknown, ...segs: string[]) => {
+    // doc(collectionRef) => id automático, como Firestore.
+    if (segs.length === 0) {
+      const id = `auto${++autoId.n}`;
+      return { path: `${(first as FakeRef).path}/${id}`, id };
+    }
+    return { path: segs.join('/') };
+  },
   query: (...args: unknown[]) => ({ query: args }),
   where: (...args: unknown[]) => ({ where: args }),
   getDocs: (...args: unknown[]) => getDocsMock(...args),
@@ -81,6 +91,7 @@ describe('FacturasRecibidasService', () => {
 
   beforeEach(() => {
     store.clear();
+    autoId.n = 0;
     getDocsMock.mockReset();
     uploadBytesMock.mockReset();
     uploadBytesMock.mockResolvedValue({});
@@ -301,6 +312,92 @@ describe('FacturasRecibidasService', () => {
     it('sin archivo no toca Storage', async () => {
       await svc.registrar(base());
       expect(uploadBytesMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('registrar con vínculo a tesorería (misma transacción)', () => {
+    const rutaMovGeneral = (id: string) => `companies/${CID}/movimientos_generales/${id}`;
+    const rutaMovCaso = (casoId: string, id: string) => `companies/${CID}/casos/${casoId}/gestoria/${id}`;
+
+    it('crear: añade un gasto en movimientos_generales y enlaza ambos lados', async () => {
+      const r = await svc.registrar(base(), { movimiento: { modo: 'crear' } });
+      expect(r.movimientoId).toBe('auto1');
+      expect(store.get(rutaMovGeneral('auto1'))).toMatchObject({
+        tipo: 'gasto',
+        esEntrada: false,
+        importe: 121,
+        fecha: '2026-04-02',
+        concepto: 'Proveedor SL · f-001',
+        baseImponible: 100,
+        cuotaIva: 21,
+        tipoIva: 21,
+        facturaRecibidaId: idFactura(),
+        companyId: CID,
+        createdBy: 'u1',
+        createdAt: '__serverTimestamp__',
+      });
+      expect(Object.values(store.get(rutaMovGeneral('auto1'))!)).not.toContain(undefined);
+      expect(store.get(pathFactura())!['movimientoId']).toBe('auto1');
+    });
+
+    it('vincular a un movimiento general: lo marca con facturaRecibidaId y sella la edición', async () => {
+      store.set(rutaMovGeneral('m1'), { tipo: 'gasto', importe: 121, esEntrada: false });
+      const r = await svc.registrar(base(), { movimiento: { modo: 'vincular', id: 'm1' } });
+      expect(r.movimientoId).toBe('m1');
+      expect(store.get(rutaMovGeneral('m1'))).toMatchObject({
+        facturaRecibidaId: idFactura(),
+        updatedBy: 'u1',
+        updatedAt: '__serverTimestamp__',
+        importe: 121,
+      });
+      expect(store.get(pathFactura())).toMatchObject({ movimientoId: 'm1' });
+      expect(store.get(pathFactura())).not.toHaveProperty('casoId');
+    });
+
+    it('vincular a un movimiento de un caso: usa su ruta y guarda el casoId en la factura', async () => {
+      store.set(rutaMovCaso('c1', 'm2'), { tipo: 'gasto', importe: 121, esEntrada: false, casoId: 'c1' });
+      await svc.registrar(base(), { movimiento: { modo: 'vincular', id: 'm2', casoId: 'c1' } });
+      expect(store.get(rutaMovCaso('c1', 'm2'))).toMatchObject({ facturaRecibidaId: idFactura() });
+      expect(store.get(pathFactura())).toMatchObject({ movimientoId: 'm2', casoId: 'c1' });
+    });
+
+    it('un movimiento ya vinculado a otra factura se rechaza y no se escribe nada', async () => {
+      store.set(rutaMovGeneral('m1'), { tipo: 'gasto', facturaRecibidaId: 'OTRA' });
+      await expect(svc.registrar(base(), { movimiento: { modo: 'vincular', id: 'm1' } })).rejects.toBeInstanceOf(
+        MovimientoYaVinculadoError,
+      );
+      expect(store.has(pathFactura())).toBe(false);
+      expect(store.has(`companies/${CID}/facturas_recibidas_meta/2026`)).toBe(false);
+      expect(store.get(rutaMovGeneral('m1'))).toEqual({ tipo: 'gasto', facturaRecibidaId: 'OTRA' });
+    });
+
+    it('un movimiento inexistente se rechaza y no se escribe nada', async () => {
+      await expect(svc.registrar(base(), { movimiento: { modo: 'vincular', id: 'nope' } })).rejects.toBeInstanceOf(
+        MovimientoNoEncontradoError,
+      );
+      expect(store.has(pathFactura())).toBe(false);
+    });
+
+    it('si la factura es duplicada no se crea ni toca ningún movimiento', async () => {
+      await svc.registrar(base());
+      await expect(svc.registrar(base(), { movimiento: { modo: 'crear' } })).rejects.toBeInstanceOf(FacturaDuplicadaError);
+      expect(store.has(rutaMovGeneral('auto1'))).toBe(false);
+    });
+
+    it('al reactivar una anulada también puede vincular', async () => {
+      await svc.registrar(base());
+      await svc.anular(idFactura());
+      const r = await svc.registrar(base(), { reactivar: true, movimiento: { modo: 'crear' } });
+      expect(r.reactivada).toBe(true);
+      expect(store.get(pathFactura())).toMatchObject({ estado: 'registrada', movimientoId: 'auto1' });
+      expect(store.get(rutaMovGeneral('auto1'))).toMatchObject({ facturaRecibidaId: idFactura() });
+    });
+
+    it('sin opción de vínculo no hay movimiento ni movimientoId', async () => {
+      const r = await svc.registrar(base());
+      expect(r.movimientoId).toBeUndefined();
+      expect(store.get(pathFactura())).not.toHaveProperty('movimientoId');
+      expect([...store.keys()].some((k) => k.includes('movimientos_generales'))).toBe(false);
     });
   });
 });

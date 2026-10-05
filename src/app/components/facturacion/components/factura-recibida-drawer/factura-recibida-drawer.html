@@ -300,6 +300,56 @@
       </div>
     </fieldset>
 
+    <!-- Tesorería -->
+    <fieldset class="space-y-2" data-tesoreria>
+      <legend class="mb-1 text-xs font-semibold uppercase tracking-wider"
+        style="color:var(--text-faint);font-family:var(--font-mono)">Tesorería</legend>
+      <div class="flex items-center gap-2">
+        <input id="fr-vinculo-ninguno" type="radio" name="fr-vinculo" value="ninguno" class="h-4 w-4 shrink-0 accent-[var(--brand)]"
+          [checked]="modoVinculo() === 'ninguno'" (change)="onModoVinculo('ninguno')" />
+        <label for="fr-vinculo-ninguno" class="text-sm" style="color:var(--text-body)">No vincular con tesorería</label>
+      </div>
+      <div class="flex items-center gap-2">
+        <input id="fr-vinculo-crear" type="radio" name="fr-vinculo" value="crear" class="h-4 w-4 shrink-0 accent-[var(--brand)]"
+          [checked]="modoVinculo() === 'crear'" (change)="onModoVinculo('crear')" />
+        <label for="fr-vinculo-crear" class="text-sm" style="color:var(--text-body)">Crear un movimiento de gasto con el total de la factura</label>
+      </div>
+      <div class="flex items-center gap-2">
+        <input id="fr-vinculo-vincular" type="radio" name="fr-vinculo" value="vincular" class="h-4 w-4 shrink-0 accent-[var(--brand)]"
+          [checked]="modoVinculo() === 'vincular'" (change)="onModoVinculo('vincular')" />
+        <label for="fr-vinculo-vincular" class="text-sm" style="color:var(--text-body)">Vincular a un movimiento existente</label>
+      </div>
+
+      @if (modoVinculo() === 'vincular') {
+        @if (sugerencias().length === 0) {
+          <p data-sin-sugerencias class="text-xs" style="color:var(--text-muted)">
+            No hay movimientos de gasto sin vincular con ese importe y una fecha cercana (hasta 7 días).
+          </p>
+        } @else {
+          <div data-lista-sugerencias role="radiogroup" tabindex="-1" aria-labelledby="fr-sugerencias-titulo" aria-required="true"
+            [attr.aria-invalid]="errorVinculo() ? 'true' : 'false'"
+            [attr.aria-describedby]="errorVinculo() ? 'fr-error-vinculo' : null"
+            class="space-y-1.5 rounded-lg p-2" style="border:1px solid var(--border)">
+            <p id="fr-sugerencias-titulo" class="text-xs font-semibold" style="color:var(--text-muted)">Movimientos sugeridos</p>
+            @for (m of sugerencias(); track m.id) {
+              <div data-sugerencia class="flex items-center gap-2">
+                <input [id]="'fr-mov-' + m.id" type="radio" name="fr-movimiento" [value]="m.id"
+                  class="h-4 w-4 shrink-0 accent-[var(--brand)]" [checked]="movVigente()?.id === m.id"
+                  (change)="onMovimiento(m.id)" />
+                <label [for]="'fr-mov-' + m.id" class="min-w-0 text-xs" style="color:var(--text-body)">
+                  <span class="block truncate">{{ m.concepto }}</span>
+                  <span class="tabular-nums" style="color:var(--text-muted)">{{ m.fecha }} · {{ m.importe | number:'1.2-2' }}&nbsp;€</span>
+                </label>
+              </div>
+            }
+          </div>
+        }
+        @if (errorVinculo(); as e) {
+          <p id="fr-error-vinculo" class="form-error" role="alert">{{ e }}</p>
+        }
+      }
+    </fieldset>
+
     @if (advertencias().length > 0) {
       <div data-advertencias class="rounded-lg px-3 py-2 text-xs"
         style="background:color-mix(in srgb,var(--warning) 12%,transparent);color:var(--text-body)">

@@ -477,4 +477,107 @@ describe('FacturaRecibidaDrawerComponent', () => {
       expect(q('[data-qr-info]')).not.toBeNull();
     });
   });
+
+  describe('vínculo con tesorería (gasto nuevo o movimiento existente)', () => {
+    const MOVS = [
+      { id: 'm-ok', tipo: 'gasto', esEntrada: false, importe: 121, fecha: '2026-04-03', concepto: 'Pago Proveedor SL' },
+      { id: 'm-caso', casoId: 'c1', tipo: 'gasto', esEntrada: false, importe: 121, fecha: '2026-04-05', concepto: 'Gasto del caso' },
+      { id: 'm-otro', tipo: 'gasto', esEntrada: false, importe: 500, fecha: '2026-04-03', concepto: 'Otro importe' },
+      { id: 'm-ingreso', tipo: 'ingreso', esEntrada: true, importe: 121, fecha: '2026-04-03', concepto: 'Ingreso' },
+    ] as const;
+
+    async function elegirVinculo(id: 'ninguno' | 'crear' | 'vincular'): Promise<void> {
+      const r = q<HTMLInputElement>(`#fr-vinculo-${id}`);
+      r.checked = true;
+      r.dispatchEvent(new Event('change', { bubbles: true }));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
+
+    beforeEach(() => {
+      fixture.componentRef.setInput('movimientos', MOVS);
+      fixture.detectChanges();
+    });
+
+    it('es un grupo de opciones con leyenda; por defecto no vincula nada', async () => {
+      const grupo = q('fieldset[data-tesoreria]');
+      expect(grupo.querySelector('legend')?.textContent).toMatch(/Tesorer/);
+      expect(q<HTMLInputElement>('#fr-vinculo-ninguno').checked).toBe(true);
+      for (const id of ['ninguno', 'crear', 'vincular']) {
+        expect(el().querySelector(`label[for="fr-vinculo-${id}"]`)).not.toBeNull();
+      }
+      await rellenarValida();
+      confirmar();
+      expect(emitidos[0].movimiento).toBeUndefined();
+    });
+
+    it('crear: el payload pide crear un gasto', async () => {
+      await rellenarValida();
+      await elegirVinculo('crear');
+      confirmar();
+      expect(emitidos[0].movimiento).toEqual({ modo: 'crear' });
+    });
+
+    it('vincular: sugiere solo gastos parecidos en importe y fecha, y emite el elegido', async () => {
+      await rellenarValida();
+      await elegirVinculo('vincular');
+      const ids = Array.from(el().querySelectorAll('[data-sugerencia] input')).map((i) => (i as HTMLInputElement).value);
+      expect(ids).toEqual(['m-ok', 'm-caso']);
+      const r = q<HTMLInputElement>('#fr-mov-m-ok');
+      r.checked = true;
+      r.dispatchEvent(new Event('change', { bubbles: true }));
+      fixture.detectChanges();
+      confirmar();
+      expect(emitidos[0].movimiento).toEqual({ modo: 'vincular', id: 'm-ok' });
+    });
+
+    it('vincular a un movimiento de un caso incluye su casoId', async () => {
+      await rellenarValida();
+      await elegirVinculo('vincular');
+      const r = q<HTMLInputElement>('#fr-mov-m-caso');
+      r.checked = true;
+      r.dispatchEvent(new Event('change', { bubbles: true }));
+      fixture.detectChanges();
+      confirmar();
+      expect(emitidos[0].movimiento).toEqual({ modo: 'vincular', id: 'm-caso', casoId: 'c1' });
+    });
+
+    it('vincular sin elegir movimiento bloquea con un error accesible', async () => {
+      await rellenarValida();
+      await elegirVinculo('vincular');
+      confirmar();
+      expect(emitidos).toHaveLength(0);
+      const grupo = q('[data-lista-sugerencias]');
+      expect(grupo.getAttribute('aria-invalid')).toBe('true');
+      const descr = grupo.getAttribute('aria-describedby')!;
+      expect(el().querySelector(`#${descr}`)?.getAttribute('role')).toBe('alert');
+    });
+
+    it('sin candidatos parecidos lo dice y permite volver a otra opción', async () => {
+      fixture.componentRef.setInput('movimientos', []);
+      await rellenarValida();
+      await elegirVinculo('vincular');
+      expect(q('[data-sin-sugerencias]').textContent).toMatch(/No hay movimientos/i);
+      confirmar();
+      expect(emitidos).toHaveLength(0);
+      expect(q('#fr-error-vinculo').getAttribute('role')).toBe('alert');
+      await elegirVinculo('ninguno');
+      confirmar();
+      expect(emitidos).toHaveLength(1);
+    });
+
+    it('cambiar a otra opción descarta la selección anterior', async () => {
+      await rellenarValida();
+      await elegirVinculo('vincular');
+      const r = q<HTMLInputElement>('#fr-mov-m-ok');
+      r.checked = true;
+      r.dispatchEvent(new Event('change', { bubbles: true }));
+      fixture.detectChanges();
+      await elegirVinculo('crear');
+      await elegirVinculo('vincular');
+      confirmar();
+      expect(emitidos).toHaveLength(0);
+    });
+  });
 });

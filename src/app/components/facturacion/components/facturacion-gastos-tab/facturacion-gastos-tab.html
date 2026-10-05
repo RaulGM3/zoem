@@ -13,7 +13,7 @@
     </button>
   </div>
 
-  <div class="flex items-end gap-3">
+  <div class="flex flex-wrap items-end gap-3">
     <div class="w-28">
       <label for="gastos-ejercicio" class="form-label">Ejercicio</label>
       <input id="gastos-ejercicio" type="number" inputmode="numeric" class="form-input w-full"
@@ -27,6 +27,17 @@
         }
       </select>
     </div>
+    <button type="button" data-exportar (click)="exportarLibro()"
+      [disabled]="exportando() || resumen().numFacturas === 0"
+      [attr.aria-describedby]="resumen().numFacturas === 0 ? 'gastos-exportar-ayuda' : null"
+      class="tap-target inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 hover:bg-[var(--surface-2)] disabled:opacity-50"
+      style="border:1px solid var(--border);color:var(--text-body)">
+      <lucide-icon [img]="DownloadIcon" size="15" aria-hidden="true"></lucide-icon>
+      Exportar libro (xlsx)
+    </button>
+    @if (resumen().numFacturas === 0) {
+      <p id="gastos-exportar-ayuda" class="text-xs" style="color:var(--text-muted)">No hay facturas registradas en este trimestre.</p>
+    }
   </div>
 
   <!-- KPIs del trimestre -->
@@ -154,6 +165,7 @@
     [saving]="guardando()"
     [errorServidor]="errorServidor()"
     [reactivacionPendiente]="reactivacionPendiente()"
+    [movimientos]="movimientos()"
     (closed)="cerrarDrawer()"
     (confirmed)="registrar($event)"
   />

@@ -17,6 +17,7 @@ import { CompanyService } from './company.service';
 import { stripUndefinedDeep } from '../firebase/sanitize';
 import { claveFactura } from '../facturas-recibidas/clave-factura';
 import { normalizarNif } from '../fiscal/nif';
+import { movimientoDesdeFactura } from '../facturas-recibidas/tesoreria-link';
 import type {
   EstadoFacturaRecibida,
   FacturaRecibida,
@@ -66,13 +67,20 @@ export interface ResultadoRegistro {
   id: string;
   numeroRecepcion: number;
   reactivada: boolean;
+  /** Movimiento de tesorería creado o vinculado, si el usuario eligió uno. */
+  movimientoId?: string;
 }
+
+/** Vínculo con tesorería elegido al confirmar: crear un gasto nuevo o enlazar uno existente. */
+export type VinculoMovimiento = { modo: 'crear' } | { modo: 'vincular'; id: string; casoId?: string };
 
 export interface OpcionesRegistro {
   /** El usuario confirmó volver a registrar una factura anulada (decisión 7: reactivación). */
   reactivar?: boolean;
   /** Archivo de la factura (PDF o imagen ya validado): se sube a Storage al confirmar, nunca antes. */
   archivo?: File;
+  /** Gasto de tesorería a crear o vincular; se escribe en la misma transacción que la factura. */
+  movimiento?: VinculoMovimiento;
 }
 
 /** Ya existe una factura registrada con el mismo NIF de emisor y número en esta empresa. */
@@ -88,6 +96,22 @@ export class FacturaAnuladaExistenteError extends Error {
   constructor(readonly id: string) {
     super('Esa factura ya estuvo registrada y está anulada. Confirma si quieres reactivarla con los datos nuevos.');
     this.name = 'FacturaAnuladaExistenteError';
+  }
+}
+
+/** El movimiento a vincular no existe (borrado o de otra empresa). */
+export class MovimientoNoEncontradoError extends Error {
+  constructor() {
+    super('El movimiento de tesorería elegido ya no existe.');
+    this.name = 'MovimientoNoEncontradoError';
+  }
+}
+
+/** El movimiento a vincular ya pertenece a otra factura recibida. */
+export class MovimientoYaVinculadoError extends Error {
+  constructor() {
+    super('Ese movimiento de tesorería ya está vinculado a otra factura.');
+    this.name = 'MovimientoYaVinculadoError';
   }
 }
 
@@ -120,6 +144,13 @@ export class FacturasRecibidasService {
 
   private facturaRef(id: string) {
     return doc(this.firestore, `companies/${this.companyId}/facturas_recibidas/${id}`);
+  }
+
+  private movimientoRef(v: { id: string; casoId?: string }) {
+    const ruta = v.casoId
+      ? `companies/${this.companyId}/casos/${v.casoId}/gestoria/${v.id}`
+      : `companies/${this.companyId}/movimientos_generales/${v.id}`;
+    return doc(this.firestore, ruta);
   }
 
   private metaRef(ejercicio: number) {
@@ -173,23 +204,64 @@ export class FacturasRecibidasService {
       datos = { ...datos, adjunto: await this.subirAdjunto(opciones.archivo) };
     }
 
+    const vinculo = opciones.movimiento;
+    // El id del gasto nuevo se fija fuera de la transacción: un reintento no debe crear otro distinto.
+    const movNuevoRef =
+      vinculo?.modo === 'crear'
+        ? doc(collection(this.firestore, `companies/${this.companyId}/movimientos_generales`))
+        : null;
+    const movExistenteRef = vinculo?.modo === 'vincular' ? this.movimientoRef(vinculo) : null;
+
     return runTransaction(this.firestore, async (tx) => {
-      const [existente, meta] = await Promise.all([tx.get(facturaRef), tx.get(metaRef)]);
+      // Todas las lecturas antes de cualquier escritura.
+      const [existente, meta, movExistente] = await Promise.all([
+        tx.get(facturaRef),
+        tx.get(metaRef),
+        movExistenteRef ? tx.get(movExistenteRef) : null,
+      ]);
 
       if (existente.exists()) {
         const actual = existente.data() as FacturaRecibida;
         if (actual.estado === 'registrada') throw new FacturaDuplicadaError(id);
         if (!opciones.reactivar) throw new FacturaAnuladaExistenteError(id);
+      }
+
+      // Validación y escritura del movimiento (si lo hay): si algo falla aquí no se escribe nada.
+      let enlace: { movimientoId: string; casoId?: string } | null = null;
+      if (movNuevoRef) {
+        tx.set(
+          movNuevoRef,
+          stripUndefinedDeep({
+            ...movimientoDesdeFactura({ ...datos, numero }, id),
+            companyId: this.companyId,
+            createdBy: uid,
+            createdAt: serverTimestamp(),
+          }),
+        );
+        enlace = { movimientoId: movNuevoRef.id };
+      } else if (movExistenteRef && vinculo?.modo === 'vincular') {
+        if (!movExistente?.exists()) throw new MovimientoNoEncontradoError();
+        if ((movExistente.data() as { facturaRecibidaId?: string }).facturaRecibidaId) {
+          throw new MovimientoYaVinculadoError();
+        }
+        tx.update(movExistenteRef, { facturaRecibidaId: id, updatedBy: uid, updatedAt: serverTimestamp() });
+        enlace = { movimientoId: vinculo.id, ...(vinculo.casoId ? { casoId: vinculo.casoId } : {}) };
+      }
+      const camposEnlace = enlace ?? {};
+
+      if (existente.exists()) {
+        const actual = existente.data() as FacturaRecibida;
         tx.update(
           facturaRef,
           stripUndefinedDeep({
             ...this.camposEditables(datos),
+            ...camposEnlace,
             estado: 'registrada',
             updatedBy: uid,
             updatedAt: serverTimestamp(),
           }),
         );
-        return { id, numeroRecepcion: actual.numeroRecepcion, reactivada: true };
+        return { id, numeroRecepcion: actual.numeroRecepcion, reactivada: true, ...(enlace ? { movimientoId: enlace.movimientoId } : {}) };
       }
 
       const ultimo = meta.exists() ? (meta.data() as FacturasRecibidasMeta).ultimo : 0;
@@ -199,6 +271,7 @@ export class FacturasRecibidasService {
         facturaRef,
         stripUndefinedDeep({
           ...this.camposEditables(datos),
+          ...camposEnlace,
           id,
           companyId: this.companyId,
           numeroRecepcion,
@@ -211,7 +284,7 @@ export class FacturasRecibidasService {
           createdAt: serverTimestamp(),
         }),
       );
-      return { id, numeroRecepcion, reactivada: false };
+      return { id, numeroRecepcion, reactivada: false, ...(enlace ? { movimientoId: enlace.movimientoId } : {}) };
     });
   }
 
