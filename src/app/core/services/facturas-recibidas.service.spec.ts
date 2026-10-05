@@ -234,6 +234,15 @@ describe('FacturasRecibidasService', () => {
       expect(store.get(`companies/${CID}/facturas_recibidas_meta/2026`)).toEqual({ ultimo: 1 });
     });
 
+    it('reactivar con otro QR reinicia qrValidacion a pendiente (sin datos de servidor); sin QR, a sin_qr', async () => {
+      const qr = { url: 'https://prewww2.aeat.es/wlpl/TIKE-CONT/ValidarQR?x=1', nif: 'B12345674', numserie: 'F-001', fecha: '02-04-2026', importe: 121 };
+      await svc.registrar({ ...base(), qr }, { reactivar: true });
+      expect(store.get(pathFactura())!['qrValidacion']).toEqual({ estado: 'pendiente' });
+      await svc.anular(idFactura());
+      await svc.registrar(base(), { reactivar: true });
+      expect(store.get(pathFactura())!['qrValidacion']).toEqual({ estado: 'sin_qr' });
+    });
+
     it('reactivar no toca claves inmutables (proveedor, numero, qrValidacion)', async () => {
       const antes = store.get(pathFactura())!;
       await svc.registrar({ ...base(), proveedor: { nombre: 'Nombre nuevo', nif: 'B12345674' } }, { reactivar: true });

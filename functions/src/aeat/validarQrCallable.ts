@@ -14,7 +14,8 @@ const deps: ValidarQrDeps = {
     const snap = await facturaRef(companyId, facturaId).get();
     if (!snap.exists) return null;
     const url: unknown = snap.get('qr.url');
-    return { qrUrl: typeof url === 'string' && url !== '' ? url : null };
+    const estado: unknown = snap.get('estado');
+    return { qrUrl: typeof url === 'string' && url !== '' ? url : null, ...(typeof estado === 'string' ? { estado } : {}) };
   },
   consultar: crearConsulta(),
   async guardar(companyId, facturaId, validacion) {

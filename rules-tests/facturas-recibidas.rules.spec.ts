@@ -118,6 +118,23 @@ describe('firestore facturas_recibidas', () => {
     await assertFails(setDoc(doc(db, `${FACT}/c`), nuevaFactura('gestor', { qrValidacion: { estado: 'sin_qr', at: new Date() } })));
   });
 
+  it('create: qrValidacion solo lleva `estado` (nada de urlConsulta/mensaje/at del cliente)', async () => {
+    const db = ctx('gestor', 'Gestor').firestore();
+    await assertFails(setDoc(doc(db, `${FACT}/q1`), nuevaFactura('gestor', { qrValidacion: { estado: 'pendiente', urlConsulta: 'https://x' } })));
+    await assertFails(setDoc(doc(db, `${FACT}/q2`), nuevaFactura('gestor', { qrValidacion: { estado: 'pendiente', mensaje: 'x' } })));
+    await assertSucceeds(setDoc(doc(db, `${FACT}/q3`), nuevaFactura('gestor', { qrValidacion: { estado: 'pendiente' } })));
+  });
+
+  it('create: qr es un mapa con claves y tipos acotados', async () => {
+    const db = ctx('gestor', 'Gestor').firestore();
+    const qr = { url: 'https://prewww2.aeat.es/wlpl/TIKE-CONT/ValidarQR?x=1', nif: 'B12345674', numserie: 'A-1', fecha: '01-02-2026', importe: 10.5 };
+    await assertSucceeds(setDoc(doc(db, `${FACT}/r1`), nuevaFactura('gestor', { qr, qrValidacion: { estado: 'pendiente' } })));
+    await assertFails(setDoc(doc(db, `${FACT}/r2`), nuevaFactura('gestor', { qr: 'texto' })));
+    await assertFails(setDoc(doc(db, `${FACT}/r3`), nuevaFactura('gestor', { qr: { ...qr, extra: 1 } })));
+    await assertFails(setDoc(doc(db, `${FACT}/r4`), nuevaFactura('gestor', { qr: { ...qr, importe: '10' } })));
+    await assertFails(setDoc(doc(db, `${FACT}/r5`), nuevaFactura('gestor', { qr: { ...qr, url: 'x'.repeat(2001) } })));
+  });
+
   it('create: valida claves, tipos, createdBy, companyId, estado y adjunto', async () => {
     const db = ctx('gestor', 'Gestor').firestore();
     await assertFails(setDoc(doc(db, `${FACT}/x1`), nuevaFactura('gestor', { campoExtra: 1 })));
@@ -157,6 +174,35 @@ describe('firestore facturas_recibidas', () => {
       await sembrarFactura();
       const db = ctx('gestor', 'Gestor').firestore();
       await assertFails(updateDoc(doc(db, `${FACT}/f1`), { qrValidacion: { estado: 'encontrada' }, ...audit() }));
+    });
+
+    it('qr y adjunto son inmutables en una factura registrada (la validación quedaría obsoleta)', async () => {
+      const qr = { url: 'https://prewww2.aeat.es/wlpl/TIKE-CONT/ValidarQR?x=1', nif: 'B12345674', numserie: 'A-1', fecha: '01-02-2026', importe: 10.5 };
+      await sembrarFactura({ qr, qrValidacion: { estado: 'encontrada' }, adjunto: { storagePath: PATH_ADJ } });
+      const d = doc(ctx('gestor', 'Gestor').firestore(), `${FACT}/f1`);
+      await assertFails(updateDoc(d, { qr: { ...qr, importe: 99 }, ...audit() }));
+      await assertFails(updateDoc(d, { adjunto: { storagePath: `${FACT}/otro.pdf` }, ...audit() }));
+      await assertSucceeds(updateDoc(d, { concepto: 'ok', ...audit() }));
+    });
+
+    it('reactivar puede sustituir qr/adjunto SOLO reiniciando qrValidacion a sin_qr|pendiente (sin datos de servidor)', async () => {
+      const qr = { url: 'https://prewww2.aeat.es/wlpl/TIKE-CONT/ValidarQR?x=1', nif: 'B12345674', numserie: 'A-1', fecha: '01-02-2026', importe: 10.5 };
+      const sembrar = () =>
+        sembrarFactura({ estado: 'anulada', anuladaPor: 'gestor', anuladaAt: new Date(), qr, qrValidacion: { estado: 'encontrada' } });
+      const nuevoQr = { ...qr, importe: 99 };
+      await sembrar();
+      const d = doc(ctx('gestor', 'Gestor').firestore(), `${FACT}/f1`);
+      // qr nuevo con la validación vieja ('encontrada') -> obsoleta: denegado
+      await assertFails(updateDoc(d, { estado: 'registrada', qr: nuevoQr, ...audit() }));
+      // el cliente no puede fabricar un resultado de servidor
+      await assertFails(updateDoc(d, { estado: 'registrada', qr: nuevoQr, qrValidacion: { estado: 'encontrada' }, ...audit() }));
+      await assertFails(updateDoc(d, { estado: 'registrada', qr: nuevoQr, qrValidacion: { estado: 'pendiente', urlConsulta: 'x' }, ...audit() }));
+      await assertSucceeds(updateDoc(d, { estado: 'registrada', qr: nuevoQr, qrValidacion: { estado: 'pendiente' }, ...audit() }));
+    });
+
+    it('qrValidacion no se reinicia fuera de una reactivación', async () => {
+      await sembrarFactura({ qrValidacion: { estado: 'encontrada' } });
+      await assertFails(updateDoc(doc(ctx('gestor', 'Gestor').firestore(), `${FACT}/f1`), { qrValidacion: { estado: 'pendiente' }, ...audit() }));
     });
 
     it.each(['proveedor', 'numero', 'numeroRecepcion', 'companyId', 'createdBy'])('%s es inmutable', async (k) => {
@@ -224,6 +270,16 @@ describe('storage facturas_recibidas', () => {
       await assertSucceeds(uploadBytes(ref(st(uid, role), PATH_ADJ), bytes, { contentType: 'application/pdf' }));
       await assertSucceeds(getBytes(ref(st(uid, role), PATH_ADJ)));
     }
+  });
+
+  it('contrato actual: un manager PUEDE sobrescribir un adjunto existente (update); Usuario/Viewer no', async () => {
+    await env.withSecurityRulesDisabled(async (c) => {
+      await uploadBytes(ref(c.storage(), PATH_ADJ), bytes, { contentType: 'application/pdf' });
+    });
+    await assertSucceeds(uploadBytes(ref(st('gestor', 'Gestor'), PATH_ADJ), new Uint8Array([9]), { contentType: 'application/pdf' }));
+    await assertFails(uploadBytes(ref(st('gestor', 'Gestor'), PATH_ADJ), new Uint8Array([9]), { contentType: 'text/html' }));
+    await assertFails(uploadBytes(ref(st('usuario', 'Usuario'), PATH_ADJ), new Uint8Array([9]), { contentType: 'application/pdf' }));
+    await assertFails(uploadBytes(ref(st('viewer', 'Viewer'), PATH_ADJ), new Uint8Array([9]), { contentType: 'application/pdf' }));
   });
 
   it('solo PDF o imagen en facturas_recibidas', async () => {

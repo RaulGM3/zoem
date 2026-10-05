@@ -266,6 +266,9 @@ export class FacturasRecibidasService {
           stripUndefinedDeep({
             ...this.camposEditables(datos),
             ...camposEnlace,
+            // Los datos nuevos pueden traer otro QR/adjunto: la validación anterior ya no vale (rules: solo se
+            // permite reiniciarla a sin_qr|pendiente al reactivar; el resultado real lo escribe el servidor).
+            qrValidacion: { estado: datos.qr ? 'pendiente' : 'sin_qr' },
             estado: 'registrada',
             updatedBy: uid,
             updatedAt: serverTimestamp(),

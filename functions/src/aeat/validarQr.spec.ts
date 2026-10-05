@@ -17,13 +17,13 @@ interface Escritura {
   mensaje?: string;
 }
 
-function entorno(over: { qrUrl?: string | null; existe?: boolean; html?: string; status?: number; falla?: boolean } = {}) {
+function entorno(over: { qrUrl?: string | null; estado?: string; existe?: boolean; html?: string; status?: number; falla?: boolean } = {}) {
   const escrituras: Escritura[] = [];
   const consultas: string[] = [];
   const deps: ValidarQrDeps = {
     async leerFactura() {
       if (over.existe === false) return null;
-      return { qrUrl: over.qrUrl === undefined ? URL_OK : over.qrUrl };
+      return { qrUrl: over.qrUrl === undefined ? URL_OK : over.qrUrl, estado: over.estado ?? 'registrada' };
     },
     async consultar(url) {
       consultas.push(url);
@@ -83,6 +83,16 @@ describe('manejarValidarQr', () => {
     const e = entorno({ qrUrl: null });
     await expect(manejarValidarQr(e.deps, e.autorizar, 'u1', DATA)).rejects.toMatchObject({ code: 'failed-precondition' });
     expect(e.consultas).toHaveLength(0);
+  });
+
+  it('factura anulada -> failed-precondition en español, no se consulta ni se escribe', async () => {
+    const e = entorno({ estado: 'anulada' });
+    await expect(manejarValidarQr(e.deps, e.autorizar, 'u1', DATA)).rejects.toMatchObject({
+      code: 'failed-precondition',
+      message: expect.stringMatching(/anulada/i),
+    });
+    expect(e.consultas).toHaveLength(0);
+    expect(e.escrituras).toHaveLength(0);
   });
 
   it.each([

@@ -25,7 +25,7 @@ export interface QrValidacionServidor {
 
 export interface ValidarQrDeps {
   /** `null` si no existe en esa empresa. `qrUrl` null si la factura no tiene QR. */
-  leerFactura(companyId: string, facturaId: string): Promise<{ qrUrl: string | null } | null>;
+  leerFactura(companyId: string, facturaId: string): Promise<{ qrUrl: string | null; estado?: string } | null>;
   consultar: Consultar;
   guardar(companyId: string, facturaId: string, validacion: QrValidacionServidor): Promise<void>;
 }
@@ -57,6 +57,9 @@ export async function manejarValidarQr(
 
   const factura = await deps.leerFactura(companyId, facturaId);
   if (!factura) throw new HttpsError('not-found', 'Factura no encontrada para esta empresa');
+  if (factura.estado === 'anulada') {
+    throw new HttpsError('failed-precondition', 'La factura está anulada: no se valida su QR en la AEAT.');
+  }
   if (!factura.qrUrl) throw new HttpsError('failed-precondition', 'La factura no tiene QR');
 
   const qr = parseQrVerifactu(factura.qrUrl);

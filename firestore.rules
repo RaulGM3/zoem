@@ -155,7 +155,8 @@ service cloud.firestore {
       // que la unicidad la garantiza la transacción del cliente (RIESGO RESIDUAL aceptado:
       // un Admin/Gestor malicioso podría crear con otro id; el create nunca pisa un doc existente).
       // `qrValidacion` lo escribe SOLO el servidor tras la creación (Admin SDK ignora las rules):
-      // el cliente solo puede crear con 'sin_qr' | 'pendiente' y nunca modificarlo.
+      // el cliente solo puede crear con 'sin_qr' | 'pendiente' y nunca modificarlo
+      // (salvo reiniciarlo a sin_qr|pendiente al reactivar una anulada con otro qr).
       // Sin delete: se anula vía `estado` (el historial anuladaPor/anuladaAt se conserva al reactivar).
       match /facturas_recibidas/{facturaId} {
         function fechaIso(v) {
@@ -193,7 +194,34 @@ service cloud.firestore {
             && (!('movimientoId' in d) || d.movimientoId is string)
             && (!('casoId' in d) || d.casoId is string)
             && d.extraccion is map
-            && d.extraccion.origen in ['ia', 'qr', 'manual'];
+            && d.extraccion.origen in ['ia', 'qr', 'manual']
+            && (!('qr' in d) || qrValido(d.qr));
+        }
+        // QR de la factura: mapa cerrado con tipos y longitudes acotadas (la URL se vuelve a parsear y
+        // reconstruir en servidor antes de consultar a la AEAT, esto es defensa en profundidad).
+        function qrValido(q) {
+          return q is map
+            && q.keys().hasOnly(['url', 'nif', 'numserie', 'fecha', 'importe'])
+            && q.keys().hasAll(['url', 'nif', 'numserie', 'fecha', 'importe'])
+            && q.url is string && q.url.size() <= 2000
+            && q.nif is string && q.nif.size() <= 20
+            && q.numserie is string && q.numserie.size() <= 60
+            && q.fecha is string && q.fecha.size() <= 10
+            && q.importe is number;
+        }
+        // Lo único que el cliente puede escribir en qrValidacion: estado inicial, sin datos de servidor.
+        function qrValidacionCliente(v) {
+          return v is map && v.keys().hasOnly(['estado']) && v.estado in ['sin_qr', 'pendiente'];
+        }
+        // qr/adjunto/qrValidacion: inmutables tras crear, SALVO al reactivar una anulada (los datos nuevos
+        // sustituyen a los viejos). Un qr nuevo exige reiniciar qrValidacion a sin_qr|pendiente: nunca queda una
+        // validación de servidor obsoleta ni una fabricada por el cliente.
+        function qrAdjuntoPermitido() {
+          let cambios = request.resource.data.diff(resource.data).affectedKeys();
+          let reactivando = resource.data.estado == 'anulada' && request.resource.data.estado == 'registrada';
+          return (!cambios.hasAny(['adjunto']) || reactivando)
+            && (!cambios.hasAny(['qr']) || (reactivando && qrValidacionCliente(request.resource.data.get('qrValidacion', null))))
+            && (!cambios.hasAny(['qrValidacion']) || (reactivando && qrValidacionCliente(request.resource.data.get('qrValidacion', null))));
         }
         function clavesEscribibles() {
           return ['id', 'companyId', 'numeroRecepcion', 'tipoFactura', 'claveOperacion', 'proveedor', 'numero',
@@ -204,7 +232,7 @@ service cloud.firestore {
         }
         // Claves que el cliente no puede cambiar nunca. Para corregir proveedor/número: anular y registrar de nuevo.
         function clavesInmutables() {
-          return ['id', 'proveedor', 'numero', 'numeroRecepcion', 'companyId', 'createdBy', 'createdAt', 'qrValidacion'];
+          return ['id', 'proveedor', 'numero', 'numeroRecepcion', 'companyId', 'createdBy', 'createdAt'];
         }
         function transicionEstadoValida() {
           let antes = resource.data.estado;
@@ -236,9 +264,7 @@ service cloud.firestore {
           && request.resource.data.estado == 'registrada'
           && request.resource.data.createdBy == request.auth.uid
           && request.resource.data.createdAt == request.time
-          && request.resource.data.qrValidacion is map
-          && request.resource.data.qrValidacion.keys().hasOnly(['estado', 'urlConsulta'])
-          && request.resource.data.qrValidacion.estado in ['sin_qr', 'pendiente']
+          && qrValidacionCliente(request.resource.data.qrValidacion)
           && (!('id' in request.resource.data) || request.resource.data.id == facturaId);
 
         allow update: if (isSuper() || isManager(cid))
@@ -246,6 +272,7 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly(clavesEscribibles())
           && !request.resource.data.diff(resource.data).affectedKeys().hasAny(clavesInmutables())
           && valoresValidos(request.resource.data)
+          && qrAdjuntoPermitido()
           && transicionEstadoValida()
           && request.resource.data.updatedBy == request.auth.uid
           && request.resource.data.updatedAt == request.time;

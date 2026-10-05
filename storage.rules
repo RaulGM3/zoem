@@ -24,19 +24,19 @@ service firebase.storage {
       return request.auth != null;
     }
     function isSuper() {
-      return isSignedIn() && request.auth.token.isSuperUser == true;
+      return isSignedIn() && request.auth.token.get('isSuperUser', false) == true;
     }
     function isActiveMember(cid) {
       return isSignedIn()
-        && request.auth.token.companyId == cid
-        && request.auth.token.estado == 'activo';
+        && request.auth.token.get('companyId', null) == cid
+        && request.auth.token.get('estado', null) == 'activo';
     }
     function canWrite(cid) {
-      return isActiveMember(cid) && request.auth.token.role != 'Viewer';
+      return isActiveMember(cid) && request.auth.token.get('role', null) != 'Viewer';
     }
     // Admin + Gestor (mismo criterio que firestore.rules isManager), vía custom claim.
     function isManager(cid) {
-      return isActiveMember(cid) && request.auth.token.role in ['Admin', 'Gestor'];
+      return isActiveMember(cid) && request.auth.token.get('role', null) in ['Admin', 'Gestor'];
     }
     // `allPaths` es de tipo path (no string, sin .matches ni string()), así que el nombre
     // completo del objeto se toma de resource.name (lectura) / request.resource.name (escritura).
