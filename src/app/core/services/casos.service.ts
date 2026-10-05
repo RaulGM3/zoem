@@ -24,6 +24,7 @@ import { CompanyService } from './company.service';
 import { PlantillasService } from './plantillas.service';
 import { ActividadService } from './actividad.service';
 import { stripUndefinedDeep } from '../firebase/sanitize';
+import { hitosDesdePlantilla, type HitoNuevo } from '../hitos/hitos-desde-plantilla';
 import {
   Caso,
   CasoPlantilla,
@@ -119,25 +120,13 @@ export class CasosService {
 
   async createCaso(data: CasoCreate): Promise<string> {
     const companyId = this.companyId;
-    let hitosToCreate: Omit<Hito, 'id' | 'casoId' | 'casoTitulo'>[] = [];
+    let hitosToCreate: HitoNuevo[] = [];
     let plantilla: Awaited<ReturnType<typeof this.plantillasService.getPlantilla>> = null;
 
     if (data.plantillaId) {
       plantilla = await this.plantillasService.getPlantilla(data.plantillaId);
       if (plantilla) {
-        const inicio = new Date();
-        hitosToCreate = plantilla.hitos.map(h => {
-          const fecha = new Date(inicio);
-          fecha.setDate(fecha.getDate() + h.diasDesdeInicio);
-          return {
-            titulo: h.titulo,
-            ...(h.descripcion ? { descripcion: h.descripcion } : {}),
-            fechaEstimada: fecha.toISOString().slice(0, 10),
-            ...(h.asignadoA ? { asignadoA: h.asignadoA } : {}),
-            estado: 'pendiente' as const,
-            orden: h.orden,
-          };
-        });
+        hitosToCreate = hitosDesdePlantilla(plantilla, new Date());
       }
     }
 

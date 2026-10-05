@@ -116,8 +116,10 @@ export class PlantillasService {
     const costosColRef = this.costosRef(ref.id);
 
     for (const h of hitos) {
-      const { id: _id, ...hitoData } = h;
-      batch.set(doc(hitosColRef), stripUndefinedDeep(hitoData) as object);
+      // El id del hito de plantilla es ESTABLE: las acciones y los hitos de los
+      // casos lo referencian (`hitoPlantillaId`), así que se conserva como id del doc.
+      const { id, ...hitoData } = h;
+      batch.set(id ? doc(hitosColRef, id) : doc(hitosColRef), stripUndefinedDeep(hitoData) as object);
     }
     for (const [i, s] of modeloCostos.suplidos.entries()) {
       batch.set(doc(costosColRef), stripUndefinedDeep({ ...s, orden: i }) as object);
@@ -146,16 +148,21 @@ export class PlantillasService {
     );
 
     if (hitos !== undefined) {
+      const hitosCol = this.hitosRef(id);
       await this.syncSubcollection(
-        this.hitosRef(id),
-        hitos.map(({ id: _id, ...h }) => stripUndefinedDeep(h) as Record<string, unknown>)
+        hitosCol,
+        // Id estable (ver createPlantilla): solo los hitos sin id reciben uno nuevo.
+        hitos.map(({ id: hitoId, ...h }) => ({
+          id: hitoId || doc(hitosCol).id,
+          data: stripUndefinedDeep(h) as Record<string, unknown>,
+        }))
       );
     }
 
     if (modeloCostos?.suplidos !== undefined) {
       await this.syncSubcollection(
         this.costosRef(id),
-        modeloCostos.suplidos.map((s, i) => stripUndefinedDeep({ ...s, orden: i }) as Record<string, unknown>)
+        modeloCostos.suplidos.map((s, i) => ({ id: String(i), data: stripUndefinedDeep({ ...s, orden: i }) as Record<string, unknown> }))
       );
     }
 
@@ -180,14 +187,14 @@ export class PlantillasService {
 
   private async syncSubcollection(
     colRef: CollectionReference<DocumentData>,
-    items: Record<string, unknown>[]
+    items: { id: string; data: Record<string, unknown> }[]
   ): Promise<void> {
     const existing = await getDocs(colRef);
     const batch = writeBatch(this.firestore);
     existing.docs.forEach(d => batch.delete(d.ref));
-    items.forEach((item, i) => {
-      batch.set(doc(colRef, String(i)), item);
-    });
+    for (const item of items) {
+      batch.set(doc(colRef, item.id), item.data);
+    }
     await batch.commit();
   }
 }

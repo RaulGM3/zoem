@@ -41,6 +41,9 @@ export interface Hito {
   asignadosA?: string[];       // multi-asignación: varios miembros pueden registrar horas
   estado: HitoEstado;
   orden: number;
+  /** Origen: plantilla de caso y hito de plantilla de los que nació (solo si el caso se creó desde plantilla). */
+  plantillaId?: string;
+  hitoPlantillaId?: string;
   horaAgenda?: string;   // HH:mm — slot asignado en la agenda
   duracionAgenda?: number; // minutos
   registrosHoras?: RegistroHoraHito[]; // horas reales declaradas (cobro por horas)
