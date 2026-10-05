@@ -6,7 +6,7 @@ import { Router } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import {
   LucideAngularModule, ArrowLeft, Edit, Phone, Mail, MapPin,
-  Building2, Calendar, Tag, CalendarClock, CircleAlert,
+  Building2, Calendar, Tag, CalendarClock, CircleAlert, Send,
 } from 'lucide-angular';
 import { INVOICES } from '../../data/dummy-data';
 import { ContactService } from '../../core/services/contact.service';
@@ -29,12 +29,14 @@ import {
 import {
   EstadoContactoDialogComponent, type CambioEstadoResult,
 } from '../../shared/components/estado-contacto-dialog/estado-contacto-dialog';
+import { AccionLanzadorComponent } from '../../shared/components/accion-lanzador/accion-lanzador';
+import { ComunicacionesEnviadasComponent } from '../../shared/components/comunicaciones-enviadas/comunicaciones-enviadas';
 import { ContactoDocumentosComponent } from './components/contacto-documentos/contacto-documentos';
 import { etiquetaDocumentoContacto } from '../../core/fiscal/documento-contacto';
 
 @Component({
   selector: 'app-contacto-detail',
-  imports: [LucideAngularModule, DecimalPipe, EstadoContactoDialogComponent, ContactoDocumentosComponent],
+  imports: [LucideAngularModule, DecimalPipe, EstadoContactoDialogComponent, ContactoDocumentosComponent, AccionLanzadorComponent, ComunicacionesEnviadasComponent],
   templateUrl: './contacto-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -49,6 +51,7 @@ export class ContactoDetailComponent {
   readonly TagIcon = Tag;
   readonly CalendarClockIcon = CalendarClock;
   readonly CircleAlertIcon = CircleAlert;
+  readonly SendIcon = Send;
 
   id = input.required<string>();
 
@@ -194,6 +197,14 @@ export class ContactoDetailComponent {
 
   getStatusStyle(status: string): { background: string; color: string } {
     return getContactStatusStyle(status);
+  }
+
+  // ── Acciones (mensajes con plantilla) ─────────────────────────────────
+  readonly lanzadorAbierto = signal(false);
+
+  abrirAcciones(): void {
+    if (!this.perm.can('Contactos', 'editar')) return;
+    this.lanzadorAbierto.set(true);
   }
 
   // ── Cambio de estado y seguimientos ───────────────────────────────────

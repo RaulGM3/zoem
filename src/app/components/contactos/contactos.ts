@@ -6,7 +6,7 @@ import {
   LucideAngularModule,
   Users, Plus, Phone, Mail, Building2,
   Edit, Trash2, ChevronRight, ChevronLeft, UserPlus, TrendingUp,
-  GitMerge, Shield, Brain, ArrowRight, X, Check, StickyNote, Briefcase,
+  GitMerge, Shield, Brain, ArrowRight, X, Check, StickyNote, Briefcase, Send,
 } from 'lucide-angular';
 // import { PIPELINE_DEALS } from '../../data/dummy-data'; // dummy data — tab oculto
 import { ContactService } from '../../core/services/contact.service';
@@ -24,6 +24,7 @@ import { ContactoDrawerComponent, type ContactoPrefill } from './components/cont
 import {
   EstadoContactoDialogComponent, type CambioEstadoResult,
 } from '../../shared/components/estado-contacto-dialog/estado-contacto-dialog';
+import { AccionLanzadorComponent } from '../../shared/components/accion-lanzador/accion-lanzador';
 import { SeguimientoContactoService } from '../../core/services/seguimiento-contacto.service';
 
 type ContactosTab = 'contactos' | 'pipeline' | 'rgpd' | 'herramientas';
@@ -31,7 +32,7 @@ type ContactosTab = 'contactos' | 'pipeline' | 'rgpd' | 'herramientas';
 @Component({
   selector: 'app-contactos',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, LucideAngularModule, DecimalPipe, ImportarContactosComponent, ContactoDrawerComponent, EstadoContactoDialogComponent],
+  imports: [RouterLink, LucideAngularModule, DecimalPipe, ImportarContactosComponent, ContactoDrawerComponent, EstadoContactoDialogComponent, AccionLanzadorComponent],
   templateUrl: './contactos.html',
 })
 export class ContactosComponent {
@@ -54,6 +55,7 @@ export class ContactosComponent {
   readonly CheckIcon = Check;
   readonly StickyNoteIcon = StickyNote;
   readonly BriefcaseIcon = Briefcase;
+  readonly SendIcon = Send;
 
   readonly contactService = inject(ContactService);
   readonly usersService = inject(UsersService);
@@ -80,6 +82,8 @@ export class ContactosComponent {
   readonly estadoContacto = signal<Contact | null>(null);
   /** Contacto recién creado, al que se le propone el primer compromiso. */
   readonly seguimientoContacto = signal<Contact | null>(null);
+  /** Contacto sobre el que se lanza una acción (null = lanzador cerrado). */
+  readonly accionContacto = signal<Contact | null>(null);
 
   // Dummy data — tabs Embudo CRM y RGPD ocultos hasta tener fuente real
   // pipelineDeals = PIPELINE_DEALS;
@@ -209,6 +213,12 @@ export class ContactosComponent {
 
   getStatusStyle(status: string): { background: string; color: string } {
     return getContactStatusStyle(status);
+  }
+
+  // ── Acciones (mensajes con plantilla) ──────────────────────────────────
+  abrirAcciones(c: Contact): void {
+    if (!this.perm.can('Contactos', 'editar')) return;
+    this.accionContacto.set(c);
   }
 
   // ── Cambio rápido de estado ───────────────────────────────────────────

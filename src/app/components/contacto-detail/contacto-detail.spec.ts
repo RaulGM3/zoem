@@ -6,6 +6,8 @@ import { ContactoDetailComponent } from './contacto-detail';
 import {
   EstadoContactoDialogComponent, type CambioEstadoResult,
 } from '../../shared/components/estado-contacto-dialog/estado-contacto-dialog';
+import { AccionLanzadorComponent } from '../../shared/components/accion-lanzador/accion-lanzador';
+import { ComunicacionesEnviadasComponent } from '../../shared/components/comunicaciones-enviadas/comunicaciones-enviadas';
 import { ContactService } from '../../core/services/contact.service';
 import { ContactFolderService } from '../../core/services/contact-folder.service';
 import { ContactFileService } from '../../core/services/contact-file.service';
@@ -26,6 +28,18 @@ class EstadoDialogStubComponent {
   readonly soloSeguimiento = input(false);
   readonly closed = output<void>();
   readonly saved = output<CambioEstadoResult>();
+}
+
+@Component({ selector: 'app-accion-lanzador', template: '', changeDetection: ChangeDetectionStrategy.OnPush })
+class AccionLanzadorStubComponent {
+  readonly ambito = input.required<string>();
+  readonly contactos = input.required<Contact[]>();
+  readonly closed = output<void>();
+}
+
+@Component({ selector: 'app-comunicaciones-enviadas', template: '<p>historial</p>', changeDetection: ChangeDetectionStrategy.OnPush })
+class ComunicacionesStubComponent {
+  readonly contactoId = input<string | null>(null);
 }
 
 const ANA = {
@@ -151,10 +165,32 @@ describe('ContactoDetailComponent', () => {
       ],
     });
     TestBed.overrideComponent(ContactoDetailComponent, {
-      remove: { imports: [EstadoContactoDialogComponent] },
-      add: { imports: [EstadoDialogStubComponent] },
+      remove: { imports: [EstadoContactoDialogComponent, AccionLanzadorComponent, ComunicacionesEnviadasComponent] },
+      add: { imports: [EstadoDialogStubComponent, AccionLanzadorStubComponent, ComunicacionesStubComponent] },
     });
     await TestBed.compileComponents();
+  });
+
+  describe('acciones y comunicaciones', () => {
+    const lanzador = () => el().querySelector('app-accion-lanzador');
+
+    it('"Acciones…" abre el lanzador de ámbito contacto', async () => {
+      await crear();
+      expect(lanzador()).toBeNull();
+      await click(boton('Acciones…'));
+      expect(lanzador()).not.toBeNull();
+    });
+
+    it('sin permiso de edición no hay botón Acciones…', async () => {
+      denegados.add('Contactos:editar');
+      await crear();
+      expect(boton('Acciones…')).toBeUndefined();
+    });
+
+    it('muestra el historial de comunicaciones del contacto', async () => {
+      await crear();
+      expect(el().querySelector('app-comunicaciones-enviadas')).not.toBeNull();
+    });
   });
 
   describe('ficha', () => {

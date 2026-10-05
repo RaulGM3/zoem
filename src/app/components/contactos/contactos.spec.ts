@@ -5,6 +5,7 @@ import { By } from '@angular/platform-browser';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter, type ParamMap } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { ContactosComponent } from './contactos';
+import { AccionLanzadorComponent } from '../../shared/components/accion-lanzador/accion-lanzador';
 import { ImportarContactosComponent } from './components/importar-contactos/importar-contactos';
 import {
   EstadoContactoDialogComponent, type CambioEstadoResult,
@@ -31,6 +32,13 @@ class EstadoDialogStubComponent {
   readonly soloSeguimiento = input(false);
   readonly closed = output<void>();
   readonly saved = output<CambioEstadoResult>();
+}
+
+@Component({ selector: 'app-accion-lanzador', template: '', changeDetection: ChangeDetectionStrategy.OnPush })
+class AccionLanzadorStubComponent {
+  readonly ambito = input.required<string>();
+  readonly contactos = input.required<Contact[]>();
+  readonly closed = output<void>();
 }
 
 const ANA = {
@@ -165,8 +173,8 @@ describe('ContactosComponent', () => {
       ],
     });
     TestBed.overrideComponent(ContactosComponent, {
-      remove: { imports: [ImportarContactosComponent, EstadoContactoDialogComponent] },
-      add: { imports: [ImportarStubComponent, EstadoDialogStubComponent] },
+      remove: { imports: [ImportarContactosComponent, EstadoContactoDialogComponent, AccionLanzadorComponent] },
+      add: { imports: [ImportarStubComponent, EstadoDialogStubComponent, AccionLanzadorStubComponent] },
     });
     await TestBed.compileComponents();
   });
@@ -278,6 +286,36 @@ describe('ContactosComponent', () => {
       await estable();
       expect(seguimientos.cambiarEstado).toHaveBeenCalledWith(ANA, 'inactivo', undefined);
       expect(dialogosEstado()).toHaveLength(0);
+    });
+  });
+
+  describe('acciones', () => {
+    const lanzador = (): AccionLanzadorStubComponent | null =>
+      fixture.debugElement.query(By.directive(AccionLanzadorStubComponent))?.componentInstance ?? null;
+    const botonAcciones = (nombre: string) =>
+      tarjeta(nombre).querySelector<HTMLButtonElement>('[aria-label="Acciones para este contacto"]');
+
+    it('el botón de acciones de la tarjeta abre el lanzador con ámbito contacto y ese contacto', async () => {
+      await crear();
+      expect(lanzador()).toBeNull();
+      await click(botonAcciones('Ana López'));
+      expect(lanzador()).not.toBeNull();
+      expect(lanzador()!.ambito()).toBe('contacto');
+      expect(lanzador()!.contactos().map(c => c.id)).toEqual(['c1']);
+    });
+
+    it('cerrar el lanzador lo desmonta', async () => {
+      await crear();
+      await click(botonAcciones('Ana López'));
+      lanzador()!.closed.emit();
+      await estable();
+      expect(lanzador()).toBeNull();
+    });
+
+    it('sin permiso Contactos:editar no hay botón de acciones', async () => {
+      denegados.add('Contactos:editar');
+      await crear();
+      expect(botonAcciones('Ana López')).toBeNull();
     });
   });
 

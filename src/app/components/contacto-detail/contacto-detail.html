@@ -28,6 +28,14 @@
       }
     </div>
     @if (perm.can('Contactos', 'editar')) {
+      <div class="flex items-center gap-2">
+      <button type="button" (click)="abrirAcciones()"
+        class="flex items-center gap-2 px-4 py-2 min-h-11 text-sm rounded-lg transition-colors duration-150"
+        style="border:1px solid var(--border);color:var(--text-body)"
+        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+        (mouseleave)="$any($event.currentTarget).style.background=''">
+        <lucide-icon [img]="SendIcon" class="w-4 h-4" />Acciones…
+      </button>
       <button (click)="onEditar()"
         class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-colors duration-150"
         style="border:1px solid var(--border);color:var(--text-body)"
@@ -35,6 +43,7 @@
         (mouseleave)="$any($event.currentTarget).style.background=''">
         <lucide-icon [img]="EditIcon" class="w-4 h-4" />Editar
       </button>
+      </div>
     }
   </div>
 
@@ -252,6 +261,9 @@
         </div>
       </div>
 
+      <!-- Comunicaciones enviadas -->
+      <app-comunicaciones-enviadas [contactoId]="id()" />
+
       <!-- Notas -->
       <div class="rounded-xl p-5" style="background:var(--surface);border:1px solid var(--border)">
         <h3 class="text-sm font-semibold mb-3" style="color:var(--text-body)">Notas</h3>
@@ -271,6 +283,10 @@
 
     </div>
   </div>
+
+  @if (lanzadorAbierto()) {
+    <app-accion-lanzador ambito="contacto" [contactos]="[c]" (closed)="lanzadorAbierto.set(false)" />
+  }
 
   @if (editandoEstado()) {
     <app-estado-contacto-dialog
