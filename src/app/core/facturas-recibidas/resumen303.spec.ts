@@ -62,4 +62,15 @@ describe('resumen303', () => {
       numFacturas: 0,
     });
   });
+
+  it('una línea exenta suma su base al tipo 0 y no aporta cuota ni deducible', () => {
+    const r = resumen303(
+      [f({ lineasIva: [{ base: 100, tipo: 21, cuota: 21 }, { base: 40, tipo: 0, cuota: 0, exento: true, causaExencion: 'E1' }] })],
+      { ejercicio: 2026, trimestre: 2 },
+    );
+    expect(r.totalBase).toBe(140);
+    expect(r.totalCuota).toBe(21);
+    expect(r.totalDeducible).toBe(21);
+    expect(r.porTipo.find((t) => t.tipo === 0)).toMatchObject({ base: 40, cuota: 0, cuotaDeducible: 0 });
+  });
 });

@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { FacturaRecibidaDrawerComponent } from './factura-recibida-drawer';
+import { vi } from 'vitest';
+import { QrDecodeService } from '../../../../core/services/qr-decode.service';
+import { parseQrVerifactu } from '../../../../core/facturas-recibidas/qr-verifactu';
 import { extraccionFalsa } from '../../../../../testing/facturas-recibidas';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
 
@@ -73,6 +76,46 @@ describe('FacturaRecibidaDrawerComponent — accesibilidad (axe)', () => {
     expect(raiz.querySelector('[data-archivo-adjunto]')).not.toBeNull();
     expect(raiz.querySelector('[data-error-archivo]')).not.toBeNull();
     expect(raiz.querySelector('[data-estado-extraccion]')?.textContent).toContain('sin IA en tests');
+    const v = await analizarA11y(raiz);
+    expect(v, `\n${formatearViolaciones(v)}\n`).toEqual([]);
+  });
+
+  it('sin violaciones con una línea exenta sin causa (error visible)', async () => {
+    const f = await montar();
+    const raiz = f.nativeElement as HTMLElement;
+    const c = raiz.querySelector<HTMLInputElement>('#fr-exenta-0')!;
+    c.checked = true;
+    c.dispatchEvent(new Event('change', { bubbles: true }));
+    f.detectChanges();
+    await pulsarConfirmar(f);
+    expect(raiz.querySelector('#fr-causa-0')?.getAttribute('aria-invalid')).toBe('true');
+    const v = await analizarA11y(raiz);
+    expect(v, `\n${formatearViolaciones(v)}\n`).toEqual([]);
+  });
+
+  it('sin violaciones con el aviso de discrepancias del QR visible', async () => {
+    TestBed.resetTestingModule();
+    const qr = parseQrVerifactu('https://prewww2.aeat.es/wlpl/TIKE-CONT/ValidarQR?nif=B12345674&numserie=F-1&fecha=02-04-2026&importe=99.00');
+    await TestBed.configureTestingModule({
+      imports: [FacturaRecibidaDrawerComponent],
+      providers: [extraccionFalsa(), { provide: QrDecodeService, useValue: { leer: vi.fn().mockResolvedValue(qr) } }],
+    }).compileComponents();
+    const f = TestBed.createComponent(FacturaRecibidaDrawerComponent);
+    f.componentRef.setInput('fechaHoy', '2026-04-05');
+    f.detectChanges();
+    const raiz = f.nativeElement as HTMLElement;
+    const input = raiz.querySelector<HTMLInputElement>('#fr-archivo')!;
+    Object.defineProperty(input, 'files', { configurable: true, value: [new File([new Uint8Array(3)], 'f.pdf', { type: 'application/pdf' })] });
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    f.detectChanges();
+    await f.whenStable();
+    const numero = raiz.querySelector<HTMLInputElement>('#fr-numero')!;
+    numero.value = 'OTRO';
+    numero.dispatchEvent(new Event('input', { bubbles: true }));
+    f.detectChanges();
+    await f.whenStable();
+    f.detectChanges();
+    expect(raiz.querySelector('[data-qr-discrepancias]')).not.toBeNull();
     const v = await analizarA11y(raiz);
     expect(v, `\n${formatearViolaciones(v)}\n`).toEqual([]);
   });

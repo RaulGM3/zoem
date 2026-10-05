@@ -3,21 +3,28 @@ import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { FacturaRecibidaDrawerComponent, type FacturaRecibidaPayload } from './factura-recibida-drawer';
 import { FacturaExtractionService, type DatosExtraidos, type ResultadoExtraccion } from '../../../../core/services/factura-extraction.service';
 import { ACCEPT_FACTURA, ACCEPT_FOTO } from '../../../../core/services/captura-archivo.service';
+import { QrDecodeService } from '../../../../core/services/qr-decode.service';
+import { parseQrVerifactu, type ResultadoParseQr } from '../../../../core/facturas-recibidas/qr-verifactu';
 
 describe('FacturaRecibidaDrawerComponent', () => {
   let fixture: ComponentFixture<FacturaRecibidaDrawerComponent>;
   let emitidos: FacturaRecibidaPayload[];
   let cierres: number;
   let extraer: ReturnType<typeof vi.fn>;
+  let leerQr: ReturnType<typeof vi.fn>;
   const el = (): HTMLElement => fixture.nativeElement;
   const q = <T extends HTMLElement>(sel: string): T => el().querySelector<T>(sel)!;
 
   async function montar(): Promise<void> {
     TestBed.resetTestingModule();
     extraer = vi.fn().mockResolvedValue({ ok: false, mensaje: 'sin IA' } satisfies ResultadoExtraccion);
+    leerQr = vi.fn().mockResolvedValue(null);
     await TestBed.configureTestingModule({
       imports: [FacturaRecibidaDrawerComponent],
-      providers: [{ provide: FacturaExtractionService, useValue: { extraer } }],
+      providers: [
+        { provide: FacturaExtractionService, useValue: { extraer } },
+        { provide: QrDecodeService, useValue: { leer: leerQr } },
+      ],
     }).compileComponents();
     fixture = TestBed.createComponent(FacturaRecibidaDrawerComponent);
     fixture.componentRef.setInput('fechaHoy', '2026-04-05');
@@ -292,6 +299,182 @@ describe('FacturaRecibidaDrawerComponent', () => {
       q<HTMLButtonElement>('[data-quitar-archivo]').click();
       fixture.detectChanges();
       expect(el().querySelector('[data-archivo-adjunto]')).toBeNull();
+    });
+  });
+
+  describe('líneas exentas / no sujetas', () => {
+    async function marcarExenta(i = 0): Promise<void> {
+      const c = q<HTMLInputElement>(`#fr-exenta-${i}`);
+      c.checked = true;
+      c.dispatchEvent(new Event('change', { bubbles: true }));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
+
+    it('cada línea tiene un interruptor "Exenta" accesible y la causa solo aparece al marcarlo', async () => {
+      const c = q<HTMLInputElement>('#fr-exenta-0');
+      expect(c.type).toBe('checkbox');
+      expect(el().querySelector('label[for="fr-exenta-0"]')?.textContent).toMatch(/exenta/i);
+      expect(el().querySelector('#fr-causa-0')).toBeNull();
+      await marcarExenta();
+      const causa = q<HTMLSelectElement>('#fr-causa-0');
+      expect(el().querySelector('label[for="fr-causa-0"]')?.textContent).toMatch(/causa/i);
+      expect(causa.querySelectorAll('option[value^="E"], option[value^="N"]').length).toBe(8);
+      expect(causa.textContent).toContain('E1 · Exenta por el art. 20 LIVA');
+    });
+
+    it('al marcar exenta la cuota pasa a 0 y el tipo a 0, aunque haya base', async () => {
+      await escribir('fr-base-0', '100');
+      await escribir('fr-tipo-0', '21');
+      await marcarExenta();
+      expect(q<HTMLInputElement>('#fr-cuota-0').value).toBe('0');
+      expect(q<HTMLSelectElement>('#fr-tipo-0').value).toBe('0');
+      expect(q<HTMLInputElement>('#fr-total').value).toBe('100');
+      await escribir('fr-base-0', '50');
+      expect(q<HTMLInputElement>('#fr-cuota-0').value).toBe('0');
+      expect(q<HTMLInputElement>('#fr-total').value).toBe('50');
+    });
+
+    it('sin causa no se emite: error accesible con aria-invalid y describedby', async () => {
+      await rellenarValida();
+      await marcarExenta();
+      confirmar();
+      expect(emitidos).toHaveLength(0);
+      const causa = q<HTMLSelectElement>('#fr-causa-0');
+      expect(causa.getAttribute('aria-invalid')).toBe('true');
+      const descr = causa.getAttribute('aria-describedby')!;
+      expect(el().querySelector(`#${descr}`)?.getAttribute('role')).toBe('alert');
+    });
+
+    it('con causa emite la línea exenta con cuota 0', async () => {
+      await rellenarValida();
+      await marcarExenta();
+      await escribir('fr-causa-0', 'E1');
+      confirmar();
+      expect(emitidos).toHaveLength(1);
+      expect(emitidos[0].datos.lineasIva).toEqual([{ base: 100, tipo: 0, cuota: 0, exento: true, causaExencion: 'E1' }]);
+      expect(emitidos[0].datos.total).toBe(100);
+    });
+
+    it('desmarcar exenta recupera el cálculo con el tipo elegido y no emite causa', async () => {
+      await rellenarValida();
+      await marcarExenta();
+      await escribir('fr-causa-0', 'E1');
+      const c = q<HTMLInputElement>('#fr-exenta-0');
+      c.checked = false;
+      c.dispatchEvent(new Event('change', { bubbles: true }));
+      fixture.detectChanges();
+      await escribir('fr-tipo-0', '21');
+      confirmar();
+      expect(emitidos[0].datos.lineasIva).toEqual([{ base: 100, tipo: 21, cuota: 21 }]);
+    });
+  });
+
+  describe('QR de Verifactu: contraste con el formulario (avisa, nunca bloquea)', () => {
+    const pdf = (): File => new File([new Uint8Array(10)], 'factura.pdf', { type: 'application/pdf' });
+    const URL_QR = (importe: string) =>
+      `https://prewww2.aeat.es/wlpl/TIKE-CONT/ValidarQR?nif=B12345674&numserie=F-77&fecha=02-04-2026&importe=${importe}`;
+    const qr = (importe = '173.50'): ResultadoParseQr => parseQrVerifactu(URL_QR(importe));
+    const IA: ResultadoExtraccion = {
+      ok: true,
+      datos: {
+        proveedorNombre: 'Proveedor SL',
+        proveedorNif: 'B12345674',
+        numero: 'F-77',
+        tipoFactura: 'F1',
+        fechaExpedicion: '2026-04-02',
+        lineasIva: [{ base: 100, tipo: 21, cuota: 21 }, { base: 50, tipo: 5, cuota: 2.5 }],
+        total: 173.5,
+        concepto: 'Material',
+      },
+    };
+
+    async function elegir(file: File): Promise<void> {
+      const input = q<HTMLInputElement>('#fr-archivo');
+      Object.defineProperty(input, 'files', { configurable: true, value: [file] });
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
+
+    it('QR coincidente: informa que se leyó y no muestra discrepancias', async () => {
+      extraer.mockResolvedValue(IA);
+      leerQr.mockResolvedValue(qr());
+      await elegir(pdf());
+      expect(leerQr).toHaveBeenCalledTimes(1);
+      expect(q('[data-qr-info]').textContent).toMatch(/QR de Verifactu/);
+      expect(el().querySelector('[data-qr-discrepancias]')).toBeNull();
+    });
+
+    it('QR con otro importe: banner con la diferencia, y el registro sigue habilitado y emite', async () => {
+      extraer.mockResolvedValue(IA);
+      leerQr.mockResolvedValue(qr('180.00'));
+      await elegir(pdf());
+      const banner = q('[data-qr-discrepancias]');
+      expect(banner.textContent).toMatch(/180\.00/);
+      expect(q<HTMLButtonElement>('[data-confirmar]').disabled).toBe(false);
+      confirmar();
+      expect(emitidos).toHaveLength(1);
+      expect(emitidos[0].datos.extraccion.discrepancias.join(' ')).toMatch(/importe del QR/);
+    });
+
+    it('el banner se recalcula al corregir el formulario', async () => {
+      extraer.mockResolvedValue(IA);
+      leerQr.mockResolvedValue(qr('180.00'));
+      await elegir(pdf());
+      expect(el().querySelector('[data-qr-discrepancias]')).not.toBeNull();
+      await escribir('fr-total', '180');
+      expect(el().querySelector('[data-qr-discrepancias]')).toBeNull();
+    });
+
+    it('con QR válido el payload lleva qr (url canónica) y se sigue pudiendo registrar', async () => {
+      extraer.mockResolvedValue(IA);
+      leerQr.mockResolvedValue(qr());
+      await elegir(pdf());
+      confirmar();
+      expect(emitidos[0].datos.qr).toEqual({
+        url: URL_QR('173.50'),
+        nif: 'B12345674',
+        numserie: 'F-77',
+        fecha: '02-04-2026',
+        importe: 173.5,
+      });
+    });
+
+    it('sin QR: ni banner ni info, y el payload no lleva qr', async () => {
+      extraer.mockResolvedValue(IA);
+      await elegir(pdf());
+      expect(el().querySelector('[data-qr-info]')).toBeNull();
+      expect(el().querySelector('[data-qr-discrepancias]')).toBeNull();
+      confirmar();
+      expect(emitidos[0].datos.qr).toBeUndefined();
+    });
+
+    it('QR que no es de la AEAT: aviso informativo y sin qr en el payload', async () => {
+      extraer.mockResolvedValue(IA);
+      leerQr.mockResolvedValue(parseQrVerifactu('https://evil.example.com/x'));
+      await elegir(pdf());
+      expect(q('[data-qr-info]').textContent).toMatch(/no es de validación de la AEAT/i);
+      confirmar();
+      expect(emitidos[0].datos.qr).toBeUndefined();
+    });
+
+    it('quitar el archivo descarta el QR', async () => {
+      extraer.mockResolvedValue(IA);
+      leerQr.mockResolvedValue(qr('180.00'));
+      await elegir(pdf());
+      q<HTMLButtonElement>('[data-quitar-archivo]').click();
+      fixture.detectChanges();
+      expect(el().querySelector('[data-qr-info]')).toBeNull();
+      expect(el().querySelector('[data-qr-discrepancias]')).toBeNull();
+    });
+
+    it('el QR llega aunque la IA falle (el formulario se rellena a mano)', async () => {
+      leerQr.mockResolvedValue(qr());
+      await elegir(pdf());
+      expect(q('[data-qr-info]')).not.toBeNull();
     });
   });
 });

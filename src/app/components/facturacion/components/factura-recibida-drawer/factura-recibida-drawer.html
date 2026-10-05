@@ -47,6 +47,20 @@
       }
       <div data-estado-extraccion role="status" aria-live="polite" aria-atomic="true"
         class="text-xs" [class.sr-only]="!mensajeExtraccion()" style="color:var(--text-muted)">{{ mensajeExtraccion() }}</div>
+      @if (qrInfo(); as info) {
+        <p data-qr-info role="status" class="text-xs" style="color:var(--text-muted)">{{ info }}</p>
+      }
+      @if (discrepanciasQr().length > 0) {
+        <div data-qr-discrepancias class="rounded-lg px-3 py-2 text-xs"
+          style="background:color-mix(in srgb,var(--warning) 12%,transparent);color:var(--text-body)">
+          <p class="font-semibold">El QR no coincide con los datos del formulario (revísalo; no impide guardar)</p>
+          <ul class="list-disc pl-4">
+            @for (a of discrepanciasQr(); track a) {
+              <li>{{ a }}</li>
+            }
+          </ul>
+        </div>
+      }
     </fieldset>
 
     <!-- Emisor -->
@@ -215,7 +229,28 @@
                   [attr.aria-describedby]="errorDe('lineasIva.' + i + '.cuota') ? idError('lineasIva.' + i + '.cuota') : null" />
               </div>
             </div>
-            @for (campo of ['base', 'tipo', 'cuota']; track campo) {
+            <div class="space-y-2">
+              <div class="flex items-center gap-2">
+                <input [id]="'fr-exenta-' + i" type="checkbox" formControlName="exenta"
+                  class="h-4 w-4 shrink-0 accent-[var(--brand)]" />
+                <label [for]="'fr-exenta-' + i" class="text-xs" style="color:var(--text-body)">Línea exenta o no sujeta (sin cuota)</label>
+              </div>
+              @if (linea.controls.exenta.value) {
+                <div>
+                  <label [for]="'fr-causa-' + i" class="form-label">Causa de exención</label>
+                  <select [id]="'fr-causa-' + i" formControlName="causa" class="form-select w-full" aria-required="true"
+                    [class.error]="errorDe('lineasIva.' + i + '.causaExencion')"
+                    [attr.aria-invalid]="errorDe('lineasIva.' + i + '.causaExencion') ? 'true' : 'false'"
+                    [attr.aria-describedby]="errorDe('lineasIva.' + i + '.causaExencion') ? idError('lineasIva.' + i + '.causaExencion') : null">
+                    <option value="">Selecciona una causa</option>
+                    @for (c of causasExencion; track c.valor) {
+                      <option [value]="c.valor">{{ c.etiqueta }}</option>
+                    }
+                  </select>
+                </div>
+              }
+            </div>
+            @for (campo of ['base', 'tipo', 'cuota', 'causaExencion']; track campo) {
               @if (errorDe('lineasIva.' + i + '.' + campo); as e) {
                 <p [id]="idError('lineasIva.' + i + '.' + campo)" class="form-error" role="alert">{{ e }}</p>
               }
