@@ -6,7 +6,7 @@ import {
   LucideAngularModule,
   Users, Plus, Phone, Mail, Building2,
   Edit, Trash2, ChevronRight, ChevronLeft, UserPlus, TrendingUp,
-  GitMerge, Shield, Brain, ArrowRight, X, Check, StickyNote, Briefcase, Send,
+  GitMerge, Shield, Brain, ArrowRight, X, Check, StickyNote, Briefcase, Send, SlidersHorizontal,
 } from 'lucide-angular';
 // import { PIPELINE_DEALS } from '../../data/dummy-data'; // dummy data — tab oculto
 import { ContactService } from '../../core/services/contact.service';
@@ -25,14 +25,31 @@ import {
   EstadoContactoDialogComponent, type CambioEstadoResult,
 } from '../../shared/components/estado-contacto-dialog/estado-contacto-dialog';
 import { AccionLanzadorComponent } from '../../shared/components/accion-lanzador/accion-lanzador';
+import { BreakpointService } from '../../core/services/breakpoint.service';
+import { ActionMenuComponent, type MenuAction } from '../../shared/components/action-menu/action-menu';
+import { OverlayShellComponent } from '../../shared/components/overlay-shell/overlay-shell';
+import {
+  ListCardDirective, ListTableDirective, ResponsiveListComponent,
+} from '../../shared/components/responsive-list/responsive-list';
 import { SeguimientoContactoService } from '../../core/services/seguimiento-contacto.service';
 
 type ContactosTab = 'contactos' | 'pipeline' | 'rgpd' | 'herramientas';
 
+/** Estados que rota la tarjeta KPI ciclable, en orden de click. */
+const KPI_ROTATIVA: readonly { status: ContactStatus; titulo: string; detalle: string }[] = [
+  { status: 'potencial', titulo: 'Potenciales', detalle: 'Por convertir en clientes' },
+  { status: 'pendiente_pago', titulo: 'Pendientes de pago', detalle: 'Esperando el cobro' },
+  { status: 'pendiente_presupuesto', titulo: 'Pendientes de presupuesto', detalle: 'Esperando presupuesto' },
+];
+
 @Component({
   selector: 'app-contactos',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, LucideAngularModule, DecimalPipe, ImportarContactosComponent, ContactoDrawerComponent, EstadoContactoDialogComponent, AccionLanzadorComponent],
+  imports: [
+    RouterLink, LucideAngularModule, DecimalPipe, ImportarContactosComponent, ContactoDrawerComponent,
+    EstadoContactoDialogComponent, AccionLanzadorComponent, ActionMenuComponent, OverlayShellComponent,
+    ResponsiveListComponent, ListCardDirective, ListTableDirective,
+  ],
   templateUrl: './contactos.html',
 })
 export class ContactosComponent {
@@ -56,10 +73,12 @@ export class ContactosComponent {
   readonly StickyNoteIcon = StickyNote;
   readonly BriefcaseIcon = Briefcase;
   readonly SendIcon = Send;
+  readonly FiltersIcon = SlidersHorizontal;
 
   readonly contactService = inject(ContactService);
   readonly usersService = inject(UsersService);
   readonly perm = inject(PermissionService);
+  protected readonly bp = inject(BreakpointService);
   private readonly toast = inject(ToastService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -75,6 +94,10 @@ export class ContactosComponent {
   filterType = signal('');
   /** Drawer de alta/edición abierto (null = cerrado) y sus datos de partida. */
   readonly drawer = signal<{ contact: Contact | null; prefill: ContactoPrefill | null } | null>(null);
+  /** Hoja de filtros (móvil). Comparte las mismas señales que los selects de escritorio. */
+  readonly filtrosAbiertos = signal(false);
+  /** Filtros activos que oculta la hoja (la búsqueda vive en el header global). */
+  readonly filtrosActivos = computed(() => (this.filterStatus() ? 1 : 0) + (this.filterType() ? 1 : 0));
   showImportDrawer = signal(false);
   deleteConfirmId = signal<string | null>(null);
 
@@ -268,12 +291,57 @@ export class ContactosComponent {
     return c.type === 'persona_fisica' ? c.profesion : c.sectorActividad;
   }
 
+  limpiarFiltros(): void {
+    this.filterStatus.set('');
+    this.filterType.set('');
+  }
+
+  /** Documento fiscal (NIF/CIF) para la tarjeta móvil. */
+  documento(c: Contact): string | undefined {
+    return c.type === 'persona_fisica' ? c.nif : c.cif;
+  }
+
+  /** Nombre del responsable asignado, si lo hay. */
+  responsable(c: Contact): string | undefined {
+    if (!c.assignedTo) return undefined;
+    const m = this.usersService.members().find((x) => x.userId === c.assignedTo);
+    return m ? [m.nombre, m.apellido].filter(Boolean).join(' ') : undefined;
+  }
+
+  /** Acciones del menú móvil. Misma lógica de permisos que los botones de escritorio. */
+  accionesContacto(): MenuAction[] {
+    const acciones: MenuAction[] = [{ id: 'caso', label: 'Abrir caso', icon: Briefcase }];
+    if (this.perm.can('Contactos', 'editar')) acciones.push({ id: 'edit', label: 'Editar contacto', icon: Edit });
+    if (this.perm.can('Contactos', 'eliminar')) acciones.push({ id: 'delete', label: 'Eliminar contacto', icon: Trash2, danger: true });
+    return acciones;
+  }
+
+  onAccion(id: string, c: Contact): void {
+    if (id === 'caso') this.abrirCaso(c.id);
+    else if (id === 'edit') this.openEdit(c);
+    else if (id === 'delete') this.deleteConfirmId.set(c.id);
+  }
+
   getPhone(c: Contact): string | undefined {
     return  c.mobile;
   }
 
-  totalBilled(): number {
-    return this.contactService.contacts().reduce((sum, c) => sum + (c.totalBilled ?? 0), 0);
+  // ── KPI rotativa: potenciales → pendientes de pago → pendientes de presupuesto ──
+  readonly kpiPasos = KPI_ROTATIVA;
+  readonly kpiIndice = signal(0);
+  readonly kpiRotativa = computed(() => {
+    const paso = KPI_ROTATIVA[this.kpiIndice()];
+    const siguiente = KPI_ROTATIVA[(this.kpiIndice() + 1) % KPI_ROTATIVA.length];
+    return {
+      ...paso,
+      total: this.contactService.contacts().filter((c) => c.status === paso.status).length,
+      color: getContactStatusStyle(paso.status).color,
+      siguiente: siguiente.titulo,
+    };
+  });
+
+  siguienteKpi(): void {
+    this.kpiIndice.update((i) => (i + 1) % KPI_ROTATIVA.length);
   }
 
   activeCount(): number {

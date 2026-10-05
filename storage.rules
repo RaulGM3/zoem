@@ -24,15 +24,28 @@ service firebase.storage {
       return request.auth != null;
     }
     function isSuper() {
-      return isSignedIn() && request.auth.token.isSuperUser == true;
+      return isSignedIn() && request.auth.token.get('isSuperUser', false) == true;
     }
     function isActiveMember(cid) {
       return isSignedIn()
-        && request.auth.token.companyId == cid
-        && request.auth.token.estado == 'activo';
+        && request.auth.token.get('companyId', null) == cid
+        && request.auth.token.get('estado', null) == 'activo';
     }
     function canWrite(cid) {
-      return isActiveMember(cid) && request.auth.token.role != 'Viewer';
+      return isActiveMember(cid) && request.auth.token.get('role', null) != 'Viewer';
+    }
+    // Admin + Gestor (mismo criterio que firestore.rules isManager), vía custom claim.
+    function isManager(cid) {
+      return isActiveMember(cid) && request.auth.token.get('role', null) in ['Admin', 'Gestor'];
+    }
+    // `allPaths` es de tipo path (no string, sin .matches ni string()), así que el nombre
+    // completo del objeto se toma de resource.name (lectura) / request.resource.name (escritura).
+    function esFacturaRecibida(nombre) {
+      return nombre.matches('companies/[^/]+/facturas_recibidas/.*');
+    }
+    // Adjuntos de factura: PDF o imagen (la captura nativa devuelve JPEG; HEIC se rechaza en cliente).
+    function tipoAdjuntoValido() {
+      return request.resource.contentType.matches('application/pdf|image/(jpeg|png|webp)');
     }
     // Límite de tamaño defensivo (50 MB) en subidas.
     function withinSizeLimit() {
@@ -55,16 +68,26 @@ service firebase.storage {
     // match /docTemplates/{templateId}.
     //
     // OJO: las reglas de Storage se SUMAN (basta con que una permita). Por eso
-    // el bloque genérico excluye acciones_envios/ y ahí manda su propia regla
-    // más estricta. `{allPaths=**}` se liga como `path` (sin .matches), así que
-    // el nombre se mira con `request.resource.name` (create/update).
+    // el bloque genérico excluye acciones_envios/ y facturas_recibidas/ — cada
+    // uno tiene su propio match más estricto abajo.
+    // `{allPaths=**}` se liga como `path` (sin .matches), así que el nombre se
+    // mira con `request.resource.name` (create/update) o `resource.name` (read).
     function esEnvioAccion(name) {
       return name.matches('companies/[^/]+/acciones_envios/.*');
     }
     match /companies/{cid}/{allPaths=**} {
-      allow read:           if isSuper() || isActiveMember(cid);
+      allow read:           if (isSuper() || isActiveMember(cid)) && !esFacturaRecibida(resource.name);
       allow create, update: if !esEnvioAccion(request.resource.name)
+                            && !esFacturaRecibida(request.resource.name)
                             && (isSuper() || (canWrite(cid) && withinSizeLimit()));
+      allow delete:         if isSuper();
+    }
+
+    // Adjuntos de facturas recibidas (libro de IVA soportado): Admin + Gestor.
+    // Mismo contrato que el match genérico: sin delete de cliente (auditoría).
+    match /companies/{cid}/facturas_recibidas/{facturaPaths=**} {
+      allow read:           if isSuper() || isManager(cid);
+      allow create, update: if isSuper() || (isManager(cid) && withinSizeLimit() && tipoAdjuntoValido());
       allow delete:         if isSuper();
     }
 

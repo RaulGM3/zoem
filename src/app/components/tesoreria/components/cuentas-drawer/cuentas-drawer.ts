@@ -6,7 +6,7 @@ import { FormsModule } from '@angular/forms';
 import { CuentasService } from '../../../../core/services/cuentas.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { CuentaBancaria, CuentaTipo } from '../../../../interfaces';
-import { FocusTrapDirective } from '../../../../shared/directives/focus-trap.directive';
+import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 
 interface CuentaForm {
   nombre: string;
@@ -19,7 +19,7 @@ const EMPTY_FORM: CuentaForm = { nombre: '', tipo: 'banco', entidad: '', iban: '
 
 @Component({
   selector: 'app-cuentas-drawer',
-  imports: [LucideAngularModule, FormsModule, FocusTrapDirective],
+  imports: [LucideAngularModule, FormsModule, OverlayShellComponent],
   templateUrl: './cuentas-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

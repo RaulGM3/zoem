@@ -1,12 +1,12 @@
 import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { LucideAngularModule, X } from 'lucide-angular';
 import { Caso } from '../../../../interfaces';
+import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 
 @Component({
   selector: 'app-cierre-modal',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LucideAngularModule, DecimalPipe],
+  imports: [DecimalPipe, OverlayShellComponent],
   templateUrl: './cierre-modal.html',
 })
 export class CierreModalComponent {
@@ -21,6 +21,4 @@ export class CierreModalComponent {
   readonly confirmed = output<void>();
   readonly movimientosOkChange = output<boolean>();
   readonly bancoOkChange = output<boolean>();
-
-  readonly XIcon = X;
 }

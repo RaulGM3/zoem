@@ -14,7 +14,6 @@ import { DecimalPipe } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormArray, FormGroup, Validators, type ValidatorFn } from '@angular/forms';
 import {
   LucideAngularModule,
-  X,
   ShieldCheck,
   Plus,
   Trash2,
@@ -24,6 +23,8 @@ import {
 import type { Invoice, InvoiceLinea } from '../../../../core/services/invoice.service';
 import { normalizeLinea } from '../../../../core/services/invoice.service';
 import { Caso } from '../../../../interfaces';
+import { BreakpointService } from '../../../../core/services/breakpoint.service';
+import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 import {
   CAUSAS_EXENCION,
   CAUSA_EXENCION_LABELS,
@@ -76,12 +77,13 @@ function conTipoPropio(l: InvoiceLinea, tipoFacturaPct: number): InvoiceLinea {
 @Component({
   selector: 'app-factura-drawer',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LucideAngularModule, DecimalPipe, ReactiveFormsModule],
+  imports: [LucideAngularModule, DecimalPipe, ReactiveFormsModule, OverlayShellComponent],
   templateUrl: './factura-drawer.html',
 })
 export class FacturaDrawerComponent {
   private readonly fb = inject(FormBuilder);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly bp = inject(BreakpointService);
 
   /** Opciones del selector de causa de exención (E1..E6, N1, N2). */
   readonly causasExencion = CAUSAS_EXENCION.map((valor) => ({ valor, etiqueta: CAUSA_EXENCION_LABELS[valor] }));
@@ -168,7 +170,6 @@ export class FacturaDrawerComponent {
   readonly contactosSolicitados = output<void>();
 
   // --- Icons ---
-  readonly XIcon = X;
   readonly ShieldCheckIcon = ShieldCheck;
   readonly PlusIcon = Plus;
   readonly Trash2Icon = Trash2;
@@ -429,6 +430,15 @@ export class FacturaDrawerComponent {
         this.cerrarLista();
         return;
     }
+  }
+
+  /** Al enfocar el buscador pide los contactos y, en móvil, lo centra para que el teclado no tape la lista. */
+  onBuscarFocus(ev: Event): void {
+    this.contactosSolicitados.emit();
+    if (!this.bp.isMobile()) return;
+    const el = ev.target as HTMLElement | null;
+    // jsdom no implementa scrollIntoView
+    el?.scrollIntoView?.({ block: 'center' });
   }
 
   cerrarLista(): void {

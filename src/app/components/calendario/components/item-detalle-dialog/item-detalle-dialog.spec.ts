@@ -11,9 +11,12 @@ describe('ItemDetalleDialogComponent', () => {
   let cerrado: ReturnType<typeof vi.fn<() => void>>;
 
   const el = (): HTMLElement => fixture.nativeElement;
-  const dialogo = (): HTMLElement => el().querySelector('[role="dialog"][aria-label^="Detalle de"]')!;
-  const confirmacion = (): HTMLElement | null =>
-    el().querySelector('[role="dialog"][aria-label="Confirmar eliminación de evento"]');
+  const dialogoCon = (titulo: (t: string) => boolean): HTMLElement | null =>
+    Array.from(el().querySelectorAll<HTMLElement>('[role="dialog"]'))
+      .find(d => titulo(d.querySelector('h2')?.textContent?.trim() ?? '')) ?? null;
+  const dialogo = (): HTMLElement => dialogoCon(t => t.startsWith('Detalle de'))!;
+  const confirmacion = (): HTMLElement | null => dialogoCon(t => t === 'Confirmar eliminación de evento');
+  const backdrop = (): HTMLElement => el().querySelector<HTMLElement>('[data-overlay-backdrop]')!;
   const boton = (texto: string, raiz: HTMLElement = el()): HTMLButtonElement | undefined =>
     Array.from(raiz.querySelectorAll('button')).find(b => b.textContent?.trim() === texto);
   const porLabel = <T extends HTMLElement>(label: string): T[] =>
@@ -56,7 +59,8 @@ describe('ItemDetalleDialogComponent', () => {
     it('muestra título, horario, tipo y cliente', () => {
       render(evento());
       const texto = dialogo().textContent ?? '';
-      expect(dialogo().getAttribute('aria-label')).toBe('Detalle de Reunión inicial');
+      expect(dialogo().querySelector('h2')!.textContent).toContain('Detalle de Reunión inicial');
+      expect(dialogo().getAttribute('aria-labelledby')).toBe(dialogo().querySelector('h2')!.id);
       expect(dialogo().getAttribute('aria-modal')).toBe('true');
       expect(texto).toContain('Reunión inicial');
       expect(texto).toContain('10:00 – 11:00');
@@ -66,7 +70,7 @@ describe('ItemDetalleDialogComponent', () => {
 
     it('etiqueta los hitos como "Hito"', () => {
       render(hito());
-      expect(dialogo().querySelector('h2')!.nextElementSibling!.textContent).toContain('Hito');
+      expect(dialogo().querySelector('[data-item-resumen]')!.textContent).toContain('Hito');
     });
 
     it('pinta el punto con el color efectivo del item', () => {
@@ -88,7 +92,7 @@ describe('ItemDetalleDialogComponent', () => {
       render(evento());
       click(dialogo().querySelector('h2'));
       expect(cerrado).not.toHaveBeenCalled();
-      click(dialogo());
+      click(backdrop());
       expect(cerrado).toHaveBeenCalledTimes(1);
     });
 

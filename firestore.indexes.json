@@ -1,6 +1,14 @@
 {
   "indexes": [
     {
+      "collectionGroup": "notificaciones",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "permission_requests",
       "queryScope": "COLLECTION",
       "fields": [
@@ -124,6 +132,15 @@
       "fields": [
         { "fieldPath": "casoId", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "facturas_recibidas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "periodo303.ejercicio", "order": "ASCENDING" },
+        { "fieldPath": "periodo303.trimestre", "order": "ASCENDING" }
       ]
     }
   ],

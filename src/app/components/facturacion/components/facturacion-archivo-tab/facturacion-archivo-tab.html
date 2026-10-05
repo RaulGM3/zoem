@@ -1,5 +1,7 @@
 <!-- Única región viva: solo anuncia cambios de Verifactu provocados por el usuario (reintento) -->
 <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">{{ anuncio() }}</div>
+<app-responsive-list [items]="casos()" trackBy="id" emptyText="No hay casos cerrados">
+<ng-template [appListTable]="casos()" let-rows>
 <div class="overflow-x-auto">
   <table class="w-full text-sm">
     <thead>
@@ -13,11 +15,9 @@
       </tr>
     </thead>
     <tbody>
-      @for (caso of casos(); track caso.id) {
-        <tr class="transition-colors duration-150 cursor-pointer" style="border-bottom:1px solid var(--border-soft)"
-          (click)="navigateToCaso.emit(caso.id)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-          (mouseleave)="$any($event.currentTarget).style.background=''">
+      @for (caso of rows; track caso.id) {
+        <tr class="transition-colors duration-150 cursor-pointer hover:bg-[var(--surface-2)]" style="border-bottom:1px solid var(--border-soft)"
+          (click)="navigateToCaso.emit(caso.id)">
           <td class="px-5 py-4">
             <p class="font-semibold" style="color:var(--text-strong)">{{ caso.titulo }}</p>
             <p class="text-xs" style="color:var(--text-faint)">{{ caso.tipo }}</p>
@@ -49,11 +49,9 @@
                   </div>
                   @if (vf.reintentable) {
                     <button type="button" (click)="$event.stopPropagation(); reintentar(caso)"
-                      class="inline-flex w-fit items-center gap-1 rounded-lg px-2 py-1 text-xs transition-colors duration-150"
+                      class="inline-flex w-fit items-center gap-1 rounded-lg px-2 py-1 text-xs transition-colors duration-150 hover:bg-[var(--surface-2)]"
                       style="border:1px solid var(--border);color:var(--text-muted)"
-                      [attr.aria-label]="'Reintentar envío a Verifactu del caso ' + caso.titulo"
-                      (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-                      (mouseleave)="$any($event.currentTarget).style.background=''">
+                      [attr.aria-label]="'Reintentar envío a Verifactu del caso ' + caso.titulo">
                       <lucide-icon [img]="RefreshCwIcon" size="12"></lucide-icon> Reintentar
                     </button>
                   }
@@ -61,19 +59,15 @@
                 @if (pdfUrl(caso.facturaId)) {
                   <div class="flex items-center gap-1.5">
                     <button (click)="downloadPdf.emit(caso.facturaId)"
-                      class="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition-colors duration-150"
+                      class="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition-colors duration-150 hover:bg-[var(--surface-2)]"
                       style="border:1px solid var(--border);color:var(--text-muted)"
-                      title="Descargar PDF"
-                      (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-                      (mouseleave)="$any($event.currentTarget).style.background=''">
+                      title="Descargar PDF">
                       <lucide-icon [img]="DownloadIcon" size="12"></lucide-icon> Descargar
                     </button>
                     <button (click)="copyPdfLink.emit(caso.facturaId)"
-                      class="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition-colors duration-150"
+                      class="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition-colors duration-150 hover:bg-[var(--surface-2)]"
                       style="border:1px solid var(--border);color:var(--text-muted)"
-                      title="Copiar link de descarga"
-                      (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-                      (mouseleave)="$any($event.currentTarget).style.background=''">
+                      title="Copiar link de descarga">
                       <lucide-icon [img]="LinkIcon" size="12"></lucide-icon> Copiar link
                     </button>
                   </div>
@@ -86,21 +80,65 @@
           <td class="px-4 py-4" (click)="$event.stopPropagation()">
             @if (canReabrir()) {
               <button (click)="reabrirCaso.emit(caso)" [disabled]="saving()"
-                class="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150 disabled:opacity-50"
-                style="border:1px solid var(--border);color:var(--text-muted)"
-                (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-                (mouseleave)="$any($event.currentTarget).style.background=''">
+                class="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150 disabled:opacity-50 hover:bg-[var(--surface-2)]"
+                style="border:1px solid var(--border);color:var(--text-muted)">
                 <lucide-icon [img]="CheckCircle2Icon" size="13"></lucide-icon> Reabrir
               </button>
             }
           </td>
         </tr>
       }
-      @if (casos().length === 0) {
-        <tr>
-          <td colspan="6" class="px-5 py-12 text-center text-sm" style="color:var(--text-faint)">No hay casos cerrados</td>
-        </tr>
-      }
     </tbody>
   </table>
 </div>
+</ng-template>
+
+<ng-template [appListCard]="casos()" let-caso>
+  <article class="rounded-xl p-3" style="border:1px solid var(--border);background:var(--surface)">
+    <div class="flex items-start justify-between gap-2">
+      <button type="button" data-abrir-caso (click)="navigateToCaso.emit(caso.id)"
+        class="tap-target min-w-0 text-left">
+        <span class="block truncate font-semibold" style="color:var(--text-strong)">{{ caso.titulo }}</span>
+        <span class="block text-xs" style="color:var(--text-faint)">{{ caso.tipo }}</span>
+      </button>
+      @if (accionesCaso(caso); as acciones) {
+        @if (acciones.length > 0) {
+          <app-action-menu [actions]="acciones" [label]="'Acciones del caso ' + caso.titulo"
+            (selected)="ejecutarAccion(caso, $event)" />
+        }
+      }
+    </div>
+    <dl class="mt-2 grid grid-cols-3 gap-2 text-xs" style="color:var(--text-muted)">
+      <div><dt>Saldo final</dt><dd class="tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.saldo | number:'1.0-0' }}€</dd></div>
+      <div><dt>Saldo bancario</dt><dd class="tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.cierreSaldoBancario != null ? (caso.cierreSaldoBancario | number:'1.0-0') + '€' : '—' }}</dd></div>
+      <div><dt>Cerrado</dt><dd>{{ caso.cierreConfirmadoAt ? (caso.cierreConfirmadoAt | slice:0:10) : '—' }}</dd></div>
+    </dl>
+    <div class="mt-2">
+      @if (caso.facturaId) {
+        <div class="flex flex-col gap-1">
+          <span class="inline-flex w-fit items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium"
+            style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">
+            <lucide-icon [img]="FileCheckIcon" size="13" aria-hidden="true"></lucide-icon> Emitida
+          </span>
+          @if (verifactuVista(caso.facturaId); as vf) {
+            <div class="flex flex-col gap-0.5 text-xs">
+              <span class="font-medium" [style.color]="verifactuColor(vf)">{{ vf.etiqueta }}</span>
+              @if (vf.detalle) {
+                <span style="color:var(--text-muted)">{{ vf.detalle }}</span>
+              }
+              @if (vf.aviso) {
+                <span style="color:var(--warning)">{{ vf.aviso }}</span>
+              }
+              @if (vf.csv) {
+                <span class="tabular-nums" style="color:var(--text-muted);font-family:var(--font-mono)">CSV: {{ vf.csv }}</span>
+              }
+            </div>
+          }
+        </div>
+      } @else {
+        <span class="text-xs" style="color:var(--text-faint)">Sin factura</span>
+      }
+    </div>
+  </article>
+</ng-template>
+</app-responsive-list>

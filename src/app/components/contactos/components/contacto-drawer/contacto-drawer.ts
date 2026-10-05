@@ -11,7 +11,7 @@ import {
   CONTACT_STATUS_OPTIONS, CANAL_ENTRADA_LABELS,
 } from '../../../../interfaces';
 import { normalizarNif, validarNif } from '../../../../core/fiscal/nif';
-import { FocusTrapDirective } from '../../../../shared/directives/focus-trap.directive';
+import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 
 type ContactPayload =
   | Omit<PersonaFisica, 'id' | 'companyId' | 'createdAt' | 'updatedAt'>
@@ -31,7 +31,7 @@ const FORM_DEFAULTS = {
 @Component({
   selector: 'app-contacto-drawer',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LucideAngularModule, ReactiveFormsModule, FocusTrapDirective],
+  imports: [LucideAngularModule, ReactiveFormsModule, OverlayShellComponent],
   templateUrl: './contacto-drawer.html',
 })
 export class ContactoDrawerComponent {

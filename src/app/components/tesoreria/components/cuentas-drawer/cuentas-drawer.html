@@ -1,167 +1,135 @@
-<div class="fixed inset-0 z-50 flex justify-end">
-  <div class="absolute inset-0 bg-black/40" (click)="closed.emit()" aria-hidden="true"></div>
-  <div class="relative flex flex-col w-full max-w-md shadow-2xl overflow-y-auto"
-    style="background:var(--surface);border-left:1px solid var(--border)"
-    role="dialog" aria-label="Cuentas bancarias" aria-modal="true"
-    appFocusTrap (escapeKey)="closed.emit()">
-    <!-- Header -->
-    <div class="flex items-center justify-between px-6 py-4 shrink-0" style="border-bottom:1px solid var(--border)">
-      <h2 class="text-base font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Cuentas bancarias</h2>
-      <button type="button" (click)="closed.emit()"
-        class="rounded-xl p-1.5 transition-colors duration-150"
-        style="color:var(--text-muted)"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-        (mouseleave)="$any($event.currentTarget).style.background=''">
-        <lucide-icon [img]="XIcon" class="size-5"></lucide-icon>
-      </button>
-    </div>
-
-    <div class="flex-1 p-6 space-y-4">
-      <!-- Lista de cuentas -->
-      @if (loading()) {
-        <p class="text-sm" style="color:var(--text-muted)">Cargando...</p>
-      } @else if (cuentas().length === 0 && !showForm()) {
-        <p class="text-sm text-center py-8" style="color:var(--text-faint)">No hay cuentas configuradas.</p>
-      } @else {
-        <ul class="space-y-2">
-          @for (cuenta of cuentas(); track cuenta.id) {
-            <li class="flex items-center justify-between gap-3 p-3 rounded-xl"
-              style="border:1px solid var(--border);background:var(--surface-2)">
-              <div class="flex items-center gap-3 min-w-0">
-                <span class="flex items-center justify-center size-8 rounded-lg shrink-0"
-                  [style.background]="cuenta.tipo === 'banco' ? 'color-mix(in srgb,var(--brand) 12%,transparent)' : 'color-mix(in srgb,var(--warning) 12%,transparent)'"
-                  [style.color]="cuenta.tipo === 'banco' ? 'var(--brand)' : 'var(--warning)'">
-                  <lucide-icon [img]="cuenta.tipo === 'banco' ? Building2Icon : WalletIcon" class="size-4"></lucide-icon>
-                </span>
-                <div class="min-w-0">
-                  <p class="text-sm font-medium truncate" style="color:var(--text-strong)">{{ cuenta.nombre }}</p>
-                  @if (cuenta.entidad) {
-                    <p class="text-xs truncate" style="color:var(--text-faint);font-family:var(--font-mono)">
-                      {{ cuenta.entidad }}{{ cuenta.iban ? ' · ' + cuenta.iban : '' }}
-                    </p>
-                  }
-                </div>
-              </div>
-              <div class="flex items-center gap-1 shrink-0">
-                @if (confirmingDeleteId() === cuenta.id) {
-                  <span class="text-xs mr-1" style="color:var(--danger)">¿Seguro?</span>
-                  <button type="button" (click)="delete(cuenta.id)" [disabled]="deletingId() === cuenta.id"
-                    class="rounded-lg p-1.5 disabled:opacity-40 transition-colors duration-150"
-                    style="color:var(--danger)"
-                    (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)'"
-                    (mouseleave)="$any($event.currentTarget).style.background=''"
-                    aria-label="Confirmar eliminación de la cuenta">
-                    <lucide-icon [img]="CheckIcon" class="size-4"></lucide-icon>
-                  </button>
-                  <button type="button" (click)="cancelDelete()"
-                    class="rounded-lg p-1.5 transition-colors duration-150"
-                    style="color:var(--text-muted)"
-                    (mouseenter)="$any($event.currentTarget).style.background='var(--surface)'"
-                    (mouseleave)="$any($event.currentTarget).style.background=''"
-                    aria-label="Cancelar">
-                    <lucide-icon [img]="XIcon" class="size-4"></lucide-icon>
-                  </button>
-                } @else {
-                  <button type="button" (click)="openEdit(cuenta)"
-                    class="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors duration-150"
-                    style="color:var(--text-body)"
-                    (mouseenter)="$any($event.currentTarget).style.background='var(--surface)'"
-                    (mouseleave)="$any($event.currentTarget).style.background=''">
-                    Editar
-                  </button>
-                  <button type="button" (click)="requestDelete(cuenta.id)"
-                    class="rounded-lg p-1.5 disabled:opacity-40 transition-colors duration-150"
-                    style="color:var(--danger)"
-                    (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)'"
-                    (mouseleave)="$any($event.currentTarget).style.background=''"
-                    aria-label="Eliminar cuenta">
-                    <lucide-icon [img]="Trash2Icon" class="size-4"></lucide-icon>
-                  </button>
+<app-overlay-shell [open]="true" title="Cuentas bancarias" variant="drawer" size="md" (closed)="closed.emit()">
+  <div class="space-y-4 px-4 py-5 sm:px-6">
+    <!-- Lista de cuentas -->
+    @if (loading()) {
+      <p class="text-sm" style="color:var(--text-muted)">Cargando...</p>
+    } @else if (cuentas().length === 0 && !showForm()) {
+      <p class="text-sm text-center py-8" style="color:var(--text-faint)">No hay cuentas configuradas.</p>
+    } @else {
+      <ul class="space-y-2">
+        @for (cuenta of cuentas(); track cuenta.id) {
+          <li class="flex items-center justify-between gap-3 p-3 rounded-xl"
+            style="border:1px solid var(--border);background:var(--surface-2)">
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="flex items-center justify-center size-8 rounded-lg shrink-0"
+                [style.background]="cuenta.tipo === 'banco' ? 'color-mix(in srgb,var(--brand) 12%,transparent)' : 'color-mix(in srgb,var(--warning) 12%,transparent)'"
+                [style.color]="cuenta.tipo === 'banco' ? 'var(--brand)' : 'var(--warning)'">
+                <lucide-icon [img]="cuenta.tipo === 'banco' ? Building2Icon : WalletIcon" class="size-4" aria-hidden="true"></lucide-icon>
+              </span>
+              <div class="min-w-0">
+                <p class="text-sm font-medium truncate" style="color:var(--text-strong)">{{ cuenta.nombre }}</p>
+                @if (cuenta.entidad) {
+                  <p class="text-xs truncate" style="color:var(--text-faint);font-family:var(--font-mono)">
+                    {{ cuenta.entidad }}{{ cuenta.iban ? ' · ' + cuenta.iban : '' }}
+                  </p>
                 }
               </div>
-            </li>
-          }
-        </ul>
-      }
-
-      <!-- Formulario nueva/editar cuenta -->
-      @if (showForm()) {
-        <div class="rounded-xl p-4 space-y-4" style="border:1px solid var(--border);background:var(--surface)">
-          <p class="text-sm font-semibold" style="color:var(--text-strong)">{{ editingId() ? 'Editar cuenta' : 'Nueva cuenta' }}</p>
-
-          <!-- Tipo -->
-          <div class="flex gap-2">
-            <button type="button" (click)="setTipo('banco')"
-              class="flex-1 py-2 text-sm font-semibold rounded-xl transition-all duration-150"
-              [style.border]="form().tipo === 'banco' ? '2px solid var(--brand)' : '1px solid var(--border)'"
-              [style.background]="form().tipo === 'banco' ? 'color-mix(in srgb,var(--brand) 8%,transparent)' : 'var(--surface-2)'"
-              [style.color]="form().tipo === 'banco' ? 'var(--brand)' : 'var(--text-body)'">
-              <lucide-icon [img]="Building2Icon" class="size-4 inline mr-1.5"></lucide-icon>
-              Banco
-            </button>
-            <button type="button" (click)="setTipo('caja')"
-              class="flex-1 py-2 text-sm font-semibold rounded-xl transition-all duration-150"
-              [style.border]="form().tipo === 'caja' ? '2px solid var(--warning)' : '1px solid var(--border)'"
-              [style.background]="form().tipo === 'caja' ? 'color-mix(in srgb,var(--warning) 8%,transparent)' : 'var(--surface-2)'"
-              [style.color]="form().tipo === 'caja' ? 'var(--warning)' : 'var(--text-body)'">
-              <lucide-icon [img]="WalletIcon" class="size-4 inline mr-1.5"></lucide-icon>
-              Caja
-            </button>
-          </div>
-
-          <!-- Nombre -->
-          <div>
-            <label class="form-label">Nombre *</label>
-            <input type="text" [placeholder]="form().tipo === 'banco' ? 'Ej. Cuenta corriente BBVA' : 'Ej. Caja chica oficina'"
-              class="form-input"
-              [ngModel]="form().nombre" (ngModelChange)="form.update(f => ({...f, nombre: $event}))" />
-          </div>
-
-          @if (isBanco()) {
-            <div>
-              <label class="form-label">Entidad bancaria</label>
-              <input type="text" placeholder="Ej. BBVA, Santander, CaixaBank"
-                class="form-input"
-                [ngModel]="form().entidad" (ngModelChange)="form.update(f => ({...f, entidad: $event}))" />
             </div>
-            <div>
-              <label class="form-label">IBAN (opcional)</label>
-              <input type="text" placeholder="ES00 0000 0000 0000 0000 0000"
-                class="form-input" style="font-family:var(--font-mono)"
-                [ngModel]="form().iban" (ngModelChange)="form.update(f => ({...f, iban: $event}))" />
+            <div class="flex items-center gap-1 shrink-0">
+              @if (confirmingDeleteId() === cuenta.id) {
+                <span class="text-xs mr-1" style="color:var(--danger)">¿Seguro?</span>
+                <button type="button" (click)="delete(cuenta.id)" [disabled]="deletingId() === cuenta.id"
+                  class="max-sm:tap-target inline-flex items-center justify-center rounded-lg p-1.5 disabled:opacity-40 transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)]"
+                  style="color:var(--danger)"
+                  aria-label="Confirmar eliminación de la cuenta">
+                  <lucide-icon [img]="CheckIcon" class="size-4" aria-hidden="true"></lucide-icon>
+                </button>
+                <button type="button" (click)="cancelDelete()"
+                  class="max-sm:tap-target inline-flex items-center justify-center rounded-lg p-1.5 transition-colors duration-150 hover:bg-[var(--surface)]"
+                  style="color:var(--text-muted)"
+                  aria-label="Cancelar">
+                  <lucide-icon [img]="XIcon" class="size-4" aria-hidden="true"></lucide-icon>
+                </button>
+              } @else {
+                <button type="button" (click)="openEdit(cuenta)"
+                  class="max-sm:tap-target rounded-lg px-2.5 py-1 text-xs font-medium transition-colors duration-150 hover:bg-[var(--surface)]"
+                  style="color:var(--text-body)"
+                  [attr.aria-label]="'Editar ' + cuenta.nombre">
+                  Editar
+                </button>
+                <button type="button" (click)="requestDelete(cuenta.id)"
+                  class="max-sm:tap-target inline-flex items-center justify-center rounded-lg p-1.5 disabled:opacity-40 transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)]"
+                  style="color:var(--danger)"
+                  [attr.aria-label]="'Eliminar ' + cuenta.nombre">
+                  <lucide-icon [img]="Trash2Icon" class="size-4" aria-hidden="true"></lucide-icon>
+                </button>
+              }
             </div>
-          }
+          </li>
+        }
+      </ul>
+    }
 
-          <div class="flex justify-end gap-2 pt-1">
-            <button type="button" (click)="cancelForm()"
-              class="px-3 py-1.5 text-sm rounded-xl transition-colors duration-150"
-              style="color:var(--text-body)"
-              (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-              (mouseleave)="$any($event.currentTarget).style.background=''">
-              Cancelar
-            </button>
-            <button type="button" (click)="save()" [disabled]="saving() || !form().nombre.trim()"
-              class="px-4 py-1.5 text-sm font-semibold text-white rounded-xl disabled:opacity-40 transition-all duration-150"
-              style="background:var(--brand)"
-              (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-              (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
-              {{ saving() ? 'Guardando...' : 'Guardar' }}
-            </button>
-          </div>
+    <!-- Formulario nueva/editar cuenta -->
+    @if (showForm()) {
+      <div class="rounded-xl p-4 space-y-4" style="border:1px solid var(--border);background:var(--surface)">
+        <p class="text-sm font-semibold" style="color:var(--text-strong)">{{ editingId() ? 'Editar cuenta' : 'Nueva cuenta' }}</p>
+
+        <!-- Tipo -->
+        <div class="flex gap-2" role="group" aria-label="Tipo de cuenta">
+          <button type="button" (click)="setTipo('banco')" [attr.aria-pressed]="form().tipo === 'banco'"
+            class="max-sm:tap-target flex-1 py-2 text-sm font-semibold rounded-xl transition-all duration-150"
+            [style.border]="form().tipo === 'banco' ? '2px solid var(--brand)' : '1px solid var(--border)'"
+            [style.background]="form().tipo === 'banco' ? 'color-mix(in srgb,var(--brand) 8%,transparent)' : 'var(--surface-2)'"
+            [style.color]="form().tipo === 'banco' ? 'var(--brand)' : 'var(--text-body)'">
+            <lucide-icon [img]="Building2Icon" class="size-4 inline mr-1.5" aria-hidden="true"></lucide-icon>
+            Banco
+          </button>
+          <button type="button" (click)="setTipo('caja')" [attr.aria-pressed]="form().tipo === 'caja'"
+            class="max-sm:tap-target flex-1 py-2 text-sm font-semibold rounded-xl transition-all duration-150"
+            [style.border]="form().tipo === 'caja' ? '2px solid var(--warning)' : '1px solid var(--border)'"
+            [style.background]="form().tipo === 'caja' ? 'color-mix(in srgb,var(--warning) 8%,transparent)' : 'var(--surface-2)'"
+            [style.color]="form().tipo === 'caja' ? 'var(--warning)' : 'var(--text-body)'">
+            <lucide-icon [img]="WalletIcon" class="size-4 inline mr-1.5" aria-hidden="true"></lucide-icon>
+            Caja
+          </button>
         </div>
-      }
 
-      <!-- Botón nueva cuenta -->
-      @if (!showForm()) {
-        <button type="button" (click)="openNew()"
-          class="flex items-center gap-2 w-full px-4 py-2.5 text-sm font-medium rounded-xl transition-colors duration-150"
-          style="border:1px dashed var(--border);color:var(--text-muted)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--brand)'"
-          (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-muted)'">
-          <lucide-icon [img]="PlusIcon" class="size-4"></lucide-icon>
-          Nueva cuenta
-        </button>
-      }
-    </div>
+        <!-- Nombre -->
+        <div>
+          <label for="cuenta-nombre" class="form-label">Nombre <span aria-hidden="true">*</span></label>
+          <input id="cuenta-nombre" type="text" required [placeholder]="form().tipo === 'banco' ? 'Ej. Cuenta corriente BBVA' : 'Ej. Caja chica oficina'"
+            class="form-input"
+            [ngModel]="form().nombre" (ngModelChange)="form.update(f => ({...f, nombre: $event}))" />
+        </div>
+
+        @if (isBanco()) {
+          <div>
+            <label for="cuenta-entidad" class="form-label">Entidad bancaria</label>
+            <input id="cuenta-entidad" type="text" placeholder="Ej. BBVA, Santander, CaixaBank"
+              class="form-input"
+              [ngModel]="form().entidad" (ngModelChange)="form.update(f => ({...f, entidad: $event}))" />
+          </div>
+          <div>
+            <label for="cuenta-iban" class="form-label">IBAN (opcional)</label>
+            <input id="cuenta-iban" type="text" placeholder="ES00 0000 0000 0000 0000 0000" autocomplete="off"
+              class="form-input" style="font-family:var(--font-mono)"
+              [ngModel]="form().iban" (ngModelChange)="form.update(f => ({...f, iban: $event}))" />
+          </div>
+        }
+
+        <div class="flex gap-2 pt-1 sm:justify-end">
+          <button type="button" (click)="cancelForm()"
+            class="max-sm:tap-target max-sm:flex-1 px-3 py-1.5 text-sm rounded-xl transition-colors duration-150 hover:bg-[var(--surface-2)]"
+            style="color:var(--text-body)">
+            Cancelar
+          </button>
+          <button type="button" (click)="save()" [disabled]="saving() || !form().nombre.trim()"
+            class="max-sm:tap-target max-sm:flex-1 px-4 py-1.5 text-sm font-semibold text-white rounded-xl disabled:opacity-40 transition-colors duration-150 bg-[var(--brand)] hover:bg-[var(--brand-hover)]">
+            {{ saving() ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- Botón nueva cuenta -->
+    @if (!showForm()) {
+      <button type="button" (click)="openNew()"
+        class="max-sm:tap-target flex items-center gap-2 w-full px-4 py-2.5 text-sm font-medium rounded-xl transition-colors duration-150 text-[color:var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[color:var(--brand)]"
+        style="border:1px dashed var(--border)">
+        <lucide-icon [img]="PlusIcon" class="size-4" aria-hidden="true"></lucide-icon>
+        Nueva cuenta
+      </button>
+    }
   </div>
-</div>
+</app-overlay-shell>

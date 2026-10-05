@@ -1,7 +1,6 @@
 import {
   Component, ChangeDetectionStrategy, input, output, signal, effect, inject,
 } from '@angular/core';
-import { LucideAngularModule, X } from 'lucide-angular';
 import type { Caso, GestoriaSlot, ResumenFinanciero } from '../../../../interfaces';
 import { RESUMEN_FINANCIERO_VACIO } from '../../../../interfaces';
 import { CasoGestoriaTabComponent } from '../../../caso-detail/components/caso-gestoria-tab/caso-gestoria-tab';
@@ -10,10 +9,11 @@ import { GestoriaService } from '../../../../core/services/gestoria.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { CasosService } from '../../../../core/services/casos.service';
 import { CuentasService } from '../../../../core/services/cuentas.service';
+import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 
 @Component({
   selector: 'app-tesoreria-caso-drawer',
-  imports: [LucideAngularModule, CasoGestoriaTabComponent, MovimientoFormDrawerComponent],
+  imports: [CasoGestoriaTabComponent, MovimientoFormDrawerComponent, OverlayShellComponent],
   templateUrl: './tesoreria-caso-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -28,7 +28,6 @@ export class TesoresriaCasoDrawerComponent {
   readonly caso = input.required<Caso | null>();
   readonly closed = output<void>();
 
-  readonly XIcon = X;
 
   readonly showMovForm = signal(false);
   readonly savingMov = signal(false);

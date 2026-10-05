@@ -65,4 +65,20 @@ describe('FacturacionKpiCardsComponent', () => {
     const violaciones = await analizarA11y(fixture.nativeElement);
     expect(violaciones, `\n${formatearViolaciones(violaciones)}\n`).toEqual([]);
   });
+
+  it('móvil compacto: rejilla de 2 columnas, valores text-lg y padding reducido; lg:grid-cols-4 se mantiene', async () => {
+    await montar(RESUMEN);
+    const root = (fixture.nativeElement as HTMLElement).firstElementChild!;
+    expect(root.classList.contains('grid-cols-2')).toBe(true);
+    expect(root.classList.contains('lg:grid-cols-4')).toBe(true);
+    const cards = Array.from(root.querySelectorAll<HTMLElement>('.kpi-card'));
+    expect(cards).toHaveLength(4);
+    for (const c of cards) {
+      expect(c.classList.contains('p-3'), 'padding móvil').toBe(true);
+      expect(c.classList.contains('sm:p-5'), 'padding sm+').toBe(true);
+      const valor = c.querySelector<HTMLElement>('p.font-semibold')!;
+      expect(valor.classList.contains('text-lg')).toBe(true);
+      expect(valor.classList.contains('sm:text-[26px]')).toBe(true);
+    }
+  });
 });

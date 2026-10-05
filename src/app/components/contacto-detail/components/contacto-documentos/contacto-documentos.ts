@@ -9,6 +9,12 @@ import { ContactFileService } from '../../../../core/services/contact-file.servi
 import { UploadQueueService } from '../../../../core/services/upload-queue.service';
 import { PermissionService } from '../../../../core/services/permission.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { DOCUMENT } from '@angular/common';
+import { BreakpointService } from '../../../../core/services/breakpoint.service';
+import { ActionMenuComponent, type MenuAction } from '../../../../shared/components/action-menu/action-menu';
+import {
+  ListCardDirective, ListTableDirective, ResponsiveListComponent,
+} from '../../../../shared/components/responsive-list/responsive-list';
 import { FolderNavigation } from '../../../../core/documentos/folder-navigation';
 import type { ContactFolder, ContactFile } from '../../../../interfaces';
 
@@ -19,7 +25,7 @@ import type { ContactFolder, ContactFile } from '../../../../interfaces';
 @Component({
   selector: 'app-contacto-documentos',
   host: { class: 'block' },
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, ActionMenuComponent, ResponsiveListComponent, ListCardDirective, ListTableDirective],
   templateUrl: './contacto-documentos.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -31,6 +37,8 @@ export class ContactoDocumentosComponent {
   private readonly toast = inject(ToastService);
   private readonly uploadQueue = inject(UploadQueueService);
   readonly perm = inject(PermissionService);
+  protected readonly bp = inject(BreakpointService);
+  private readonly doc = inject(DOCUMENT);
 
   readonly FolderPlusIcon = FolderPlus;
   readonly UploadIcon = Upload;
@@ -69,6 +77,31 @@ export class ContactoDocumentosComponent {
       this.contactId();
       untracked(() => this.nav.toRoot());
     });
+  }
+
+  /** Acciones de un archivo en el menú móvil. Mismos permisos que los botones de escritorio. */
+  accionesArchivo(): MenuAction[] {
+    const acciones: MenuAction[] = [{ id: 'download', label: 'Descargar', icon: Download }];
+    if (this.perm.can('Contactos', 'eliminar')) acciones.push({ id: 'delete', label: 'Eliminar', icon: Trash2, danger: true });
+    return acciones;
+  }
+
+  /** Acciones de una carpeta en el menú móvil. Mismos permisos que los botones de escritorio. */
+  accionesCarpeta(): MenuAction[] {
+    const acciones: MenuAction[] = [];
+    if (this.perm.can('Contactos', 'editar')) acciones.push({ id: 'rename', label: 'Renombrar', icon: Pencil });
+    if (this.perm.can('Contactos', 'eliminar')) acciones.push({ id: 'delete', label: 'Eliminar', icon: Trash2, danger: true });
+    return acciones;
+  }
+
+  onAccionArchivo(id: string, file: ContactFile): void {
+    if (id === 'download') this.doc.defaultView?.open(file.downloadUrl, '_blank', 'noopener');
+    else if (id === 'delete') this.deletingFileId.set(file.id);
+  }
+
+  onAccionCarpeta(id: string, folder: ContactFolder): void {
+    if (id === 'rename') this.startRename(folder);
+    else if (id === 'delete') this.deletingFolderId.set(folder.id);
   }
 
   navigateToFolder(folder: ContactFolder) {

@@ -30,4 +30,6 @@ export interface MovimientoGestoria {
   ivaExento?: boolean;
   baseImponible?: number;
   cuotaIva?: number;
+  /** Factura recibida vinculada (id determinista); se escribe en la misma transacción que `FacturaRecibida.movimientoId`. */
+  facturaRecibidaId?: string;
 }

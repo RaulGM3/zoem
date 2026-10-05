@@ -32,7 +32,7 @@
     }
 
     <!-- Tab content -->
-    <div class="flex-1 overflow-y-auto p-6">
+    <div class="flex-1 overflow-y-auto p-4 sm:p-6">
 
       @if (activeTab() === 'info') {
         <app-caso-info-tab
@@ -44,6 +44,7 @@
           [contactSearch]="contactSearch()"
           [noResults]="noContactResults()"
           [canEdit]="canEditCasos()"
+          [members]="usersService.members()"
           (cancelEdit)="editingInfo.set(false)"
           (saveInfo)="onSaveInfo($event)"
           (searchChange)="contactSearch.set($event)"

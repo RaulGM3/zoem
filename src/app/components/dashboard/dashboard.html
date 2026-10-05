@@ -1,5 +1,5 @@
 <!-- Page Header -->
-<div class="mb-6 flex items-center justify-between">
+<div class="mb-6 flex flex-wrap items-center justify-between gap-2">
   <div>
     <h1 class="text-[19px] font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Dashboard</h1>
     <p class="mt-0.5 text-sm" style="color:var(--text-muted)">Aquí está el resumen de tu negocio.</p>
@@ -11,7 +11,7 @@
 </div>
 
 <!-- KPIs -->
-<div class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+<div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
   @if (perm.can('Casos', 'ver')) {
     <app-stat-card
       [icon]="BriefcaseIcon" tone="blue" label="Casos activos"
@@ -42,10 +42,10 @@
   }
 </div>
 
-<div class="grid gap-6 lg:grid-cols-3">
+<div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
 
   <!-- Columna principal: finanzas + estadística -->
-  <div class="flex flex-col gap-6 lg:col-span-2">
+  <div class="flex min-w-0 flex-col gap-6 lg:col-span-2">
 
     <!-- Cuentas bancarias -->
     @if (perm.can('Tesorería', 'ver')) {
@@ -101,10 +101,8 @@
         <div>
           @for (m of ultimosMovimientos(); track m.id) {
             <a [routerLink]="m.link"
-              class="flex items-center gap-3 px-5 py-3 transition-colors duration-150"
-              style="border-bottom:1px solid var(--border)"
-              (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-              (mouseleave)="$any($event.currentTarget).style.background=''">
+              class="flex items-center gap-3 px-5 py-3 transition-colors duration-150 hover:bg-[var(--surface-2)]"
+              style="border-bottom:1px solid var(--border)">
               <span class="h-2 w-2 shrink-0 rounded-full"
                 [style.background]="m.esEntrada ? 'var(--success)' : 'var(--danger)'"></span>
               <div class="min-w-0 flex-1">
@@ -133,7 +131,7 @@
         <app-bar-chart [data]="honorariosPorMes()" />
       </div>
 
-      <div class="grid gap-6 sm:grid-cols-2">
+      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div class="rounded-xl p-5" style="background:var(--surface);border:1px solid var(--border)">
           <h2 class="mb-4 text-sm font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">
             Ingresos vs Egresos
@@ -159,7 +157,7 @@
   </div>
 
   <!-- Columna lateral: IA + agenda + actividad -->
-  <div class="flex flex-col gap-6">
+  <div class="flex min-w-0 flex-col gap-6">
 
     <!-- Recepción IA -->
     @if (perm.can('RecepciónIA', 'ver')) {
@@ -175,10 +173,8 @@
         <div>
           @for (lead of iaTop(); track lead.id) {
             <a routerLink="/recepcion-ia"
-              class="flex items-start gap-3 px-5 py-3 transition-colors duration-150"
-              style="border-bottom:1px solid var(--border)"
-              (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-              (mouseleave)="$any($event.currentTarget).style.background=''">
+              class="flex items-start gap-3 px-5 py-3 transition-colors duration-150 hover:bg-[var(--surface-2)]"
+              style="border-bottom:1px solid var(--border)">
               <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
                 style="background:color-mix(in srgb,var(--accent-ia) 12%,transparent);color:var(--accent-ia)">
                 <lucide-icon [img]="BotIcon" size="14" />
@@ -217,10 +213,8 @@
         <div>
           @for (s of misSeguimientos(); track s.id) {
             <a [routerLink]="s.link"
-              class="flex items-start gap-3 px-5 py-3 transition-colors duration-150"
-              style="border-bottom:1px solid var(--border)"
-              (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-              (mouseleave)="$any($event.currentTarget).style.background=''">
+              class="flex items-start gap-3 px-5 py-3 transition-colors duration-150 hover:bg-[var(--surface-2)]"
+              style="border-bottom:1px solid var(--border)">
               <lucide-icon [img]="CalendarClockIcon" size="15" class="mt-0.5 shrink-0"
                 [style.color]="s.vencido ? 'var(--danger)' : 'var(--text-faint)'"></lucide-icon>
               <div class="min-w-0 flex-1">
@@ -248,10 +242,8 @@
         <div>
           @for (item of agendaProxima(); track item.id) {
             <a [routerLink]="item.link"
-              class="flex items-start gap-3 px-5 py-3 transition-colors duration-150"
-              style="border-bottom:1px solid var(--border)"
-              (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-              (mouseleave)="$any($event.currentTarget).style.background=''">
+              class="flex items-start gap-3 px-5 py-3 transition-colors duration-150 hover:bg-[var(--surface-2)]"
+              style="border-bottom:1px solid var(--border)">
               <span class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full" [class]="item.dotClass"></span>
               <div class="min-w-0 flex-1">
                 <p class="truncate text-sm font-medium" style="color:var(--text-strong)">{{ item.titulo }}</p>

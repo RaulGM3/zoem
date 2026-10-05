@@ -3,6 +3,15 @@ import { Timestamp } from '@angular/fire/firestore';
 export type CasoTipo = 'Legal' | 'Fiscal' | 'Laboral' | 'Mercantil' | 'Civil';
 export type CasoEstado = 'pendiente' | 'en_proceso' | 'cerrado' | 'urgente' | 'archivado';
 export type CasoPrioridad = 'alta' | 'media' | 'baja';
+
+/** Etiqueta visible de cada estado de caso (el valor crudo es una clave técnica). */
+export const CASO_ESTADO_LABEL: Record<CasoEstado, string> = {
+  pendiente: 'Pendiente',
+  en_proceso: 'En proceso',
+  cerrado: 'Cerrado',
+  urgente: 'Urgente',
+  archivado: 'Archivado',
+};
 export type HitoEstado = 'pendiente' | 'en_progreso' | 'completado' | 'cancelado';
 
 /**
@@ -49,6 +58,10 @@ export interface Hito {
   registrosHoras?: RegistroHoraHito[]; // horas reales declaradas (cobro por horas)
   anotaciones?: Anotacion[]; // notas libres del calendario
   calendarColor?: string | null;
+  /** uid de quien creó el hito (lo usa el backend para no notificar al propio autor). */
+  createdBy?: string;
+  /** uid de quien hizo la última edición. */
+  updatedBy?: string;
   estadoActualizadoPor?: string; // userId de quién cambió el estado por última vez
   estadoActualizadoEn?: string;  // ISO datetime del último cambio de estado
 }
@@ -116,6 +129,10 @@ export interface Caso {
   cierreSaldoBancario?: number;
   encargadoId?: string;
   vencimiento?: string;
+  /** uid de quien creó el caso. */
+  createdBy?: string;
+  /** uid de quien hizo la última edición (el backend lo usa como actor en notificaciones). */
+  updatedBy?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

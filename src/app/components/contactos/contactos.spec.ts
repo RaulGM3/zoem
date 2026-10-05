@@ -92,7 +92,11 @@ describe('ContactosComponent', () => {
     Array.from(raiz.querySelectorAll('button')).find(b => b.textContent?.replace(/\s+/g, ' ').includes(texto));
   const tarjetas = (): HTMLElement[] => qa('[role="group"][aria-label^="Ficha de"]');
   const tarjeta = (nombre: string): HTMLElement => q(`[role="group"][aria-label="Ficha de ${nombre}"]`);
-  const drawer = (): HTMLElement | null => el().querySelector('aside[role="dialog"]');
+  const nombreDialogo = (): string | null | undefined => {
+    const id = drawer()!.getAttribute('aria-labelledby');
+    return el().querySelector(`#${id}`)?.textContent?.trim();
+  };
+  const drawer = (): HTMLElement | null => el().querySelector('[role="dialog"]');
   const dialogosEstado = (): EstadoDialogStubComponent[] =>
     fixture.debugElement.queryAll(By.directive(EstadoDialogStubComponent)).map(d => d.componentInstance);
 
@@ -192,7 +196,41 @@ describe('ContactosComponent', () => {
       const kpis = qa('.kpi-card').slice(0, 3).map(k => k.textContent?.replace(/\s+/g, ' ').trim());
       expect(kpis[0]).toContain('Total Contactos 2');
       expect(kpis[1]).toContain('Activos 1');
-      expect(kpis[2]).toContain('1,500€');
+      expect(el().textContent).not.toContain('Facturación Total');
+    });
+
+    it('la tercera KPI es un botón que rota entre potenciales, pendientes de pago y de presupuesto', async () => {
+      contacts.set([
+        ANA, ACME,
+        { ...ACME, id: 'c3', status: 'pendiente_pago' } as Contact,
+        { ...ACME, id: 'c4', status: 'pendiente_pago' } as Contact,
+        { ...ACME, id: 'c5', status: 'pendiente_presupuesto' } as Contact,
+        { ...ACME, id: 'c6', status: 'pendiente_presupuesto' } as Contact,
+        { ...ACME, id: 'c7', status: 'pendiente_presupuesto' } as Contact,
+      ]);
+      await crear();
+      const kpi = (): HTMLButtonElement => q<HTMLButtonElement>('button.kpi-card');
+      // Texto accesible: sin la ligadura del icono ni los indicadores aria-hidden.
+      const texto = (): string => {
+        const copia = kpi().cloneNode(true) as HTMLElement;
+        copia.querySelectorAll('[aria-hidden="true"]').forEach(n => n.remove());
+        return copia.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+      };
+
+      expect(kpi().type).toBe('button');
+      expect(texto()).toContain('Potenciales 1');
+      expect(texto()).toContain('Cambiar a Pendientes de pago');
+
+      await click(kpi());
+      expect(texto()).toContain('Pendientes de pago 2');
+      expect(texto()).toContain('Cambiar a Pendientes de presupuesto');
+
+      await click(kpi());
+      expect(texto()).toContain('Pendientes de presupuesto 3');
+      expect(texto()).toContain('Cambiar a Potenciales');
+
+      await click(kpi());
+      expect(texto()).toContain('Potenciales 1');
     });
 
     it('lista los contactos del más reciente al más antiguo con sus datos', async () => {
@@ -338,7 +376,7 @@ describe('ContactosComponent', () => {
 
       await click(boton('Nuevo Contacto'));
       expect(valor('nombre')).toBe('');
-      await click(q('.fixed.inset-0.bg-black\\/40'));
+      await click(q('[data-overlay-backdrop]'));
       expect(drawer()).toBeNull();
 
       await click(boton('Nuevo Contacto'));
@@ -350,11 +388,11 @@ describe('ContactosComponent', () => {
     it('tras editar, un alta nueva abre vacía y en el paso 1', async () => {
       await crear();
       await click(tarjeta('Ana López').querySelector<HTMLButtonElement>('[aria-label="Editar contacto"]'));
-      expect(drawer()!.getAttribute('aria-label')).toBe('Editar contacto');
+      expect(nombreDialogo()).toBe('Editar contacto');
       expect(valor('nombre')).toBe('Ana');
       await click(boton('Cancelar', drawer()!));
       await click(boton('Nuevo Contacto'));
-      expect(drawer()!.getAttribute('aria-label')).toBe('Nuevo contacto');
+      expect(nombreDialogo()).toBe('Nuevo contacto');
       expect(valor('nombre')).toBe('');
       expect(existe('calle')).toBe(false);
     });
@@ -391,7 +429,7 @@ describe('ContactosComponent', () => {
       history.replaceState({ nombre: 'Eva', apellidos: 'Ruiz', mobile: '611222333', notes: 'Desde recepción' }, '');
       queryParams.next(convertToParamMap({ newContact: '1' }));
       await crear();
-      expect(drawer()!.getAttribute('aria-label')).toBe('Nuevo contacto');
+      expect(nombreDialogo()).toBe('Nuevo contacto');
       expect([valor('nombre'), valor('apellidos'), valor('mobile'), valor('notes')])
         .toEqual(['Eva', 'Ruiz', '611222333', 'Desde recepción']);
       expect(valor('status')).toBe('activo');
@@ -426,7 +464,7 @@ describe('ContactosComponent', () => {
       expect(drawer()).toBeNull();
       isLoading.set(false);
       await estable();
-      expect(drawer()!.getAttribute('aria-label')).toBe('Editar contacto');
+      expect(nombreDialogo()).toBe('Editar contacto');
       expect(valor('nombre')).toBe('Ana');
       expect(navigate).toHaveBeenCalledWith([], expect.objectContaining({ queryParams: {}, replaceUrl: true }));
     });

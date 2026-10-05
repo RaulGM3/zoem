@@ -81,6 +81,8 @@ export class ContactService {
     const ref = await addDoc(this.contactsCollection(this.companyId), stripUndefinedDeep({
       ...payload,
       companyId: this.companyId,
+      createdBy: this.auth.currentUser?.uid,
+      updatedBy: this.auth.currentUser?.uid,
       createdAt: providedCreatedAt ?? serverTimestamp(),
       updatedAt: serverTimestamp(),
     }));
@@ -111,6 +113,7 @@ export class ContactService {
   async updateContact(id: string, data: Record<string, unknown>): Promise<void> {
     const payload = stripUndefinedDeep({
       ...data,
+      updatedBy: this.auth.currentUser?.uid,
       updatedAt: serverTimestamp(),
     });
     try {

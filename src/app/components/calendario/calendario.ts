@@ -12,6 +12,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { UserSyncService } from '../../core/services/user-sync.service';
 import { UsersService } from '../../core/services/users';
 import { PermissionService } from '../../core/services/permission.service';
+import { BreakpointService } from '../../core/services/breakpoint.service';
 import { HITO_ESTADO_CALENDAR_STATUS, stampEstadoChange } from '../../core/hitos/hito-estado';
 import type { Anotacion, CreateEventoData, Evento, EventoColor, EventoEstado, Hito, HitoEstado, RegistroHoraHito } from '../../interfaces';
 import type { CalendarItem, EventGroup, ViewMode, WeekDay } from './calendario.types';
@@ -91,6 +92,8 @@ export class CalendarioComponent {
   private readonly userSync = inject(UserSyncService);
   private readonly usersService = inject(UsersService);
   readonly perm = inject(PermissionService);
+  private readonly breakpoint = inject(BreakpointService);
+  readonly isMobile = this.breakpoint.isMobile;
   private readonly nav = viewChild(CalendarNavComponent);
 
   /** Miembros del despacho — para asignar y registrar horas en los hitos. */
@@ -243,6 +246,11 @@ export class CalendarioComponent {
   });
 
   toggleDate(date: string): void {
+    // Móvil: vista de una sola jornada — elegir un día sustituye la selección.
+    if (this.isMobile()) {
+      this.selectedDates.set(new Set([date]));
+      return;
+    }
     this.selectedDates.update(set => {
       const next = new Set(set);
       if (next.has(date)) next.delete(date);
@@ -265,6 +273,17 @@ export class CalendarioComponent {
     // la nueva vista — evita que siga contaminando groupedEvents/unscheduledItems.
     this.selectedDates.set(new Set());
     this.viewMode.set(mode);
+  }
+
+  /** Vuelve a la semana (o mes) actual con el día de hoy como única jornada. */
+  goToday(): void {
+    const now = new Date();
+    const anchor = this.viewMode() === 'month' ? localDateStr(now) : mondayOf(now);
+    this.currentWeekStart.set(anchor);
+    this.visibleMonthDate.set(anchor);
+    this.stripDayCount.set(this.viewMode() === 'month' ? 42 : 21);
+    this.selectedDates.set(new Set([localDateStr(now)]));
+    this.nav()?.scrollToStart();
   }
 
   prevWeek(): void {

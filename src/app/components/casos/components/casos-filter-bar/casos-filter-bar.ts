@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
-import type { CasoEstado, CasoTipo } from '../../../../interfaces';
+import { CASO_ESTADO_LABEL, type CasoEstado, type CasoTipo } from '../../../../interfaces';
 
 @Component({
   selector: 'app-casos-filter-bar',
@@ -15,4 +15,6 @@ export class CasosFilterBarComponent {
 
   readonly filterEstadoChange = output<string>();
   readonly filterTipoChange = output<string>();
+
+  readonly estadoLabel = CASO_ESTADO_LABEL;
 }

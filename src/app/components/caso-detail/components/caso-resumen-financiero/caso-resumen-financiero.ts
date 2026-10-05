@@ -1,8 +1,9 @@
-import { Component, ChangeDetectionStrategy, input, output, computed, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output, computed, signal, inject } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { LucideAngularModule, Info } from 'lucide-angular';
 import type { MovimientoGestoria, MovimientoTipo } from '../../../../interfaces';
 import { movTipoStyle } from '../mov-tipo-style';
+import { BreakpointService } from '../../../../core/services/breakpoint.service';
 
 /**
  * Tarjetas de resumen de la gestoría de un caso (ingresos, egresos con su
@@ -19,6 +20,8 @@ import { movTipoStyle } from '../mov-tipo-style';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CasoResumenFinancieroComponent {
+  private readonly bp = inject(BreakpointService);
+
   readonly movimientos = input.required<MovimientoGestoria[]>();
 
   /** Se ha pulsado un tipo en el desglose de egresos: el contenedor filtra la tabla por él. */
@@ -77,5 +80,13 @@ export class CasoResumenFinancieroComponent {
   seleccionarTipo(tipo: MovimientoTipo): void {
     this.desgloseAbierto.set(false);
     this.tipoSeleccionado.emit(tipo);
+  }
+
+  /**
+   * Abre el desglose al pasar el ratón o enfocar. En táctil un toque dispara
+   * mouseenter + foco + clic: abrir aquí y alternar en el clic lo cerraría al instante.
+   */
+  abrirPorHover(): void {
+    if (!this.bp.isMobile()) this.desgloseAbierto.set(true);
   }
 }

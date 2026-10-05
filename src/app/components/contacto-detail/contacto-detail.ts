@@ -8,6 +8,8 @@ import {
   LucideAngularModule, ArrowLeft, Edit, Phone, Mail, MapPin,
   Building2, Calendar, Tag, CalendarClock, CircleAlert, Send,
 } from 'lucide-angular';
+import { BreakpointService } from '../../core/services/breakpoint.service';
+import { ActionMenuComponent, type MenuAction } from '../../shared/components/action-menu/action-menu';
 import { INVOICES } from '../../data/dummy-data';
 import { ContactService } from '../../core/services/contact.service';
 import { ContactFolderService } from '../../core/services/contact-folder.service';
@@ -36,7 +38,7 @@ import { etiquetaDocumentoContacto } from '../../core/fiscal/documento-contacto'
 
 @Component({
   selector: 'app-contacto-detail',
-  imports: [LucideAngularModule, DecimalPipe, EstadoContactoDialogComponent, ContactoDocumentosComponent, AccionLanzadorComponent, ComunicacionesEnviadasComponent],
+  imports: [LucideAngularModule, DecimalPipe, EstadoContactoDialogComponent, ContactoDocumentosComponent, AccionLanzadorComponent, ComunicacionesEnviadasComponent, ActionMenuComponent],
   templateUrl: './contacto-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -65,6 +67,7 @@ export class ContactoDetailComponent {
   private readonly seguimientosService = inject(SeguimientoContactoService);
   readonly usersService = inject(UsersService);
   readonly perm = inject(PermissionService);
+  protected readonly bp = inject(BreakpointService);
 
   contacto = signal<Contact | null>(null);
 
@@ -315,6 +318,25 @@ export class ContactoDetailComponent {
   onEditar(): void {
     if (!this.perm.can('Contactos', 'editar')) return;
     this.router.navigate(['/contactos'], { queryParams: { editContact: this.id() } });
+  }
+
+  /** Acciones de la cabecera en móvil. Mismo permiso que el botón Editar de escritorio. */
+  accionesContacto(): MenuAction[] {
+    if (!this.perm.can('Contactos', 'editar')) return [];
+    return [
+      { id: 'edit', label: 'Editar contacto', icon: Edit },
+      { id: 'estado', label: 'Cambiar estado', icon: CalendarClock },
+    ];
+  }
+
+  onAccion(id: string): void {
+    if (id === 'edit') this.onEditar();
+    else if (id === 'estado') this.abrirEstado();
+  }
+
+  /** Teléfono para la llamada rápida: móvil primero, fijo como alternativa. */
+  telefonoRapido(c: Contact): string | undefined {
+    return c.mobile || c.phone || undefined;
   }
 
   // --- Notas (autoguardado) ---

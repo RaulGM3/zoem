@@ -1,6 +1,10 @@
-import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, input, output } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import type { Caso } from '../../../../interfaces';
+import { BreakpointService } from '../../../../core/services/breakpoint.service';
+import {
+  ResponsiveListComponent, ListCardDirective, ListTableDirective,
+} from '../../../../shared/components/responsive-list/responsive-list';
 
 export interface ResumenCaso {
   ingresos: number;
@@ -13,11 +17,13 @@ export interface ResumenCaso {
 @Component({
   selector: 'app-tesoreria-casos-tab',
   host: { class: 'block' },
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, ResponsiveListComponent, ListCardDirective, ListTableDirective],
   templateUrl: './casos-tab.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TesoreriaCasosTabComponent {
+  protected readonly bp = inject(BreakpointService);
+
   readonly casosContables = input.required<Caso[]>();
   readonly resumenPorCaso = input.required<Map<string, ResumenCaso>>();
   // Totales del pie de tabla: siempre la suma de las mismas filas visibles

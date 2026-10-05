@@ -8,12 +8,12 @@
   } @else {
 
     <!-- Selección de cuenta + importación -->
-    <div class="rounded-xl p-4 flex flex-wrap items-end gap-4" style="background:var(--surface);border:1px solid var(--border)">
+    <div data-conciliacion-barra class="flex flex-col gap-3 rounded-xl p-4 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4"
+      style="background:var(--surface);border:1px solid var(--border)">
       <div class="space-y-1">
-        <label class="form-label">Cuenta</label>
-        <select [value]="cuentaSeleccionada()" (change)="cuentaSeleccionada.set($any($event.target).value)"
-          class="form-select" style="width:auto;min-width:220px"
-          aria-label="Seleccionar cuenta">
+        <label for="conciliacion-cuenta" class="form-label">Cuenta</label>
+        <select id="conciliacion-cuenta" [value]="cuentaSeleccionada()" (change)="cuentaSeleccionada.set($any($event.target).value)"
+          class="form-select w-full sm:w-auto sm:min-w-[220px]">
           <option value="" disabled>Selecciona una cuenta</option>
           @for (c of cuentas(); track c.id) {
             <option [value]="c.id">{{ c.nombre }}{{ c.entidad ? ' · ' + c.entidad : '' }}</option>
@@ -22,27 +22,22 @@
       </div>
 
       @if (cuentaSeleccionada()) {
-        <label class="inline-flex items-center gap-2 cursor-pointer rounded-xl px-3 py-2 text-sm font-semibold text-white"
-          style="background:var(--brand)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-          (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
-          <lucide-icon [img]="UploadIcon" class="w-4 h-4" />
+        <label class="max-sm:tap-target inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-white transition-colors duration-150 focus-within:outline-2 focus-within:outline-offset-2 bg-[var(--brand)] hover:bg-[var(--brand-hover)]">
+          <lucide-icon [img]="UploadIcon" class="w-4 h-4" aria-hidden="true" />
           {{ importando() ? 'Importando...' : 'Importar extracto (CSV)' }}
-          <input type="file" accept=".csv,text/csv" class="hidden" (change)="onFile($event)" [disabled]="importando()" />
+          <input type="file" accept=".csv,text/csv" class="sr-only" (change)="onFile($event)" [disabled]="importando()" />
         </label>
 
         @if (pendientes() > 0) {
           <button type="button" (click)="autoConciliar.emit(cuentaSeleccionada())"
-            class="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors duration-150"
-            style="border:1px solid var(--border);color:var(--brand);background:color-mix(in srgb,var(--brand) 6%,transparent)"
-            (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 10%,transparent)'"
-            (mouseleave)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 6%,transparent)'">
-            <lucide-icon [img]="Wand2Icon" class="w-4 h-4" />
+            class="max-sm:tap-target inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors duration-150 bg-[color-mix(in_srgb,var(--brand)_6%,transparent)] hover:bg-[color-mix(in_srgb,var(--brand)_10%,transparent)]"
+            style="border:1px solid var(--border);color:var(--brand)">
+            <lucide-icon [img]="Wand2Icon" class="w-4 h-4" aria-hidden="true" />
             Conciliar automáticamente
           </button>
         }
 
-        <div class="ml-auto text-right">
+        <div class="sm:ml-auto sm:text-right">
           <p class="text-[10.5px] uppercase tracking-wider font-semibold" style="color:var(--text-muted);font-family:var(--font-mono)">Saldo según extracto</p>
           <p class="text-lg font-bold tabular-nums mt-0.5" style="color:var(--text-strong);font-family:var(--font-display)">
             @if (saldoExtracto() !== null) { {{ saldoExtracto() | number:'1.2-2' }} € }
@@ -55,8 +50,8 @@
     @if (cuentaSeleccionada()) {
       <!-- Líneas del extracto -->
       <div class="rounded-xl overflow-hidden" style="background:var(--surface);border:1px solid var(--border)">
-        <div class="flex items-center justify-between px-4 py-3" style="border-bottom:1px solid var(--border)">
-          <h3 class="text-sm font-semibold" style="color:var(--text-strong)">Líneas del extracto</h3>
+        <div class="flex items-center justify-between gap-2 px-4 py-3" style="border-bottom:1px solid var(--border)">
+          <h2 class="text-sm font-semibold" style="color:var(--text-strong)">Líneas del extracto</h2>
           <span class="text-xs" style="color:var(--text-muted)">{{ pendientes() }} pendientes de casar</span>
         </div>
 
@@ -66,90 +61,135 @@
             <p class="text-xs mt-1">Importa el CSV del banco para empezar a conciliar.</p>
           </div>
         } @else {
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead style="background:var(--surface-2)">
-                <tr style="border-bottom:1px solid var(--border)">
-                  <th class="px-4 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wider"
-                    style="color:var(--text-muted);font-family:var(--font-mono)">Fecha</th>
-                  <th class="px-4 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wider"
-                    style="color:var(--text-muted);font-family:var(--font-mono)">Concepto</th>
-                  <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
-                    style="color:var(--text-muted);font-family:var(--font-mono)">Importe</th>
-                  <th class="px-4 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wider"
-                    style="color:var(--text-muted);font-family:var(--font-mono)">Estado</th>
-                  <th class="px-4 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wider"
-                    style="color:var(--text-muted);font-family:var(--font-mono)">Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (l of lineasCuenta(); track l.id) {
-                  <tr style="border-bottom:1px solid var(--border)">
-                    <td class="px-4 py-3 whitespace-nowrap" style="color:var(--text-muted);font-family:var(--font-mono)">{{ l.fecha }}</td>
-                    <td class="px-4 py-3" style="color:var(--text-body)">{{ l.concepto }}</td>
-                    <td class="px-4 py-3 text-right font-medium tabular-nums"
-                      [style.color]="l.importe >= 0 ? 'var(--success)' : 'var(--danger)'"
-                      style="font-family:var(--font-mono)">
+          <div class="p-3 sm:p-0">
+            <app-responsive-list [items]="lineasCuenta()" trackBy="id">
+              <ng-template [appListCard]="lineasCuenta()" let-l>
+                <div data-linea-card class="rounded-xl p-3" style="border:1px solid var(--border)">
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                      <p class="text-xs" style="color:var(--text-muted);font-family:var(--font-mono)">{{ l.fecha }}</p>
+                      <p class="mt-0.5 break-words text-sm" style="color:var(--text-body)">{{ l.concepto }}</p>
+                    </div>
+                    <p class="shrink-0 text-sm font-semibold tabular-nums" style="font-family:var(--font-mono)"
+                      [style.color]="l.importe >= 0 ? 'var(--success)' : 'var(--danger)'">
                       {{ l.importe >= 0 ? '+' : '' }}{{ l.importe | number:'1.2-2' }} €
-                    </td>
-                    <td class="px-4 py-3">
-                      @switch (l.estado) {
-                        @case ('casado') {
-                          <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold"
-                            style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">
-                            <lucide-icon [img]="CheckCircle2Icon" class="w-3 h-3" /> Casado
-                          </span>
-                        }
-                        @case ('ignorado') {
-                          <span class="rounded-full px-2 py-0.5 text-xs font-bold"
-                            style="background:var(--surface-2);color:var(--text-muted)">Ignorado</span>
-                        }
-                        @default {
-                          <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold"
-                            style="background:color-mix(in srgb,var(--warning) 12%,transparent);color:var(--warning)">
-                            <lucide-icon [img]="AlertTriangleIcon" class="w-3 h-3" /> Pendiente
-                          </span>
-                        }
-                      }
-                    </td>
-                    <td class="px-4 py-3">
-                      @if (l.estado === 'pendiente') {
-                        <div class="flex items-center gap-2">
-                          <select class="form-select text-xs" style="width:auto;min-width:160px;padding:0.25rem 0.5rem;border-radius:0.5rem"
-                            (change)="casar.emit({ cuentaId: l.cuentaId, lineaId: l.id, movimientoId: $any($event.target).value }); $any($event.target).value = ''">
-                            <option value="" selected>Casar con…</option>
-                            @for (m of movimientosDisponibles(); track m.id) {
-                              <option [value]="m.id">
-                                {{ m.fecha }} · {{ m.esEntrada ? '+' : '−' }}{{ m.importe | number:'1.2-2' }} € · {{ m.concepto }}
-                              </option>
+                    </p>
+                  </div>
+                  <div class="mt-2 flex items-center justify-between gap-2">
+                    <ng-container [ngTemplateOutlet]="estadoBadge" [ngTemplateOutletContext]="{ $implicit: l.estado }" />
+                    @if (l.estado !== 'pendiente') {
+                      <button type="button" data-deshacer (click)="desconciliar.emit({ cuentaId: l.cuentaId, lineaId: l.id })"
+                        class="tap-target inline-flex items-center gap-1 rounded-lg px-2 text-xs transition-colors duration-150 hover:bg-[var(--surface-2)]"
+                        style="color:var(--text-muted)">
+                        <lucide-icon [img]="UnlinkIcon" class="w-3.5 h-3.5" aria-hidden="true" /> Deshacer
+                      </button>
+                    }
+                  </div>
+                  @if (l.estado === 'pendiente') {
+                    <div class="mt-2 flex items-center gap-2">
+                      <ng-container [ngTemplateOutlet]="casarSelect" [ngTemplateOutletContext]="{ $implicit: l }" />
+                      <button type="button" data-ignorar (click)="ignorar.emit({ cuentaId: l.cuentaId, lineaId: l.id })"
+                        class="tap-target inline-flex shrink-0 items-center justify-center rounded-lg transition-colors duration-150 hover:bg-[var(--surface-2)]"
+                        style="color:var(--text-muted)"
+                        [attr.aria-label]="'Ignorar línea ' + l.concepto">
+                        <lucide-icon [img]="EyeOffIcon" class="w-4 h-4" aria-hidden="true" />
+                      </button>
+                    </div>
+                  }
+                </div>
+              </ng-template>
+
+              <ng-template [appListTable]="lineasCuenta()" let-lineas>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-sm">
+                    <thead style="background:var(--surface-2)">
+                      <tr style="border-bottom:1px solid var(--border)">
+                        <th class="px-4 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wider"
+                          style="color:var(--text-muted);font-family:var(--font-mono)">Fecha</th>
+                        <th class="px-4 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wider"
+                          style="color:var(--text-muted);font-family:var(--font-mono)">Concepto</th>
+                        <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
+                          style="color:var(--text-muted);font-family:var(--font-mono)">Importe</th>
+                        <th class="px-4 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wider"
+                          style="color:var(--text-muted);font-family:var(--font-mono)">Estado</th>
+                        <th class="px-4 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wider"
+                          style="color:var(--text-muted);font-family:var(--font-mono)">Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (l of lineas; track l.id) {
+                        <tr style="border-bottom:1px solid var(--border)">
+                          <td class="px-4 py-3 whitespace-nowrap" style="color:var(--text-muted);font-family:var(--font-mono)">{{ l.fecha }}</td>
+                          <td class="px-4 py-3" style="color:var(--text-body)">{{ l.concepto }}</td>
+                          <td class="px-4 py-3 text-right font-medium tabular-nums"
+                            [style.color]="l.importe >= 0 ? 'var(--success)' : 'var(--danger)'"
+                            style="font-family:var(--font-mono)">
+                            {{ l.importe >= 0 ? '+' : '' }}{{ l.importe | number:'1.2-2' }} €
+                          </td>
+                          <td class="px-4 py-3">
+                            <ng-container [ngTemplateOutlet]="estadoBadge" [ngTemplateOutletContext]="{ $implicit: l.estado }" />
+                          </td>
+                          <td class="px-4 py-3">
+                            @if (l.estado === 'pendiente') {
+                              <div class="flex items-center gap-2">
+                                <ng-container [ngTemplateOutlet]="casarSelect" [ngTemplateOutletContext]="{ $implicit: l }" />
+                                <button type="button" (click)="ignorar.emit({ cuentaId: l.cuentaId, lineaId: l.id })"
+                                  class="rounded-lg p-1.5 transition-colors duration-150 text-[color:var(--text-faint)] hover:bg-[var(--surface-2)] hover:text-[color:var(--text-body)]"
+                                  title="Ignorar línea" [attr.aria-label]="'Ignorar línea ' + l.concepto">
+                                  <lucide-icon [img]="EyeOffIcon" class="w-3.5 h-3.5" aria-hidden="true" />
+                                </button>
+                              </div>
+                            } @else {
+                              <button type="button" (click)="desconciliar.emit({ cuentaId: l.cuentaId, lineaId: l.id })"
+                                class="inline-flex items-center gap-1 text-xs transition-colors duration-150 text-[color:var(--text-faint)] hover:text-[color:var(--text-body)]">
+                                <lucide-icon [img]="UnlinkIcon" class="w-3.5 h-3.5" aria-hidden="true" /> Deshacer
+                              </button>
                             }
-                          </select>
-                          <button type="button" (click)="ignorar.emit({ cuentaId: l.cuentaId, lineaId: l.id })"
-                            class="rounded-lg p-1.5 transition-colors duration-150"
-                            style="color:var(--text-faint)"
-                            (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-body)'"
-                            (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
-                            title="Ignorar línea" aria-label="Ignorar línea">
-                            <lucide-icon [img]="EyeOffIcon" class="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      } @else {
-                        <button type="button" (click)="desconciliar.emit({ cuentaId: l.cuentaId, lineaId: l.id })"
-                          class="inline-flex items-center gap-1 text-xs transition-colors duration-150"
-                          style="color:var(--text-faint)"
-                          (mouseenter)="$any($event.currentTarget).style.color='var(--text-body)'"
-                          (mouseleave)="$any($event.currentTarget).style.color='var(--text-faint)'">
-                          <lucide-icon [img]="UnlinkIcon" class="w-3.5 h-3.5" /> Deshacer
-                        </button>
+                          </td>
+                        </tr>
                       }
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
+                    </tbody>
+                  </table>
+                </div>
+              </ng-template>
+            </app-responsive-list>
           </div>
         }
       </div>
     }
   }
 </div>
+
+<ng-template #estadoBadge let-estado>
+  @switch (estado) {
+    @case ('casado') {
+      <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold"
+        style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">
+        <lucide-icon [img]="CheckCircle2Icon" class="w-3 h-3" aria-hidden="true" /> Casado
+      </span>
+    }
+    @case ('ignorado') {
+      <span class="rounded-full px-2 py-0.5 text-xs font-bold"
+        style="background:var(--surface-2);color:var(--text-muted)">Ignorado</span>
+    }
+    @default {
+      <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold"
+        style="background:color-mix(in srgb,var(--warning) 12%,transparent);color:var(--warning)">
+        <lucide-icon [img]="AlertTriangleIcon" class="w-3 h-3" aria-hidden="true" /> Pendiente
+      </span>
+    }
+  }
+</ng-template>
+
+<ng-template #casarSelect let-l>
+  <select class="form-select min-w-0 flex-1 text-sm sm:flex-none sm:min-w-[160px] sm:text-xs"
+    [attr.aria-label]="'Casar línea ' + l.concepto + ' con un movimiento'"
+    (change)="casar.emit({ cuentaId: l.cuentaId, lineaId: l.id, movimientoId: $any($event.target).value }); $any($event.target).value = ''">
+    <option value="" selected>Casar con…</option>
+    @for (m of movimientosDisponibles(); track m.id) {
+      <option [value]="m.id">
+        {{ m.fecha }} · {{ m.esEntrada ? '+' : '−' }}{{ m.importe | number:'1.2-2' }} € · {{ m.concepto }}
+      </option>
+    }
+  </select>
+</ng-template>

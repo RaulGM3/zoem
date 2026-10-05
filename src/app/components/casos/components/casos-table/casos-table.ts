@@ -1,7 +1,13 @@
 import { Component, ChangeDetectionStrategy, input, output, signal } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
-import { LucideAngularModule, MoreHorizontal, Trash2 } from 'lucide-angular';
-import type { Caso } from '../../../../interfaces';
+import { DatePipe, DecimalPipe } from '@angular/common';
+import { LucideAngularModule, MoreHorizontal, Trash2, ExternalLink, CalendarClock, Flag } from 'lucide-angular';
+import { ActionMenuComponent, type MenuAction } from '../../../../shared/components/action-menu/action-menu';
+import {
+  ListCardDirective,
+  ListTableDirective,
+  ResponsiveListComponent,
+} from '../../../../shared/components/responsive-list/responsive-list';
+import { CASO_ESTADO_LABEL, type Caso } from '../../../../interfaces';
 
 @Component({
   selector: 'app-casos-table',
@@ -12,7 +18,15 @@ import type { Caso } from '../../../../interfaces';
     // su trigger, aunque siga siendo clicable. Lo cerramos en cualquier scroll.
     '(window:scroll)': 'closeDropdownOnScroll()',
   },
-  imports: [LucideAngularModule, DecimalPipe],
+  imports: [
+    LucideAngularModule,
+    DecimalPipe,
+    DatePipe,
+    ActionMenuComponent,
+    ResponsiveListComponent,
+    ListTableDirective,
+    ListCardDirective,
+  ],
   templateUrl: './casos-table.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -28,6 +42,9 @@ export class CasosTableComponent {
 
   readonly MoreHorizontalIcon = MoreHorizontal;
   readonly TrashIcon = Trash2;
+  readonly CalendarIcon = CalendarClock;
+  readonly FlagIcon = Flag;
+  readonly estadoLabel = CASO_ESTADO_LABEL;
 
   /** Longitud máxima del subtítulo antes de truncar. La lista completa queda en el `title`. */
   private readonly MAX_SUBTITULO = 60;
@@ -36,6 +53,18 @@ export class CasosTableComponent {
   readonly activeCaso = signal<Caso | null>(null);
   readonly dropdownPos = signal<{ top: number; right: number } | null>(null);
   readonly casoToDelete = signal<Caso | null>(null);
+
+  /** Acciones del menú de tarjeta (móvil); misma regla de permiso que el dropdown de escritorio. */
+  accionesCaso(): MenuAction[] {
+    const acciones: MenuAction[] = [{ id: 'abrir', label: 'Abrir caso', icon: ExternalLink }];
+    if (this.canDelete()) acciones.push({ id: 'eliminar', label: 'Eliminar caso', icon: Trash2, danger: true });
+    return acciones;
+  }
+
+  ejecutarAccion(caso: Caso, id: string): void {
+    if (id === 'abrir') this.casoClick.emit(caso);
+    else if (id === 'eliminar' && this.canDelete()) this.casoToDelete.set(caso);
+  }
 
   /** Cierra el dropdown contextual si la página se desplaza mientras está abierto (ver `host` listener). */
   closeDropdownOnScroll(): void {

@@ -10,7 +10,7 @@ import type { TipoIva } from '../../../../interfaces/iva';
 import { GestoriaService } from '../../../../core/services/gestoria.service';
 import { CuentasService } from '../../../../core/services/cuentas.service';
 import { ToastService } from '../../../../core/services/toast.service';
-import { FocusTrapDirective } from '../../../../shared/directives/focus-trap.directive';
+import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 
 type IvaSel = '21' | '10' | '4' | '0' | 'exento';
 
@@ -46,7 +46,7 @@ const IVA_INCLUIDO_POR_TIPO: Record<MovimientoTipo, boolean> = {
 
 @Component({
   selector: 'app-movimiento-general-drawer',
-  imports: [LucideAngularModule, DecimalPipe, FocusTrapDirective],
+  imports: [LucideAngularModule, DecimalPipe, OverlayShellComponent],
   templateUrl: './movimiento-general-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

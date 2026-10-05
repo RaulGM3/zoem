@@ -1,10 +1,10 @@
 @if (editing()) {
-  <div class="rounded-xl p-6 space-y-4 max-w-2xl" style="background:var(--surface);border:1px solid var(--border)">
+  <div class="rounded-xl p-4 sm:p-6 space-y-4 max-w-2xl" style="background:var(--surface);border:1px solid var(--border)">
     <h2 class="font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Editar caso</h2>
 
     <div class="space-y-1">
-      <label class="form-label">Título</label>
-      <input
+      <label class="form-label" for="caso-edit-titulo">Título</label>
+      <input id="caso-edit-titulo"
         type="text"
         [value]="editTitulo()"
         (input)="editTitulo.set($any($event.target).value)"
@@ -13,8 +13,8 @@
     </div>
 
     <div class="space-y-1">
-      <label class="form-label">Descripción</label>
-      <textarea
+      <label class="form-label" for="caso-edit-desc">Descripción</label>
+      <textarea id="caso-edit-desc"
         rows="3"
         [value]="editDescripcion()"
         (input)="editDescripcion.set($any($event.target).value)"
@@ -22,44 +22,48 @@
       ></textarea>
     </div>
 
-    <div class="grid grid-cols-2 gap-3">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <div class="space-y-1">
-        <label class="form-label">Tipo</label>
-        <select [value]="editTipo()" (change)="editTipo.set($any($event.target).value)" class="form-select">
+        <label class="form-label" for="caso-edit-tipo">Tipo</label>
+        <select id="caso-edit-tipo" [value]="editTipo()" (change)="editTipo.set($any($event.target).value)" class="form-select">
           @for (t of tipos; track t) { <option [value]="t">{{ t }}</option> }
         </select>
       </div>
       <div class="space-y-1">
-        <label class="form-label">Estado</label>
-        <select [value]="editEstado()" (change)="editEstado.set($any($event.target).value)" class="form-select">
+        <label class="form-label" for="caso-edit-estado">Estado</label>
+        <select id="caso-edit-estado" [value]="editEstado()" (change)="editEstado.set($any($event.target).value)" class="form-select">
           @for (e of estados; track e) { <option [value]="e">{{ e }}</option> }
         </select>
       </div>
       <div class="space-y-1">
-        <label class="form-label">Prioridad</label>
-        <select [value]="editPrioridad()" (change)="editPrioridad.set($any($event.target).value)" class="form-select">
+        <label class="form-label" for="caso-edit-prioridad">Prioridad</label>
+        <select id="caso-edit-prioridad" [value]="editPrioridad()" (change)="editPrioridad.set($any($event.target).value)" class="form-select">
           @for (p of prioridades; track p) { <option [value]="p">{{ p }}</option> }
         </select>
       </div>
       <div class="space-y-1">
-        <label class="form-label">Vencimiento</label>
-        <input type="date" [value]="editVencimiento()" (input)="editVencimiento.set($any($event.target).value)" class="form-input" />
+        <label class="form-label" for="caso-edit-venc">Vencimiento</label>
+        <input id="caso-edit-venc" type="date" [value]="editVencimiento()" (input)="editVencimiento.set($any($event.target).value)" class="form-input" />
+      </div>
+      <div class="space-y-1">
+        <label class="form-label" for="caso-encargado">Encargado</label>
+        <select id="caso-encargado" [value]="editEncargadoId()" (change)="editEncargadoId.set($any($event.target).value)" class="form-select">
+          <option value="" [selected]="!editEncargadoId()">Sin asignar</option>
+          @for (o of encargadoOptions(); track o.value) {
+            <option [value]="o.value" [selected]="o.value === editEncargadoId()">{{ o.label }}</option>
+          }
+        </select>
       </div>
     </div>
 
     <div class="flex gap-2 pt-2">
       <button (click)="cancelEdit.emit()"
-        class="px-4 py-2 text-sm rounded-lg transition-colors duration-150"
-        style="border:1px solid var(--border);color:var(--text-muted)"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-        (mouseleave)="$any($event.currentTarget).style.background=''">
+        class="max-sm:tap-target px-4 py-2 text-sm rounded-lg transition-colors duration-150 hover:bg-[var(--surface-2)]"
+        style="border:1px solid var(--border);color:var(--text-muted)">
         Cancelar
       </button>
       <button (click)="submit()" [disabled]="saving() || !editTitulo().trim()"
-        class="px-4 py-2 text-sm rounded-lg text-white transition-colors duration-150 disabled:opacity-50"
-        style="background:var(--brand)"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-        (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+        class="max-sm:tap-target px-4 py-2 text-sm rounded-lg text-white bg-[var(--brand)] transition-colors duration-150 hover:bg-[var(--brand-hover)] disabled:opacity-50">
         {{ saving() ? 'Guardando...' : 'Guardar' }}
       </button>
     </div>
@@ -67,11 +71,11 @@
 } @else {
   <div class="space-y-6 max-w-2xl">
     <!-- Info cards -->
-    <div class="rounded-xl p-6 space-y-4" style="background:var(--surface);border:1px solid var(--border)">
+    <div class="rounded-xl p-4 sm:p-6 space-y-4" style="background:var(--surface);border:1px solid var(--border)">
       @if (caso().descripcion) {
         <p class="text-sm" style="color:var(--text-muted)">{{ caso().descripcion }}</p>
       }
-      <dl class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+      <dl class="grid grid-cols-1 gap-x-6 sm:grid-cols-2 gap-y-3 text-sm">
         <div>
           <dt class="text-xs uppercase tracking-wide" style="color:var(--text-faint)">Tipo</dt>
           <dd>
@@ -96,11 +100,15 @@
           <dt class="text-xs uppercase tracking-wide" style="color:var(--text-faint)">Vencimiento</dt>
           <dd class="mt-1" style="color:var(--text-body)">{{ caso().vencimiento ?? '—' }}</dd>
         </div>
+        <div>
+          <dt class="text-xs uppercase tracking-wide" style="color:var(--text-faint)">Encargado</dt>
+          <dd class="mt-1" style="color:var(--text-body)">{{ encargadoNombre() }}</dd>
+        </div>
       </dl>
     </div>
 
     <!-- Contacts -->
-    <div class="rounded-xl p-6 space-y-4" style="background:var(--surface);border:1px solid var(--border)">
+    <div class="rounded-xl p-4 sm:p-6 space-y-4" style="background:var(--surface);border:1px solid var(--border)">
       <h3 class="font-medium" style="color:var(--text-strong)">Clientes vinculados</h3>
 
       @if (linkedContacts().length > 0) {
@@ -116,10 +124,7 @@
                 </div>
                 @if (canEdit()) {
                   <button (click)="askRemoveContact(c)"
-                    class="p-1 rounded transition-colors duration-150 shrink-0"
-                    style="color:var(--text-faint)"
-                    (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)';$any($event.currentTarget).style.color='var(--danger)'"
-                    (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+                    class="max-sm:tap-target inline-flex items-center justify-center p-1 rounded transition-colors duration-150 shrink-0 text-[color:var(--text-faint)] hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] hover:text-[color:var(--danger)]"
                     [attr.aria-label]="'Quitar ' + displayName(c)">
                     <lucide-icon [img]="XIcon" class="w-3.5 h-3.5" />
                   </button>
@@ -171,10 +176,8 @@
             @for (r of searchResults(); track r.id) {
               <li>
                 <button
-                  class="w-full text-left px-3 py-2 text-sm transition-colors duration-150"
+                  class="w-full text-left px-3 py-2 text-sm transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--brand)_8%,transparent)]"
                   style="color:var(--text-body)"
-                  (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 8%,transparent)'"
-                  (mouseleave)="$any($event.currentTarget).style.background=''"
                   (click)="addContact.emit(r.id)"
                 >{{ displayName(r) }}</button>
               </li>
@@ -214,19 +217,14 @@
       </p>
       <div class="mt-5 flex gap-3 justify-end">
         <button
-          class="px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-150"
-          style="background:var(--surface-2);color:var(--text-body)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--border)'"
-          (mouseleave)="$any($event.currentTarget).style.background='var(--surface-2)'"
+          class="max-sm:tap-target px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-150 bg-[var(--surface-2)] hover:bg-[var(--border)]"
+          style="color:var(--text-body)"
           (click)="cancelRemoveContact()"
         >
           Cancelar
         </button>
         <button
-          class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors duration-150"
-          style="background:var(--danger)"
-          (mouseenter)="$any($event.currentTarget).style.filter='brightness(0.9)'"
-          (mouseleave)="$any($event.currentTarget).style.filter=''"
+          class="max-sm:tap-target px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors duration-150 bg-[var(--danger)] hover:brightness-90"
           (click)="confirmRemoveContact()"
         >
           Quitar

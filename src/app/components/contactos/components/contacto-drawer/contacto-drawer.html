@@ -1,36 +1,7 @@
-<!-- Drawer backdrop -->
-<div class="fixed inset-0 bg-black/40 z-40" (click)="close()" aria-hidden="true"></div>
-
-<!-- Modal drawer -->
-<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-  <aside
-    class="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl shadow-2xl"
-    style="background:var(--surface);border:1px solid var(--border)"
-    role="dialog"
-    aria-modal="true"
-    [attr.aria-label]="editingId() ? 'Editar contacto' : 'Nuevo contacto'"
-    appFocusTrap
-    (escapeKey)="close()"
-  >
-    <!-- Header del drawer -->
-    <div class="flex items-center justify-between px-6 py-4 shrink-0"
-      style="border-bottom:1px solid var(--border)">
-      <h2 class="text-base font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">
-        {{ editingId() ? 'Editar contacto' : 'Nuevo contacto' }}
-      </h2>
-      <button (click)="close()"
-        class="rounded-xl p-1.5 transition-colors duration-150"
-        style="color:var(--text-muted)"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-        (mouseleave)="$any($event.currentTarget).style.background=''"
-        aria-label="Cerrar">
-        <span class="material-symbols-outlined" style="font-size:20px">close</span>
-      </button>
-    </div>
-
+<app-overlay-shell [open]="true" [title]="editingId() ? 'Editar contacto' : 'Nuevo contacto'" variant="drawer" (closed)="close()">
     <!-- Step indicator (solo contacto nuevo) -->
     @if (!editingId()) {
-      <div class="flex items-center gap-2 px-6 pt-5 pb-1">
+      <div class="flex items-center gap-2 px-5 pt-5 pb-1">
         <div class="flex items-center gap-1.5 shrink-0">
           <span class="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white"
             [style.background]="formStep() === 2 ? 'var(--success)' : 'var(--brand)'">
@@ -55,7 +26,7 @@
     }
 
     <!-- Body scrollable -->
-    <form [formGroup]="form" (ngSubmit)="saveContact()" class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+    <form [formGroup]="form" (ngSubmit)="saveContact()" class="px-5 py-5 space-y-5">
 
       <!-- Tipo de contacto -->
       @if (showStep1Fields()) {
@@ -83,7 +54,7 @@
       <!-- PERSONA FÍSICA -->
       @if (formType() === 'persona_fisica') {
         @if (showStep1Fields()) {
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label for="nombre" class="form-label">Nombre *</label>
               <input id="nombre" formControlName="nombre" type="text" class="form-input"
@@ -101,7 +72,7 @@
               }
             </div>
           </div>
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label for="nifType" class="form-label">Tipo de documento</label>
               <select id="nifType" formControlName="nifType" class="form-select">
@@ -153,7 +124,7 @@
               <p class="form-error">Campo obligatorio</p>
             }
           </div>
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label for="cifType" class="form-label">Tipo de documento</label>
               <select id="cifType" formControlName="cifType" class="form-select">
@@ -175,7 +146,7 @@
           </div>
         }
         @if (showStep2Fields()) {
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label for="nombreComercial" class="form-label">Nombre comercial</label>
               <input id="nombreComercial" formControlName="nombreComercial" type="text" class="form-input" />
@@ -196,7 +167,7 @@
               </select>
             </div>
           </div>
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label for="sectorActividad" class="form-label">Sector de actividad</label>
               <input id="sectorActividad" formControlName="sectorActividad" type="text" class="form-input" />
@@ -243,8 +214,8 @@
         <div class="form-divider">
           <p class="form-section-title">Dirección</p>
           <div class="space-y-3">
-            <div class="grid grid-cols-3 gap-3">
-              <div class="col-span-2">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div class="sm:col-span-2">
                 <label for="calle" class="form-label">Calle</label>
                 <input id="calle" formControlName="calle" type="text" class="form-input" />
               </div>
@@ -253,7 +224,7 @@
                 <input id="numero" formControlName="numero" type="text" class="form-input" />
               </div>
             </div>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label for="codigoPostal" class="form-label">C.P.</label>
                 <input id="codigoPostal" formControlName="codigoPostal" type="text" class="form-input" />
@@ -263,7 +234,7 @@
                 <input id="municipio" formControlName="municipio" type="text" class="form-input" />
               </div>
             </div>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label for="provincia" class="form-label">Provincia</label>
                 <input id="provincia" formControlName="provincia" type="text" class="form-input" />
@@ -299,7 +270,7 @@
               placeholder="Ej. Divorcio, herencia, consulta laboral…"
               class="form-input" />
           </div>
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label for="canalEntrada" class="form-label">Canal de entrada</label>
               <select id="canalEntrada" formControlName="canalEntrada" class="form-select">
@@ -326,52 +297,41 @@
     </form>
 
     <!-- Footer sticky -->
-    <div class="flex gap-3 px-6 py-4 shrink-0"
-      style="border-top:1px solid var(--border);background:var(--surface)">
+    <div footer class="flex gap-3 px-5 py-4">
       @if (!editingId() && formStep() === 1) {
         <button type="button" (click)="close()"
-          class="flex-1 rounded-xl py-2.5 text-sm font-medium transition-colors duration-150"
+          class="tap-target flex-1 rounded-xl py-2.5 text-sm font-medium transition-colors duration-150"
           style="border:1px solid var(--border);color:var(--text-body);background:var(--surface-2)">
           Cancelar
         </button>
         <button type="button" (click)="nextStep()"
-          class="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white flex items-center justify-center gap-1.5 transition-all duration-150"
-          style="background:var(--brand)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-          (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+          class="tap-target flex-1 rounded-xl py-2.5 text-sm font-semibold text-white flex items-center justify-center gap-1.5 transition-all duration-150 bg-[var(--brand)] hover:bg-[var(--brand-hover)] disabled:hover:bg-[var(--brand)]">
           Continuar
           <span class="material-symbols-outlined" style="font-size:16px">chevron_right</span>
         </button>
       } @else if (!editingId() && formStep() === 2) {
         <button type="button" (click)="prevStep()"
-          class="rounded-xl px-3 py-2.5 text-sm font-medium flex items-center gap-1 transition-colors duration-150"
+          class="tap-target rounded-xl px-3 py-2.5 text-sm font-medium flex items-center gap-1 transition-colors duration-150"
           style="border:1px solid var(--border);color:var(--text-body);background:var(--surface-2)">
           <span class="material-symbols-outlined" style="font-size:16px">chevron_left</span>
           Atrás
         </button>
         <button type="button" (click)="saveContact()" [disabled]="isSaving()"
-          class="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all duration-150"
-          style="background:var(--brand)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-          (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+          class="tap-target flex-1 rounded-xl py-2.5 text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all duration-150 bg-[var(--brand)] hover:bg-[var(--brand-hover)] disabled:hover:bg-[var(--brand)]">
           @if (isSaving()) { <lucide-icon [img]="Loader2Icon" size="16" class="animate-spin"></lucide-icon> }
           Guardar contacto
         </button>
       } @else {
         <button type="button" (click)="close()"
-          class="flex-1 rounded-xl py-2.5 text-sm font-medium transition-colors duration-150"
+          class="tap-target flex-1 rounded-xl py-2.5 text-sm font-medium transition-colors duration-150"
           style="border:1px solid var(--border);color:var(--text-body);background:var(--surface-2)">
           Cancelar
         </button>
         <button type="button" (click)="saveContact()" [disabled]="isSaving()"
-          class="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all duration-150"
-          style="background:var(--brand)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-          (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+          class="tap-target flex-1 rounded-xl py-2.5 text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all duration-150 bg-[var(--brand)] hover:bg-[var(--brand-hover)] disabled:hover:bg-[var(--brand)]">
           @if (isSaving()) { <lucide-icon [img]="Loader2Icon" size="16" class="animate-spin"></lucide-icon> }
           Guardar cambios
         </button>
       }
     </div>
-  </aside>
-</div>
+</app-overlay-shell>

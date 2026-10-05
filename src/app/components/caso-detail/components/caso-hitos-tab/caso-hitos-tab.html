@@ -37,20 +37,20 @@
               [class]="getHitoEstadoColor(hito.estado)"
               [attr.aria-label]="'Cambiar estado del hito, actual: ' + getHitoEstadoLabel(hito.estado)"
               [attr.title]="getHitoEstadoLabel(hito.estado)"
-              class="mt-0.5 shrink-0 disabled:cursor-not-allowed disabled:opacity-70"
+              class="max-sm:tap-target inline-flex items-center justify-center shrink-0 disabled:cursor-not-allowed disabled:opacity-70"
             >
               <lucide-icon [img]="getHitoEstadoIcon(hito.estado)" class="w-5 h-5" />
             </button>
             <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium"
+              <p class="text-sm font-medium break-words"
                 [style.color]="hito.estado === 'completado' ? 'var(--text-faint)' : 'var(--text-strong)'"
                 [style.text-decoration]="hito.estado === 'completado' ? 'line-through' : 'none'">
                 {{ hito.titulo }}
               </p>
               @if (hito.descripcion) {
-                <p class="text-xs mt-0.5" style="color:var(--text-faint)">{{ hito.descripcion }}</p>
+                <p class="text-xs mt-0.5 break-words" style="color:var(--text-faint)">{{ hito.descripcion }}</p>
               }
-              <div class="flex items-center gap-3 mt-1 text-xs" style="color:var(--text-faint)">
+              <div data-hito-meta class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs" style="color:var(--text-faint)">
                 @if (hito.fechaEstimada) {
                   <span>{{ hito.fechaEstimada }}</span>
                 }
@@ -68,53 +68,63 @@
                 }
               </div>
             </div>
-            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              @if (tieneHorasPendientes(hito) && canEdit()) {
-                <button (click)="facturarHoras.emit(hito)"
-                  class="p-1 rounded transition-colors duration-150"
-                  (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 10%,transparent)'"
-                  (mouseleave)="$any($event.currentTarget).style.background=''"
-                  aria-label="Facturar horas del hito" title="Facturar horas como honorarios">
-                  <lucide-icon [img]="EuroIcon" class="w-3.5 h-3.5" style="color:var(--brand)" />
-                </button>
-              }
-              @if (canEdit()) {
-                <button (click)="editHito.emit(hito)"
-                  class="p-1 rounded transition-colors duration-150"
-                  (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-                  (mouseleave)="$any($event.currentTarget).style.background=''"
-                  aria-label="Editar hito">
-                  <lucide-icon [img]="Edit2Icon" class="w-3.5 h-3.5" style="color:var(--text-faint)" />
-                </button>
-              }
-              @if (canDelete()) {
-                @if (confirmingDeleteId() === hito.id) {
+            @if (bp.isMobile()) {
+              <div class="flex items-center gap-1 shrink-0">
+                @if (canDelete() && confirmingDeleteId() === hito.id) {
                   <span class="text-xs mr-1" style="color:var(--danger)">¿Seguro?</span>
                   <button (click)="confirmDelete(hito.id)"
-                    class="p-1 rounded transition-colors duration-150"
-                    (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)'"
-                    (mouseleave)="$any($event.currentTarget).style.background=''"
+                    class="max-sm:tap-target inline-flex items-center justify-center rounded p-1 transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)]"
                     aria-label="Confirmar eliminación del hito">
-                    <lucide-icon [img]="CheckIcon" class="w-3.5 h-3.5" style="color:var(--danger)" />
+                    <lucide-icon [img]="CheckIcon" class="w-4 h-4" style="color:var(--danger)" />
                   </button>
                   <button (click)="cancelDelete()"
-                    class="p-1 rounded transition-colors duration-150"
-                    (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-                    (mouseleave)="$any($event.currentTarget).style.background=''"
+                    class="max-sm:tap-target inline-flex items-center justify-center rounded p-1 transition-colors duration-150 hover:bg-[var(--surface-2)]"
                     aria-label="Cancelar">
-                    <lucide-icon [img]="XIcon" class="w-3.5 h-3.5" style="color:var(--text-faint)" />
+                    <lucide-icon [img]="XIcon" class="w-4 h-4" style="color:var(--text-faint)" />
                   </button>
-                } @else {
-                  <button (click)="requestDelete(hito.id)"
-                    class="p-1 rounded transition-colors duration-150"
-                    (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)'"
-                    (mouseleave)="$any($event.currentTarget).style.background=''"
-                    aria-label="Eliminar hito">
-                    <lucide-icon [img]="Trash2Icon" class="w-3.5 h-3.5" style="color:color-mix(in srgb,var(--danger) 70%,transparent)" />
+                } @else if (acciones(hito).length > 0) {
+                  <app-action-menu [actions]="acciones(hito)" [label]="'Acciones de ' + hito.titulo" (selected)="ejecutar($event, hito)" />
+                }
+              </div>
+            } @else {
+              <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                @if (tieneHorasPendientes(hito) && canEdit()) {
+                  <button (click)="facturarHoras.emit(hito)"
+                    class="p-1 rounded transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--brand)_10%,transparent)]"
+                    aria-label="Facturar horas del hito" title="Facturar horas como honorarios">
+                    <lucide-icon [img]="EuroIcon" class="w-3.5 h-3.5" style="color:var(--brand)" />
                   </button>
                 }
-              }
-            </div>
+                @if (canEdit()) {
+                  <button (click)="editHito.emit(hito)"
+                    class="p-1 rounded transition-colors duration-150 hover:bg-[var(--surface-2)]"
+                    aria-label="Editar hito">
+                    <lucide-icon [img]="Edit2Icon" class="w-3.5 h-3.5" style="color:var(--text-faint)" />
+                  </button>
+                }
+                @if (canDelete()) {
+                  @if (confirmingDeleteId() === hito.id) {
+                    <span class="text-xs mr-1" style="color:var(--danger)">¿Seguro?</span>
+                    <button (click)="confirmDelete(hito.id)"
+                      class="p-1 rounded transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)]"
+                      aria-label="Confirmar eliminación del hito">
+                      <lucide-icon [img]="CheckIcon" class="w-3.5 h-3.5" style="color:var(--danger)" />
+                    </button>
+                    <button (click)="cancelDelete()"
+                      class="p-1 rounded transition-colors duration-150 hover:bg-[var(--surface-2)]"
+                      aria-label="Cancelar">
+                      <lucide-icon [img]="XIcon" class="w-3.5 h-3.5" style="color:var(--text-faint)" />
+                    </button>
+                  } @else {
+                    <button (click)="requestDelete(hito.id)"
+                      class="p-1 rounded transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)]"
+                      aria-label="Eliminar hito">
+                      <lucide-icon [img]="Trash2Icon" class="w-3.5 h-3.5" style="color:color-mix(in srgb,var(--danger) 70%,transparent)" />
+                    </button>
+                  }
+                }
+              </div>
+            }
           </li>
         }
       </ul>
@@ -122,10 +132,7 @@
     @if (canEdit()) {
       <div class="p-3" style="border-top:1px solid var(--border-soft)">
         <button (click)="addHito.emit()"
-          class="w-full flex items-center justify-center gap-2 py-2 text-sm rounded-lg transition-colors duration-150"
-          style="color:var(--text-muted)"
-          (mouseenter)="$any($event.currentTarget).style.color='var(--brand)';$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 8%,transparent)'"
-          (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)';$any($event.currentTarget).style.background=''">
+          class="max-sm:tap-target w-full flex items-center justify-center gap-2 py-2 text-sm rounded-lg transition-colors duration-150 text-[color:var(--text-muted)] hover:text-[color:var(--brand)] hover:bg-[color-mix(in_srgb,var(--brand)_8%,transparent)]">
           <lucide-icon [img]="PlusIcon" class="w-4 h-4" />
           Añadir hito
         </button>
@@ -137,10 +144,8 @@
   @if (isAdmin()) {
     <div class="flex justify-end">
       <button (click)="actividadVisible.set(true)"
-        class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors duration-150"
-        style="border:1px solid var(--border);color:var(--text-muted)"
-        (mouseenter)="$any($event.currentTarget).style.color='var(--brand)';$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 8%,transparent)'"
-        (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)';$any($event.currentTarget).style.background=''">
+        class="max-sm:tap-target flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors duration-150 text-[color:var(--text-muted)] hover:text-[color:var(--brand)] hover:bg-[color-mix(in_srgb,var(--brand)_8%,transparent)]"
+        style="border:1px solid var(--border)">
         <lucide-icon [img]="ActivityIcon" class="w-4 h-4" />
         Ver actividad
       </button>
@@ -152,21 +157,19 @@
 @if (isAdmin() && actividadVisible()) {
   <div class="fixed inset-0 z-40 bg-black/30 flex items-center justify-center p-4"
     (click)="actividadVisible.set(false)">
-    <div class="rounded-xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col z-50"
+    <div class="rounded-xl shadow-2xl w-full max-w-md max-h-[80dvh] flex flex-col z-50"
       style="background:var(--surface)"
       role="dialog" aria-modal="true" aria-labelledby="actividad-dialog-title"
       (click)="$event.stopPropagation()">
-      <div class="flex items-center justify-between px-6 py-4" style="border-bottom:1px solid var(--border)">
+      <div class="flex items-center justify-between px-4 py-4 sm:px-6" style="border-bottom:1px solid var(--border)">
         <h2 id="actividad-dialog-title" class="text-base font-semibold" style="color:var(--text-strong)">Actividad</h2>
         <button (click)="actividadVisible.set(false)"
-          class="p-1.5 rounded-lg transition-colors duration-150"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-          (mouseleave)="$any($event.currentTarget).style.background=''"
+          class="max-sm:tap-target inline-flex items-center justify-center p-1.5 rounded-lg transition-colors duration-150 hover:bg-[var(--surface-2)]"
           aria-label="Cerrar">
           <lucide-icon [img]="XIcon" class="w-4 h-4" style="color:var(--text-faint)" />
         </button>
       </div>
-      <div class="flex-1 overflow-y-auto px-6 py-5">
+      <div class="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
         @if (actividad().length === 0) {
           <p class="text-sm text-center py-8" style="color:var(--text-faint)">No hay actividad registrada</p>
         } @else {

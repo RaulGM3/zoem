@@ -1,6 +1,6 @@
 <div class="rounded-xl overflow-hidden" style="background:var(--surface);border:1px solid var(--border)">
   <div class="px-4 py-3" style="border-bottom:1px solid var(--border)">
-    <h3 class="text-sm font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Contabilidad por caso</h3>
+    <h2 class="text-sm font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Contabilidad por caso</h2>
   </div>
 
   @if (loading()) {
@@ -11,80 +11,149 @@
       <p class="text-xs mt-1" style="color:var(--text-faint)">La contabilidad aparece cuando registras movimientos de gestoría en los casos</p>
     </div>
   } @else {
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead style="background:var(--surface-2)">
-          <tr style="border-bottom:1px solid var(--border)">
-            <th class="px-4 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wider"
-              style="color:var(--text-muted);font-family:var(--font-mono)">Caso</th>
-            <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
-              style="color:var(--text-muted);font-family:var(--font-mono)">Ingresos</th>
-            <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
-              style="color:var(--text-muted);font-family:var(--font-mono)">Honorarios</th>
-            <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
-              style="color:var(--text-muted);font-family:var(--font-mono)">Egresos</th>
-            <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
-              style="color:var(--text-muted);font-family:var(--font-mono)">Saldo aprobado</th>
-            <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
-              style="color:var(--text-muted);font-family:var(--font-mono)">Saldo proyectado</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (caso of casosContables(); track caso.id) {
-            @let r = resumenPorCaso().get(caso.id);
-            <tr class="cursor-pointer transition-colors duration-150"
-              style="border-bottom:1px solid var(--border)"
-              (click)="casoSeleccionado.emit(caso)"
-              (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 5%,transparent)'"
-              (mouseleave)="$any($event.currentTarget).style.background=''">
-              <td class="px-4 py-3 font-medium" style="color:var(--text-strong)">{{ caso.titulo }}</td>
-              <td class="px-4 py-3 text-right font-medium tabular-nums" style="color:var(--success);font-family:var(--font-mono)">
-                {{ (r?.ingresos ?? 0) | number:'1.2-2' }} €
-              </td>
-              <td class="px-4 py-3 text-right font-medium tabular-nums" style="color:var(--success);font-family:var(--font-mono)">
-                {{ (r?.honorarios ?? 0) | number:'1.2-2' }} €
-              </td>
-              <td class="px-4 py-3 text-right font-medium tabular-nums" style="color:var(--danger);font-family:var(--font-mono)">
-                {{ (r?.egresos ?? 0) | number:'1.2-2' }} €
-              </td>
-              <td class="px-4 py-3 text-right font-semibold tabular-nums"
-                [style.color]="(r?.saldoAprobado ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)'"
-                style="font-family:var(--font-mono)">
-                {{ (r?.saldoAprobado ?? 0) | number:'1.2-2' }} €
-              </td>
-              <td class="px-4 py-3 text-right font-semibold tabular-nums"
-                [style.color]="(r?.saldoProyectado ?? 0) >= 0 ? 'var(--text-body)' : 'var(--danger)'"
-                style="font-family:var(--font-mono)">
-                {{ (r?.saldoProyectado ?? 0) | number:'1.2-2' }} €
-              </td>
-            </tr>
-          }
-        </tbody>
-        <tfoot style="background:var(--surface-2);border-top:2px solid var(--border)">
-          <tr class="font-semibold" style="color:var(--text-strong)">
-            <td class="px-4 py-3">Total</td>
-            <td class="px-4 py-3 text-right tabular-nums" style="color:var(--success);font-family:var(--font-mono)">
-              {{ totalIngresos() | number:'1.2-2' }} €
-            </td>
-            <td class="px-4 py-3 text-right tabular-nums" style="color:var(--success);font-family:var(--font-mono)">
-              {{ totalHonorarios() | number:'1.2-2' }} €
-            </td>
-            <td class="px-4 py-3 text-right tabular-nums" style="color:var(--danger);font-family:var(--font-mono)">
-              {{ totalEgresos() | number:'1.2-2' }} €
-            </td>
-            <td class="px-4 py-3 text-right tabular-nums"
-              [style.color]="saldoAprobado() >= 0 ? 'var(--success)' : 'var(--danger)'"
-              style="font-family:var(--font-mono)">
-              {{ saldoAprobado() | number:'1.2-2' }} €
-            </td>
-            <td class="px-4 py-3 text-right tabular-nums"
-              [style.color]="saldoProyectado() >= 0 ? 'var(--text-body)' : 'var(--danger)'"
-              style="font-family:var(--font-mono)">
-              {{ saldoProyectado() | number:'1.2-2' }} €
-            </td>
-          </tr>
-        </tfoot>
-      </table>
+    <div class="p-3 sm:p-0">
+      <app-responsive-list [items]="casosContables()" trackBy="id">
+        <ng-template [appListCard]="casosContables()" let-caso>
+          @let r = resumenPorCaso().get(caso.id);
+          <button type="button" data-caso-abrir (click)="casoSeleccionado.emit(caso)"
+            class="block w-full rounded-xl p-3 text-left transition-colors duration-150 hover:bg-[var(--surface-2)]"
+            style="border:1px solid var(--border)">
+            <p class="font-medium" style="color:var(--text-strong)">{{ caso.titulo }}</p>
+            <dl class="mt-2 grid grid-cols-3 gap-x-3 gap-y-2 text-xs">
+              <div>
+                <dt style="color:var(--text-muted)">Ingresos</dt>
+                <dd class="font-medium tabular-nums" style="color:var(--success);font-family:var(--font-mono)">{{ (r?.ingresos ?? 0) | number:'1.2-2' }} €</dd>
+              </div>
+              <div>
+                <dt style="color:var(--text-muted)">Honorarios</dt>
+                <dd class="font-medium tabular-nums" style="color:var(--success);font-family:var(--font-mono)">{{ (r?.honorarios ?? 0) | number:'1.2-2' }} €</dd>
+              </div>
+              <div>
+                <dt style="color:var(--text-muted)">Egresos</dt>
+                <dd class="font-medium tabular-nums" style="color:var(--danger);font-family:var(--font-mono)">{{ (r?.egresos ?? 0) | number:'1.2-2' }} €</dd>
+              </div>
+              <div class="col-span-3 flex items-baseline justify-between gap-3 pt-2" style="border-top:1px solid var(--border)">
+                <dt style="color:var(--text-muted)">Saldo aprobado</dt>
+                <dd class="text-sm font-semibold tabular-nums" style="font-family:var(--font-mono)"
+                  [style.color]="(r?.saldoAprobado ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)'">{{ (r?.saldoAprobado ?? 0) | number:'1.2-2' }} €</dd>
+              </div>
+              <div class="col-span-3 flex items-baseline justify-between gap-3">
+                <dt style="color:var(--text-muted)">Saldo proyectado</dt>
+                <dd class="text-sm font-semibold tabular-nums" style="font-family:var(--font-mono)"
+                  [style.color]="(r?.saldoProyectado ?? 0) >= 0 ? 'var(--text-body)' : 'var(--danger)'">{{ (r?.saldoProyectado ?? 0) | number:'1.2-2' }} €</dd>
+              </div>
+            </dl>
+          </button>
+        </ng-template>
+        <ng-template [appListTable]="casosContables()" let-casos>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead style="background:var(--surface-2)">
+                <tr style="border-bottom:1px solid var(--border)">
+                  <th class="px-4 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wider"
+                    style="color:var(--text-muted);font-family:var(--font-mono)">Caso</th>
+                  <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
+                    style="color:var(--text-muted);font-family:var(--font-mono)">Ingresos</th>
+                  <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
+                    style="color:var(--text-muted);font-family:var(--font-mono)">Honorarios</th>
+                  <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
+                    style="color:var(--text-muted);font-family:var(--font-mono)">Egresos</th>
+                  <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
+                    style="color:var(--text-muted);font-family:var(--font-mono)">Saldo aprobado</th>
+                  <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
+                    style="color:var(--text-muted);font-family:var(--font-mono)">Saldo proyectado</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (caso of casos; track caso.id) {
+                  @let r = resumenPorCaso().get(caso.id);
+                  <tr class="cursor-pointer transition-colors duration-150"
+                    style="border-bottom:1px solid var(--border)"
+                    (click)="casoSeleccionado.emit(caso)"
+                    (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 5%,transparent)'"
+                    (mouseleave)="$any($event.currentTarget).style.background=''">
+                    <td class="px-4 py-3 font-medium" style="color:var(--text-strong)">{{ caso.titulo }}</td>
+                    <td class="px-4 py-3 text-right font-medium tabular-nums" style="color:var(--success);font-family:var(--font-mono)">
+                      {{ (r?.ingresos ?? 0) | number:'1.2-2' }} €
+                    </td>
+                    <td class="px-4 py-3 text-right font-medium tabular-nums" style="color:var(--success);font-family:var(--font-mono)">
+                      {{ (r?.honorarios ?? 0) | number:'1.2-2' }} €
+                    </td>
+                    <td class="px-4 py-3 text-right font-medium tabular-nums" style="color:var(--danger);font-family:var(--font-mono)">
+                      {{ (r?.egresos ?? 0) | number:'1.2-2' }} €
+                    </td>
+                    <td class="px-4 py-3 text-right font-semibold tabular-nums"
+                      [style.color]="(r?.saldoAprobado ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)'"
+                      style="font-family:var(--font-mono)">
+                      {{ (r?.saldoAprobado ?? 0) | number:'1.2-2' }} €
+                    </td>
+                    <td class="px-4 py-3 text-right font-semibold tabular-nums"
+                      [style.color]="(r?.saldoProyectado ?? 0) >= 0 ? 'var(--text-body)' : 'var(--danger)'"
+                      style="font-family:var(--font-mono)">
+                      {{ (r?.saldoProyectado ?? 0) | number:'1.2-2' }} €
+                    </td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot style="background:var(--surface-2);border-top:2px solid var(--border)">
+                <tr class="font-semibold" style="color:var(--text-strong)">
+                  <td class="px-4 py-3">Total</td>
+                  <td class="px-4 py-3 text-right tabular-nums" style="color:var(--success);font-family:var(--font-mono)">
+                    {{ totalIngresos() | number:'1.2-2' }} €
+                  </td>
+                  <td class="px-4 py-3 text-right tabular-nums" style="color:var(--success);font-family:var(--font-mono)">
+                    {{ totalHonorarios() | number:'1.2-2' }} €
+                  </td>
+                  <td class="px-4 py-3 text-right tabular-nums" style="color:var(--danger);font-family:var(--font-mono)">
+                    {{ totalEgresos() | number:'1.2-2' }} €
+                  </td>
+                  <td class="px-4 py-3 text-right tabular-nums"
+                    [style.color]="saldoAprobado() >= 0 ? 'var(--success)' : 'var(--danger)'"
+                    style="font-family:var(--font-mono)">
+                    {{ saldoAprobado() | number:'1.2-2' }} €
+                  </td>
+                  <td class="px-4 py-3 text-right tabular-nums"
+                    [style.color]="saldoProyectado() >= 0 ? 'var(--text-body)' : 'var(--danger)'"
+                    style="font-family:var(--font-mono)">
+                    {{ saldoProyectado() | number:'1.2-2' }} €
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </ng-template>
+      </app-responsive-list>
     </div>
+
+    @if (bp.isMobile()) {
+      <div data-casos-totales class="mx-3 mb-3 rounded-xl p-3 text-xs"
+        style="background:var(--surface-2);border:1px solid var(--border)">
+        <p class="mb-2 text-sm font-semibold" style="color:var(--text-strong)">Total</p>
+        <dl class="grid grid-cols-2 gap-x-3 gap-y-2">
+        <div>
+          <dt style="color:var(--text-muted)">Ingresos</dt>
+          <dd class="font-semibold tabular-nums" style="color:var(--success);font-family:var(--font-mono)">{{ totalIngresos() | number:'1.2-2' }} €</dd>
+        </div>
+        <div>
+          <dt style="color:var(--text-muted)">Honorarios</dt>
+          <dd class="font-semibold tabular-nums" style="color:var(--success);font-family:var(--font-mono)">{{ totalHonorarios() | number:'1.2-2' }} €</dd>
+        </div>
+        <div>
+          <dt style="color:var(--text-muted)">Egresos</dt>
+          <dd class="font-semibold tabular-nums" style="color:var(--danger);font-family:var(--font-mono)">{{ totalEgresos() | number:'1.2-2' }} €</dd>
+        </div>
+        <div>
+          <dt style="color:var(--text-muted)">Saldo aprobado</dt>
+          <dd class="font-semibold tabular-nums" style="font-family:var(--font-mono)"
+            [style.color]="saldoAprobado() >= 0 ? 'var(--success)' : 'var(--danger)'">{{ saldoAprobado() | number:'1.2-2' }} €</dd>
+        </div>
+        <div class="col-span-2">
+          <dt style="color:var(--text-muted)">Saldo proyectado</dt>
+          <dd class="font-semibold tabular-nums" style="font-family:var(--font-mono)"
+            [style.color]="saldoProyectado() >= 0 ? 'var(--text-body)' : 'var(--danger)'">{{ saldoProyectado() | number:'1.2-2' }} €</dd>
+        </div>
+        </dl>
+      </div>
+    }
   }
 </div>

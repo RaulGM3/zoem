@@ -1,0 +1,17 @@
+{
+  "name": "Vertey",
+  "short_name": "Vertey",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563ff",
+  "icons": [
+    {
+      "src": "vertey isotipo.png",
+      "sizes": "507x450",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

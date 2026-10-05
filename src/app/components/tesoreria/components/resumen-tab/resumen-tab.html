@@ -3,140 +3,176 @@
   <div class="rounded-xl overflow-hidden" style="background:var(--surface);border:1px solid var(--border)">
     <div class="flex items-center justify-between gap-2 px-4 py-3" style="border-bottom:1px solid var(--border)">
       <div class="flex items-center gap-2">
-        <lucide-icon [img]="ScaleIcon" class="w-4 h-4" style="color:var(--text-muted)" />
-        <h3 class="text-sm font-semibold" style="color:var(--text-strong)">Resumen por cuenta</h3>
+        <lucide-icon [img]="ScaleIcon" class="w-4 h-4" style="color:var(--text-muted)" aria-hidden="true" />
+        <h2 class="text-sm font-semibold" style="color:var(--text-strong)">Resumen por cuenta</h2>
         @if (cuentaSeleccionada()) {
           <button type="button" (click)="cuentaSeleccionada.set(null)"
-            class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold transition-colors duration-150"
-            style="background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand)"
-            (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 20%,transparent)'"
-            (mouseleave)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 12%,transparent)'">
-            <lucide-icon [img]="XIcon" class="w-3 h-3" />
+            class="max-sm:tap-target inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold transition-colors duration-150 bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] hover:bg-[color-mix(in_srgb,var(--brand)_20%,transparent)]"
+            style="color:var(--brand)">
+            <lucide-icon [img]="XIcon" class="w-3 h-3" aria-hidden="true" />
             Ver todas
           </button>
         }
       </div>
-      <span class="text-xs" style="color:var(--text-faint)">
+      <span class="hidden text-xs sm:inline" style="color:var(--text-faint)">
         {{ cuentaSeleccionada() ? 'Click en la fila para deseleccionar' : 'Click en una cuenta para filtrar' }}
       </span>
     </div>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead style="background:var(--surface-2)">
-          <tr style="border-bottom:1px solid var(--border)">
-            <th class="px-4 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wider"
-              style="color:var(--text-muted);font-family:var(--font-mono)">Cuenta</th>
-            <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
-              style="color:var(--text-muted);font-family:var(--font-mono)">Ingresos</th>
-            <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
-              style="color:var(--text-muted);font-family:var(--font-mono)">Egresos</th>
-            <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
-              style="color:var(--text-muted);font-family:var(--font-mono)">Sistema</th>
-            <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
-              style="color:var(--text-muted);font-family:var(--font-mono)">Aprobado</th>
-            <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
-              style="color:var(--text-muted);font-family:var(--font-mono)">Saldo real</th>
-            <th class="px-4 py-2.5 text-center text-[10.5px] font-semibold uppercase tracking-wider"
-              style="color:var(--text-muted);font-family:var(--font-mono)">Estado</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (c of cotejos(); track c.cuenta.id) {
-            <tr (click)="toggleCuenta(c.cuenta.id)" class="cursor-pointer transition-colors duration-150"
-              style="border-bottom:1px solid var(--border)"
-              tabindex="0"
-              [attr.aria-label]="'Filtrar por cuenta ' + c.cuenta.nombre + (cuentaSeleccionada() === c.cuenta.id ? ' (seleccionada)' : '')"
-              (keydown.enter)="toggleCuenta(c.cuenta.id)"
-              (keydown.space)="$event.preventDefault(); toggleCuenta(c.cuenta.id)"
-              [style.background]="cuentaSeleccionada() === c.cuenta.id ? 'color-mix(in srgb,var(--brand) 5%,transparent)' : ''"
-              (mouseenter)="$any($event.currentTarget).style.background=cuentaSeleccionada()===c.cuenta.id?'color-mix(in srgb,var(--brand) 8%,transparent)':'var(--surface-2)'"
-              (mouseleave)="$any($event.currentTarget).style.background=cuentaSeleccionada()===c.cuenta.id?'color-mix(in srgb,var(--brand) 5%,transparent)':''">
-              <td class="px-4 py-3">
-                <div class="flex items-center gap-2.5">
-                  <span class="flex items-center justify-center size-7 rounded-lg shrink-0"
-                    [style.background]="c.cuenta.tipo === 'banco' ? 'color-mix(in srgb,var(--brand) 12%,transparent)' : 'color-mix(in srgb,var(--warning) 12%,transparent)'"
-                    [style.color]="c.cuenta.tipo === 'banco' ? 'var(--brand)' : 'var(--warning)'">
-                    <lucide-icon [img]="c.cuenta.tipo === 'banco' ? LandmarkIcon : WalletIcon" class="w-3.5 h-3.5" />
-                  </span>
-                  <div>
-                    <p class="font-medium" style="color:var(--text-strong)">{{ c.cuenta.nombre }}</p>
-                    @if (c.cuenta.entidad) {
-                      <p class="text-xs" style="color:var(--text-faint)">{{ c.cuenta.entidad }}</p>
-                    }
-                  </div>
+
+    @if (bp.isMobile()) {
+      <ul role="list" class="space-y-3 p-3">
+        @for (c of cotejos(); track c.cuenta.id) {
+          <li data-cuenta-card class="rounded-xl p-3"
+            [style.border]="cuentaSeleccionada() === c.cuenta.id ? '1px solid var(--brand)' : '1px solid var(--border)'"
+            [style.background]="cuentaSeleccionada() === c.cuenta.id ? 'color-mix(in srgb,var(--brand) 5%,transparent)' : ''">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex min-w-0 items-center gap-2.5">
+                <span class="flex items-center justify-center size-8 rounded-lg shrink-0"
+                  [style.background]="c.cuenta.tipo === 'banco' ? 'color-mix(in srgb,var(--brand) 12%,transparent)' : 'color-mix(in srgb,var(--warning) 12%,transparent)'"
+                  [style.color]="c.cuenta.tipo === 'banco' ? 'var(--brand)' : 'var(--warning)'">
+                  <lucide-icon [img]="c.cuenta.tipo === 'banco' ? LandmarkIcon : WalletIcon" class="w-4 h-4" aria-hidden="true" />
+                </span>
+                <div class="min-w-0">
+                  <p class="truncate font-medium" style="color:var(--text-strong)">{{ c.cuenta.nombre }}</p>
+                  @if (c.cuenta.entidad) {
+                    <p class="truncate text-xs" style="color:var(--text-faint)">{{ c.cuenta.entidad }}</p>
+                  }
                 </div>
-              </td>
-              <td class="px-4 py-3 text-right font-medium tabular-nums" style="color:var(--success);font-family:var(--font-mono)">
-                {{ c.ingresos | number:'1.2-2' }} €
-              </td>
-              <td class="px-4 py-3 text-right font-medium tabular-nums" style="color:var(--danger);font-family:var(--font-mono)">
-                {{ c.egresos | number:'1.2-2' }} €
-              </td>
-              <td class="px-4 py-3 text-right font-semibold tabular-nums"
-                [style.color]="c.sistema >= 0 ? 'var(--text-body)' : 'var(--danger)'"
-                style="font-family:var(--font-mono)">
-                {{ c.sistema | number:'1.2-2' }} €
-              </td>
-              <td class="px-4 py-3 text-right font-medium tabular-nums"
-                [style.color]="c.proyeccion >= 0 ? 'var(--text-muted)' : 'var(--warning)'"
-                style="font-family:var(--font-mono)">
-                {{ c.proyeccion | number:'1.2-2' }} €
-              </td>
-              <td class="px-4 py-3 text-right">
-                <div class="flex items-center justify-end gap-1">
-                  <input type="number" step="0.01" [value]="c.banco ?? ''"
-                    (click)="$event.stopPropagation()"
-                    (keydown)="$event.stopPropagation()"
+              </div>
+              <button type="button" data-filtrar-cuenta (click)="toggleCuenta(c.cuenta.id)"
+                [attr.aria-pressed]="cuentaSeleccionada() === c.cuenta.id"
+                [attr.aria-label]="'Filtrar movimientos por ' + c.cuenta.nombre"
+                class="tap-target inline-flex shrink-0 items-center justify-center rounded-lg px-2.5 text-xs font-semibold"
+                [style.color]="cuentaSeleccionada() === c.cuenta.id ? 'var(--brand)' : 'var(--text-muted)'"
+                style="border:1px solid var(--border)">
+                {{ cuentaSeleccionada() === c.cuenta.id ? 'Filtrada' : 'Filtrar' }}
+              </button>
+            </div>
+
+            <dl class="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+              <div>
+                <dt style="color:var(--text-muted)">Ingresos</dt>
+                <dd class="font-medium tabular-nums" style="color:var(--success);font-family:var(--font-mono)">{{ c.ingresos | number:'1.2-2' }} €</dd>
+              </div>
+              <div>
+                <dt style="color:var(--text-muted)">Egresos</dt>
+                <dd class="font-medium tabular-nums" style="color:var(--danger);font-family:var(--font-mono)">{{ c.egresos | number:'1.2-2' }} €</dd>
+              </div>
+              <div>
+                <dt style="color:var(--text-muted)">Sistema</dt>
+                <dd class="font-semibold tabular-nums" style="font-family:var(--font-mono)"
+                  [style.color]="c.sistema >= 0 ? 'var(--text-body)' : 'var(--danger)'">{{ c.sistema | number:'1.2-2' }} €</dd>
+              </div>
+              <div>
+                <dt style="color:var(--text-muted)">Aprobado</dt>
+                <dd class="font-medium tabular-nums" style="font-family:var(--font-mono)"
+                  [style.color]="c.proyeccion >= 0 ? 'var(--text-muted)' : 'var(--warning)'">{{ c.proyeccion | number:'1.2-2' }} €</dd>
+              </div>
+            </dl>
+
+            <div class="mt-3 flex items-end justify-between gap-3 pt-3" style="border-top:1px solid var(--border)">
+              <div class="min-w-0 flex-1">
+                <p class="text-xs" style="color:var(--text-muted)" aria-hidden="true">Saldo real</p>
+                <div class="relative mt-1">
+                  <input type="number" inputmode="decimal" step="0.01" [value]="c.banco ?? ''"
                     (change)="actualizarSaldoCuenta.emit({ cuentaId: c.cuenta.id, valor: $any($event.target).value })"
                     placeholder="0.00"
                     [attr.aria-label]="'Saldo real de ' + c.cuenta.nombre"
-                    class="form-input text-right tabular-nums" style="width:7rem;padding:0.25rem 0.5rem;font-family:var(--font-mono)" />
-                  <span class="text-xs" style="color:var(--text-faint)">€</span>
+                    class="form-input w-full pr-7 text-right tabular-nums" style="font-family:var(--font-mono)" />
+                  <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs" style="color:var(--text-faint)" aria-hidden="true">€</span>
                 </div>
-              </td>
-              <td class="px-4 py-3 text-center">
-                @if (c.diferencia !== null) {
-                  @if (c.conciliado) {
-                    <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold"
-                      style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">
-                      <lucide-icon [img]="CheckCircle2Icon" class="w-3 h-3" />
-                      Conciliado
-                    </span>
-                  } @else {
-                    <span class="relative inline-block">
-                      @if (hoveredDiscrepancia() === c.cuenta.id) {
-                        <span [id]="'discrepancia-tip-' + c.cuenta.id"
-                          class="absolute z-20 pointer-events-none rounded-lg px-2.5 py-2 text-xs text-center"
-                          style="bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);width:11rem;background:var(--surface);border:1px solid var(--border);color:var(--text-body);box-shadow:0 4px 16px rgba(0,0,0,0.18)">
-                          Diferencia de {{ (c.diferencia < 0 ? -c.diferencia : c.diferencia) | number:'1.2-2' }} €. Haz clic para ver el desglose.
-                          <span class="absolute" style="top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--border)"></span>
-                        </span>
-                      }
-                      <button type="button"
-                        class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold transition-opacity duration-150"
-                        style="background:color-mix(in srgb,var(--warning) 12%,transparent);color:var(--warning)"
-                        (mouseenter)="hoveredDiscrepancia.set(c.cuenta.id)"
-                        (mouseleave)="hoveredDiscrepancia.set(null)"
-                        (focus)="hoveredDiscrepancia.set(c.cuenta.id)"
-                        (blur)="hoveredDiscrepancia.set(null)"
-                        (keydown)="$event.stopPropagation()"
-                        (click)="dialogDiscrepancia.set(c); $event.stopPropagation()"
-                        [attr.aria-label]="'Ver desglose de discrepancia en ' + c.cuenta.nombre"
-                        [attr.aria-describedby]="hoveredDiscrepancia() === c.cuenta.id ? ('discrepancia-tip-' + c.cuenta.id) : null">
-                        <lucide-icon [img]="AlertTriangleIcon" class="w-3 h-3" />
-                        Discrepancia
-                      </button>
-                    </span>
-                  }
-                } @else {
-                  <span class="text-xs" style="color:var(--text-faint)">Sin saldo real</span>
-                }
-              </td>
+              </div>
+              <div class="shrink-0 pb-2">
+                <ng-container [ngTemplateOutlet]="estadoCotejo" [ngTemplateOutletContext]="{ $implicit: c }" />
+              </div>
+            </div>
+          </li>
+        }
+      </ul>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead style="background:var(--surface-2)">
+            <tr style="border-bottom:1px solid var(--border)">
+              <th class="px-4 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wider"
+                style="color:var(--text-muted);font-family:var(--font-mono)">Cuenta</th>
+              <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
+                style="color:var(--text-muted);font-family:var(--font-mono)">Ingresos</th>
+              <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
+                style="color:var(--text-muted);font-family:var(--font-mono)">Egresos</th>
+              <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
+                style="color:var(--text-muted);font-family:var(--font-mono)">Sistema</th>
+              <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
+                style="color:var(--text-muted);font-family:var(--font-mono)">Aprobado</th>
+              <th class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider"
+                style="color:var(--text-muted);font-family:var(--font-mono)">Saldo real</th>
+              <th class="px-4 py-2.5 text-center text-[10.5px] font-semibold uppercase tracking-wider"
+                style="color:var(--text-muted);font-family:var(--font-mono)">Estado</th>
             </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            @for (c of cotejos(); track c.cuenta.id) {
+              <tr (click)="toggleCuenta(c.cuenta.id)" class="cursor-pointer transition-colors duration-150"
+                style="border-bottom:1px solid var(--border)"
+                tabindex="0"
+                [attr.aria-label]="'Filtrar por cuenta ' + c.cuenta.nombre + (cuentaSeleccionada() === c.cuenta.id ? ' (seleccionada)' : '')"
+                (keydown.enter)="toggleCuenta(c.cuenta.id)"
+                (keydown.space)="$event.preventDefault(); toggleCuenta(c.cuenta.id)"
+                [class]="cuentaSeleccionada() === c.cuenta.id
+                  ? 'bg-[color-mix(in_srgb,var(--brand)_5%,transparent)] hover:bg-[color-mix(in_srgb,var(--brand)_8%,transparent)]'
+                  : 'hover:bg-[var(--surface-2)]'">
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-2.5">
+                    <span class="flex items-center justify-center size-7 rounded-lg shrink-0"
+                      [style.background]="c.cuenta.tipo === 'banco' ? 'color-mix(in srgb,var(--brand) 12%,transparent)' : 'color-mix(in srgb,var(--warning) 12%,transparent)'"
+                      [style.color]="c.cuenta.tipo === 'banco' ? 'var(--brand)' : 'var(--warning)'">
+                      <lucide-icon [img]="c.cuenta.tipo === 'banco' ? LandmarkIcon : WalletIcon" class="w-3.5 h-3.5" aria-hidden="true" />
+                    </span>
+                    <div>
+                      <p class="font-medium" style="color:var(--text-strong)">{{ c.cuenta.nombre }}</p>
+                      @if (c.cuenta.entidad) {
+                        <p class="text-xs" style="color:var(--text-faint)">{{ c.cuenta.entidad }}</p>
+                      }
+                    </div>
+                  </div>
+                </td>
+                <td class="px-4 py-3 text-right font-medium tabular-nums" style="color:var(--success);font-family:var(--font-mono)">
+                  {{ c.ingresos | number:'1.2-2' }} €
+                </td>
+                <td class="px-4 py-3 text-right font-medium tabular-nums" style="color:var(--danger);font-family:var(--font-mono)">
+                  {{ c.egresos | number:'1.2-2' }} €
+                </td>
+                <td class="px-4 py-3 text-right font-semibold tabular-nums"
+                  [style.color]="c.sistema >= 0 ? 'var(--text-body)' : 'var(--danger)'"
+                  style="font-family:var(--font-mono)">
+                  {{ c.sistema | number:'1.2-2' }} €
+                </td>
+                <td class="px-4 py-3 text-right font-medium tabular-nums"
+                  [style.color]="c.proyeccion >= 0 ? 'var(--text-muted)' : 'var(--warning)'"
+                  style="font-family:var(--font-mono)">
+                  {{ c.proyeccion | number:'1.2-2' }} €
+                </td>
+                <td class="px-4 py-3 text-right">
+                  <div class="flex items-center justify-end gap-1">
+                    <input type="number" step="0.01" [value]="c.banco ?? ''"
+                      (click)="$event.stopPropagation()"
+                      (keydown)="$event.stopPropagation()"
+                      (change)="actualizarSaldoCuenta.emit({ cuentaId: c.cuenta.id, valor: $any($event.target).value })"
+                      placeholder="0.00"
+                      [attr.aria-label]="'Saldo real de ' + c.cuenta.nombre"
+                      class="form-input text-right tabular-nums" style="width:7rem;padding:0.25rem 0.5rem;font-family:var(--font-mono)" />
+                    <span class="text-xs" style="color:var(--text-faint)">€</span>
+                  </div>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <ng-container [ngTemplateOutlet]="estadoCotejo" [ngTemplateOutletContext]="{ $implicit: c }" />
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
   </div>
 
   <!-- Detalle de movimientos por cuenta -->
@@ -145,26 +181,28 @@
     @let movsCuenta = movimientosFiltradosPorCuenta().get(c.cuenta.id) ?? [];
     @if (totalMovs.length > 0) {
       <div class="rounded-xl overflow-hidden" style="background:var(--surface);border:1px solid var(--border)">
-        <div class="flex items-center justify-between gap-2 px-4 py-3 flex-wrap" style="border-bottom:1px solid var(--border)">
-          <div class="flex items-center gap-2">
+        <div class="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between" style="border-bottom:1px solid var(--border)">
+          <div class="flex min-w-0 items-center gap-2">
             <span class="flex items-center justify-center size-7 rounded-lg shrink-0"
               [style.background]="c.cuenta.tipo === 'banco' ? 'color-mix(in srgb,var(--brand) 12%,transparent)' : 'color-mix(in srgb,var(--warning) 12%,transparent)'"
               [style.color]="c.cuenta.tipo === 'banco' ? 'var(--brand)' : 'var(--warning)'">
-              <lucide-icon [img]="c.cuenta.tipo === 'banco' ? LandmarkIcon : WalletIcon" class="w-3.5 h-3.5" />
+              <lucide-icon [img]="c.cuenta.tipo === 'banco' ? LandmarkIcon : WalletIcon" class="w-3.5 h-3.5" aria-hidden="true" />
             </span>
-            <h3 class="text-sm font-semibold" style="color:var(--text-strong)">{{ c.cuenta.nombre }}</h3>
+            <h2 class="truncate text-sm font-semibold" style="color:var(--text-strong)">{{ c.cuenta.nombre }}</h2>
             @if (c.cuenta.entidad) {
-              <span class="text-xs" style="color:var(--text-faint)">· {{ c.cuenta.entidad }}</span>
+              <span class="truncate text-xs" style="color:var(--text-faint)">· {{ c.cuenta.entidad }}</span>
             }
           </div>
-          <div class="flex items-center gap-3">
+          <div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:gap-3">
             <span class="text-xs" style="color:var(--text-faint)">
               {{ movsCuenta.length }} de {{ totalMovs.length }} movimiento{{ totalMovs.length !== 1 ? 's' : '' }}
             </span>
-            <div class="flex rounded-lg overflow-hidden text-xs font-semibold" style="border:1px solid var(--border)">
+            <div class="flex rounded-lg overflow-hidden text-xs font-semibold" style="border:1px solid var(--border)"
+              role="group" [attr.aria-label]="'Filtrar movimientos de ' + c.cuenta.nombre">
               @for (f of [['pendientes','Pendientes'],['aprobados','Aprobados'],['todos','Todos']]; track f[0]) {
                 <button type="button" (click)="setFiltro(c.cuenta.id, $any(f[0]))"
-                  class="px-3 py-1.5 transition-colors duration-150"
+                  [attr.aria-pressed]="getFiltro(c.cuenta.id) === f[0]"
+                  class="max-sm:tap-target flex-1 px-3 py-1.5 transition-colors duration-150 sm:flex-none"
                   [style.background]="getFiltro(c.cuenta.id) === f[0]
                     ? (f[0] === 'pendientes' ? 'color-mix(in srgb,var(--warning) 10%,transparent)'
                        : f[0] === 'aprobados' ? 'color-mix(in srgb,var(--success) 10%,transparent)'
@@ -186,6 +224,29 @@
           <p class="px-4 py-6 text-sm text-center" style="color:var(--text-faint)">
             No hay movimientos {{ getFiltro(c.cuenta.id) === 'pendientes' ? 'pendientes' : 'aprobados' }} en esta cuenta.
           </p>
+        } @else if (bp.isMobile()) {
+          <ul role="list">
+            @for (mov of movsCuenta; track mov.id) {
+              <li data-movimiento-card class="flex items-start justify-between gap-3 px-4 py-3" style="border-bottom:1px solid var(--border)">
+                <div class="min-w-0">
+                  <p class="break-words text-sm" style="color:var(--text-strong)">{{ mov.concepto }}</p>
+                  @if (mov.notas) {
+                    <p class="break-words text-xs" style="color:var(--text-faint)">{{ mov.notas }}</p>
+                  }
+                  <p class="mt-1 text-xs" style="color:var(--text-muted)">
+                    {{ mov.casoNombre }} · <span style="font-family:var(--font-mono)">{{ mov.fecha }}</span>
+                  </p>
+                </div>
+                <div class="flex shrink-0 flex-col items-end gap-1">
+                  <span class="text-sm font-bold tabular-nums" style="font-family:var(--font-mono)"
+                    [style.color]="mov.esEntrada ? 'var(--success)' : 'var(--danger)'">
+                    {{ mov.esEntrada ? '+' : '−' }}{{ mov.importe | number:'1.2-2' }} €
+                  </span>
+                  <ng-container [ngTemplateOutlet]="estadoMovimiento" [ngTemplateOutletContext]="{ $implicit: mov.aprobado === true }" />
+                </div>
+              </li>
+            }
+          </ul>
         } @else {
           <div class="overflow-x-auto">
             <table class="min-w-full text-sm">
@@ -215,17 +276,7 @@
                     <td class="px-4 py-3 text-xs" style="color:var(--text-muted)">{{ mov.casoNombre }}</td>
                     <td class="px-4 py-3" style="color:var(--text-muted);font-family:var(--font-mono)">{{ mov.fecha }}</td>
                     <td class="px-4 py-3">
-                      @if (mov.aprobado === true) {
-                        <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold"
-                          style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">
-                          <lucide-icon [img]="CheckCircle2Icon" class="w-3 h-3" /> Aprobado
-                        </span>
-                      } @else {
-                        <span class="rounded-full px-2 py-0.5 text-xs font-bold"
-                          style="background:color-mix(in srgb,var(--warning) 12%,transparent);color:var(--warning)">
-                          Pendiente
-                        </span>
-                      }
+                      <ng-container [ngTemplateOutlet]="estadoMovimiento" [ngTemplateOutletContext]="{ $implicit: mov.aprobado === true }" />
                     </td>
                     <td class="px-4 py-3 text-right font-bold tabular-nums"
                       [style.color]="mov.esEntrada ? 'var(--success)' : 'var(--danger)'"
@@ -245,27 +296,24 @@
   <!-- Cotejo legacy (sin cuentas configuradas) -->
   <div class="rounded-xl overflow-hidden" style="background:var(--surface);border:1px solid var(--border)">
     <div class="flex items-center gap-2 px-4 py-3" style="border-bottom:1px solid var(--border)">
-      <lucide-icon [img]="ScaleIcon" class="w-4 h-4" style="color:var(--text-muted)" />
-      <h3 class="text-sm font-semibold" style="color:var(--text-strong)">Cotejo bancario</h3>
+      <lucide-icon [img]="ScaleIcon" class="w-4 h-4" style="color:var(--text-muted)" aria-hidden="true" />
+      <h2 class="text-sm font-semibold" style="color:var(--text-strong)">Cotejo bancario</h2>
     </div>
     <div class="p-4 grid gap-4 md:grid-cols-3">
       <div>
-        <label class="form-label">Saldo bancario real</label>
+        <label for="resumen-saldo-bancario" class="form-label">Saldo bancario real</label>
         <div class="flex gap-2 mt-1">
           <div class="relative flex-1">
-            <input type="number" inputmode="decimal" step="0.01"
+            <input id="resumen-saldo-bancario" type="number" inputmode="decimal" step="0.01"
               [value]="localSaldoInput()"
               (input)="localSaldoInput.set($any($event.target).value)"
               placeholder="0.00"
               class="form-input text-right pr-7" style="font-family:var(--font-mono)" />
-            <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs" style="color:var(--text-faint)">€</span>
+            <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs" style="color:var(--text-faint)" aria-hidden="true">€</span>
           </div>
           <button type="button" (click)="guardarSaldoBancario.emit(localSaldoInput())" [disabled]="savingSaldo()"
-            class="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-white disabled:opacity-50 transition-all duration-150"
-            style="background:var(--brand)"
-            (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-            (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
-            <lucide-icon [img]="SaveIcon" class="w-3.5 h-3.5" />
+            class="max-sm:tap-target inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-white disabled:opacity-50 transition-colors duration-150 bg-[var(--brand)] hover:bg-[var(--brand-hover)]">
+            <lucide-icon [img]="SaveIcon" class="w-3.5 h-3.5" aria-hidden="true" />
             Guardar
           </button>
         </div>
@@ -275,16 +323,16 @@
       </div>
       @let c = cotejo();
       @if (c) {
-        <div class="flex items-center gap-2 rounded-xl px-4" style="background:var(--surface-2)">
+        <div class="flex items-center gap-2 rounded-xl px-4 py-3 md:py-0" style="background:var(--surface-2)">
           <div>
             <p class="text-xs" style="color:var(--text-muted)">Saldo aprobado</p>
             <p class="text-lg font-semibold tabular-nums" style="color:var(--text-body);font-family:var(--font-display)">{{ c.sistema | number:'1.2-2' }} €</p>
           </div>
         </div>
-        <div class="flex items-center gap-3 rounded-xl px-4"
+        <div class="flex items-center gap-3 rounded-xl px-4 py-3 md:py-0"
           [style.background]="c.conciliado ? 'color-mix(in srgb,var(--success) 8%,transparent)' : 'color-mix(in srgb,var(--warning) 8%,transparent)'">
           <lucide-icon [img]="c.conciliado ? CheckCircle2Icon : AlertTriangleIcon"
-            class="w-5 h-5 shrink-0"
+            class="w-5 h-5 shrink-0" aria-hidden="true"
             [style.color]="c.conciliado ? 'var(--success)' : 'var(--warning)'" />
           <div>
             <p class="text-xs" [style.color]="c.conciliado ? 'var(--success)' : 'var(--warning)'">
@@ -297,7 +345,7 @@
           </div>
         </div>
       } @else {
-        <div class="flex items-center text-sm rounded-xl px-4 md:col-span-2"
+        <div class="flex items-center text-sm rounded-xl px-4 py-3 md:col-span-2 md:py-0"
           style="background:var(--surface-2);color:var(--text-faint)">
           Carga tu saldo bancario para cotejar
         </div>
@@ -311,23 +359,26 @@
   <div class="rounded-xl overflow-hidden" style="background:var(--surface);border:1px solid var(--border)">
     <div class="flex items-center gap-2 px-4 py-3" style="border-bottom:1px solid var(--border)">
       <lucide-icon [img]="LockIcon" class="w-4 h-4" style="color:var(--text-muted)" aria-hidden="true" />
-      <h3 class="text-sm font-semibold" style="color:var(--text-strong)">Cierres de caja</h3>
+      <h2 class="text-sm font-semibold" style="color:var(--text-strong)">Cierres de caja</h2>
       <span class="ml-auto text-xs" style="color:var(--text-faint)">{{ cierres().length }} {{ cierres().length === 1 ? 'cierre' : 'cierres' }}</span>
     </div>
     <div>
       @for (cierre of cierres(); track cierre.id) {
         <div>
-          <button type="button" (click)="toggleCierre(cierre.id)"
-            class="w-full flex items-center gap-4 px-4 py-3 transition-colors duration-150 text-left"
+          <button type="button" (click)="toggleCierre(cierre.id)" data-cierre
+            class="w-full flex items-center gap-4 px-4 py-3 transition-colors duration-150 text-left hover:bg-[var(--surface-2)]"
             style="border-bottom:1px solid var(--border)"
-            (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-            (mouseleave)="$any($event.currentTarget).style.background=''"
             [attr.aria-expanded]="cierreExpandido() === cierre.id">
             <div class="flex-1 min-w-0">
               <p class="text-sm font-medium" style="color:var(--text-strong)">{{ cierre.fecha }}</p>
               @if (cierre.notas) {
                 <p class="text-xs mt-0.5 truncate" style="color:var(--text-faint)">{{ cierre.notas }}</p>
               }
+              <div class="mt-1 flex flex-wrap items-center gap-x-3 text-xs sm:hidden" style="font-family:var(--font-mono)">
+                <span style="color:var(--success)">+{{ cierre.totales.ingresos | number:'1.2-2' }} €</span>
+                <span style="color:var(--danger)">−{{ cierre.totales.egresos | number:'1.2-2' }} €</span>
+                <span class="font-semibold" style="color:var(--text-body)">= {{ cierre.totales.sistemaTotal | number:'1.2-2' }} €</span>
+              </div>
             </div>
             <div class="hidden sm:flex items-center gap-4 text-xs" style="font-family:var(--font-mono)">
               <span style="color:var(--success)">+{{ cierre.totales.ingresos | number:'1.2-2' }} €</span>
@@ -341,12 +392,12 @@
           @if (cierreExpandido() === cierre.id) {
             <div class="px-4 pb-3 space-y-1.5">
               @for (cc of cierre.cuentas; track cc.cuentaId) {
-                <div class="flex items-center gap-3 text-xs rounded-lg px-3 py-2" style="background:var(--surface-2)">
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs rounded-lg px-3 py-2" style="background:var(--surface-2)">
                   <lucide-icon [img]="cc.tipo === 'banco' ? LandmarkIcon : WalletIcon"
                     class="w-3.5 h-3.5 shrink-0"
                     [style.color]="cc.tipo === 'banco' ? 'var(--brand)' : 'var(--warning)'"
                     aria-hidden="true" />
-                  <span class="font-medium w-32 truncate" style="color:var(--text-body)">{{ cc.nombre }}</span>
+                  <span class="font-medium min-w-0 flex-1 truncate sm:w-32 sm:flex-none" style="color:var(--text-body)">{{ cc.nombre }}</span>
                   <span style="color:var(--text-muted);font-family:var(--font-mono)">
                     Sistema: <strong style="color:var(--text-body)">{{ cc.sistema | number:'1.2-2' }} €</strong>
                   </span>
@@ -369,49 +420,29 @@
 }
 
 <!-- Dialog desglose discrepancia -->
-@if (dialogDiscrepancia(); as dc) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center p-4"
-    style="background:rgba(0,0,0,0.45)"
-    (click)="dialogDiscrepancia.set(null)"
-    role="dialog" aria-modal="true" [attr.aria-label]="'Discrepancia en ' + dc.cuenta.nombre"
-    appFocusTrap (escapeKey)="dialogDiscrepancia.set(null)">
-    <div class="relative w-full max-w-md rounded-2xl p-6 space-y-5"
-      style="background:var(--surface);border:1px solid var(--border);box-shadow:0 20px 60px rgba(0,0,0,0.25)"
-      (click)="$event.stopPropagation()">
-
-      <!-- Header -->
-      <div class="flex items-start justify-between gap-3">
-        <div class="flex items-center gap-3">
-          <span class="flex items-center justify-center size-10 rounded-xl shrink-0"
-            style="background:color-mix(in srgb,var(--warning) 12%,transparent)">
-            <lucide-icon [img]="AlertTriangleIcon" class="w-5 h-5" style="color:var(--warning)" />
-          </span>
-          <div>
-            <h2 class="text-base font-semibold" style="color:var(--text-strong)">Discrepancia detectada</h2>
-            <p class="text-xs mt-0.5" style="color:var(--text-faint)">{{ dc.cuenta.nombre }}{{ dc.cuenta.entidad ? ' · ' + dc.cuenta.entidad : '' }}</p>
-          </div>
-        </div>
-        <button type="button" (click)="dialogDiscrepancia.set(null)"
-          class="flex items-center justify-center size-7 rounded-lg transition-colors duration-150 shrink-0"
-          style="color:var(--text-muted)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-          (mouseleave)="$any($event.currentTarget).style.background='transparent'"
-          aria-label="Cerrar">
-          <lucide-icon [img]="XIcon" class="w-4 h-4" />
-        </button>
+@let dc = dialogDiscrepancia();
+<app-overlay-shell [open]="!!dc" title="Discrepancia detectada" variant="modal" (closed)="dialogDiscrepancia.set(null)">
+  @if (dc) {
+    <div class="space-y-5 p-5">
+      <div class="flex items-center gap-3">
+        <span class="flex items-center justify-center size-10 rounded-xl shrink-0"
+          style="background:color-mix(in srgb,var(--warning) 12%,transparent)">
+          <lucide-icon [img]="AlertTriangleIcon" class="w-5 h-5" style="color:var(--warning)" aria-hidden="true" />
+        </span>
+        <p class="text-sm" style="color:var(--text-muted)">{{ dc.cuenta.nombre }}{{ dc.cuenta.entidad ? ' · ' + dc.cuenta.entidad : '' }}</p>
       </div>
 
       <!-- Desglose numérico -->
       <div class="rounded-xl overflow-hidden" style="border:1px solid var(--border)">
         <div class="grid grid-cols-2" style="border-bottom:1px solid var(--border)">
-          <div class="p-4" style="border-right:1px solid var(--border)">
+          <div class="min-w-0 p-4" style="border-right:1px solid var(--border)">
             <p class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Saldo sistema</p>
-            <p class="text-xl font-bold tabular-nums mt-1" style="font-family:var(--font-mono);color:var(--text-body)">{{ dc.sistema | number:'1.2-2' }} €</p>
+            <p class="text-lg font-bold tabular-nums mt-1 break-words sm:text-xl" style="font-family:var(--font-mono);color:var(--text-body)">{{ dc.sistema | number:'1.2-2' }} €</p>
             <p class="text-xs mt-1.5" style="color:var(--text-faint)">Suma de movimientos aprobados</p>
           </div>
-          <div class="p-4">
+          <div class="min-w-0 p-4">
             <p class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Saldo real</p>
-            <p class="text-xl font-bold tabular-nums mt-1" style="font-family:var(--font-mono);color:var(--text-body)">{{ dc.banco | number:'1.2-2' }} €</p>
+            <p class="text-lg font-bold tabular-nums mt-1 break-words sm:text-xl" style="font-family:var(--font-mono);color:var(--text-body)">{{ dc.banco | number:'1.2-2' }} €</p>
             <p class="text-xs mt-1.5" style="color:var(--text-faint)">Ingresado manualmente</p>
           </div>
         </div>
@@ -436,60 +467,59 @@
             'Error en el saldo real ingresado manualmente.'
           ]; track $index) {
             <li class="flex items-start gap-2.5 text-sm" style="color:var(--text-body)">
-              <span class="size-1.5 rounded-full shrink-0 mt-1.5" style="background:var(--warning)"></span>
+              <span class="size-1.5 rounded-full shrink-0 mt-1.5" style="background:var(--warning)" aria-hidden="true"></span>
               {{ causa }}
             </li>
           }
         </ul>
       </div>
-
-      <button type="button" (click)="dialogDiscrepancia.set(null)"
-        class="w-full rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors duration-150"
-        style="background:var(--surface-2);color:var(--text-body)"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-3)'"
-        (mouseleave)="$any($event.currentTarget).style.background='var(--surface-2)'">
-        Entendido
-      </button>
     </div>
+  }
+  <div footer class="px-5 py-4">
+    <button type="button" (click)="dialogDiscrepancia.set(null)"
+      class="max-sm:tap-target w-full rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors duration-150 bg-[var(--surface-2)] hover:bg-[var(--surface-3)]"
+      style="color:var(--text-body)">
+      Entendido
+    </button>
   </div>
-}
+</app-overlay-shell>
 
 <!-- Histórico de casos cerrados -->
 @if (resumenHistorico(); as hist) {
   <div class="rounded-xl overflow-hidden" style="background:var(--surface);border:1px solid var(--border)">
     <div class="flex items-center gap-2 px-4 py-3" style="border-bottom:1px solid var(--border)">
-      <lucide-icon [img]="HistoryIcon" class="w-4 h-4" style="color:var(--text-muted)" />
-      <h3 class="text-sm font-semibold" style="color:var(--text-strong)">Histórico — casos cerrados</h3>
+      <lucide-icon [img]="HistoryIcon" class="w-4 h-4" style="color:var(--text-muted)" aria-hidden="true" />
+      <h2 class="text-sm font-semibold" style="color:var(--text-strong)">Histórico — casos cerrados</h2>
       <span class="ml-auto text-xs" style="color:var(--text-faint)">{{ hist.casosCount }} {{ hist.casosCount === 1 ? 'caso' : 'casos' }}</span>
     </div>
     <div class="grid grid-cols-2 md:grid-cols-5">
-      <div class="p-4" style="border-right:1px solid var(--border)">
+      <div class="min-w-0 p-4" style="border-right:1px solid var(--border)">
         <p class="text-xs" style="color:var(--text-muted)">Ingresos</p>
-        <p class="text-base font-semibold tabular-nums mt-0.5" style="color:var(--success);font-family:var(--font-display)">
+        <p class="text-base font-semibold tabular-nums mt-0.5 break-words" style="color:var(--success);font-family:var(--font-display)">
           {{ hist.totalIngresosCerrados | number:'1.2-2' }} €
         </p>
       </div>
-      <div class="p-4" style="border-right:1px solid var(--border)">
+      <div class="min-w-0 p-4 md:border-r" style="border-color:var(--border)">
         <p class="text-xs" style="color:var(--text-muted)">Suplidos</p>
-        <p class="text-base font-semibold tabular-nums mt-0.5" style="color:var(--warning);font-family:var(--font-display)">
+        <p class="text-base font-semibold tabular-nums mt-0.5 break-words" style="color:var(--warning);font-family:var(--font-display)">
           {{ hist.totalSuplidosCerrados | number:'1.2-2' }} €
         </p>
       </div>
-      <div class="p-4" style="border-right:1px solid var(--border)">
+      <div class="min-w-0 p-4" style="border-right:1px solid var(--border)">
         <p class="text-xs" style="color:var(--text-muted)">Honorarios</p>
-        <p class="text-base font-semibold tabular-nums mt-0.5" style="color:var(--brand);font-family:var(--font-display)">
+        <p class="text-base font-semibold tabular-nums mt-0.5 break-words" style="color:var(--brand);font-family:var(--font-display)">
           {{ hist.totalHonorariosCerrados | number:'1.2-2' }} €
         </p>
       </div>
-      <div class="p-4" style="border-right:1px solid var(--border)">
+      <div class="min-w-0 p-4 md:border-r" style="border-color:var(--border)">
         <p class="text-xs" style="color:var(--text-muted)">Egresos</p>
-        <p class="text-base font-semibold tabular-nums mt-0.5" style="color:var(--danger);font-family:var(--font-display)">
+        <p class="text-base font-semibold tabular-nums mt-0.5 break-words" style="color:var(--danger);font-family:var(--font-display)">
           {{ hist.totalEgresosCerrados | number:'1.2-2' }} €
         </p>
       </div>
-      <div class="p-4">
+      <div class="col-span-2 min-w-0 p-4 max-md:border-t md:col-span-1" style="border-color:var(--border)">
         <p class="text-xs" style="color:var(--text-muted)">Saldo neto</p>
-        <p class="text-base font-semibold tabular-nums mt-0.5" style="font-family:var(--font-display)"
+        <p class="text-base font-semibold tabular-nums mt-0.5 break-words" style="font-family:var(--font-display)"
           [style.color]="hist.saldoCerrados >= 0 ? 'var(--success)' : 'var(--danger)'">
           {{ hist.saldoCerrados | number:'1.2-2' }} €
         </p>
@@ -497,3 +527,58 @@
     </div>
   </div>
 }
+
+<!-- Estado del cotejo de una cuenta (tabla y tarjeta) -->
+<ng-template #estadoCotejo let-c>
+  @if (c.diferencia !== null) {
+    @if (c.conciliado) {
+      <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold"
+        style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">
+        <lucide-icon [img]="CheckCircle2Icon" class="w-3 h-3" aria-hidden="true" />
+        Conciliado
+      </span>
+    } @else {
+      <span class="relative inline-block">
+        @if (!bp.isMobile() && hoveredDiscrepancia() === c.cuenta.id) {
+          <span [id]="'discrepancia-tip-' + c.cuenta.id"
+            class="absolute z-20 pointer-events-none rounded-lg px-2.5 py-2 text-xs text-center"
+            style="bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);width:11rem;background:var(--surface);border:1px solid var(--border);color:var(--text-body);box-shadow:0 4px 16px rgba(0,0,0,0.18)">
+            Diferencia de {{ (c.diferencia < 0 ? -c.diferencia : c.diferencia) | number:'1.2-2' }} €. Haz clic para ver el desglose.
+            <span class="absolute" style="top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--border)"></span>
+          </span>
+        }
+        <button type="button" data-discrepancia
+          class="max-sm:tap-target inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold transition-opacity duration-150"
+          style="background:color-mix(in srgb,var(--warning) 12%,transparent);color:var(--warning)"
+          (mouseenter)="hoveredDiscrepancia.set(c.cuenta.id)"
+          (mouseleave)="hoveredDiscrepancia.set(null)"
+          (focus)="hoveredDiscrepancia.set(c.cuenta.id)"
+          (blur)="hoveredDiscrepancia.set(null)"
+          (keydown)="$event.stopPropagation()"
+          (click)="dialogDiscrepancia.set(c); $event.stopPropagation()"
+          [attr.aria-label]="'Ver desglose de discrepancia en ' + c.cuenta.nombre"
+          [attr.aria-describedby]="!bp.isMobile() && hoveredDiscrepancia() === c.cuenta.id ? ('discrepancia-tip-' + c.cuenta.id) : null">
+          <lucide-icon [img]="AlertTriangleIcon" class="w-3 h-3" aria-hidden="true" />
+          Discrepancia
+        </button>
+      </span>
+    }
+  } @else {
+    <span class="text-xs" style="color:var(--text-faint)">Sin saldo real</span>
+  }
+</ng-template>
+
+<!-- Estado de aprobación de un movimiento -->
+<ng-template #estadoMovimiento let-aprobado>
+  @if (aprobado) {
+    <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold"
+      style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">
+      <lucide-icon [img]="CheckCircle2Icon" class="w-3 h-3" aria-hidden="true" /> Aprobado
+    </span>
+  } @else {
+    <span class="rounded-full px-2 py-0.5 text-xs font-bold"
+      style="background:color-mix(in srgb,var(--warning) 12%,transparent);color:var(--warning)">
+      Pendiente
+    </span>
+  }
+</ng-template>

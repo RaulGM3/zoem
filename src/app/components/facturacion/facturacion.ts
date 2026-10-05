@@ -17,6 +17,7 @@ import {
   escribirClienteEnContacto,
   type ClienteFactura,
 } from '../../core/facturacion/cliente-factura';
+import { BreakpointService } from '../../core/services/breakpoint.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { ToastService } from '../../core/services/toast.service';
 import { Caso, gestoriaCompleta, Hito } from '../../interfaces';
@@ -25,6 +26,7 @@ import type { HoraFlat } from './components/facturacion-horas-tab/facturacion-ho
 import { FacturacionKpiCardsComponent } from './components/facturacion-kpi-cards/facturacion-kpi-cards';
 import { FacturacionCasosTabComponent } from './components/facturacion-casos-tab/facturacion-casos-tab';
 import { FacturacionArchivoTabComponent } from './components/facturacion-archivo-tab/facturacion-archivo-tab';
+import { FacturacionGastosTabComponent } from './components/facturacion-gastos-tab/facturacion-gastos-tab';
 import { FacturacionHorasTabComponent } from './components/facturacion-horas-tab/facturacion-horas-tab';
 import { FacturacionConfiguracionTabComponent } from './components/facturacion-configuracion-tab/facturacion-configuracion-tab';
 import { FacturaDrawerComponent } from './components/factura-drawer/factura-drawer';
@@ -42,7 +44,7 @@ function fechaLocalHoy(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-type FacturacionTab = 'casos' | 'archivo' | 'facturas' | 'horas' | 'configuracion';
+type FacturacionTab = 'casos' | 'archivo' | 'facturas' | 'gastos' | 'horas' | 'configuracion';
 
 @Component({
   selector: 'app-facturacion',
@@ -52,6 +54,7 @@ type FacturacionTab = 'casos' | 'archivo' | 'facturas' | 'horas' | 'configuracio
     FacturacionKpiCardsComponent,
     FacturacionCasosTabComponent,
     FacturacionArchivoTabComponent,
+    FacturacionGastosTabComponent,
     FacturacionHorasTabComponent,
     FacturacionConfiguracionTabComponent,
     FacturaDrawerComponent,
@@ -72,11 +75,34 @@ export class FacturacionComponent implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
+  protected readonly bp = inject(BreakpointService);
 
   readonly SettingsIcon = Settings;
   readonly PlusIcon = Plus;
 
+  /** Gastos (facturas recibidas / IVA soportado) es solo para Admin y Gestor, como las rules de Firestore y Storage. */
+  readonly puedeVerGastos = computed(
+    () => (this.perm.hasRole('Admin', 'Gestor') || this.perm.isSuperUser()) && this.perm.can('Facturación', 'crear'),
+  );
+
+  readonly tabs = computed<readonly { id: FacturacionTab; label: string }[]>(() => [
+    { id: 'casos', label: 'Casos abiertos' },
+    { id: 'facturas', label: 'Facturas' },
+    ...(this.puedeVerGastos() ? [{ id: 'gastos' as const, label: 'Gastos' }] : []),
+    { id: 'archivo', label: 'Archivo' },
+    { id: 'horas', label: 'Registro de Horas' },
+    { id: 'configuracion', label: 'Configuración' },
+  ]);
+
+  /** Fecha de hoy para el periodo inicial y la fecha de registro de una factura recibida. */
+  protected readonly hoy = fechaLocalHoy();
+
   activeTab = signal<FacturacionTab>('casos');
+
+  protected seleccionarTab(id: string): void {
+    const tab = this.tabs().find((t) => t.id === id);
+    if (tab) this.activeTab.set(tab.id);
+  }
 
   // --- Config ---
   readonly savingConfig = signal(false);

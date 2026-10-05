@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, input, output, computed, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output, computed, signal, inject } from '@angular/core';
 import { DecimalPipe, TitleCasePipe } from '@angular/common';
 import {
   LucideAngularModule, Plus, Trash2, X, Check, Pencil, Search, SlidersHorizontal,
@@ -11,12 +11,14 @@ import {
   type CampoOrden, type DireccionFiltro, type FiltroMovimientos, type OrdenMovimientos,
 } from '../../../../core/tesoreria/filtro-movimientos';
 import { movTipoStyle } from '../mov-tipo-style';
+import { BreakpointService } from '../../../../core/services/breakpoint.service';
+import { ActionMenuComponent, type MenuAction } from '../../../../shared/components/action-menu/action-menu';
 
 /** Tabla de movimientos de gestoría de un caso, con búsqueda, filtros y ordenación. */
 @Component({
   selector: 'app-caso-movimientos',
   host: { class: 'block' },
-  imports: [LucideAngularModule, DecimalPipe, TitleCasePipe],
+  imports: [LucideAngularModule, DecimalPipe, TitleCasePipe, ActionMenuComponent],
   templateUrl: './caso-movimientos.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -31,6 +33,8 @@ export class CasoMovimientosComponent {
   readonly addMov = output<void>();
   readonly deleteMov = output<string>();
   readonly editMov = output<MovimientoGestoria>();
+
+  protected readonly bp = inject(BreakpointService);
 
   readonly PlusIcon = Plus;
   readonly Trash2Icon = Trash2;
@@ -171,6 +175,42 @@ export class CasoMovimientosComponent {
     this.filtroTipos.set([tipo]);
     this.filtroDireccion.set('salidas');
     this.mostrarFiltros.set(true);
+  }
+
+  /** Opciones del selector de orden móvil (equivale a pulsar las cabeceras de la tabla). */
+  readonly opcionesOrden: readonly { valor: string; etiqueta: string }[] = [
+    { valor: 'fecha:desc', etiqueta: 'Fecha (más reciente)' },
+    { valor: 'fecha:asc', etiqueta: 'Fecha (más antigua)' },
+    { valor: 'importe:desc', etiqueta: 'Importe (mayor)' },
+    { valor: 'importe:asc', etiqueta: 'Importe (menor)' },
+    { valor: 'concepto:asc', etiqueta: 'Concepto (A-Z)' },
+    { valor: 'concepto:desc', etiqueta: 'Concepto (Z-A)' },
+    { valor: 'tipo:asc', etiqueta: 'Tipo (A-Z)' },
+    { valor: 'tipo:desc', etiqueta: 'Tipo (Z-A)' },
+  ];
+
+  /** Valor `campo:direccion` del orden actual. */
+  readonly valorOrden = computed(() => `${this.orden().campo}:${this.orden().direccion}`);
+
+  /** Aplica un valor del selector de orden; ignora los que no están en las opciones. */
+  establecerOrden(valor: string): void {
+    if (!this.opcionesOrden.some(o => o.valor === valor)) return;
+    const [campo, direccion] = valor.split(':') as [CampoOrden, OrdenMovimientos['direccion']];
+    this.orden.set({ campo, direccion });
+  }
+
+  /** Acciones del menú móvil (⋯) de cada tarjeta, según permisos. */
+  readonly acciones = computed<MenuAction[]>(() => {
+    const out: MenuAction[] = [];
+    if (this.canEdit()) out.push({ id: 'edit', label: 'Editar', icon: Pencil });
+    if (this.canDelete()) out.push({ id: 'delete', label: 'Eliminar', icon: Trash2, danger: true });
+    return out;
+  });
+
+  /** Ejecuta una acción del menú móvil: mismos efectos que los iconos de la tabla. */
+  ejecutar(id: string, mov: MovimientoGestoria): void {
+    if (id === 'edit') this.editMov.emit(mov);
+    else if (id === 'delete') this.requestDeleteMov(mov.id);
   }
 
   requestDeleteMov(movId: string): void {

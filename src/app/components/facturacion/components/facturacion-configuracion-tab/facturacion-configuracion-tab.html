@@ -54,10 +54,7 @@
 
       <div class="flex justify-end pt-1">
         <button type="submit" [disabled]="form().invalid || saving()"
-          class="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50 transition-colors duration-150"
-          style="background:var(--brand)"
-          (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-          (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+          class="tap-target inline-flex items-center gap-2 rounded-lg bg-[var(--brand)] px-4 py-2.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-[var(--brand-hover)] disabled:opacity-50">
           <lucide-icon [img]="SaveIcon" size="15"></lucide-icon>
           {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
         </button>

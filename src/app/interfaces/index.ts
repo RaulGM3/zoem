@@ -27,3 +27,4 @@ export * from './retiro.interface';
 export * from './cierre-caja.interface';
 export * from './extracto-bancario.interface';
 export * from './accion.interface';
+export * from './factura-recibida.interface';

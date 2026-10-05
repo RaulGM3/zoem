@@ -5,20 +5,15 @@
     <p class="mt-0.5 text-sm" style="color:var(--text-muted)">Gestiona tu CRM de clientes y contactos</p>
   </div>
   @if (perm.can('Contactos', 'crear')) {
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2">
       <button (click)="showImportDrawer.set(true)"
-        class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-150"
-        style="background:var(--surface-2);color:var(--text-muted);border:1px solid var(--border)"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--border)'"
-        (mouseleave)="$any($event.currentTarget).style.background='var(--surface-2)'">
+        class="tap-target inline-flex items-center gap-2 rounded-xl bg-[var(--surface-2)] px-4 py-2.5 text-sm font-semibold transition-all duration-150 hover:bg-[var(--border)]"
+        style="color:var(--text-muted);border:1px solid var(--border)">
         <span class="material-symbols-outlined" style="font-size:16px">upload_file</span>
         Importar Excel
       </button>
       <button (click)="openNew()"
-        class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150"
-        style="background:var(--brand)"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--brand-hover)'"
-        (mouseleave)="$any($event.currentTarget).style.background='var(--brand)'">
+        class="tap-target inline-flex items-center gap-2 rounded-xl bg-[var(--brand)] px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:bg-[var(--brand-hover)]">
         <span class="material-symbols-outlined" style="font-size:16px">add</span>
         Nuevo Contacto
       </button>
@@ -42,13 +37,30 @@
     </p>
     <p class="mt-1.5 text-xs" style="color:var(--success)">Con proyectos en curso</p>
   </div>
-  <div class="kpi-card rounded-xl p-5" style="background:var(--surface);border:1px solid var(--border)">
-    <p class="text-[13px] font-medium" style="color:var(--text-muted)">Facturación Total</p>
-    <p class="mt-1 font-semibold tabular-nums" style="font-size:29px;line-height:1;color:var(--text-strong);font-family:var(--font-display)">
-      {{ totalBilled() | number:'1.0-0' }}€
-    </p>
-    <p class="mt-1.5 text-xs" style="color:var(--success)">Facturado histórico</p>
-  </div>
+  <!-- KPI rotativa: cada click pasa al siguiente estado -->
+  <button type="button" (click)="siguienteKpi()"
+    class="kpi-card group cursor-pointer rounded-xl border border-[var(--border)] p-5 text-left transition-colors duration-150 hover:border-[var(--brand)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]"
+    style="background:var(--surface)">
+    <span class="flex items-start justify-between gap-2">
+      <span class="text-[13px] font-medium" style="color:var(--text-muted)" aria-live="polite">{{ kpiRotativa().titulo }}</span>
+      <span class="material-symbols-outlined rounded-md p-0.5 transition-transform duration-200 group-hover:rotate-180"
+        style="font-size:18px;color:var(--text-muted);background:var(--surface-2)" aria-hidden="true">sync_alt</span>
+    </span>
+    <span class="mt-1 block font-semibold tabular-nums" style="font-size:29px;line-height:1;color:var(--text-strong);font-family:var(--font-display)">
+      {{ kpiRotativa().total }}
+    </span>
+    <span class="mt-1.5 flex items-center justify-between gap-2">
+      <span class="text-xs" [style.color]="kpiRotativa().color">{{ kpiRotativa().detalle }}</span>
+      <span class="flex gap-1" aria-hidden="true">
+        @for (paso of kpiPasos; track paso.status; let i = $index) {
+          <span class="h-1.5 rounded-full transition-all duration-200"
+            [class]="i === kpiIndice() ? 'w-4' : 'w-1.5'"
+            [style.background]="i === kpiIndice() ? 'var(--brand)' : 'var(--border)'"></span>
+        }
+      </span>
+    </span>
+    <span class="sr-only">Cambiar a {{ kpiRotativa().siguiente }}</span>
+  </button>
 </div>
 
 <!-- Card contenedor -->
@@ -69,6 +81,54 @@
     <div class="p-4">
 
       <!-- Filtros -->
+      @if (bp.isMobile()) {
+        <div class="mb-4 flex justify-end">
+          <button type="button" data-filtros-btn (click)="filtrosAbiertos.set(true)"
+            aria-haspopup="dialog"
+            class="tap-target relative inline-flex items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors duration-150 hover:bg-[var(--surface-2)]"
+            style="border:1px solid var(--border);color:var(--text-body)">
+            <lucide-icon [img]="FiltersIcon" size="15" aria-hidden="true"></lucide-icon>
+            Filtros
+            @if (filtrosActivos() > 0) {
+              <span data-filtros-badge
+                class="inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold text-white"
+                style="background:var(--brand)"
+                [attr.aria-label]="filtrosActivos() + (filtrosActivos() === 1 ? ' filtro activo' : ' filtros activos')">{{ filtrosActivos() }}</span>
+            }
+          </button>
+        </div>
+
+        <app-overlay-shell [open]="filtrosAbiertos()" title="Filtros" variant="modal" (closed)="filtrosAbiertos.set(false)">
+          <div class="space-y-4 p-5">
+            <div>
+              <label class="form-label" for="contactos-estado">Estado</label>
+              <select id="contactos-estado" class="form-select w-full"
+                (change)="filterStatus.set($any($event.target).value)">
+                <option value="" [selected]="filterStatus() === ''">Todos los estados</option>
+                @for (s of contactStatuses; track s.value) {
+                  <option [value]="s.value" [selected]="filterStatus() === s.value">{{ s.label }}</option>
+                }
+              </select>
+            </div>
+            <div>
+              <label class="form-label" for="contactos-tipo">Tipo</label>
+              <select id="contactos-tipo" class="form-select w-full"
+                (change)="filterType.set($any($event.target).value)">
+                <option value="" [selected]="filterType() === ''">Todos los tipos</option>
+                <option value="persona_fisica" [selected]="filterType() === 'persona_fisica'">Persona Física</option>
+                <option value="persona_juridica" [selected]="filterType() === 'persona_juridica'">Persona Jurídica</option>
+              </select>
+            </div>
+          </div>
+          <div footer class="flex items-center justify-between gap-3 p-4">
+            <button type="button" (click)="limpiarFiltros()"
+              class="tap-target rounded-lg px-4 text-sm font-medium transition-colors duration-150 hover:bg-[var(--surface-2)]"
+              style="border:1px solid var(--border);color:var(--text-muted)">Limpiar</button>
+            <button type="button" (click)="filtrosAbiertos.set(false)"
+              class="tap-target rounded-lg bg-[var(--brand)] px-4 text-sm font-semibold text-white transition-colors duration-150 hover:bg-[var(--brand-hover)]">Aplicar</button>
+          </div>
+        </app-overlay-shell>
+      } @else {
       <div class="mb-4 flex flex-col gap-3 sm:flex-row">
         <select (change)="filterStatus.set($any($event.target).value)"
           class="form-select" style="width:auto;min-width:160px"
@@ -87,12 +147,21 @@
         </select>
       </div>
 
+      }
+
       @if (contactService.isLoading()) {
         <div class="py-12 text-center text-sm" style="color:var(--text-faint)">Cargando contactos...</div>
       } @else {
-        <!-- Contacts Grid -->
+        <!-- Contacts: rejilla de fichas (escritorio) / lista compacta (móvil) -->
+        @if (filtered().length === 0) {
+          <div class="rounded-xl py-16 text-center text-sm" style="color:var(--text-faint);border:1px dashed var(--border)">
+            No se encontraron contactos
+          </div>
+        } @else {
+        <app-responsive-list [items]="filtered()" trackBy="id" emptyText="No se encontraron contactos">
+        <ng-template [appListTable]="filtered()" let-rows>
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          @for (c of filtered(); track c.id) {
+          @for (c of rows; track c.id) {
             <div [routerLink]="['/contactos', c.id]"
               tabindex="0"
               role="group"
@@ -140,10 +209,7 @@
                   <a [href]="'mailto:' + c.email"
                     (click)="$event.stopPropagation()"
                     (keydown)="$event.stopPropagation()"
-                    class="flex items-center gap-2 transition-colors duration-150"
-                    style="color:var(--text-muted)"
-                    (mouseenter)="$any($event.currentTarget).style.color='var(--brand)'"
-                    (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)'"
+                    class="flex items-center gap-2 text-[var(--text-muted)] transition-colors duration-150 hover:text-[var(--brand)]"
                     [attr.aria-label]="'Enviar email a ' + c.email">
                     <lucide-icon [img]="MailIcon" size="12" class="shrink-0" style="color:var(--text-faint)"></lucide-icon>
                     <span class="truncate">{{ c.email }}</span>
@@ -153,10 +219,8 @@
                   <a [href]="'tel:' + getPhone(c)"
                     (click)="$event.stopPropagation()"
                     (keydown)="$event.stopPropagation()"
-                    class="flex items-center gap-2 transition-colors duration-150"
-                    style="color:var(--text-muted);font-family:var(--font-mono)"
-                    (mouseenter)="$any($event.currentTarget).style.color='var(--brand)'"
-                    (mouseleave)="$any($event.currentTarget).style.color='var(--text-muted)'"
+                    class="flex items-center gap-2 text-[var(--text-muted)] transition-colors duration-150 hover:text-[var(--brand)]"
+                    style="font-family:var(--font-mono)"
                     [attr.aria-label]="'Llamar a ' + getPhone(c)">
                     <lucide-icon [img]="PhoneIcon" size="12" class="shrink-0" style="color:var(--text-faint)"></lucide-icon>
                     <span>{{ getPhone(c) }}</span>
@@ -200,10 +264,7 @@
                 <div class="flex gap-0.5 shrink-0">
                   <button (click)="abrirCaso(c.id); $event.stopPropagation()"
                     (keydown)="$event.stopPropagation()"
-                    class="rounded-lg p-1.5 transition-colors duration-150"
-                    style="color:var(--text-faint)"
-                    (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--brand) 10%,transparent)';$any($event.currentTarget).style.color='var(--brand)'"
-                    (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+                    class="rounded-lg p-1.5 text-[var(--text-faint)] transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] hover:text-[var(--brand)]"
                     aria-label="Abrir caso para este contacto">
                     <lucide-icon [img]="BriefcaseIcon" size="14"></lucide-icon>
                   </button>
@@ -218,10 +279,7 @@
                       <lucide-icon [img]="SendIcon" size="14"></lucide-icon>
                     </button>
                     <button (click)="openEdit(c); $event.stopPropagation()"
-                      class="rounded-lg p-1.5 transition-colors duration-150"
-                      style="color:var(--text-faint)"
-                      (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)';$any($event.currentTarget).style.color='var(--text-body)'"
-                      (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+                      class="rounded-lg p-1.5 text-[var(--text-faint)] transition-colors duration-150 hover:bg-[var(--surface-2)] hover:text-[var(--text-body)]"
                       aria-label="Editar contacto">
                       <lucide-icon [img]="EditIcon" size="14"></lucide-icon>
                     </button>
@@ -242,10 +300,7 @@
                       </button>
                     } @else {
                       <button (click)="deleteConfirmId.set(c.id); $event.stopPropagation()"
-                        class="rounded-lg p-1.5 transition-colors duration-150"
-                        style="color:var(--text-faint)"
-                        (mouseenter)="$any($event.currentTarget).style.background='color-mix(in srgb,var(--danger) 10%,transparent)';$any($event.currentTarget).style.color='var(--danger)'"
-                        (mouseleave)="$any($event.currentTarget).style.background='';$any($event.currentTarget).style.color='var(--text-faint)'"
+                        class="rounded-lg p-1.5 text-[var(--text-faint)] transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] hover:text-[var(--danger)]"
                         aria-label="Eliminar contacto">
                         <lucide-icon [img]="Trash2Icon" size="14"></lucide-icon>
                       </button>
@@ -255,13 +310,83 @@
               </div>
             </div>
           }
-
-          @if (filtered().length === 0) {
-            <div class="col-span-full rounded-xl py-16 text-center text-sm" style="color:var(--text-faint);border:1px dashed var(--border)">
-              No se encontraron contactos
-            </div>
-          }
         </div>
+        </ng-template>
+
+        <ng-template [appListCard]="filtered()" let-c>
+          <article data-contacto-card class="rounded-xl p-4"
+            [attr.aria-label]="'Ficha de ' + displayName(c)"
+            style="background:var(--surface);border:1px solid var(--border)">
+            <div class="flex items-start gap-3">
+              <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold"
+                [style]="getAvatarStyle(c.type)" aria-hidden="true">{{ initials(c) }}</div>
+              <div class="min-w-0 flex-1">
+                <a [routerLink]="['/contactos', c.id]" class="block truncate font-bold leading-tight"
+                  style="font-size:14.5px;color:var(--text-strong)">{{ displayName(c) }}</a>
+                <div class="mt-1 flex flex-wrap items-center gap-1.5">
+                  <span class="rounded-full px-2 py-0.5 text-[10.5px] font-bold" [style]="getTypeStyle(c.type)">{{ typeLabel(c.type) }}</span>
+                  @if (documento(c); as doc) {
+                    <span class="text-[11px] tabular-nums" style="color:var(--text-muted);font-family:var(--font-mono)">{{ doc }}</span>
+                  }
+                </div>
+              </div>
+              <app-action-menu [actions]="accionesContacto()" [label]="'Acciones de ' + displayName(c)"
+                (selected)="onAccion($event, c)" />
+            </div>
+
+            <div class="mt-3 flex flex-wrap items-center gap-2">
+              @if (perm.can('Contactos', 'editar')) {
+                <button type="button" (click)="abrirEstado(c)"
+                  class="tap-target rounded-full px-3 text-[11px] font-bold"
+                  [style]="getStatusStyle(c.status)"
+                  [attr.aria-label]="'Cambiar estado de ' + displayName(c) + '. Actual: ' + statusLabel(c.status)">{{ statusLabel(c.status) }}</button>
+              } @else {
+                <span class="rounded-full px-2.5 py-1 text-[11px] font-bold" [style]="getStatusStyle(c.status)">{{ statusLabel(c.status) }}</span>
+              }
+              @if (responsable(c); as resp) {
+                <span class="text-xs" style="color:var(--text-muted)">Responsable: {{ resp }}</span>
+              }
+            </div>
+
+            <div class="mt-2 flex flex-col text-[13px]">
+              @if (getPhone(c)) {
+                <a [href]="'tel:' + getPhone(c)"
+                  class="tap-target flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--brand)]"
+                  style="font-family:var(--font-mono)" [attr.aria-label]="'Llamar a ' + getPhone(c)">
+                  <lucide-icon [img]="PhoneIcon" size="14" aria-hidden="true" style="color:var(--text-faint)"></lucide-icon>
+                  <span>{{ getPhone(c) }}</span>
+                </a>
+              }
+              @if (c.email) {
+                <a [href]="'mailto:' + c.email"
+                  class="tap-target flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--brand)]"
+                  [attr.aria-label]="'Enviar email a ' + c.email">
+                  <lucide-icon [img]="MailIcon" size="14" aria-hidden="true" style="color:var(--text-faint)"></lucide-icon>
+                  <span class="truncate">{{ c.email }}</span>
+                </a>
+              }
+            </div>
+
+            @if (deleteConfirmId() === c.id) {
+              <div class="mt-3 flex items-center justify-between gap-2 rounded-lg p-2"
+                style="background:color-mix(in srgb,var(--danger) 8%,transparent)">
+                <span class="text-xs" style="color:var(--danger)">¿Eliminar este contacto?</span>
+                <div class="flex gap-1">
+                  <button type="button" (click)="confirmDelete(c.id)" class="tap-target rounded-lg px-3 text-sm"
+                    style="color:var(--danger)" aria-label="Confirmar eliminación">
+                    <lucide-icon [img]="CheckIcon" size="16" aria-hidden="true"></lucide-icon>
+                  </button>
+                  <button type="button" (click)="deleteConfirmId.set(null)" class="tap-target rounded-lg px-3 text-sm"
+                    style="color:var(--text-muted)" aria-label="Cancelar">
+                    <lucide-icon [img]="XIcon" size="16" aria-hidden="true"></lucide-icon>
+                  </button>
+                </div>
+              </div>
+            }
+          </article>
+        </ng-template>
+        </app-responsive-list>
+        }
       }
     </div>
   }

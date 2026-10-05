@@ -17,7 +17,9 @@ describe('DayScheduleComponent — detalle del item', () => {
   let toastInfo: ReturnType<typeof vi.fn>;
 
   const el = (): HTMLElement => fixture.nativeElement;
-  const dialogo = (): HTMLElement | null => el().querySelector('[role="dialog"][aria-label^="Detalle de"]');
+  const dialogo = (): HTMLElement | null =>
+    Array.from(el().querySelectorAll<HTMLElement>('[role="dialog"]'))
+      .find(d => d.querySelector('h2')?.textContent?.trim().startsWith('Detalle de')) ?? null;
   const boton = (texto: string): HTMLButtonElement | undefined =>
     Array.from(el().querySelectorAll('button')).find(b => b.textContent?.trim() === texto);
   const porLabel = <T extends HTMLElement>(label: string): T[] =>
@@ -75,7 +77,7 @@ describe('DayScheduleComponent — detalle del item', () => {
 
     it('muestra el detalle del item abierto', () => {
       abrir(evento());
-      expect(dialogo()!.getAttribute('aria-label')).toBe('Detalle de Reunión inicial');
+      expect(dialogo()!.querySelector('h2')!.textContent).toContain('Detalle de Reunión inicial');
       expect(dialogo()!.textContent).toContain('10:00 – 11:00');
     });
 
@@ -95,7 +97,7 @@ describe('DayScheduleComponent — detalle del item', () => {
 
     it('se cierra al pulsar el fondo y con Escape', () => {
       abrir(evento());
-      click(dialogo());
+      click(el().querySelector<HTMLElement>('[data-overlay-backdrop]'));
       expect(dialogo()).toBeNull();
 
       component.openItem(evento());

@@ -69,6 +69,7 @@ export class EventosService {
       ...data,
       companyId: this.companyId,
       creadoPor: this.currentUserId,
+      updatedBy: this.currentUserId,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }));
@@ -85,7 +86,7 @@ export class EventosService {
   }
 
   async updateEvento(id: string, data: Partial<CreateEventoData>): Promise<void> {
-    await updateDoc(doc(this.eventosRef, id), stripUndefinedDeep({ ...data, updatedAt: serverTimestamp() }));
+    await updateDoc(doc(this.eventosRef, id), stripUndefinedDeep({ ...data, updatedBy: this.currentUserId, updatedAt: serverTimestamp() }));
     this.eventos.update(list => list.map(e => (e.id === id ? { ...e, ...data } : e)));
   }
 

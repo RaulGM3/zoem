@@ -1,6 +1,6 @@
-<div class="p-6 space-y-6">
+<div class="space-y-4 sm:space-y-6 sm:p-6">
   <!-- Header -->
-  <div class="flex items-center justify-between">
+  <div data-test="perfil-header" class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div class="flex items-center gap-3">
       <div class="w-10 h-10 rounded-xl flex items-center justify-center"
         style="background:color-mix(in srgb,var(--brand) 12%,transparent)">
@@ -12,9 +12,11 @@
       </div>
     </div>
     <button
+      type="button"
+      data-test="perfil-guardar"
       (click)="guardar()"
       [disabled]="guardando()"
-      class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg font-medium transition-colors disabled:opacity-60 text-white"
+      class="tap-target w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-lg font-medium transition-colors disabled:opacity-60 text-white"
       [style.background]="guardado() ? 'var(--success)' : 'var(--brand)'">
       @if (guardando()) {
         <lucide-icon [img]="LoaderIcon" class="w-4 h-4 animate-spin" />Guardando…
@@ -26,9 +28,9 @@
     </button>
   </div>
 
-  <div class="grid lg:grid-cols-3 gap-6">
+  <div data-test="perfil-grid" class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
     <!-- Resumen perfil -->
-    <div class="space-y-4">
+    <div class="min-w-0 space-y-4">
       <div class="rounded-xl p-5 text-center"
         style="background:var(--surface);border:1px solid var(--border)">
         <div class="w-20 h-20 rounded-full flex items-center justify-center font-bold text-2xl mx-auto mb-3"
@@ -38,6 +40,9 @@
         <p class="font-semibold" style="color:var(--text-strong)">{{ currentUser()?.displayName ?? currentUser()?.email }}</p>
         @if (currentUser()?.despacho?.nombre) {
           <p class="text-sm font-medium mt-0.5" style="color:var(--text-muted)">{{ currentUser()?.despacho?.nombre }}</p>
+        }
+        @if (rol(); as r) {
+          <span data-test="perfil-rol" class="mt-2 inline-block px-3 py-0.5 text-xs font-semibold rounded-full" [class]="r.colorClass">{{ r.label }}</span>
         }
         @if (currentUser()?.profesional?.especialidad) {
           <span class="mt-2 inline-block px-3 py-0.5 text-xs font-semibold rounded-full"
@@ -61,47 +66,39 @@
       <div class="rounded-xl p-4 space-y-2 text-sm"
         style="background:var(--surface);border:1px solid var(--border)">
         <h3 class="font-semibold" style="color:var(--text-body)">Información de cuenta</h3>
-        <div class="flex justify-between">
-          <span style="color:var(--text-muted)">Email</span>
-          <span class="truncate max-w-40" style="color:var(--text-body)">{{ currentUser()?.email }}</span>
+        <div class="flex justify-between gap-3">
+          <span class="shrink-0" style="color:var(--text-muted)">Email</span>
+          <span class="truncate min-w-0" style="color:var(--text-body)">{{ currentUser()?.email }}</span>
         </div>
-        <div class="flex justify-between">
-          <span style="color:var(--text-muted)">Miembro desde</span>
+        <div class="flex justify-between gap-3">
+          <span class="shrink-0" style="color:var(--text-muted)">Miembro desde</span>
           <span style="color:var(--text-body)">{{ memberSince() }}</span>
         </div>
-        <div class="flex justify-between">
-          <span style="color:var(--text-muted)">ID de usuario</span>
+        <div class="flex justify-between gap-3">
+          <span class="shrink-0" style="color:var(--text-muted)">ID de usuario</span>
           <span class="text-xs font-mono truncate max-w-27.5" style="color:var(--text-faint)">{{ currentUser()?.id }}</span>
         </div>
       </div>
     </div>
 
     <!-- Formularios -->
-    <div class="lg:col-span-2 rounded-xl"
+    <div class="min-w-0 lg:col-span-2 rounded-xl"
       style="background:var(--surface);border:1px solid var(--border)">
-      <div class="flex" style="border-bottom:1px solid var(--border)">
-        <button (click)="activeTab.set('personal')"
-          class="px-5 py-3 text-sm font-medium transition-colors"
-          [style.color]="activeTab() === 'personal' ? 'var(--brand)' : 'var(--text-muted)'"
-          [style.border-bottom]="activeTab() === 'personal' ? '2px solid var(--brand)' : '2px solid transparent'">
-          Personal
-        </button>
-        <button (click)="activeTab.set('despacho')"
-          class="px-5 py-3 text-sm font-medium transition-colors"
-          [style.color]="activeTab() === 'despacho' ? 'var(--brand)' : 'var(--text-muted)'"
-          [style.border-bottom]="activeTab() === 'despacho' ? '2px solid var(--brand)' : '2px solid transparent'">
-          Despacho
-        </button>
-        <button (click)="activeTab.set('profesional')"
-          class="px-5 py-3 text-sm font-medium transition-colors"
-          [style.color]="activeTab() === 'profesional' ? 'var(--brand)' : 'var(--text-muted)'"
-          [style.border-bottom]="activeTab() === 'profesional' ? '2px solid var(--brand)' : '2px solid transparent'">
-          Profesional
-        </button>
+      <div class="flex overflow-x-auto" style="border-bottom:1px solid var(--border)" role="tablist" aria-label="Secciones del perfil">
+        @for (tab of tabs; track tab.id) {
+          <button type="button" role="tab" [attr.data-test]="'tab-' + tab.id"
+            [attr.aria-selected]="activeTab() === tab.id"
+            (click)="activeTab.set(tab.id)"
+            class="tap-target shrink-0 whitespace-nowrap px-4 sm:px-5 py-3 text-sm font-medium transition-colors"
+            [style.color]="activeTab() === tab.id ? 'var(--brand)' : 'var(--text-muted)'"
+            [style.border-bottom]="activeTab() === tab.id ? '2px solid var(--brand)' : '2px solid transparent'">
+            {{ tab.label }}
+          </button>
+        }
       </div>
 
       @if (activeTab() === 'personal') {
-        <form [formGroup]="personalForm" class="p-5 grid md:grid-cols-2 gap-4">
+        <form [formGroup]="personalForm" class="p-4 sm:p-5 grid md:grid-cols-2 gap-4">
           <div class="md:col-span-2 space-y-1">
             <label class="form-label" for="nombre">Nombre completo</label>
             <input id="nombre" formControlName="nombre" type="text" class="form-input" />
@@ -120,14 +117,14 @@
             <input id="linkedin" formControlName="linkedin" type="text" class="form-input" />
           </div>
           <div class="md:col-span-2 space-y-1">
-            <label class="form-label" for="biografia">Biografía</label>
+            <label class="form-label" for="biografia">Bio</label>
             <textarea id="biografia" formControlName="biografia" rows="4" class="form-input resize-none"></textarea>
           </div>
         </form>
       }
 
       @if (activeTab() === 'despacho') {
-        <form [formGroup]="despachoForm" class="p-5 grid md:grid-cols-2 gap-4">
+        <form [formGroup]="despachoForm" class="p-4 sm:p-5 grid md:grid-cols-2 gap-4">
           <div class="md:col-span-2 space-y-1">
             <label class="form-label" for="nombreDespacho">Nombre del despacho</label>
             <input id="nombreDespacho" formControlName="nombre" type="text" class="form-input" />
@@ -156,7 +153,7 @@
       }
 
       @if (activeTab() === 'profesional') {
-        <form [formGroup]="profesionalForm" class="p-5 grid md:grid-cols-2 gap-4">
+        <form [formGroup]="profesionalForm" class="p-4 sm:p-5 grid md:grid-cols-2 gap-4">
           <div class="md:col-span-2 space-y-1">
             <label class="form-label" for="colegio">Colegio profesional</label>
             <input id="colegio" formControlName="colegio" type="text" class="form-input" />
@@ -179,6 +176,14 @@
             </select>
           </div>
         </form>
+      }
+
+      @if (activeTab() === 'permisos') {
+        <app-perfil-permisos [rol]="rol()" [permisos]="permisos()" [empresa]="empresa()" />
+      }
+
+      @if (activeTab() === 'notificaciones') {
+        <app-notificaciones-prefs />
       }
     </div>
   </div>
