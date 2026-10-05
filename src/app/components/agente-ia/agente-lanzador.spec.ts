@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { DeferBlockBehavior, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
+import { BreakpointService } from '../../core/services/breakpoint.service';
 import { AgenteLanzadorComponent } from './agente-lanzador';
 
 /**
@@ -12,14 +14,17 @@ import { AgenteLanzadorComponent } from './agente-lanzador';
  * cadena pesada del agente, estos tests reventarían con NG0201 — y ese es
  * justamente el punto: el lanzador tiene que ser barato o no sirve de nada.
  */
-async function montar(url = '/casos') {
+async function montar(url = '/casos', movil = false) {
   const events = new Subject<unknown>();
   const router = { url, events: events.asObservable() };
 
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     imports: [AgenteLanzadorComponent],
-    providers: [{ provide: Router, useValue: router }],
+    providers: [
+      { provide: Router, useValue: router },
+      { provide: BreakpointService, useValue: { isMobile: signal(movil) } },
+    ],
     // Sin esto, TestBed RENDERIZA el bloque diferido y con él todo el agente,
     // que aquí no está provisto a propósito. Lo que se prueba en este archivo
     // es la máquina de estados del lanzador; lo que el panel pinta ya lo cubre
@@ -111,5 +116,37 @@ describe('AgenteLanzadorComponent', () => {
     const { fixture } = await montar('/agente-ia');
 
     expect(fab(fixture)).toBeNull();
+  });
+
+  it('en escritorio abre el chat', async () => {
+    const { fixture, componente } = await montar('/casos', false);
+
+    fab(fixture).click();
+
+    expect(componente.modo()).toBe('chat');
+  });
+
+  it('en móvil abre el dictado por voz, no el chat', async () => {
+    const { fixture, componente } = await montar('/casos', true);
+
+    fab(fixture).click();
+
+    expect(componente.modo()).toBe('voz');
+  });
+
+  it('en móvil la etiqueta anuncia que se va a dictar', async () => {
+    const { fixture } = await montar('/casos', true);
+
+    expect(fab(fixture).getAttribute('aria-label')).toMatch(/dictar/i);
+  });
+
+  it('desde la voz se puede pasar a la conversación completa', async () => {
+    const { fixture, componente } = await montar('/casos', true);
+
+    fab(fixture).click();
+    componente.verConversacion();
+
+    expect(componente.modo()).toBe('chat');
+    expect(componente.abierto()).toBe(true);
   });
 });

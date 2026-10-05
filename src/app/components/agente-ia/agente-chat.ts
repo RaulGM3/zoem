@@ -10,6 +10,7 @@ import { AgentChatService } from '../../core/agent/agent-chat.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { fusionarDictado } from '../../core/voz/transcripcion-texto';
 import { BotonDictadoComponent } from './boton-dictado';
+import { contextoAgente } from './contexto-agente';
 
 /**
  * Modo de conversación.
@@ -335,12 +336,7 @@ export class AgenteChatComponent {
     }
   }
 
-  /**
-   * Contexto vivo para el system prompt. Saber en qué pantalla está el usuario
-   * es lo que permite que "créame un caso aquí" o "ábreme este" tengan sentido.
-   */
   private contexto(): string {
-    const rol = this.perm.userRole() ?? 'sin rol asignado';
-    return `- Pantalla actual: ${this.router.url}\n- Rol del usuario: ${rol}`;
+    return contextoAgente(this.router.url, this.perm.userRole());
   }
 }
