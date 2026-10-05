@@ -29,7 +29,7 @@ const input = (over: Partial<EjecutarAccionInput> = {}): EjecutarAccionInput => 
   ...over,
 });
 
-describe('AccionEjecucionService', () => {
+describe('AccionEjecucionService (preparar/abrir)', () => {
   let svc: AccionEjecucionService;
   let calls: string[];
   let open: ReturnType<typeof vi.fn>;
@@ -65,23 +65,22 @@ describe('AccionEjecucionService', () => {
     svc = TestBed.inject(AccionEjecucionService);
   });
 
-  it('sin documento: construye la URL del canal, registra y abre', async () => {
-    const r = await svc.ejecutar(input());
+  it('sin documento: construye la URL del canal y registra, sin abrir', async () => {
+    const r = await svc.preparar(input());
     expect(getTemplate).not.toHaveBeenCalled();
     expect(subirYFirmar).not.toHaveBeenCalled();
     expect(r.url).toContain('https://mail.google.com/mail/?view=cm');
     expect(r.url).toContain('to=ana%40x.com');
     expect(r.url).toContain('su=Hola%20Ana');
     expect(r.registroId).toBe('r1');
-    expect(r.abierto).toBe(true);
     expect(crear).toHaveBeenCalledWith('r1', {
       accionId: 'a1', accionNombre: 'Bienvenida', contactoIds: ['k1'], canal: 'gmail',
     });
-    expect(open).toHaveBeenCalledWith(r.url, '_blank');
+    expect(open).not.toHaveBeenCalled();
   });
 
   it('con documento: interpola, genera docx, sube, firma y añade el enlace al cuerpo', async () => {
-    const r = await svc.ejecutar(input({
+    const r = await svc.preparar(input({
       accion: accion({ docTemplateId: 't1' }),
       valoresDoc: { cliente: 'Ana Ruiz' },
     }));
@@ -94,57 +93,58 @@ describe('AccionEjecucionService', () => {
     expect(crear.mock.calls[0][1]).toMatchObject({ docPath: 'companies/c1/acciones_envios/r1.docx' });
   });
 
-  it('escribe el registro ANTES de abrir la app', async () => {
-    await svc.ejecutar(input());
+  it('preparar registra pero NO abre; abrir() abre de forma síncrona después', async () => {
+    const r = await svc.preparar(input());
+    expect(calls).toEqual(['registro']);
+    expect(svc.abrir(r.url, 'gmail')).toBe(true);
     expect(calls).toEqual(['registro', 'open']);
+    expect(open).toHaveBeenCalledWith(r.url, '_blank');
   });
 
   it('guarda casoId y hitoId cuando vienen', async () => {
-    await svc.ejecutar(input({ casoId: 'cs1', hitoId: 'h1' }));
+    await svc.preparar(input({ casoId: 'cs1', hitoId: 'h1' }));
     expect(crear.mock.calls[0][1]).toMatchObject({ casoId: 'cs1', hitoId: 'h1' });
   });
 
   it('whatsapp usa el móvil normalizado del contacto', async () => {
-    const r = await svc.ejecutar(input({ canal: 'whatsapp' }));
+    const r = await svc.preparar(input({ canal: 'whatsapp' }));
     expect(r.url.startsWith('https://wa.me/34612345678?text=')).toBe(true);
   });
 
-  it('nativo abre con _system', async () => {
+  it('nativo abre con _system', () => {
     isNative = true;
-    await svc.ejecutar(input());
+    svc.abrir('https://x', 'gmail');
     expect(open.mock.calls[0][1]).toBe('_system');
   });
 
   it('plantilla de documento inexistente: error y no se crea ni abre nada', async () => {
     getTemplate.mockResolvedValue(null);
-    await expect(svc.ejecutar(input({ accion: accion({ docTemplateId: 't1' }) }))).rejects.toThrow(/plantilla/i);
+    await expect(svc.preparar(input({ accion: accion({ docTemplateId: 't1' }) }))).rejects.toThrow(/plantilla/i);
     expect(crear).not.toHaveBeenCalled();
     expect(open).not.toHaveBeenCalled();
   });
 
   it('canal no disponible para los destinatarios: error sin efectos', async () => {
-    await expect(svc.ejecutar(input({ contactos: [{ ...ana, mobile: '' } as Contact], canal: 'whatsapp' }))).rejects.toThrow(/móvil/i);
+    await expect(svc.preparar(input({ contactos: [{ ...ana, mobile: '' } as Contact], canal: 'whatsapp' }))).rejects.toThrow(/móvil/i);
     expect(crear).not.toHaveBeenCalled();
     expect(open).not.toHaveBeenCalled();
   });
 
   it('si falla el registro no se abre la app', async () => {
     crear.mockRejectedValue(new Error('permission-denied'));
-    await expect(svc.ejecutar(input())).rejects.toThrow('permission-denied');
+    await expect(svc.preparar(input())).rejects.toThrow('permission-denied');
     expect(open).not.toHaveBeenCalled();
   });
 
-  it('abierto=false si el navegador bloquea el popup', async () => {
+  it('abrir devuelve false si el navegador bloquea el popup', () => {
     open.mockReturnValue(null);
-    const r = await svc.ejecutar(input());
-    expect(r.abierto).toBe(false);
-    expect(r.url).toBeTruthy();
+    expect(svc.abrir('https://x', 'gmail')).toBe(false);
   });
 
   it('marca excedeLimite si la URL supera 2000 caracteres', async () => {
-    const r = await svc.ejecutar(input({ cuerpo: 'x'.repeat(2500) }));
+    const r = await svc.preparar(input({ cuerpo: 'x'.repeat(2500) }));
     expect(r.excedeLimite).toBe(true);
-    const corto = await svc.ejecutar(input());
+    const corto = await svc.preparar(input());
     expect(corto.excedeLimite).toBe(false);
   });
 });

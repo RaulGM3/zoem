@@ -37,18 +37,17 @@ export interface EjecutarAccionResultado {
   docUrl?: string;
   /** La URL supera ~2000 caracteres: algunos clientes pueden truncar el cuerpo. */
   excedeLimite: boolean;
-  /** `false` si el navegador bloqueó la apertura: ofrecer `url` como enlace manual. */
-  abierto: boolean;
 }
 
 /**
- * Orquesta una acción: [documento -> docx -> Storage -> URL firmada] ->
- * cuerpo final -> URL del canal -> registro -> abrir la app.
- *
- * El registro se escribe ANTES de abrir: si las rules/red lo rechazan no se
- * envía nada sin dejar rastro. Ojo con los navegadores: tras awaits largos
- * (generar el docx) `window.open` puede bloquearse como popup; por eso se
- * devuelve `abierto` y `url` para mostrar un enlace de respaldo.
+ * Ejecución en DOS pasos para no perder el gesto de usuario (los navegadores
+ * bloquean `window.open` tras awaits largos):
+ * 1. `preparar`: [documento -> docx -> Storage -> URL firmada] -> cuerpo final
+ *    -> URL del canal -> registro. El registro se escribe aquí (antes de abrir:
+ *    si las rules/red lo rechazan no se envía nada sin dejar rastro); significa
+ *    "preparado", no "enviado" (el usuario aún puede no pulsar Abrir).
+ * 2. `abrir`: síncrono, se llama desde el click del botón "Abrir en {canal}".
+ *    Devuelve `false` si el navegador bloqueó la apertura.
  */
 @Injectable({ providedIn: 'root' })
 export class AccionEjecucionService {
@@ -59,7 +58,7 @@ export class AccionEjecucionService {
   private readonly platform = inject(PlatformService);
   private readonly document = inject(DOCUMENT);
 
-  async ejecutar(input: EjecutarAccionInput): Promise<EjecutarAccionResultado> {
+  async preparar(input: EjecutarAccionInput): Promise<EjecutarAccionResultado> {
     const { accion, contactos, canal, asunto, cuerpo } = input;
 
     const disp = canalDisponible(canal, contactos);
@@ -96,15 +95,17 @@ export class AccionEjecucionService {
     };
     await this.registros.crear(registroId, registro);
 
-    const abierto = abrirUrlCanal(this.document.defaultView, url, canal, this.platform.isNative);
-
     return {
       registroId,
       url,
       cuerpoFinal,
       ...(docPath ? { docPath, docUrl } : {}),
       excedeLimite: excedeLimiteUrl(url),
-      abierto,
     };
+  }
+
+  /** Síncrono a propósito: debe ejecutarse dentro del handler de un click. */
+  abrir(url: string, canal: Canal): boolean {
+    return abrirUrlCanal(this.document.defaultView, url, canal, this.platform.isNative);
   }
 }
