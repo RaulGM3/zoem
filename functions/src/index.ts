@@ -232,3 +232,4 @@ export { syncMemberClaims, syncSuperuserClaim, backfillMemberClaims } from './cu
 // ─── Feed ICS del calendario ──────────────────────────────────────────────────
 export { calendarFeed } from './calendarFeed/calendarFeedHttp';
 export { createCalendarFeedToken, revokeCalendarFeedToken } from './calendarFeed/tokens';
+export { validarQrFacturaRecibida } from './aeat/validarQrCallable';
