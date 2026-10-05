@@ -12,7 +12,7 @@ import { CompanyService } from '../../core/services/company.service';
 @Component({ selector: 'app-notificaciones-prefs', template: '<p>prefs</p>' })
 class PrefsStub {}
 
-describe('PerfilComponent — pestaña Notificaciones', () => {
+describe('PerfilComponent — mobile', () => {
   async function setup() {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -44,33 +44,51 @@ describe('PerfilComponent — pestaña Notificaciones', () => {
     return fixture;
   }
 
-  it('offers a Notificaciones tab that renders the prefs section', async () => {
-    const fixture = await setup();
-    const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('app-notificaciones-prefs')).toBeNull();
-    const tab = el.querySelector<HTMLButtonElement>('[data-test="tab-notificaciones"]')!;
-    expect(tab.textContent).toContain('Notificaciones');
-    tab.click();
-    fixture.detectChanges();
-    expect(el.querySelector('app-notificaciones-prefs')).not.toBeNull();
-  });
-
-  it('shows the company role in the summary card', async () => {
+  it('does not add page padding on mobile (the layout already pads)', async () => {
     const el = (await setup()).nativeElement as HTMLElement;
-    const badge = el.querySelector<HTMLElement>('[data-test="perfil-rol"]')!;
-    expect(badge.textContent?.trim()).toBe('Gestor');
+    const root = el.firstElementChild as HTMLElement;
+    expect(root.classList).toContain('sm:p-6');
+    expect(root.classList).not.toContain('p-6');
   });
 
-  it('offers a Rol y permisos tab with the resolved permissions of the user', async () => {
+  it('keeps the layout grid within the viewport (no min-content blowout from the tab bar)', async () => {
+    const el = (await setup()).nativeElement as HTMLElement;
+    const grid = el.querySelector<HTMLElement>('[data-test="perfil-grid"]')!;
+    expect(grid.classList).toContain('grid-cols-1');
+    for (const child of Array.from(grid.children)) {
+      expect(child.classList).toContain('min-w-0');
+    }
+  });
+
+  it('stacks the header and makes the save button full width on mobile', async () => {
+    const el = (await setup()).nativeElement as HTMLElement;
+    const header = el.querySelector<HTMLElement>('[data-test="perfil-header"]')!;
+    expect(header.classList).toContain('flex-col');
+    expect(header.classList).toContain('sm:flex-row');
+    const save = el.querySelector<HTMLButtonElement>('[data-test="perfil-guardar"]')!;
+    expect(save.classList).toContain('w-full');
+    expect(save.classList).toContain('sm:w-auto');
+    expect(save.classList).toContain('tap-target');
+  });
+
+  it('renders scrollable accessible tabs with tap targets', async () => {
     const fixture = await setup();
     const el = fixture.nativeElement as HTMLElement;
-    el.querySelector<HTMLButtonElement>('[data-test="tab-permisos"]')!.click();
+    const list = el.querySelector<HTMLElement>('[role="tablist"]')!;
+    expect(list.classList).toContain('overflow-x-auto');
+    const tabs = Array.from(list.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+    expect(tabs.map((t) => t.textContent?.trim())).toEqual([
+      'Personal', 'Despacho', 'Profesional', 'Rol y permisos', 'Notificaciones',
+    ]);
+    for (const t of tabs) {
+      expect(t.type).toBe('button');
+      expect(t.classList).toContain('tap-target');
+      expect(t.classList).toContain('shrink-0');
+    }
+    expect(tabs[0].getAttribute('aria-selected')).toBe('true');
+    tabs[1].click();
     fixture.detectChanges();
-    expect(el.textContent).toContain('Despacho Pérez');
-    expect(el.textContent).toContain('Gestión de proyectos, clientes y facturación');
-    const rows = el.querySelectorAll('[data-test="permiso-modulo"]');
-    expect(rows.length).toBe(9);
-    const caps = Array.from(rows[0].querySelectorAll<HTMLElement>('[data-test="permiso-cap"]'));
-    expect(caps.map((c) => c.dataset['granted'])).toEqual(['true', 'false', 'false', 'false']);
+    expect(tabs[1].getAttribute('aria-selected')).toBe('true');
+    expect(tabs[0].getAttribute('aria-selected')).toBe('false');
   });
 });

@@ -5,12 +5,20 @@ import { AuthService } from '../../auth/auth.service';
 import { UserSyncService } from '../../core/services/user-sync.service';
 import { ToastService } from '../../core/services/toast.service';
 import { NotificacionesPrefsComponent } from './notificaciones-prefs/notificaciones-prefs';
+import { PerfilPermisosComponent, type ModuloPermisos, type RolInfo } from './perfil-permisos/perfil-permisos';
+import { PermissionService } from '../../core/services/permission.service';
+import { CompanyService } from '../../core/services/company.service';
+import { CAPABILITIES, MODULOS, type Capability, type Modulo } from '../../core/permissions/permissions';
+import { FIRM_ROLE_CONFIGS } from '../../interfaces/member';
 
-type PerfilTab = 'personal' | 'despacho' | 'profesional' | 'notificaciones';
+type PerfilTab = 'personal' | 'despacho' | 'profesional' | 'permisos' | 'notificaciones';
+
+const MODULO_LABELS: Partial<Record<Modulo, string>> = { 'RecepciónIA': 'Recepción IA' };
+const CAP_LABELS: Record<Capability, string> = { ver: 'Ver', crear: 'Crear', editar: 'Editar', eliminar: 'Eliminar' };
 
 @Component({
   selector: 'app-perfil',
-  imports: [LucideAngularModule, ReactiveFormsModule, NotificacionesPrefsComponent],
+  imports: [LucideAngularModule, ReactiveFormsModule, NotificacionesPrefsComponent, PerfilPermisosComponent],
   templateUrl: './perfil.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -26,8 +34,17 @@ export class PerfilComponent {
   private readonly auth = inject(AuthService);
   private readonly userSync = inject(UserSyncService);
   private readonly toast = inject(ToastService);
+  private readonly permissions = inject(PermissionService);
+  private readonly companyService = inject(CompanyService);
 
   activeTab = signal<PerfilTab>('personal');
+  readonly tabs: { id: PerfilTab; label: string }[] = [
+    { id: 'personal', label: 'Personal' },
+    { id: 'despacho', label: 'Despacho' },
+    { id: 'profesional', label: 'Profesional' },
+    { id: 'permisos', label: 'Rol y permisos' },
+    { id: 'notificaciones', label: 'Notificaciones' },
+  ];
   guardado = signal(false);
   guardando = signal(false);
 
@@ -83,6 +100,44 @@ export class PerfilComponent {
     const filled = fields.filter((f) => !!f).length;
     return Math.round((filled / fields.length) * 100);
   });
+
+  readonly empresa = computed(() => this.companyService.activeCompany()?.name ?? null);
+
+  /** Rol del usuario en la empresa activa (custom si lo tiene). */
+  readonly rol = computed<RolInfo | null>(() => {
+    if (this.permissions.isSuperUser()) {
+      return {
+        label: 'Superusuario',
+        colorClass: 'bg-amber-100 text-amber-800',
+        descripcion: 'Acceso total a toda la plataforma',
+        baseRole: null,
+      };
+    }
+    const member = this.permissions.currentMember();
+    if (!member) return null;
+    const { label, colorClass } = this.permissions.displayRole(member);
+    const custom = this.permissions.currentCustomRole();
+    const base = FIRM_ROLE_CONFIGS.find((r) => r.nombre === member.role)?.descripcion ?? '';
+    return {
+      label,
+      colorClass,
+      descripcion: custom ? custom.descripcion ?? base : base,
+      baseRole: custom ? member.role : null,
+    };
+  });
+
+  /** Permisos efectivos (override > rol custom > empresa > base) por módulo. */
+  readonly permisos = computed<ModuloPermisos[]>(() =>
+    MODULOS.map((modulo) => ({
+      modulo,
+      label: MODULO_LABELS[modulo] ?? modulo,
+      caps: CAPABILITIES.map((cap) => ({
+        cap,
+        label: CAP_LABELS[cap],
+        granted: this.permissions.can(modulo, cap),
+      })),
+    })),
+  );
 
   readonly memberSince = computed(() => {
     const ts = this.currentUser()?.createdAt as { toDate?: () => Date } | null;
