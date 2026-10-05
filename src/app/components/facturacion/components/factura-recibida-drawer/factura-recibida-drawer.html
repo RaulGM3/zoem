@@ -1,0 +1,263 @@
+<app-overlay-shell [open]="true" title="Registrar factura recibida" variant="drawer" (closed)="closed.emit()">
+  <div class="space-y-5 p-5" [formGroup]="form">
+
+    <p class="flex items-start gap-2 rounded-lg px-3 py-2 text-xs" data-aviso-registro
+      style="background:var(--surface-2);color:var(--text-body)">
+      <lucide-icon [img]="InfoIcon" size="14" class="mt-px shrink-0" aria-hidden="true"></lucide-icon>
+      <span>Es un registro para tu IVA soportado (libro de facturas recibidas y modelo 303). No se envía nada a la AEAT ni a Verifactu.</span>
+    </p>
+
+    <!-- Emisor -->
+    <fieldset class="space-y-3">
+      <legend class="mb-1 text-xs font-semibold uppercase tracking-wider"
+        style="color:var(--text-faint);font-family:var(--font-mono)">Emisor</legend>
+
+      <div>
+        <label for="fr-proveedor-nombre" class="form-label">Nombre o razón social</label>
+        <input id="fr-proveedor-nombre" type="text" formControlName="proveedorNombre" autocomplete="off"
+          class="form-input w-full" [class.error]="errorDe('proveedor.nombre')" aria-required="true"
+          [attr.aria-invalid]="errorDe('proveedor.nombre') ? 'true' : 'false'"
+          [attr.aria-describedby]="errorDe('proveedor.nombre') ? idError('proveedor.nombre') : null" />
+        @if (errorDe('proveedor.nombre'); as e) {
+          <p [id]="idError('proveedor.nombre')" class="form-error" role="alert">{{ e }}</p>
+        }
+      </div>
+
+      <div>
+        <label for="fr-proveedor-nif" class="form-label">NIF del emisor</label>
+        <input id="fr-proveedor-nif" type="text" formControlName="proveedorNif" autocomplete="off"
+          class="form-input w-full" [class.error]="errorDe('proveedor.nif')" aria-required="true"
+          [attr.aria-invalid]="errorDe('proveedor.nif') ? 'true' : 'false'"
+          [attr.aria-describedby]="errorDe('proveedor.nif') ? idError('proveedor.nif') : null" />
+        @if (errorDe('proveedor.nif'); as e) {
+          <p [id]="idError('proveedor.nif')" class="form-error" role="alert">{{ e }}</p>
+        }
+      </div>
+    </fieldset>
+
+    <!-- Factura -->
+    <fieldset class="space-y-3">
+      <legend class="mb-1 text-xs font-semibold uppercase tracking-wider"
+        style="color:var(--text-faint);font-family:var(--font-mono)">Factura</legend>
+
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div>
+          <label for="fr-numero" class="form-label">Número de factura</label>
+          <input id="fr-numero" type="text" formControlName="numero" autocomplete="off"
+            class="form-input w-full" [class.error]="errorDe('numero')" aria-required="true"
+            [attr.aria-invalid]="errorDe('numero') ? 'true' : 'false'"
+            [attr.aria-describedby]="errorDe('numero') ? idError('numero') : null" />
+          @if (errorDe('numero'); as e) {
+            <p [id]="idError('numero')" class="form-error" role="alert">{{ e }}</p>
+          }
+        </div>
+        <div>
+          <label for="fr-tipo-factura" class="form-label">Tipo de factura</label>
+          <select id="fr-tipo-factura" formControlName="tipoFactura" class="form-select w-full"
+            [attr.aria-invalid]="errorDe('tipoFactura') ? 'true' : 'false'">
+            <option value="F1">F1 · Factura completa</option>
+            <option value="F2">F2 · Factura simplificada</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div>
+          <label for="fr-fecha-expedicion" class="form-label">Fecha de expedición</label>
+          <input id="fr-fecha-expedicion" type="date" formControlName="fechaExpedicion"
+            class="form-input w-full" [class.error]="errorDe('fechaExpedicion')" aria-required="true"
+            [attr.aria-invalid]="errorDe('fechaExpedicion') ? 'true' : 'false'"
+            [attr.aria-describedby]="errorDe('fechaExpedicion') ? idError('fechaExpedicion') : null" />
+          @if (errorDe('fechaExpedicion'); as e) {
+            <p [id]="idError('fechaExpedicion')" class="form-error" role="alert">{{ e }}</p>
+          }
+        </div>
+        <div>
+          <label for="fr-fecha-registro" class="form-label">Fecha de registro</label>
+          <input id="fr-fecha-registro" type="date" formControlName="fechaRegistro"
+            class="form-input w-full" [class.error]="errorDe('fechaRegistro')" aria-required="true"
+            [attr.aria-invalid]="errorDe('fechaRegistro') ? 'true' : 'false'"
+            [attr.aria-describedby]="errorDe('fechaRegistro') ? idError('fechaRegistro') : null" />
+          @if (errorDe('fechaRegistro'); as e) {
+            <p [id]="idError('fechaRegistro')" class="form-error" role="alert">{{ e }}</p>
+          }
+        </div>
+      </div>
+
+      <div>
+        <label for="fr-concepto" class="form-label">Concepto</label>
+        <input id="fr-concepto" type="text" formControlName="concepto" autocomplete="off" class="form-input w-full" />
+      </div>
+    </fieldset>
+
+    <!-- Periodo 303 -->
+    <fieldset class="space-y-2">
+      <legend class="mb-1 text-xs font-semibold uppercase tracking-wider"
+        style="color:var(--text-faint);font-family:var(--font-mono)">Periodo del modelo 303</legend>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label for="fr-ejercicio" class="form-label">Ejercicio</label>
+          <input id="fr-ejercicio" type="number" inputmode="numeric" class="form-input w-full"
+            [class.error]="errorDe('periodo303')"
+            [attr.aria-invalid]="errorDe('periodo303') ? 'true' : 'false'"
+            [attr.aria-describedby]="errorDe('periodo303') ? idError('periodo303') : 'fr-periodo-ayuda'"
+            [value]="periodo().ejercicio || ''" (input)="onEjercicio($any($event.target).value)" />
+        </div>
+        <div>
+          <label for="fr-trimestre" class="form-label">Trimestre</label>
+          <select id="fr-trimestre" class="form-select w-full"
+            [attr.aria-describedby]="errorDe('periodo303') ? idError('periodo303') : 'fr-periodo-ayuda'"
+            (change)="onTrimestre($any($event.target).value)">
+            @for (t of trimestres; track t) {
+              <option [value]="t" [selected]="periodo().trimestre === t">{{ t }}T</option>
+            }
+          </select>
+        </div>
+      </div>
+      <p id="fr-periodo-ayuda" class="text-xs" style="color:var(--text-muted)">
+        Por defecto es el trimestre de la fecha de registro. Puedes cambiarlo si vas a deducir el IVA en otro periodo.
+      </p>
+      @if (errorDe('periodo303'); as e) {
+        <p [id]="idError('periodo303')" class="form-error" role="alert">{{ e }}</p>
+      }
+    </fieldset>
+
+    <!-- Desglose de IVA -->
+    <fieldset class="space-y-3">
+      <legend class="mb-1 text-xs font-semibold uppercase tracking-wider"
+        style="color:var(--text-faint);font-family:var(--font-mono)">Desglose de IVA soportado</legend>
+
+      @if (errorDe('lineasIva'); as e) {
+        <p [id]="idError('lineasIva')" class="form-error" role="alert">{{ e }}</p>
+      }
+
+      <div formArrayName="lineas" class="space-y-3">
+        @for (linea of lineas.controls; track linea; let i = $index) {
+          <div [formGroupName]="i" data-linea class="space-y-2 rounded-lg p-3"
+            style="border:1px solid var(--border)" role="group" [attr.aria-label]="'Línea de IVA ' + (i + 1)">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-xs font-semibold" style="color:var(--text-muted)">Línea {{ i + 1 }}</span>
+              @if (lineas.length > 1) {
+                <button type="button" [attr.data-quitar-linea]="i" (click)="quitarLinea(i)"
+                  [attr.aria-label]="'Quitar la línea de IVA ' + (i + 1)"
+                  class="tap-target inline-flex items-center justify-center rounded p-1.5 text-[color:var(--text-muted)] transition-colors hover:text-[color:var(--danger)]">
+                  <lucide-icon [img]="Trash2Icon" size="14" aria-hidden="true"></lucide-icon>
+                </button>
+              }
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+              <div>
+                <label [for]="'fr-base-' + i" class="form-label">Base</label>
+                <input [id]="'fr-base-' + i" type="number" step="0.01" min="0" inputmode="decimal"
+                  formControlName="base" class="form-input w-full" aria-required="true"
+                  [class.error]="errorDe('lineasIva.' + i + '.base')"
+                  [attr.aria-invalid]="errorDe('lineasIva.' + i + '.base') ? 'true' : 'false'"
+                  [attr.aria-describedby]="errorDe('lineasIva.' + i + '.base') ? idError('lineasIva.' + i + '.base') : null" />
+              </div>
+              <div>
+                <label [for]="'fr-tipo-' + i" class="form-label">Tipo %</label>
+                <select [id]="'fr-tipo-' + i" formControlName="tipo" class="form-select w-full"
+                  [attr.aria-invalid]="errorDe('lineasIva.' + i + '.tipo') ? 'true' : 'false'"
+                  [attr.aria-describedby]="errorDe('lineasIva.' + i + '.tipo') ? idError('lineasIva.' + i + '.tipo') : null">
+                  @for (t of tiposIva(); track t) {
+                    <option [value]="t">{{ t }}%</option>
+                  }
+                </select>
+              </div>
+              <div>
+                <label [for]="'fr-cuota-' + i" class="form-label">Cuota</label>
+                <input [id]="'fr-cuota-' + i" type="number" step="0.01" min="0" inputmode="decimal"
+                  formControlName="cuota" class="form-input w-full" aria-required="true"
+                  [class.error]="errorDe('lineasIva.' + i + '.cuota')"
+                  [attr.aria-invalid]="errorDe('lineasIva.' + i + '.cuota') ? 'true' : 'false'"
+                  [attr.aria-describedby]="errorDe('lineasIva.' + i + '.cuota') ? idError('lineasIva.' + i + '.cuota') : null" />
+              </div>
+            </div>
+            @for (campo of ['base', 'tipo', 'cuota']; track campo) {
+              @if (errorDe('lineasIva.' + i + '.' + campo); as e) {
+                <p [id]="idError('lineasIva.' + i + '.' + campo)" class="form-error" role="alert">{{ e }}</p>
+              }
+            }
+          </div>
+        }
+      </div>
+
+      <button type="button" data-add-linea (click)="agregarLinea()"
+        class="tap-target flex w-full items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-[var(--border)] py-2.5 text-xs font-medium text-[color:var(--text-muted)] transition-colors duration-150 hover:border-[var(--brand)] hover:text-[color:var(--brand)]">
+        <lucide-icon [img]="PlusIcon" size="14" aria-hidden="true"></lucide-icon>
+        Añadir otro tipo de IVA
+      </button>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label for="fr-total" class="form-label">Total de la factura</label>
+          <input id="fr-total" type="number" step="0.01" min="0" inputmode="decimal" formControlName="total"
+            class="form-input w-full" aria-required="true" [class.error]="errorDe('total')"
+            [attr.aria-invalid]="errorDe('total') ? 'true' : 'false'"
+            [attr.aria-describedby]="errorDe('total') ? idError('total') : null" />
+          @if (errorDe('total'); as e) {
+            <p [id]="idError('total')" class="form-error" role="alert">{{ e }}</p>
+          }
+        </div>
+        <div>
+          <label for="fr-deducible" class="form-label">% deducible</label>
+          <input id="fr-deducible" type="number" step="1" min="0" max="100" inputmode="decimal"
+            formControlName="porcentajeDeducible" class="form-input w-full" [class.error]="errorDe('porcentajeDeducible')"
+            [attr.aria-invalid]="errorDe('porcentajeDeducible') ? 'true' : 'false'"
+            [attr.aria-describedby]="errorDe('porcentajeDeducible') ? idError('porcentajeDeducible') : null" />
+          @if (errorDe('porcentajeDeducible'); as e) {
+            <p [id]="idError('porcentajeDeducible')" class="form-error" role="alert">{{ e }}</p>
+          }
+        </div>
+      </div>
+
+      <div class="space-y-1 rounded-lg p-4 text-sm" style="background:var(--surface-2)" data-resumen>
+        <div class="flex justify-between" style="color:var(--text-body)">
+          <span>Base imponible</span>
+          <span class="tabular-nums" style="font-family:var(--font-mono)">{{ resumen().base | number:'1.2-2' }}&nbsp;€</span>
+        </div>
+        <div class="flex justify-between" style="color:var(--text-body)">
+          <span>IVA soportado</span>
+          <span class="tabular-nums" style="font-family:var(--font-mono)">{{ resumen().cuota | number:'1.2-2' }}&nbsp;€</span>
+        </div>
+      </div>
+    </fieldset>
+
+    @if (advertencias().length > 0) {
+      <div data-advertencias class="rounded-lg px-3 py-2 text-xs"
+        style="background:color-mix(in srgb,var(--warning) 12%,transparent);color:var(--text-body)">
+        <p class="font-semibold">Revisa estos avisos (no impiden guardar)</p>
+        <ul class="list-disc pl-4">
+          @for (a of advertencias(); track a.campo + a.mensaje) {
+            <li>{{ a.mensaje }}</li>
+          }
+        </ul>
+      </div>
+    }
+  </div>
+
+  <div footer>
+    @if (errorServidor(); as e) {
+      <p data-error-servidor role="alert" class="mx-5 mt-3 rounded-lg px-3 py-2 text-xs"
+        style="background:color-mix(in srgb,var(--danger) 8%,transparent);color:var(--danger)">{{ e }}</p>
+    }
+    @if (reactivacionPendiente()) {
+      <div data-reactivar-aviso class="mx-5 mt-3 space-y-2 rounded-lg px-3 py-2 text-xs"
+        style="background:var(--surface-2);color:var(--text-body)">
+        <p>Esa factura ya estuvo registrada y está anulada. Puedes reactivarla con los datos de este formulario; se conserva su historial de anulación.</p>
+        <button type="button" data-reactivar (click)="onConfirm(true)" [disabled]="saving()"
+          class="tap-target rounded-lg px-3 text-xs font-semibold text-white disabled:opacity-50"
+          style="background:var(--brand)">Reactivar con estos datos</button>
+      </div>
+    }
+    <div class="flex gap-3 px-5 py-4">
+      <button type="button" (click)="closed.emit()"
+        class="tap-target flex-1 rounded-lg py-2.5 text-sm font-medium transition-colors duration-150 hover:bg-[var(--surface-2)]"
+        style="border:1px solid var(--border);color:var(--text-body)">Cancelar</button>
+      <button type="button" data-confirmar (click)="onConfirm()" [disabled]="saving()"
+        class="tap-target flex-1 rounded-lg bg-[var(--brand)] py-2.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-[var(--brand-hover)] disabled:opacity-50">
+        {{ saving() ? 'Registrando…' : 'Registrar factura' }}
+      </button>
+    </div>
+  </div>
+</app-overlay-shell>

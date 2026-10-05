@@ -29,14 +29,14 @@
     <div class="p-3" style="border-bottom:1px solid var(--border)">
       <label for="facturacion-seccion" class="form-label">Sección</label>
       <select id="facturacion-seccion" class="form-input w-full" (change)="seleccionarTab($any($event.target).value)">
-        @for (tab of tabs; track tab.id) {
+        @for (tab of tabs(); track tab.id) {
           <option [value]="tab.id" [selected]="activeTab() === tab.id">{{ tab.label }}</option>
         }
       </select>
     </div>
   } @else {
     <div class="flex overflow-x-auto" style="border-bottom:1px solid var(--border)">
-      @for (tab of tabs; track tab.id) {
+      @for (tab of tabs(); track tab.id) {
         <button (click)="activeTab.set(tab.id)" data-tab
           class="px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors duration-150"
           [style.color]="activeTab() === tab.id ? 'var(--brand)' : 'var(--text-muted)'"
@@ -73,6 +73,10 @@
       (anularFactura)="handleAnularFactura($event)"
       (editNumber)="abrirEditarNumero($event)"
     />
+  }
+
+  @if (activeTab() === 'gastos' && puedeVerGastos()) {
+    <app-facturacion-gastos-tab [fechaHoy]="hoy" />
   }
 
   @if (activeTab() === 'archivo') {

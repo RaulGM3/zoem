@@ -1,0 +1,160 @@
+<div class="space-y-4 p-5">
+
+  <!-- Cabecera: copy + periodo + alta -->
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <p class="flex max-w-xl items-start gap-2 text-xs" style="color:var(--text-muted)" data-aviso-registro>
+      <lucide-icon [img]="InfoIcon" size="14" class="mt-px shrink-0" aria-hidden="true"></lucide-icon>
+      <span>Registro de facturas recibidas para tu IVA soportado (libro registro y modelo 303). No se envía nada a la AEAT ni a Verifactu.</span>
+    </p>
+    <button type="button" data-registrar (click)="abrirDrawer()"
+      class="tap-target inline-flex items-center justify-center gap-2 self-start rounded-lg bg-[var(--brand)] px-3 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-[var(--brand-hover)]">
+      <lucide-icon [img]="PlusIcon" size="15" aria-hidden="true"></lucide-icon>
+      Registrar factura
+    </button>
+  </div>
+
+  <div class="flex items-end gap-3">
+    <div class="w-28">
+      <label for="gastos-ejercicio" class="form-label">Ejercicio</label>
+      <input id="gastos-ejercicio" type="number" inputmode="numeric" class="form-input w-full"
+        [value]="ejercicio()" (change)="onEjercicio($any($event.target).value)" />
+    </div>
+    <div class="w-28">
+      <label for="gastos-trimestre" class="form-label">Trimestre</label>
+      <select id="gastos-trimestre" class="form-select w-full" (change)="onTrimestre($any($event.target).value)">
+        @for (t of trimestres; track t) {
+          <option [value]="t" [selected]="trimestreSel() === t">{{ t }}T</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <!-- KPIs del trimestre -->
+  @let r = resumen();
+  <dl class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Resumen del trimestre">
+    <div class="rounded-xl p-3" style="border:1px solid var(--border);background:var(--surface)">
+      <dt class="text-xs" style="color:var(--text-muted)">Facturas registradas</dt>
+      <dd data-kpi="facturas" class="text-lg font-semibold tabular-nums" style="color:var(--text-strong);font-family:var(--font-display)">{{ r.numFacturas }}</dd>
+    </div>
+    <div class="rounded-xl p-3" style="border:1px solid var(--border);background:var(--surface)">
+      <dt class="text-xs" style="color:var(--text-muted)">Base imponible</dt>
+      <dd data-kpi="base" class="text-lg font-semibold tabular-nums" style="color:var(--text-strong);font-family:var(--font-display)">{{ r.totalBase | number:'1.2-2' }} €</dd>
+    </div>
+    <div class="rounded-xl p-3" style="border:1px solid var(--border);background:var(--surface)">
+      <dt class="text-xs" style="color:var(--text-muted)">IVA soportado</dt>
+      <dd data-kpi="cuota" class="text-lg font-semibold tabular-nums" style="color:var(--text-strong);font-family:var(--font-display)">{{ r.totalCuota | number:'1.2-2' }} €</dd>
+    </div>
+    <div class="rounded-xl p-3" style="border:1px solid var(--border);background:var(--surface)">
+      <dt class="text-xs" style="color:var(--text-muted)">IVA deducible</dt>
+      <dd data-kpi="deducible" class="text-lg font-semibold tabular-nums" style="color:var(--text-strong);font-family:var(--font-display)">{{ r.totalDeducible | number:'1.2-2' }} €</dd>
+    </div>
+  </dl>
+
+  <!-- Estado de la factura (compartido por tabla y tarjetas) -->
+  <ng-template #estadoTpl let-f>
+    @if (f.estado === 'anulada') {
+      <span class="inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+        style="background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger)">Anulada</span>
+    } @else {
+      <span class="inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+        style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">Registrada</span>
+    }
+  </ng-template>
+
+  <app-responsive-list [items]="delTrimestre()" trackBy="id"
+    [emptyText]="cargando() ? 'Cargando facturas…' : 'No hay facturas recibidas en este trimestre'">
+
+    <!-- Tabla (escritorio) -->
+    <ng-template [appListTable]="delTrimestre()" let-rows>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm" style="border-collapse:separate;border-spacing:0">
+          <caption class="sr-only">Facturas recibidas del trimestre</caption>
+          <thead>
+            <tr style="border-bottom:1px solid var(--border)">
+              <th scope="col" class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-faint)">Recep.</th>
+              <th scope="col" class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-faint)">Emisor</th>
+              <th scope="col" class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-faint)">Número</th>
+              <th scope="col" class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-faint)">Expedición</th>
+              <th scope="col" class="px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-wider" style="color:var(--text-faint)">IVA</th>
+              <th scope="col" class="px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-wider" style="color:var(--text-faint)">Total</th>
+              <th scope="col" class="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wider" style="color:var(--text-faint)">Estado</th>
+              <th scope="col" class="px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-wider" style="color:var(--text-faint)">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (f of rows; track f.id) {
+              <tr [attr.data-factura-fila]="f.id" class="transition-colors duration-100 hover:bg-[var(--surface-2)]"
+                [class.opacity-70]="f.estado === 'anulada'" style="border-bottom:1px solid var(--border)">
+                <td class="px-3 py-2.5 tabular-nums" style="color:var(--text-muted);font-family:var(--font-mono)">{{ f.numeroRecepcion }}</td>
+                <td class="max-w-[220px] truncate px-3 py-2.5" style="color:var(--text-body)">
+                  {{ f.proveedor.nombre }}
+                  <p class="truncate text-[10px]" style="color:var(--text-faint)">{{ f.proveedor.nif }}</p>
+                </td>
+                <td class="px-3 py-2.5 font-medium tabular-nums" style="color:var(--text-strong);font-family:var(--font-mono)">{{ f.numero }}</td>
+                <td class="px-3 py-2.5 tabular-nums" style="color:var(--text-muted)">{{ f.fechaExpedicion }}</td>
+                <td class="px-3 py-2.5 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ ivaDe(f) | number:'1.2-2' }} €</td>
+                <td class="px-3 py-2.5 text-right font-medium tabular-nums" [class.line-through]="f.estado === 'anulada'"
+                  style="color:var(--text-strong);font-family:var(--font-mono)">{{ f.total | number:'1.2-2' }} €</td>
+                <td class="px-3 py-2.5 text-center">
+                  <ng-container [ngTemplateOutlet]="estadoTpl" [ngTemplateOutletContext]="{ $implicit: f }" />
+                </td>
+                <td class="px-3 py-2.5 text-right">
+                  @if (puedeAnular(f)) {
+                    <button type="button" [attr.data-anular]="f.id" (click)="anular(f)"
+                      class="tap-target rounded p-1.5 text-[color:var(--text-muted)] transition-colors hover:text-[color:var(--danger)]"
+                      [attr.aria-label]="'Anular la factura ' + f.numero + ' de ' + f.proveedor.nombre" title="Anular factura">
+                      <lucide-icon [img]="BanIcon" size="14" aria-hidden="true"></lucide-icon>
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </ng-template>
+
+    <!-- Tarjeta (móvil) -->
+    <ng-template [appListCard]="delTrimestre()" let-f>
+      <article [attr.data-factura-fila]="f.id" [attr.data-estado]="f.estado" class="rounded-xl p-3"
+        [class.opacity-70]="f.estado === 'anulada'"
+        style="border:1px solid var(--border);border-left-width:4px;background:var(--surface)"
+        [style.border-left-color]="f.estado === 'anulada' ? 'var(--danger)' : 'var(--success)'">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="truncate text-[15px] font-semibold" style="color:var(--text-strong)">{{ f.proveedor.nombre }}</p>
+            <p class="mt-0.5 text-xs tabular-nums" style="color:var(--text-muted);font-family:var(--font-mono)">{{ f.numero }} · {{ f.proveedor.nif }}</p>
+          </div>
+          <div class="flex shrink-0 flex-col items-end gap-1">
+            <p class="text-lg font-semibold leading-tight tabular-nums" [class.line-through]="f.estado === 'anulada'"
+              style="color:var(--text-strong);font-family:var(--font-mono)">{{ f.total | number:'1.2-2' }} €</p>
+            <ng-container [ngTemplateOutlet]="estadoTpl" [ngTemplateOutletContext]="{ $implicit: f }" />
+          </div>
+        </div>
+        <div class="mt-3 flex items-center justify-between gap-2 pt-2" style="border-top:1px solid var(--border-soft)">
+          <p class="flex flex-col text-xs tabular-nums" style="color:var(--text-muted)">
+            <span>Recepción n.º {{ f.numeroRecepcion }}</span>
+            <span>{{ fechaCorta(f.fechaExpedicion) }} · IVA {{ ivaDe(f) | number:'1.2-2' }} €</span>
+          </p>
+          @if (acciones(f); as menu) {
+            @if (menu.length > 0) {
+              <app-action-menu [actions]="menu" [label]="'Acciones de la factura ' + f.numero"
+                (selected)="ejecutarAccion(f, $event)" />
+            }
+          }
+        </div>
+      </article>
+    </ng-template>
+  </app-responsive-list>
+</div>
+
+@if (drawerAbierto()) {
+  <app-factura-recibida-drawer
+    [fechaHoy]="fechaHoy()"
+    [saving]="guardando()"
+    [errorServidor]="errorServidor()"
+    [reactivacionPendiente]="reactivacionPendiente()"
+    (closed)="cerrarDrawer()"
+    (confirmed)="registrar($event)"
+  />
+}
