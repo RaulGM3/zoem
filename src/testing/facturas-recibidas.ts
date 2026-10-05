@@ -4,6 +4,7 @@ import { signal, type WritableSignal } from '@angular/core';
 import { FacturacionGastosTabComponent } from '../app/components/facturacion/components/facturacion-gastos-tab/facturacion-gastos-tab';
 import { FacturasRecibidasService } from '../app/core/services/facturas-recibidas.service';
 import { ToastService } from '../app/core/services/toast.service';
+import { FacturaExtractionService } from '../app/core/services/factura-extraction.service';
 import type { FacturaRecibida } from '../app/interfaces/factura-recibida.interface';
 
 export function mockViewport(mobile: boolean): void {
@@ -67,6 +68,12 @@ export function crearFake(lista: FacturaRecibida[] = FACTURAS): FakeSvc {
   };
 }
 
+/** Extracción falsa: el drawer nunca debe hablar con Gemini en los tests. */
+export const extraccionFalsa = () => ({
+  provide: FacturaExtractionService,
+  useValue: { extraer: vi.fn().mockResolvedValue({ ok: false, mensaje: 'sin IA en tests' }) },
+});
+
 export async function montarTab(fake: FakeSvc, mobile = false) {
   TestBed.resetTestingModule();
   mockViewport(mobile);
@@ -76,6 +83,7 @@ export async function montarTab(fake: FakeSvc, mobile = false) {
     providers: [
       { provide: FacturasRecibidasService, useValue: fake },
       { provide: ToastService, useValue: toast },
+      extraccionFalsa(),
     ],
   }).compileComponents();
   const fixture: ComponentFixture<FacturacionGastosTabComponent> = TestBed.createComponent(FacturacionGastosTabComponent);

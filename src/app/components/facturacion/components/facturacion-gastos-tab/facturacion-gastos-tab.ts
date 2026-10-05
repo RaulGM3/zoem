@@ -118,13 +118,13 @@ export class FacturacionGastosTabComponent implements OnInit {
     }
   }
 
-  protected async registrar({ datos, reactivar }: FacturaRecibidaPayload): Promise<void> {
+  protected async registrar({ datos, reactivar, archivo }: FacturaRecibidaPayload): Promise<void> {
     if (this.guardando()) return;
     this.guardando.set(true);
     this.errorServidor.set(null);
     this.reactivacionPendiente.set(false);
     try {
-      const r = await this.service.registrar(datos, { reactivar });
+      const r = await this.service.registrar(datos, { reactivar, archivo });
       this.toast.success(
         r.reactivada ? 'Factura reactivada' : `Factura registrada con el número de recepción ${r.numeroRecepcion}`,
       );

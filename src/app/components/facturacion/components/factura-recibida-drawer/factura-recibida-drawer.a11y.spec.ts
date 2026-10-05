@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { FacturaRecibidaDrawerComponent } from './factura-recibida-drawer';
+import { extraccionFalsa } from '../../../../../testing/facturas-recibidas';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
 
 async function montar(): Promise<ComponentFixture<FacturaRecibidaDrawerComponent>> {
   TestBed.resetTestingModule();
-  await TestBed.configureTestingModule({ imports: [FacturaRecibidaDrawerComponent] }).compileComponents();
+  await TestBed.configureTestingModule({ imports: [FacturaRecibidaDrawerComponent], providers: [extraccionFalsa()] }).compileComponents();
   const fixture = TestBed.createComponent(FacturaRecibidaDrawerComponent);
   fixture.componentRef.setInput('fechaHoy', '2026-04-05');
   fixture.detectChanges();
@@ -52,5 +53,27 @@ describe('FacturaRecibidaDrawerComponent — accesibilidad (axe)', () => {
     await f.whenStable();
     const activo = document.activeElement as HTMLElement | null;
     expect(activo?.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('sin violaciones con archivo adjunto, estado de extracción y error de formato visibles', async () => {
+    const f = await montar();
+    const raiz = f.nativeElement as HTMLElement;
+    const input = raiz.querySelector<HTMLInputElement>('#fr-archivo')!;
+    Object.defineProperty(input, 'files', { configurable: true, value: [new File([new Uint8Array(3)], 'a.pdf', { type: 'application/pdf' })] });
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    f.detectChanges();
+    await f.whenStable();
+    f.detectChanges();
+    const heic = raiz.querySelector<HTMLInputElement>('#fr-foto')!;
+    Object.defineProperty(heic, 'files', { configurable: true, value: [new File([new Uint8Array(3)], 'a.heic', { type: 'image/heic' })] });
+    heic.dispatchEvent(new Event('change', { bubbles: true }));
+    f.detectChanges();
+    await f.whenStable();
+    f.detectChanges();
+    expect(raiz.querySelector('[data-archivo-adjunto]')).not.toBeNull();
+    expect(raiz.querySelector('[data-error-archivo]')).not.toBeNull();
+    expect(raiz.querySelector('[data-estado-extraccion]')?.textContent).toContain('sin IA en tests');
+    const v = await analizarA11y(raiz);
+    expect(v, `\n${formatearViolaciones(v)}\n`).toEqual([]);
   });
 });

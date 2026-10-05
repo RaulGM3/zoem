@@ -117,6 +117,14 @@ describe('FacturacionGastosTabComponent', () => {
       expect(drawer()).toBeNull();
     });
 
+    it('pasa el archivo adjunto al servicio (se sube al confirmar)', async () => {
+      const archivo = new File([new Uint8Array(4)], 'f.pdf', { type: 'application/pdf' });
+      await abrirYRellenar();
+      drawer().componentInstance.confirmed.emit({ ...datos, archivo });
+      await fixture.whenStable();
+      expect(fake.registrar).toHaveBeenCalledWith(datos.datos, { reactivar: false, archivo });
+    });
+
     it('duplicado: el drawer sigue abierto con el error', async () => {
       fake.registrar.mockRejectedValue(new FacturaDuplicadaError('id'));
       await abrirYRellenar();

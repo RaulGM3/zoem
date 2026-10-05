@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { FacturaRecibidaDrawerComponent } from './factura-recibida-drawer';
+import { extraccionFalsa } from '../../../../../testing/facturas-recibidas';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
 
 function mockViewport(mobile: boolean): void {
@@ -22,7 +23,7 @@ describe('FacturaRecibidaDrawerComponent — móvil', () => {
       async function montar() {
         TestBed.resetTestingModule();
         mockViewport(mobile);
-        await TestBed.configureTestingModule({ imports: [FacturaRecibidaDrawerComponent] }).compileComponents();
+        await TestBed.configureTestingModule({ imports: [FacturaRecibidaDrawerComponent], providers: [extraccionFalsa()] }).compileComponents();
         const fixture = TestBed.createComponent(FacturaRecibidaDrawerComponent);
         fixture.componentRef.setInput('fechaHoy', '2026-04-05');
         fixture.detectChanges();

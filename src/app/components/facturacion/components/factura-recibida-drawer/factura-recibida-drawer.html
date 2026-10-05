@@ -7,6 +7,48 @@
       <span>Es un registro para tu IVA soportado (libro de facturas recibidas y modelo 303). No se envía nada a la AEAT ni a Verifactu.</span>
     </p>
 
+    <!-- Archivo de la factura -->
+    <fieldset class="space-y-3">
+      <legend class="mb-1 text-xs font-semibold uppercase tracking-wider"
+        style="color:var(--text-faint);font-family:var(--font-mono)">Archivo de la factura</legend>
+      <p class="text-xs" style="color:var(--text-muted)">
+        Sube un PDF o una foto y la IA rellenará los datos. Siempre podrás revisarlos y corregirlos antes de registrar.
+      </p>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div>
+          <label for="fr-archivo" class="form-label">Subir PDF o imagen</label>
+          <input id="fr-archivo" type="file" [accept]="ACCEPT_FACTURA" class="form-input w-full text-xs"
+            [attr.aria-describedby]="errorArchivo() ? 'fr-error-archivo' : null"
+            (change)="onArchivo($event)" />
+        </div>
+        <div>
+          <label for="fr-foto" class="form-label">Hacer foto</label>
+          <input id="fr-foto" type="file" [accept]="ACCEPT_FOTO" capture="environment" class="form-input w-full text-xs"
+            [attr.aria-describedby]="errorArchivo() ? 'fr-error-archivo' : null"
+            (change)="onArchivo($event)" />
+        </div>
+      </div>
+      @if (errorArchivo(); as e) {
+        <p id="fr-error-archivo" data-error-archivo class="form-error" role="alert">{{ e }}</p>
+      }
+      @if (archivo(); as a) {
+        <div data-archivo-adjunto class="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs"
+          style="background:var(--surface-2);color:var(--text-body)">
+          <span class="flex min-w-0 items-center gap-2">
+            <lucide-icon [img]="PaperclipIcon" size="14" class="shrink-0" aria-hidden="true"></lucide-icon>
+            <span class="truncate">{{ a.name }}</span>
+          </span>
+          <button type="button" data-quitar-archivo (click)="quitarArchivo()"
+            [attr.aria-label]="'Quitar el archivo ' + a.name"
+            class="tap-target inline-flex items-center justify-center rounded p-1.5 text-[color:var(--text-muted)] hover:text-[color:var(--danger)]">
+            <lucide-icon [img]="XIcon" size="14" aria-hidden="true"></lucide-icon>
+          </button>
+        </div>
+      }
+      <div data-estado-extraccion role="status" aria-live="polite" aria-atomic="true"
+        class="text-xs" [class.sr-only]="!mensajeExtraccion()" style="color:var(--text-muted)">{{ mensajeExtraccion() }}</div>
+    </fieldset>
+
     <!-- Emisor -->
     <fieldset class="space-y-3">
       <legend class="mb-1 text-xs font-semibold uppercase tracking-wider"
@@ -254,7 +296,7 @@
       <button type="button" (click)="closed.emit()"
         class="tap-target flex-1 rounded-lg py-2.5 text-sm font-medium transition-colors duration-150 hover:bg-[var(--surface-2)]"
         style="border:1px solid var(--border);color:var(--text-body)">Cancelar</button>
-      <button type="button" data-confirmar (click)="onConfirm()" [disabled]="saving()"
+      <button type="button" data-confirmar (click)="onConfirm()" [disabled]="saving() || estadoExtraccion() === 'leyendo'"
         class="tap-target flex-1 rounded-lg bg-[var(--brand)] py-2.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-[var(--brand-hover)] disabled:opacity-50">
         {{ saving() ? 'Registrando…' : 'Registrar factura' }}
       </button>

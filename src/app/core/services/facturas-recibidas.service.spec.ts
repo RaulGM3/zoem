@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { Firestore } from '@angular/fire/firestore';
 import { Auth } from '@angular/fire/auth';
+import { Storage } from '@angular/fire/storage';
 import {
   FacturaAnuladaExistenteError,
   FacturaDuplicadaError,
@@ -12,9 +13,10 @@ import {
 import { CompanyService } from './company.service';
 import { claveFactura } from '../facturas-recibidas/clave-factura';
 
-const { store, getDocsMock } = vi.hoisted(() => ({
+const { store, getDocsMock, uploadBytesMock } = vi.hoisted(() => ({
   store: new Map<string, Record<string, unknown>>(),
   getDocsMock: vi.fn(),
+  uploadBytesMock: vi.fn(),
 }));
 
 interface FakeRef {
@@ -50,6 +52,12 @@ vi.mock('@angular/fire/firestore', () => ({
   },
 }));
 
+vi.mock('@angular/fire/storage', () => ({
+  Storage: class MockStorage {},
+  ref: (_s: unknown, path: string) => ({ fullPath: path }),
+  uploadBytes: (...args: unknown[]) => uploadBytesMock(...args),
+}));
+
 const CID = 'co-1';
 const base = (): DatosNuevaFactura => ({
   tipoFactura: 'F1',
@@ -74,11 +82,14 @@ describe('FacturasRecibidasService', () => {
   beforeEach(() => {
     store.clear();
     getDocsMock.mockReset();
+    uploadBytesMock.mockReset();
+    uploadBytesMock.mockResolvedValue({});
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       providers: [
         FacturasRecibidasService,
         { provide: Firestore, useValue: {} },
+        { provide: Storage, useValue: {} },
         { provide: Auth, useValue: { currentUser: { uid: 'u1' } } },
         { provide: CompanyService, useValue: { activeCompany: signal({ id: CID, name: 'X' }) } },
       ],
@@ -244,6 +255,52 @@ describe('FacturasRecibidasService', () => {
         updatedBy: 'u1',
         updatedAt: '__serverTimestamp__',
       });
+    });
+  });
+
+  describe('registrar con archivo adjunto', () => {
+    const pdf = () => new File([new Uint8Array(20)], 'Factura 1 (copia).pdf', { type: 'application/pdf' });
+
+    it('sube el archivo bajo companies/{cid}/facturas_recibidas/ y guarda el adjunto en el doc', async () => {
+      await svc.registrar(base(), { archivo: pdf() });
+      expect(uploadBytesMock).toHaveBeenCalledTimes(1);
+      const [refArg, fileArg, meta] = uploadBytesMock.mock.calls[0] as [{ fullPath: string }, File, { contentType: string }];
+      expect(refArg.fullPath).toMatch(new RegExp(`^companies/${CID}/facturas_recibidas/\\d+_Factura_1__copia_.pdf$`));
+      expect(fileArg.name).toBe('Factura 1 (copia).pdf');
+      expect(meta).toEqual({ contentType: 'application/pdf' });
+      expect(store.get(pathFactura())!['adjunto']).toEqual({
+        storagePath: refArg.fullPath,
+        nombre: 'Factura 1 (copia).pdf',
+        mimeType: 'application/pdf',
+        size: 20,
+      });
+    });
+
+    it('un duplicado se detecta ANTES de subir: no se sube nada', async () => {
+      await svc.registrar(base());
+      await expect(svc.registrar(base(), { archivo: pdf() })).rejects.toBeInstanceOf(FacturaDuplicadaError);
+      expect(uploadBytesMock).not.toHaveBeenCalled();
+    });
+
+    it('una anulada sin confirmar reactivación no sube nada; confirmada sí y actualiza el adjunto', async () => {
+      await svc.registrar(base());
+      await svc.anular(idFactura());
+      await expect(svc.registrar(base(), { archivo: pdf() })).rejects.toBeInstanceOf(FacturaAnuladaExistenteError);
+      expect(uploadBytesMock).not.toHaveBeenCalled();
+      await svc.registrar(base(), { archivo: pdf(), reactivar: true });
+      expect(uploadBytesMock).toHaveBeenCalledTimes(1);
+      expect((store.get(pathFactura())!['adjunto'] as { nombre: string }).nombre).toBe('Factura 1 (copia).pdf');
+    });
+
+    it('si falla la subida no se escribe nada en Firestore', async () => {
+      uploadBytesMock.mockRejectedValue(new Error('storage/unauthorized'));
+      await expect(svc.registrar(base(), { archivo: pdf() })).rejects.toThrow('storage/unauthorized');
+      expect(store.size).toBe(0);
+    });
+
+    it('sin archivo no toca Storage', async () => {
+      await svc.registrar(base());
+      expect(uploadBytesMock).not.toHaveBeenCalled();
     });
   });
 });

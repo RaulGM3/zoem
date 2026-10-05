@@ -14,19 +14,25 @@ import {
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { LucideAngularModule, Plus, Trash2, Info } from 'lucide-angular';
+import { LucideAngularModule, Plus, Trash2, Info, Paperclip, X } from 'lucide-angular';
 import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 import { opcionesIva } from '../../../../interfaces/iva';
 import type { PeriodoIva, TrimestreIva } from '../../../../interfaces/factura-recibida.interface';
 import { esFechaIso, trimestre } from '../../../../core/facturas-recibidas/trimestre';
 import { validarFacturaRecibida, type ResultadoValidacionFactura } from '../../../../core/facturas-recibidas/validar-factura-recibida';
 import type { DatosNuevaFactura } from '../../../../core/services/facturas-recibidas.service';
+import { ACCEPT_FACTURA, ACCEPT_FOTO, CapturaArchivoService } from '../../../../core/services/captura-archivo.service';
+import { FacturaExtractionService, type DatosExtraidos } from '../../../../core/services/factura-extraction.service';
 
 export interface FacturaRecibidaPayload {
   datos: DatosNuevaFactura;
   /** `true` solo cuando el usuario confirmó reactivar una factura anulada con la misma clave. */
   reactivar: boolean;
+  /** Archivo adjunto elegido (se sube a Storage al confirmar, no antes). */
+  archivo?: File;
 }
+
+type EstadoExtraccion = 'idle' | 'leyendo' | 'ok' | 'error';
 
 type LineaGroup = FormGroup<{
   base: FormControl<number | null>;
@@ -46,6 +52,8 @@ export class FacturaRecibidaDrawerComponent {
   private readonly fb = inject(FormBuilder);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
+  private readonly captura = inject(CapturaArchivoService);
+  private readonly extraccion = inject(FacturaExtractionService);
 
   /** Fecha de hoy (`yyyy-MM-dd`) que propone la fecha de registro; la aporta el padre. */
   readonly fechaHoy = input.required<string>();
@@ -61,6 +69,32 @@ export class FacturaRecibidaDrawerComponent {
   protected readonly PlusIcon = Plus;
   protected readonly Trash2Icon = Trash2;
   protected readonly InfoIcon = Info;
+  protected readonly PaperclipIcon = Paperclip;
+  protected readonly XIcon = X;
+  protected readonly ACCEPT_FACTURA = ACCEPT_FACTURA;
+  protected readonly ACCEPT_FOTO = ACCEPT_FOTO;
+
+  protected readonly archivo = signal<File | null>(null);
+  protected readonly errorArchivo = signal<string | null>(null);
+  protected readonly estadoExtraccion = signal<EstadoExtraccion>('idle');
+  private readonly mensajeFallo = signal('');
+  private readonly origenIa = signal(false);
+  /** Descarta el resultado de una extracción si entretanto se eligió otro archivo. */
+  private extraccionActual = 0;
+
+  /** Texto de la región viva (`role="status"`): anuncia leyendo / listo / fallo. */
+  protected readonly mensajeExtraccion = computed(() => {
+    switch (this.estadoExtraccion()) {
+      case 'leyendo':
+        return 'Leyendo la factura con IA…';
+      case 'ok':
+        return 'Datos leídos de la factura. Revísalos y corrígelos antes de registrar.';
+      case 'error':
+        return this.mensajeFallo();
+      default:
+        return '';
+    }
+  });
 
   protected readonly trimestres: readonly TrimestreIva[] = [1, 2, 3, 4];
 
@@ -113,7 +147,7 @@ export class FacturaRecibidaDrawerComponent {
       total: v.total ?? Number.NaN,
       porcentajeDeducible: v.porcentajeDeducible ?? 100,
       concepto: v.concepto.trim(),
-      extraccion: { origen: 'manual', discrepancias: [] },
+      extraccion: { origen: this.origenIa() ? 'ia' : 'manual', discrepancias: [] },
     };
   });
 
@@ -145,6 +179,10 @@ export class FacturaRecibidaDrawerComponent {
   }
 
   protected agregarLinea(): void {
+    this.lineas.push(this.crearLinea());
+  }
+
+  private crearLinea(): LineaGroup {
     const grupo: LineaGroup = this.fb.group({
       base: this.fb.control<number | null>(null),
       tipo: this.fb.nonNullable.control('21'),
@@ -161,7 +199,7 @@ export class FacturaRecibidaDrawerComponent {
     grupo.controls.base.valueChanges.subscribe(recalcularCuota);
     grupo.controls.tipo.valueChanges.subscribe(recalcularCuota);
     grupo.controls.cuota.valueChanges.subscribe(() => this.recalcularTotal());
-    this.lineas.push(grupo);
+    return grupo;
   }
 
   protected quitarLinea(i: number): void {
@@ -198,6 +236,67 @@ export class FacturaRecibidaDrawerComponent {
     return `fr-error-${campo.replace(/\./g, '-')}`;
   }
 
+  protected async onArchivo(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+
+    const resultado = this.captura.validar(file);
+    if (!resultado.ok) {
+      this.errorArchivo.set(resultado.mensaje);
+      return;
+    }
+    this.errorArchivo.set(null);
+    this.archivo.set(resultado.archivo);
+    this.origenIa.set(false);
+
+    const token = ++this.extraccionActual;
+    this.estadoExtraccion.set('leyendo');
+    const extraido = await this.extraccion.extraer(resultado.archivo);
+    if (token !== this.extraccionActual) return;
+    if (extraido.ok) {
+      this.precargar(extraido.datos);
+      this.origenIa.set(true);
+      this.estadoExtraccion.set('ok');
+    } else {
+      this.mensajeFallo.set(extraido.mensaje);
+      this.estadoExtraccion.set('error');
+    }
+    this.formValue.set(this.form.getRawValue());
+  }
+
+  protected quitarArchivo(): void {
+    this.extraccionActual++;
+    this.archivo.set(null);
+    this.origenIa.set(false);
+    this.estadoExtraccion.set('idle');
+    this.errorArchivo.set(null);
+  }
+
+  /** Vuelca lo leído por la IA en el formulario sin pisar con vacíos lo que el usuario ya escribió. */
+  private precargar(d: DatosExtraidos): void {
+    const f = this.form.controls;
+    if (d.proveedorNombre) f.proveedorNombre.setValue(d.proveedorNombre, { emitEvent: false });
+    if (d.proveedorNif) f.proveedorNif.setValue(d.proveedorNif, { emitEvent: false });
+    if (d.numero) f.numero.setValue(d.numero, { emitEvent: false });
+    if (d.fechaExpedicion) f.fechaExpedicion.setValue(d.fechaExpedicion, { emitEvent: false });
+    if (d.concepto) f.concepto.setValue(d.concepto, { emitEvent: false });
+    f.tipoFactura.setValue(d.tipoFactura, { emitEvent: false });
+
+    if (d.lineasIva.length > 0) {
+      this.lineas.clear({ emitEvent: false });
+      for (const l of d.lineasIva) {
+        const grupo = this.crearLinea();
+        grupo.setValue({ base: l.base, tipo: String(l.tipo), cuota: l.cuota }, { emitEvent: false });
+        this.lineas.push(grupo, { emitEvent: false });
+      }
+      this.recalcularTotal();
+    }
+    // El total leído manda (si no cuadra con las líneas, la validación lo señala al registrar).
+    if (d.total !== null) f.total.setValue(d.total, { emitEvent: false });
+  }
+
   protected onConfirm(reactivar = false): void {
     this.submitted.set(true);
     if (!this.validacion().ok) {
@@ -206,6 +305,6 @@ export class FacturaRecibidaDrawerComponent {
       });
       return;
     }
-    this.confirmed.emit({ datos: this.datos(), reactivar });
+    this.confirmed.emit({ datos: this.datos(), reactivar, archivo: this.archivo() ?? undefined });
   }
 }

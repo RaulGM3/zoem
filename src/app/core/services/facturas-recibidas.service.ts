@@ -12,6 +12,7 @@ import {
   where,
 } from '@angular/fire/firestore';
 import { Auth } from '@angular/fire/auth';
+import { Storage, ref, uploadBytes } from '@angular/fire/storage';
 import { CompanyService } from './company.service';
 import { stripUndefinedDeep } from '../firebase/sanitize';
 import { claveFactura } from '../facturas-recibidas/clave-factura';
@@ -70,6 +71,8 @@ export interface ResultadoRegistro {
 export interface OpcionesRegistro {
   /** El usuario confirmó volver a registrar una factura anulada (decisión 7: reactivación). */
   reactivar?: boolean;
+  /** Archivo de la factura (PDF o imagen ya validado): se sube a Storage al confirmar, nunca antes. */
+  archivo?: File;
 }
 
 /** Ya existe una factura registrada con el mismo NIF de emisor y número en esta empresa. */
@@ -96,6 +99,7 @@ export class FacturaAnuladaExistenteError extends Error {
 @Injectable({ providedIn: 'root' })
 export class FacturasRecibidasService {
   private readonly firestore = inject(Firestore);
+  private readonly storage = inject(Storage);
   private readonly auth = inject(Auth);
   private readonly companyService = inject(CompanyService);
 
@@ -160,6 +164,15 @@ export class FacturasRecibidasService {
     const facturaRef = this.facturaRef(id);
     const metaRef = this.metaRef(datos.periodo303.ejercicio);
 
+    if (opciones.archivo) {
+      // Pre-chequeo (design #9): un duplicado no debe dejar un blob huérfano en Storage. Si otra pestaña
+      // gana la carrera entre este chequeo y la transacción, el blob queda huérfano (aceptado: sin delete de cliente).
+      const estado = await this.estadoExistente(nif, numero);
+      if (estado === 'registrada') throw new FacturaDuplicadaError(id);
+      if (estado === 'anulada' && !opciones.reactivar) throw new FacturaAnuladaExistenteError(id);
+      datos = { ...datos, adjunto: await this.subirAdjunto(opciones.archivo) };
+    }
+
     return runTransaction(this.firestore, async (tx) => {
       const [existente, meta] = await Promise.all([tx.get(facturaRef), tx.get(metaRef)]);
 
@@ -200,6 +213,14 @@ export class FacturasRecibidasService {
       );
       return { id, numeroRecepcion, reactivada: false };
     });
+  }
+
+  /** Sube el archivo a `companies/{cid}/facturas_recibidas/` (la ruta que exigen las rules de Firestore y Storage). */
+  private async subirAdjunto(archivo: File): Promise<NonNullable<FacturaRecibida['adjunto']>> {
+    const nombreSeguro = archivo.name.replace(/[^A-Za-z0-9._-]/g, '_');
+    const storagePath = `companies/${this.companyId}/facturas_recibidas/${Date.now()}_${nombreSeguro}`;
+    await uploadBytes(ref(this.storage, storagePath), archivo, { contentType: archivo.type });
+    return { storagePath, nombre: archivo.name, mimeType: archivo.type, size: archivo.size };
   }
 
   /** Campos mutables de una factura (excluye proveedor, número, recepción, qrValidacion: inmutables en rules). */
