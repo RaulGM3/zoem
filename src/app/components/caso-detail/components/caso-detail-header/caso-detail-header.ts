@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
-import { LucideAngularModule, ArrowLeft, Edit2 } from 'lucide-angular';
+import { LucideAngularModule, ArrowLeft, Edit2, Send } from 'lucide-angular';
 import { RouterLink } from '@angular/router';
 
 export type CasoTab = 'info' | 'hitos' | 'gestoria' | 'documentos';
@@ -25,10 +25,12 @@ export class CasoDetailHeaderComponent {
   readonly canEdit = input(true);
 
   readonly edit = output<void>();
+  readonly acciones = output<void>();
   readonly tabChange = output<CasoTab>();
 
   readonly ArrowLeftIcon = ArrowLeft;
   readonly Edit2Icon = Edit2;
+  readonly SendIcon = Send;
 
   readonly tabs: readonly [CasoTab, string][] = [
     ['info', 'Información'],

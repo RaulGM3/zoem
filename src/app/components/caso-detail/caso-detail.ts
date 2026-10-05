@@ -15,6 +15,12 @@ import { CasoDocService } from '../../core/services/caso-doc.service';
 import { UploadQueueService } from '../../core/services/upload-queue.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { CuentasService } from '../../core/services/cuentas.service';
+import { AccionesService } from '../../core/services/acciones.service';
+import { accionesSugeridasAlCompletar } from '../../core/acciones/sugerencia-hito';
+import type { Accion } from '../../interfaces/accion.interface';
+import { AccionLanzadorComponent } from '../../shared/components/accion-lanzador/accion-lanzador';
+import { SugerenciaAccionComponent } from '../../shared/components/sugerencia-accion/sugerencia-accion';
+import { ComunicacionesEnviadasComponent } from '../../shared/components/comunicaciones-enviadas/comunicaciones-enviadas';
 import { cycleHitoEstado, stampEstadoChange } from '../../core/hitos/hito-estado';
 import {
   Caso, CasoDocSlot, CasoDocFile,
@@ -43,6 +49,9 @@ import { MovimientoFormDrawerComponent, MovimientoFormData } from './components/
     CasoDocumentosTabComponent,
     HitoFormDrawerComponent,
     MovimientoFormDrawerComponent,
+    AccionLanzadorComponent,
+    SugerenciaAccionComponent,
+    ComunicacionesEnviadasComponent,
   ],
   templateUrl: './caso-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -52,6 +61,7 @@ export class CasoDetailComponent implements OnDestroy {
   private readonly router = inject(Router);
   readonly casosService = inject(CasosService);
   private readonly toast = inject(ToastService);
+  private readonly accionesService = inject(AccionesService);
   readonly gestoriaService = inject(GestoriaService);
   readonly contactService = inject(ContactService);
   readonly usersService = inject(UsersService);
@@ -153,6 +163,36 @@ export class CasoDetailComponent implements OnDestroy {
     const ids = this.caso()?.contactoIds ?? [];
     return this.contactService.contacts().filter(c => ids.includes(c.id));
   });
+
+  // Acciones (mensajes con plantilla)
+  /** Lanzador abierto (null = cerrado). `accion`/`sugeridas`/`hitoId` solo vienen de la sugerencia al completar un hito. */
+  readonly lanzador = signal<{ accion?: Accion; sugeridas?: Accion[]; hitoId?: string } | null>(null);
+  /** Sugerencia pendiente tras completar un hito de plantilla. */
+  readonly sugerencia = signal<{ hito: Hito; acciones: Accion[] } | null>(null);
+
+  abrirAcciones(): void {
+    if (!this.canEditCasos()) return;
+    this.lanzador.set({});
+  }
+
+  aceptarSugerencia(): void {
+    const s = this.sugerencia();
+    if (!s) return;
+    this.sugerencia.set(null);
+    this.lanzador.set(
+      s.acciones.length === 1
+        ? { accion: s.acciones[0], hitoId: s.hito.id }
+        : { sugeridas: s.acciones, hitoId: s.hito.id },
+    );
+  }
+
+  private async sugerirTrasCambioEstado(hito: Hito, nuevoEstado: Hito['estado']): Promise<void> {
+    if (!this.canEditCasos()) return;
+    const acciones = await accionesSugeridasAlCompletar(
+      hito, nuevoEstado, (p, h) => this.accionesService.listarPorHitoPlantilla(p, h),
+    );
+    if (acciones.length > 0) this.sugerencia.set({ hito, acciones });
+  }
 
   // Hitos
   readonly showHitoForm = signal(false);
@@ -340,7 +380,7 @@ export class CasoDetailComponent implements OnDestroy {
       const actividad: ActividadInput = estadoChanged
         ? { hitoTitulo: data.titulo, tipo: 'estado', autorId, estadoAnterior: editing?.estado, estadoNuevo: data.estado }
         : { hitoTitulo: data.titulo, tipo: 'editado', autorId };
-      await this.toast.run(
+      const ok = await this.toast.run(
         async () => {
           if (editing) {
             await this.casosService.updateHito(c.id, editing.id, hitoData, actividad);
@@ -348,6 +388,7 @@ export class CasoDetailComponent implements OnDestroy {
             // addHito ya registra el evento 'creado' internamente.
             await this.casosService.addHito(c.id, c.titulo, { ...hitoData, orden: this.hitos().length }, autorId);
           }
+          return true;
         },
         {
           successMessage: editing ? 'Hito actualizado' : 'Hito creado',
@@ -355,6 +396,7 @@ export class CasoDetailComponent implements OnDestroy {
           onSuccess: () => this.showHitoForm.set(false),
         }
       );
+      if (ok && editing && estadoChanged) void this.sugerirTrasCambioEstado(editing, data.estado);
     } finally {
       this.savingHito.set(false);
     }
@@ -404,16 +446,20 @@ export class CasoDetailComponent implements OnDestroy {
       estado: nuevoEstado,
       ...stampEstadoChange(autorId),
     };
-    await this.toast.run(
-      () => this.casosService.updateHito(c.id, hito.id, patch, {
-        hitoTitulo: hito.titulo,
-        tipo: 'estado',
-        autorId,
-        estadoAnterior: hito.estado,
-        estadoNuevo: nuevoEstado,
-      }),
+    const ok = await this.toast.run(
+      async () => {
+        await this.casosService.updateHito(c.id, hito.id, patch, {
+          hitoTitulo: hito.titulo,
+          tipo: 'estado',
+          autorId,
+          estadoAnterior: hito.estado,
+          estadoNuevo: nuevoEstado,
+        });
+        return true;
+      },
       { errorTitle: 'No se pudo cambiar el estado del hito' }
     );
+    if (ok) void this.sugerirTrasCambioEstado(hito, nuevoEstado);
   }
 
   // ── Gestoría ───────────────────────────────────────────

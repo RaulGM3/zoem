@@ -17,7 +17,7 @@ import { CANAL_LABELS, type Accion } from '../../../interfaces/accion.interface'
   template: `
     <div class="w-full sm:max-w-md max-h-[85dvh] flex flex-col rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden"
       style="background:var(--surface);border:1px solid var(--border)"
-      (click)="$event.stopPropagation()"
+      (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()"
       role="dialog" aria-modal="true" aria-labelledby="as-title"
       appFocusTrap (escapeKey)="closed.emit()">
       <div class="flex items-center justify-between px-5 py-4 shrink-0" style="border-bottom:1px solid var(--border)">

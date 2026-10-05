@@ -19,8 +19,17 @@
       [docsPending]="docsPending()"
       [canEdit]="canEditCasos()"
       (edit)="startEditInfo()"
+      (acciones)="abrirAcciones()"
       (tabChange)="setTab($event)"
     />
+
+    @if (sugerencia(); as s) {
+      <app-sugerencia-accion
+        [hitoTitulo]="s.hito.titulo"
+        (aceptar)="aceptarSugerencia()"
+        (descartar)="sugerencia.set(null)"
+      />
+    }
 
     <!-- Tab content -->
     <div class="flex-1 overflow-y-auto p-6">
@@ -41,6 +50,9 @@
           (addContact)="addContact($event)"
           (removeContact)="removeContact($event)"
         />
+        <div class="mt-6">
+          <app-comunicaciones-enviadas [casoId]="caso()!.id" />
+        </div>
       }
 
       @if (activeTab() === 'hitos') {
@@ -124,3 +136,16 @@
   (saved)="onSaveMov($event)"
   (closed)="closeMovForm()"
 />
+
+@if (lanzador(); as l) {
+  <app-accion-lanzador
+    ambito="caso"
+    [contactos]="linkedContacts()"
+    [caso]="caso()"
+    [hitos]="hitos()"
+    [hitoId]="l.hitoId ?? null"
+    [accion]="l.accion ?? null"
+    [sugeridas]="l.sugeridas ?? null"
+    (closed)="lanzador.set(null)"
+  />
+}

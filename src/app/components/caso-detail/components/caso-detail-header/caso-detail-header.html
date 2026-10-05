@@ -29,6 +29,19 @@
       </div>
     </div>
     @if (!editing() && canEdit()) {
+      <div class="shrink-0 flex items-center gap-2">
+      <button
+        type="button"
+        data-testid="caso-acciones"
+        (click)="acciones.emit()"
+        class="flex items-center gap-1.5 px-3 py-1.5 min-h-11 text-sm rounded-lg transition-colors duration-150"
+        style="border:1px solid var(--border);color:var(--text-muted)"
+        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
+        (mouseleave)="$any($event.currentTarget).style.background=''"
+      >
+        <lucide-icon [img]="SendIcon" class="w-3.5 h-3.5" />
+        Notificar / Acciones
+      </button>
       <button
         (click)="edit.emit()"
         class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors duration-150"
@@ -39,6 +52,7 @@
         <lucide-icon [img]="Edit2Icon" class="w-3.5 h-3.5" />
         Editar
       </button>
+      </div>
     }
   </div>
 
