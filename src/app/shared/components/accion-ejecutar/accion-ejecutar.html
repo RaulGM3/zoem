@@ -1,0 +1,183 @@
+<div
+  class="w-full sm:max-w-2xl max-h-[92dvh] flex flex-col rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden"
+  style="background:var(--surface);border:1px solid var(--border)"
+  (click)="$event.stopPropagation()"
+  role="dialog" aria-modal="true" aria-labelledby="ae-title"
+  appFocusTrap (escapeKey)="closed.emit()">
+
+  <div class="flex items-center justify-between px-5 py-4 shrink-0" style="border-bottom:1px solid var(--border)">
+    <div class="min-w-0">
+      <h2 id="ae-title" class="text-base font-semibold truncate"
+        style="color:var(--text-strong);font-family:var(--font-display)">{{ accion().nombre }}</h2>
+      @if (caso(); as c) {
+        <p class="text-xs truncate" style="color:var(--text-faint)">Caso: {{ c.titulo }}</p>
+      }
+    </div>
+    <button type="button" (click)="closed.emit()" aria-label="Cerrar"
+      class="rounded-xl p-2 min-w-11 min-h-11 flex items-center justify-center shrink-0" style="color:var(--text-muted)">
+      <lucide-icon [img]="XIcon" size="18"></lucide-icon>
+    </button>
+  </div>
+
+  <div class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+    <!-- Destinatarios -->
+    <div data-testid="destinatarios">
+      @if (eligeDestinatarios()) {
+        <fieldset>
+          <legend class="form-label">Destinatarios</legend>
+          <div class="space-y-1">
+            @for (c of contactos(); track c.id) {
+              <label class="flex items-center gap-2 text-sm min-h-11 cursor-pointer" style="color:var(--text-body)">
+                <input type="checkbox" [checked]="estaSeleccionado(c.id)" (change)="alternarContacto(c.id)"
+                  style="accent-color:var(--brand)" />
+                {{ nombre(c) }}
+                <span class="text-xs" style="color:var(--text-faint)">{{ c.email }}</span>
+              </label>
+            }
+          </div>
+        </fieldset>
+      } @else {
+        <p class="text-sm" style="color:var(--text-body)">
+          <span class="form-label inline">Para</span>
+          {{ contexto()['cliente'] }}
+        </p>
+      }
+    </div>
+
+    @if (mostrarHito()) {
+      <div>
+        <label for="ae-hito" class="form-label">Hito</label>
+        <select id="ae-hito" class="form-select" [value]="hitoSel()" (change)="seleccionarHito($any($event.target).value)">
+          <option value="">Sin hito</option>
+          @for (h of hitosOrdenados(); track h.id) {
+            <option [value]="h.id" [selected]="h.id === hitoSel()">{{ h.titulo }}</option>
+          }
+        </select>
+      </div>
+    }
+
+    <form [formGroup]="form" class="space-y-4">
+      <div>
+        <label for="ae-asunto" class="form-label">Asunto</label>
+        <input id="ae-asunto" formControlName="asunto" type="text" class="form-input" />
+      </div>
+      <div>
+        <label for="ae-cuerpo" class="form-label">Mensaje</label>
+        <textarea id="ae-cuerpo" formControlName="cuerpo" rows="8" class="form-input resize-y"></textarea>
+      </div>
+    </form>
+
+    @if (marcadoresSinResolver().length > 0) {
+      <p class="text-xs" style="color:var(--warning)">
+        Quedan marcadores sin sustituir: {{ marcadoresSinResolver().join(', ') }}.
+      </p>
+    }
+
+    <!-- Documento -->
+    @if (accion().docTemplateId) {
+      <fieldset class="rounded-xl p-3 space-y-3" style="border:1px solid var(--border)">
+        <legend class="form-label px-1">Documento{{ plantillaDoc() ? ': ' + plantillaDoc()!.name : '' }}</legend>
+        @if (plantillaDocError()) {
+          <p class="text-sm" role="alert" style="color:var(--danger)">
+            La plantilla de documento de esta acción ya no está disponible. Edita la acción para elegir otra.
+          </p>
+        } @else {
+          <p class="text-xs" style="color:var(--text-faint)">
+            Se enviará como enlace que caduca a los 7 días. Completa los datos que faltan.
+          </p>
+          <div class="grid sm:grid-cols-2 gap-3" [formGroup]="docForm">
+            @for (v of variablesDoc(); track v.key) {
+              <div>
+                <label [attr.for]="'ae-doc-' + v.key" class="form-label">
+                  {{ v.label }}{{ v.required ? ' *' : '' }}
+                </label>
+                <input [id]="'ae-doc-' + v.key" [formControlName]="v.key" type="text" class="form-input" />
+              </div>
+            }
+          </div>
+          @if (docFaltantes().length > 0) {
+            <p class="text-xs" style="color:var(--warning)">
+              Faltan datos obligatorios:
+              @for (v of docFaltantes(); track v.key; let last = $last) { {{ v.label }}{{ last ? '.' : ',' }} }
+            </p>
+          }
+        }
+      </fieldset>
+    }
+
+    <!-- Canal -->
+    <fieldset>
+      <legend class="form-label">Enviar por</legend>
+      <div class="space-y-1">
+        @for (c of canales(); track c.canal) {
+          <label class="flex items-start gap-2 min-h-11 py-1.5 text-sm" [class.cursor-pointer]="c.disp.ok"
+            [style.color]="c.disp.ok ? 'var(--text-body)' : 'var(--text-faint)'">
+            <input type="radio" name="ae-canal" [value]="c.canal" [checked]="canal() === c.canal"
+              [disabled]="!c.disp.ok" (change)="elegirCanal(c.canal)" class="mt-1"
+              style="accent-color:var(--brand)" />
+            <span>
+              {{ canalLabels[c.canal] }}
+              @if (!c.disp.ok) {
+                <span class="block text-xs">{{ c.disp.motivo }}</span>
+              }
+            </span>
+          </label>
+        }
+      </div>
+    </fieldset>
+
+    <!-- Estado -->
+    <p role="status" aria-live="polite" class="text-sm" style="color:var(--text-muted)">{{ mensajeEstado() }}</p>
+
+    @if (fase() === 'error') {
+      <p role="alert" class="text-sm" style="color:var(--danger)">
+        No se pudo preparar el mensaje. Revisa tu conexión e inténtalo de nuevo.
+      </p>
+    }
+
+    @if (fase() === 'listo' && resultado(); as r) {
+      @if (r.excedeLimite) {
+        <p class="text-sm" style="color:var(--warning)">
+          El mensaje es demasiado largo para algunos clientes de correo y podría cortarse. Usa «Copiar texto» y pégalo
+          en el mensaje, o acorta el cuerpo y vuelve a preparar.
+        </p>
+      }
+      @if (aperturaBloqueada()) {
+        <p class="text-sm" style="color:var(--text-body)">
+          <a data-testid="enlace-respaldo" [href]="r.url" target="_blank" rel="noopener noreferrer"
+            class="underline" style="color:var(--brand)">Abrir el mensaje manualmente</a>
+        </p>
+      }
+    }
+  </div>
+
+  <div class="flex flex-wrap gap-3 justify-end px-5 py-4 shrink-0" style="border-top:1px solid var(--border)">
+    @if (fase() === 'listo') {
+      <button type="button" (click)="volverAEditar()"
+        class="px-4 min-h-11 text-sm rounded-xl" style="border:1px solid var(--border);color:var(--text-body);background:var(--surface-2)">
+        Editar
+      </button>
+      <button type="button" data-testid="copiar" (click)="copiar()"
+        class="px-4 min-h-11 text-sm rounded-xl flex items-center gap-2"
+        style="border:1px solid var(--border);color:var(--text-body);background:var(--surface-2)">
+        <lucide-icon [img]="CopyIcon" size="15"></lucide-icon>
+        Copiar texto
+      </button>
+      <button #abrirBtn type="button" data-testid="abrir" (click)="abrir()"
+        class="px-4 min-h-11 text-sm font-semibold text-white rounded-xl flex items-center gap-2" style="background:var(--brand)">
+        <lucide-icon [img]="ExternalLinkIcon" size="15"></lucide-icon>
+        Abrir en {{ canal() ? canalLabels[canal()!] : '' }}
+      </button>
+    } @else {
+      <button type="button" (click)="closed.emit()"
+        class="px-4 min-h-11 text-sm rounded-xl" style="border:1px solid var(--border);color:var(--text-body);background:var(--surface-2)">
+        Cancelar
+      </button>
+      <button type="button" data-testid="preparar" (click)="preparar()" [disabled]="!puedePreparar()"
+        class="px-4 min-h-11 text-sm font-semibold text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+        style="background:var(--brand)">
+        {{ fase() === 'preparando' ? 'Preparando…' : (fase() === 'error' ? 'Reintentar' : 'Preparar mensaje') }}
+      </button>
+    }
+  </div>
+</div>

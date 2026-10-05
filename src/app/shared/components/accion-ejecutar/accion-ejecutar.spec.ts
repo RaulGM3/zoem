@@ -1,0 +1,235 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { TestBed, type ComponentFixture } from '@angular/core/testing';
+import { signal } from '@angular/core';
+import { AccionEjecutarComponent } from './accion-ejecutar';
+import { AccionEjecucionService } from '../../../core/services/accion-ejecucion.service';
+import { DocTemplateService } from '../../../core/services/doc-template.service';
+import { CompanyService } from '../../../core/services/company.service';
+import type { Accion } from '../../../interfaces/accion.interface';
+import type { Contact } from '../../../interfaces/contact.interface';
+import type { Caso, Hito } from '../../../interfaces/caso.interface';
+
+const ana = { id: 'k1', type: 'persona_fisica', nombre: 'Ana', apellidos: 'Ruiz', email: 'ana@x.com', mobile: '612345678' } as Contact;
+const luis = { id: 'k2', type: 'persona_fisica', nombre: 'Luis', apellidos: 'Gil', email: 'luis@x.com', mobile: '' } as Contact;
+const CASO = { id: 'cs1', titulo: 'Divorcio', tipo: 'Civil', descripcion: '', vencimiento: '' } as Caso;
+const HITOS = [
+  { id: 'h1', titulo: 'Demanda', orden: 0, estado: 'completado' },
+  { id: 'h2', titulo: 'Vista', orden: 1, estado: 'pendiente' },
+] as Hito[];
+
+const accion = (over: Partial<Accion> = {}): Accion =>
+  ({
+    id: 'a1', nombre: 'Aviso', ambito: 'caso', asunto: 'Novedad: {{hito}}',
+    cuerpo: 'Hola {{cliente}}, hito {{hito}} de {{empresa}}', canales: ['gmail', 'whatsapp'], activa: true, ...over,
+  }) as Accion;
+
+describe('AccionEjecutarComponent', () => {
+  let fixture: ComponentFixture<AccionEjecutarComponent>;
+  let component: AccionEjecutarComponent;
+  let preparar: ReturnType<typeof vi.fn>;
+  let abrir: ReturnType<typeof vi.fn>;
+  let getTemplate: ReturnType<typeof vi.fn>;
+  let writeText: ReturnType<typeof vi.fn>;
+  const el = () => fixture.nativeElement as HTMLElement;
+  const q = <T extends HTMLElement>(sel: string) => el().querySelector<T>(sel)!;
+  const flush = async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    for (let i = 0; i < 5; i++) await Promise.resolve();
+    fixture.detectChanges();
+  };
+
+  async function montar(inputs: Record<string, unknown> = {}) {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [AccionEjecutarComponent],
+      providers: [
+        { provide: AccionEjecucionService, useValue: { preparar, abrir } },
+        { provide: DocTemplateService, useValue: { getTemplate } },
+        { provide: CompanyService, useValue: { activeCompany: signal({ id: 'c1', name: 'Despacho Pérez' }) } },
+      ],
+    }).compileComponents();
+    fixture = TestBed.createComponent(AccionEjecutarComponent);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('accion', accion());
+    fixture.componentRef.setInput('contactos', [ana, luis]);
+    fixture.componentRef.setInput('caso', CASO);
+    fixture.componentRef.setInput('hitos', HITOS);
+    for (const [k, v] of Object.entries(inputs)) fixture.componentRef.setInput(k, v);
+    await flush();
+  }
+
+  beforeEach(async () => {
+    preparar = vi.fn().mockResolvedValue({
+      registroId: 'r1', url: 'https://mail.google.com/x', cuerpoFinal: 'Cuerpo final', excedeLimite: false,
+    });
+    abrir = vi.fn().mockReturnValue(true);
+    getTemplate = vi.fn().mockResolvedValue({
+      id: 't1', name: 'Hoja',
+      variables: [
+        { key: 'cliente', label: 'Cliente', type: 'text', required: true },
+        { key: 'importe', label: 'Importe', type: 'currency', required: true },
+        { key: 'nota', label: 'Nota', type: 'text', required: false },
+      ],
+    });
+    writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    await montar();
+  });
+
+  it('es un diálogo modal accesible con región de estado aria-live', () => {
+    const d = q('[role="dialog"]');
+    expect(d.getAttribute('aria-modal')).toBe('true');
+    expect(d.getAttribute('aria-labelledby')).toBeTruthy();
+    expect(d.hasAttribute('appFocusTrap')).toBe(true);
+    expect(q('[role="status"]').getAttribute('aria-live')).toBe('polite');
+  });
+
+  it('prerrellena asunto y cuerpo con contactos, hito sugerido y empresa', () => {
+    const v = component.form.getRawValue();
+    expect(v.asunto).toBe('Novedad: Demanda');
+    expect(v.cuerpo).toBe('Hola Ana Ruiz, Luis Gil, hito Demanda de Despacho Pérez');
+  });
+
+  it('usa el hito preseleccionado', async () => {
+    await montar({ hitoId: 'h2' });
+    expect(component.form.getRawValue().asunto).toBe('Novedad: Vista');
+  });
+
+  it('al cambiar el hito se rellena de nuevo, salvo que el usuario haya editado el campo', () => {
+    component.seleccionarHito('h2');
+    fixture.detectChanges();
+    expect(component.form.getRawValue().asunto).toBe('Novedad: Vista');
+
+    component.form.controls.cuerpo.setValue('Texto mío');
+    component.form.controls.cuerpo.markAsDirty();
+    component.seleccionarHito('h1');
+    fixture.detectChanges();
+    expect(component.form.getRawValue().asunto).toBe('Novedad: Demanda');
+    expect(component.form.getRawValue().cuerpo).toBe('Texto mío');
+  });
+
+  it('al desmarcar destinatarios se rellena con los restantes y WhatsApp indica el motivo', async () => {
+    // Dos destinatarios: WhatsApp deshabilitado
+    const wa = q<HTMLInputElement>('input[type="radio"][value="whatsapp"]');
+    expect(wa.disabled).toBe(true);
+    expect(el().textContent).toContain('solo permite enviar a uno');
+
+    component.alternarContacto('k2');
+    await flush();
+    expect(component.form.getRawValue().cuerpo).toContain('Hola Ana Ruiz,');
+    expect(q<HTMLInputElement>('input[type="radio"][value="whatsapp"]').disabled).toBe(false);
+  });
+
+  it('con ámbito contacto los destinatarios son fijos (sin checkboxes)', async () => {
+    await montar({ accion: accion({ ambito: 'contacto' }), contactos: [ana], caso: null, hitos: [] });
+    expect(el().querySelector('[data-testid="destinatarios"] input[type="checkbox"]')).toBeNull();
+    expect(el().textContent).toContain('Ana Ruiz');
+    expect(el().querySelector('select#ae-hito')).toBeNull();
+  });
+
+  it('Preparar llama al servicio con asunto, cuerpo, canal, destinatarios, caso y hito', async () => {
+    await component.preparar();
+    await flush();
+    expect(preparar).toHaveBeenCalledWith({
+      accion: expect.objectContaining({ id: 'a1' }),
+      contactos: [ana, luis],
+      canal: 'gmail',
+      asunto: 'Novedad: Demanda',
+      cuerpo: 'Hola Ana Ruiz, Luis Gil, hito Demanda de Despacho Pérez',
+      casoId: 'cs1',
+      hitoId: 'h1',
+    });
+  });
+
+  it('Preparar NO abre la app; el botón "Abrir en Gmail" la abre en el click (síncrono)', async () => {
+    await component.preparar();
+    await flush();
+    expect(abrir).not.toHaveBeenCalled();
+    const btn = q<HTMLButtonElement>('[data-testid="abrir"]');
+    expect(btn.textContent).toContain('Abrir en Gmail');
+    btn.click();
+    expect(abrir).toHaveBeenCalledWith('https://mail.google.com/x', 'gmail');
+  });
+
+  it('si el navegador bloquea la apertura muestra el enlace y "Copiar texto"', async () => {
+    abrir.mockReturnValue(false);
+    await component.preparar();
+    await flush();
+    q<HTMLButtonElement>('[data-testid="abrir"]').click();
+    fixture.detectChanges();
+    const link = q<HTMLAnchorElement>('[data-testid="enlace-respaldo"]');
+    expect(link.getAttribute('href')).toBe('https://mail.google.com/x');
+    q<HTMLButtonElement>('[data-testid="copiar"]').click();
+    await flush();
+    expect(writeText).toHaveBeenCalledWith('Cuerpo final');
+    expect(q('[role="status"]').textContent).toContain('copiado');
+  });
+
+  it('avisa si la URL excede el límite', async () => {
+    preparar.mockResolvedValue({ registroId: 'r', url: 'https://x', cuerpoFinal: 'c', excedeLimite: true });
+    await component.preparar();
+    await flush();
+    expect(el().textContent).toContain('demasiado largo');
+  });
+
+  it('muestra el error de preparar en un alert y permite reintentar', async () => {
+    preparar.mockRejectedValue(new Error('permission-denied'));
+    await component.preparar();
+    await flush();
+    expect(q('[role="alert"]').textContent).toContain('No se pudo preparar');
+    expect(el().querySelector('[data-testid="abrir"]')).toBeNull();
+    expect(q<HTMLButtonElement>('[data-testid="preparar"]').disabled).toBe(false);
+  });
+
+  it('muestra "Preparando…" mientras espera', async () => {
+    let resolver!: (v: unknown) => void;
+    preparar.mockReturnValue(new Promise((r) => (resolver = r)));
+    const p = component.preparar();
+    fixture.detectChanges();
+    expect(q('[role="status"]').textContent).toContain('Preparando');
+    expect(q<HTMLButtonElement>('[data-testid="preparar"]').disabled).toBe(true);
+    resolver({ registroId: 'r', url: 'u', cuerpoFinal: 'c', excedeLimite: false });
+    await p;
+  });
+
+  describe('con documento', () => {
+    beforeEach(async () => {
+      await montar({ accion: accion({ docTemplateId: 't1' }) });
+    });
+
+    it('lista las variables de la plantilla, prerrellenadas con el contexto', () => {
+      expect(getTemplate).toHaveBeenCalledWith('t1');
+      expect(component.docForm.getRawValue()['cliente']).toBe('Ana Ruiz, Luis Gil');
+      expect(q<HTMLInputElement>('#ae-doc-cliente').value).toBe('Ana Ruiz, Luis Gil');
+      expect(q<HTMLInputElement>('#ae-doc-importe').value).toBe('');
+    });
+
+    it('bloquea Preparar mientras falten variables obligatorias y lo indica', () => {
+      expect(component.puedePreparar()).toBe(false);
+      expect(el().textContent).toContain('Importe');
+      component.docForm.controls['importe'].setValue('1.200 €');
+      expect(component.puedePreparar()).toBe(true);
+    });
+
+    it('envía valoresDoc al servicio', async () => {
+      component.docForm.controls['importe'].setValue('1.200 €');
+      await component.preparar();
+      expect(preparar.mock.calls[0][0].valoresDoc).toMatchObject({ importe: '1.200 €', cliente: 'Ana Ruiz, Luis Gil' });
+    });
+
+    it('si la plantilla ya no existe avisa y bloquea', async () => {
+      getTemplate.mockResolvedValue(null);
+      await montar({ accion: accion({ docTemplateId: 't1' }) });
+      expect(q('[role="alert"]').textContent).toContain('plantilla de documento');
+      expect(component.puedePreparar()).toBe(false);
+    });
+  });
+
+  it('cerrar emite closed', async () => {
+    const spy = vi.fn();
+    component.closed.subscribe(spy);
+    q<HTMLButtonElement>('[aria-label="Cerrar"]').click();
+    expect(spy).toHaveBeenCalled();
+  });
+});
