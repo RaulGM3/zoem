@@ -206,7 +206,7 @@ export class DemoLayoutComponent {
     {
       category: 'Configuración',
       items: [
-        { name: 'Usuarios y Permisos', href: '/usuarios', icon: UserCog, badge: 'Nuevo', modulo: 'Configuración' },
+        { name: 'Configuración', href: '/configuracion', icon: Settings, modulo: 'Configuración' },
         { name: 'Acciones', href: '/acciones', icon: Send, modulo: 'Configuración' },
         { name: 'Mi Perfil', href: '/perfil', icon: User },
       ],

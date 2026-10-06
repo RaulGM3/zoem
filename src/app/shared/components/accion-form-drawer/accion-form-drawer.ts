@@ -10,6 +10,8 @@ import {
 import type { DocTemplate } from '../../../interfaces/doc-template.interface';
 import type { HitoPlantilla } from '../../../interfaces/plantilla.interface';
 import { VARIABLES_ACCION, insertarVariable } from '../../../core/acciones/insertar-variable';
+import { formatoParaCanales, type TextoRedactado } from '../../../core/acciones/redaccion-ia';
+import { RedactorIaComponent } from '../redactor-ia/redactor-ia';
 
 type CampoTexto = 'asunto' | 'cuerpo';
 
@@ -21,7 +23,7 @@ type CampoTexto = 'asunto' | 'cuerpo';
  */
 @Component({
   selector: 'app-accion-form-drawer',
-  imports: [LucideAngularModule, ReactiveFormsModule, FocusTrapDirective],
+  imports: [LucideAngularModule, ReactiveFormsModule, FocusTrapDirective, RedactorIaComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'contents' },
   template: `
@@ -70,6 +72,9 @@ type CampoTexto = 'asunto' | 'cuerpo';
             </select>
           </div>
         }
+
+        <app-redactor-ia idPrefix="af" modo="plantilla" [formato]="formatoRedaccion()" [borrador]="textos()"
+          (redactado)="aplicarRedaccion($event)" />
 
         <div>
           <label for="af-asunto" class="form-label">Asunto *</label>
@@ -183,12 +188,16 @@ export class AccionFormDrawerComponent {
   readonly canalesSel = signal<Canal[]>([]);
   readonly campoActivo = signal<CampoTexto>('cuerpo');
   private readonly formValido = signal(false);
+  /** Asunto y cuerpo espejados a signal: borrador que se pasa al redactor IA. */
+  readonly textos = signal<TextoRedactado>({ asunto: '', cuerpo: '' });
+  readonly formatoRedaccion = computed(() => formatoParaCanales(this.canalesSel()));
 
 
   readonly puedeGuardar = computed(() => this.formValido() && this.canalesSel().length > 0);
 
   constructor() {
     this.form.statusChanges.subscribe(() => this.formValido.set(this.form.valid));
+    this.form.valueChanges.subscribe(() => this.sincronizarTextos());
     effect(() => {
       const a = this.accion();
       const fijo = this.ambitoFijo();
@@ -203,7 +212,22 @@ export class AccionFormDrawerComponent {
       });
       this.canalesSel.set(a?.canales ? [...a.canales] : []);
       this.formValido.set(this.form.valid);
+      this.sincronizarTextos();
     });
+  }
+
+  private sincronizarTextos(): void {
+    const { asunto, cuerpo } = this.form.getRawValue();
+    this.textos.set({ asunto, cuerpo });
+  }
+
+  /** Sustituye asunto y cuerpo por lo redactado; un asunto vacío no pisa el actual. */
+  aplicarRedaccion(t: TextoRedactado): void {
+    const c = this.form.controls;
+    c.asunto.setValue(t.asunto || c.asunto.value);
+    c.cuerpo.setValue(t.cuerpo);
+    c.asunto.markAsDirty();
+    c.cuerpo.markAsDirty();
   }
 
   registrarFoco(campo: CampoTexto): void {

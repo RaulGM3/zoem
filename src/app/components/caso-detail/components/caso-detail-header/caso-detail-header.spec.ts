@@ -30,6 +30,27 @@ describe('CasoDetailHeaderComponent: acciones', () => {
     expect(spy).toHaveBeenCalled();
   });
 
+  it('en móvil los botones bajan a su propia fila y no le roban ancho al título', async () => {
+    const el = (await montar(true)).nativeElement as HTMLElement;
+    const fila = el.querySelector('[data-caso-cabecera]')!;
+    expect(fila.className).toContain('flex-col');
+    expect(fila.className).toContain('sm:flex-row');
+    const acciones = el.querySelector('[data-caso-header-acciones]')!;
+    expect(acciones.className).toContain('w-full');
+    expect(acciones.className).toContain('sm:w-auto');
+    expect(acciones.className).not.toMatch(/(^|\s)shrink-0/);
+    acciones.querySelectorAll('button').forEach((b) => expect(b.className).toContain('flex-1'));
+  });
+
+  it('muestra la etiqueta legible del estado', async () => {
+    const f = await montar(true);
+    f.componentRef.setInput('estado', 'en_proceso');
+    f.detectChanges();
+    const texto = (f.nativeElement as HTMLElement).textContent!;
+    expect(texto).toContain('En proceso');
+    expect(texto).not.toContain('en_proceso');
+  });
+
   it('no se muestra sin permiso de edición ni mientras se edita', async () => {
     expect(((await montar(false)).nativeElement as HTMLElement).querySelector('[data-testid="caso-acciones"]')).toBeNull();
     expect(((await montar(true, true)).nativeElement as HTMLElement).querySelector('[data-testid="caso-acciones"]')).toBeNull();

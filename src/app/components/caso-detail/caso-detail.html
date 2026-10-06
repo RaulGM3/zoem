@@ -32,27 +32,33 @@
     }
 
     <!-- Tab content -->
-    <div class="flex-1 overflow-y-auto p-4 sm:p-6">
+    <div class="flex-1 overflow-y-auto py-4 sm:py-6">
 
       @if (activeTab() === 'info') {
-        <app-caso-info-tab
-          [caso]="caso()!"
-          [editing]="editingInfo()"
-          [saving]="savingInfo()"
-          [linkedContacts]="linkedContacts()"
-          [searchResults]="contactSearchResults()"
-          [contactSearch]="contactSearch()"
-          [noResults]="noContactResults()"
-          [canEdit]="canEditCasos()"
-          [members]="usersService.members()"
-          (cancelEdit)="editingInfo.set(false)"
-          (saveInfo)="onSaveInfo($event)"
-          (searchChange)="contactSearch.set($event)"
-          (addContact)="addContact($event)"
-          (removeContact)="removeContact($event)"
-        />
-        <div class="mt-6">
-          <app-comunicaciones-enviadas [casoId]="caso()!.id" />
+        <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,42rem)_minmax(0,1fr)] gap-6 items-start">
+          <app-caso-info-tab
+            [caso]="caso()!"
+            [editing]="editingInfo()"
+            [saving]="savingInfo()"
+            [linkedContacts]="linkedContacts()"
+            [searchResults]="contactSearchResults()"
+            [contactSearch]="contactSearch()"
+            [noResults]="noContactResults()"
+            [canEdit]="canEditCasos()"
+            [members]="usersService.members()"
+            (cancelEdit)="editingInfo.set(false)"
+            (saveInfo)="onSaveInfo($event)"
+            (searchChange)="contactSearch.set($event)"
+            (addContact)="addContact($event)"
+            (removeContact)="removeContact($event)"
+          />
+          <app-caso-acciones-panel
+            [casoId]="caso()!.id"
+            [contactos]="linkedContacts()"
+            [canEdit]="canEditCasos()"
+            [recarga]="recargaAcciones()"
+            (ejecutar)="ejecutarAccion($event)"
+          />
         </div>
       }
 
@@ -147,6 +153,6 @@
     [hitoId]="l.hitoId ?? null"
     [accion]="l.accion ?? null"
     [sugeridas]="l.sugeridas ?? null"
-    (closed)="lanzador.set(null)"
+    (closed)="cerrarLanzador()"
   />
 }

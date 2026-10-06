@@ -6,6 +6,7 @@ import { AccionesService } from '../../../../core/services/acciones.service';
 import { DocTemplateService } from '../../../../core/services/doc-template.service';
 import { PermissionService } from '../../../../core/services/permission.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { AccionRedaccionService } from '../../../../core/services/accion-redaccion.service';
 import type { Accion } from '../../../../interfaces/accion.interface';
 import type { HitoPlantilla } from '../../../../interfaces/plantilla.interface';
 import type { DocTemplate } from '../../../../interfaces/doc-template.interface';
@@ -36,6 +37,7 @@ describe('PlantillaAccionesTabComponent', () => {
         { provide: AccionesService, useValue: svc },
         { provide: DocTemplateService, useValue: { templates: signal([{ id: 't1', name: 'Hoja', status: 'listo' }] as DocTemplate[]) } },
         { provide: PermissionService, useValue: { can: () => true } },
+        { provide: AccionRedaccionService, useValue: { redactar: vi.fn() } },
         { provide: ToastService, useValue: { run: async (fn: () => Promise<unknown>, o?: { onSuccess?: () => void }) => { const r = await fn(); o?.onSuccess?.(); return r; } } },
       ],
     }).compileComponents();

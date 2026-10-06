@@ -4,6 +4,7 @@ import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
@@ -15,6 +16,7 @@ import { UserSyncService } from '../core/services/user-sync.service';
 import { CompanyService } from '../core/services/company.service';
 import { UsersService } from '../core/services/users';
 import { PushNotificationService } from '../core/services/push-notification.service';
+import { ClaimsSyncService } from '../core/services/claims-sync.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -24,6 +26,7 @@ export class AuthService {
   private readonly companyService = inject(CompanyService);
   private readonly usersService = inject(UsersService);
   private readonly pushNotifications = inject(PushNotificationService);
+  private readonly claimsSync = inject(ClaimsSyncService);
 
   readonly user = signal<User | null>(null);
   readonly isLoading = signal(true);
@@ -36,6 +39,9 @@ export class AuthService {
         if (user) {
           await this.userSync.syncUser(user.uid, user.email ?? '', user.displayName);
           await this.companyService.loadMyCompanies(user.uid);
+          // Storage autoriza con custom claims: alinearlos con la empresa activa.
+          const companyId = this.companyService.activeCompany()?.id;
+          if (companyId) void this.claimsSync.sync(companyId);
           // Cargar los miembros de la empresa activa acá garantiza que el rol del
           // usuario esté disponible app-wide (sidebar, dashboard) sin importar por
           // qué ruta entre. El permissionGuard ya no es el único que los carga.
@@ -64,6 +70,10 @@ export class AuthService {
 
   async loginWithEmail(email: string, password: string): Promise<void> {
     await signInWithEmailAndPassword(this.auth, email, password);
+  }
+
+  async sendPasswordReset(email: string): Promise<void> {
+    await sendPasswordResetEmail(this.auth, email);
   }
 
   async loginWithGoogle(): Promise<void> {

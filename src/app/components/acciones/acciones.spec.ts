@@ -6,6 +6,7 @@ import { AccionesService } from '../../core/services/acciones.service';
 import { DocTemplateService } from '../../core/services/doc-template.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { ToastService } from '../../core/services/toast.service';
+import { AccionRedaccionService } from '../../core/services/accion-redaccion.service';
 import type { Accion } from '../../interfaces/accion.interface';
 import type { DocTemplate } from '../../interfaces/doc-template.interface';
 
@@ -44,6 +45,7 @@ describe('AccionesComponent', () => {
           },
         },
         { provide: PermissionService, useValue: { can } },
+        { provide: AccionRedaccionService, useValue: { redactar: vi.fn() } },
         { provide: ToastService, useValue: { run: async (fn: () => Promise<unknown>, o?: { onSuccess?: () => void }) => { const r = await fn(); o?.onSuccess?.(); return r; } } },
       ],
     }).compileComponents();

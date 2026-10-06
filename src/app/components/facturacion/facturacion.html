@@ -103,12 +103,7 @@
   }
 
   @if (activeTab() === 'configuracion') {
-    <app-facturacion-configuracion-tab
-      [form]="configForm"
-      [saving]="savingConfig()"
-      [cifLabel]="cifLabel()"
-      (save)="saveConfig()"
-    />
+    <app-facturacion-ajustes />
   }
 </div>
 

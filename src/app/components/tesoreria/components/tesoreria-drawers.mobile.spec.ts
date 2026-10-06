@@ -80,9 +80,9 @@ describe('Drawers de Tesorería — móvil', () => {
 
     it('el formulario tiene etiquetas asociadas y botones táctiles', async () => {
       const f = await montar(CuentasDrawerComponent, true);
-      f.componentInstance.openNew();
-      f.detectChanges();
       const el = f.nativeElement as HTMLElement;
+      Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.includes('Nueva cuenta'))!.click();
+      f.detectChanges();
       expect(el.querySelector('label[for="cuenta-nombre"]')).not.toBeNull();
       expect(el.querySelector('input#cuenta-nombre')).not.toBeNull();
       const v = await analizarA11y(el);

@@ -1,5 +1,4 @@
-<app-overlay-shell [open]="true" title="Cuentas bancarias" variant="drawer" size="md" (closed)="closed.emit()">
-  <div class="space-y-4 px-4 py-5 sm:px-6">
+  <div class="space-y-4">
     <!-- Lista de cuentas -->
     @if (loading()) {
       <p class="text-sm" style="color:var(--text-muted)">Cargando...</p>
@@ -132,4 +131,3 @@
       </button>
     }
   </div>
-</app-overlay-shell>

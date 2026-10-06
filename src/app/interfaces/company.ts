@@ -1,4 +1,5 @@
 import { Timestamp } from '@angular/fire/firestore';
+import type { CompanyLogo } from '../core/services/company.service';
 
 export type ComunidadAutonoma =
   | 'andalucia'
@@ -52,7 +53,7 @@ export interface Company {
   ciudad: string;
   cif?: string;
   website?: string;
-  logo?: string;
+  logo?: CompanyLogo;
   descripcion?: string;
   plan: CompanyPlan;
   status: CompanyStatus;

@@ -7,12 +7,15 @@ import type { Invoice } from './invoice.service';
 import { normalizeLinea } from './invoice.service';
 import { totalesRegistro } from '../verifactu/totales-registro';
 import { CompanyService, getLabelIdentificacion } from './company.service';
+import { CompanyLogoService } from './company-logo.service';
+import { encajarLogo } from '../configuracion/logo';
 import type { Company } from './company.service';
 
 @Injectable({ providedIn: 'root' })
 export class InvoicePdfService {
   private readonly storage = inject(Storage);
   private readonly companyService = inject(CompanyService);
+  private readonly logoService = inject(CompanyLogoService);
 
   async generateAndUpload(invoice: Invoice): Promise<string> {
     const company = this.companyService.activeCompany();
@@ -34,6 +37,26 @@ export class InvoicePdfService {
     document.body.removeChild(a);
   }
 
+  /**
+   * Dibuja el logo (arriba-izquierda, 40x16 mm máx., proporción preservada).
+   * Devuelve la Y del nombre de empresa: bajo el logo si se dibujó, `yPorDefecto` si no.
+   * Cualquier fallo (descarga, decodificación) deja el layout original.
+   */
+  private async dibujarLogo(doc: jsPDF, company: Company, margin: number, yPorDefecto: number): Promise<number> {
+    if (!company.logo) return yPorDefecto;
+    try {
+      const logo = await this.logoService.cargarDataUrl(company.logo);
+      const caja = logo ? encajarLogo(logo.w, logo.h) : null;
+      if (!logo || !caja) return yPorDefecto;
+      const top = 12;
+      doc.addImage(logo.dataUrl, logo.format, margin, top, caja.w, caja.h);
+      return top + caja.h + 6;
+    } catch (err) {
+      console.warn('[pdf] no se pudo dibujar el logo:', err);
+      return yPorDefecto;
+    }
+  }
+
   private async buildPdf(invoice: Invoice, company: Company): Promise<Blob> {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const margin = 20;
@@ -42,6 +65,7 @@ export class InvoicePdfService {
 
     // ── Company block (left) ────────────────────────────────────────────────
     let y = 22;
+    y = await this.dibujarLogo(doc, company, margin, y);
     doc.setFontSize(15);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 30, 30);

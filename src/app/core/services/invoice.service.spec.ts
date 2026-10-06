@@ -6,6 +6,7 @@ import { Functions } from '@angular/fire/functions';
 import { Storage } from '@angular/fire/storage';
 import { InvoiceService, InvoiceLinea, Invoice } from './invoice.service';
 import { InvoicePdfService } from './invoice-pdf.service';
+import { CompanyLogoService } from './company-logo.service';
 import { CompanyService, Company } from './company.service';
 import type { ClienteFactura } from '../facturacion/cliente-factura';
 
@@ -337,6 +338,7 @@ describe('InvoiceService.createInvoiceForCaso() — cálculos', () => {
         { provide: Functions, useValue: {} },
         { provide: Storage, useValue: {} },
         { provide: CompanyService, useValue: { activeCompany: signal<Company | null>(null) } },
+        { provide: CompanyLogoService, useValue: { cargarDataUrl: vi.fn() } },
       ],
     });
     const svc = TestBed.inject(InvoiceService);

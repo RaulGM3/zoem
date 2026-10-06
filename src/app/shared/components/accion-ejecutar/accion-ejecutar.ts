@@ -17,6 +17,8 @@ import { interpolarTexto, clavesFaltantes } from '../../../core/acciones/interpo
 import { prefillVariables } from '../../../core/acciones/prefill-variables';
 import { canalDisponible } from '../../../core/acciones/url-canal';
 import { hitoSugerido } from '../../../core/acciones/hito-sugerido';
+import type { FormatoRedaccion, TextoRedactado } from '../../../core/acciones/redaccion-ia';
+import { RedactorIaComponent } from '../redactor-ia/redactor-ia';
 
 type Fase = 'editando' | 'preparando' | 'listo' | 'error';
 
@@ -29,7 +31,7 @@ type Fase = 'editando' | 'preparando' | 'listo' | 'error';
  */
 @Component({
   selector: 'app-accion-ejecutar',
-  imports: [LucideAngularModule, ReactiveFormsModule, FocusTrapDirective],
+  imports: [LucideAngularModule, ReactiveFormsModule, FocusTrapDirective, RedactorIaComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './accion-ejecutar.html',
   host: {
@@ -74,7 +76,7 @@ export class AccionEjecutarComponent implements OnInit {
   readonly plantillaDoc = signal<{ name: string; variables: TemplateVariable[] } | null>(null);
   readonly plantillaDocError = signal(false);
   /** Valores del formulario espejados a signals para que los `computed` reaccionen. */
-  private readonly valores = signal({ asunto: '', cuerpo: '' });
+  protected readonly valores = signal<TextoRedactado>({ asunto: '', cuerpo: '' });
   private readonly valoresDoc = signal<Record<string, string>>({});
 
   private readonly abrirBtn = viewChild<ElementRef<HTMLButtonElement>>('abrirBtn');
@@ -97,6 +99,8 @@ export class AccionEjecutarComponent implements OnInit {
   readonly canales = computed(() =>
     this.accion().canales.map((canal) => ({ canal, disp: canalDisponible(canal, this.contactosSel()) })),
   );
+
+  readonly formatoRedaccion = computed<FormatoRedaccion>(() => (this.canal() === 'whatsapp' ? 'whatsapp' : 'email'));
 
   readonly variablesDoc = computed(() => this.plantillaDoc()?.variables ?? []);
   readonly docFaltantes = computed(() => {
@@ -204,6 +208,18 @@ export class AccionEjecutarComponent implements OnInit {
   /** `setValue` solo si el usuario no tocó el control (los cambios programáticos no lo marcan dirty). */
   private rellenar(control: FormControl<string>, valor: string): void {
     if (!control.dirty) control.setValue(valor);
+  }
+
+  /**
+   * Vuelca lo redactado por la IA. Marca los controles dirty para que el
+   * relleno automático (al cambiar destinatarios o hito) no lo pise.
+   */
+  aplicarRedaccion(t: TextoRedactado): void {
+    const c = this.form.controls;
+    c.asunto.setValue(t.asunto || c.asunto.value);
+    c.cuerpo.setValue(t.cuerpo);
+    c.asunto.markAsDirty();
+    c.cuerpo.markAsDirty();
   }
 
   nombre(c: Contact): string {

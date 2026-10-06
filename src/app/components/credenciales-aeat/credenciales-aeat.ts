@@ -60,8 +60,9 @@ type EstadoCert = 'sin_configurar' | 'activo' | 'expirado';
         </p>
 
         <div>
-          <label class="form-label">Archivo .pfx / .p12</label>
+          <label for="aeat-cert-file" class="form-label">Archivo .pfx / .p12</label>
           <input
+            id="aeat-cert-file"
             type="file"
             accept=".pfx,.p12"
             (change)="onFileChange($event)"
@@ -71,8 +72,9 @@ type EstadoCert = 'sin_configurar' | 'activo' | 'expirado';
         </div>
 
         <div>
-          <label class="form-label">Contraseña del certificado</label>
+          <label for="aeat-cert-password" class="form-label">Contraseña del certificado</label>
           <input
+            id="aeat-cert-password"
             type="password"
             formControlName="password"
             autocomplete="current-password"

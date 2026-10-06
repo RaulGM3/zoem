@@ -1,4 +1,4 @@
-import { Component, signal, computed, ChangeDetectionStrategy, inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, signal, computed, ChangeDetectionStrategy, inject, input, OnInit, OnDestroy } from '@angular/core';
 import {
   LucideAngularModule, UserCog, Plus,
   Mail, Clock, Trash2, Copy, Check, Lock, Inbox,
@@ -50,6 +50,9 @@ type EditableMatrix = Record<Modulo, Record<FirmRole, RoleCaps>>;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UsuariosComponent implements OnInit, OnDestroy {
+  /** Dentro de /configuracion: el título pasa a h2 y se elimina el padding de página. */
+  readonly embebido = input(false);
+
   readonly UserCogIcon = UserCog;
   readonly PlusIcon = Plus;
   readonly MailIcon = Mail;

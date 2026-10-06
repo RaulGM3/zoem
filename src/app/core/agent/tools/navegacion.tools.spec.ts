@@ -38,4 +38,8 @@ describe('navegar', () => {
       expect(ruta.startsWith('/')).toBe(true);
     }
   });
+
+  it('Configuración navega al área /configuracion (ya no a /usuarios)', () => {
+    expect(RUTAS_POR_MODULO.Configuración).toBe('/configuracion');
+  });
 });

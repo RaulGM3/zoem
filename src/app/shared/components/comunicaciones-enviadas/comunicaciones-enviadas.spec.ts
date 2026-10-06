@@ -69,6 +69,23 @@ describe('ComunicacionesEnviadasComponent', () => {
     expect(el().querySelector('[role="alert"]')).not.toBeNull();
   });
 
+  it('con registros externos los pinta sin consultar', async () => {
+    await montar({ casoId: 'cs1', registros: [REG[1]] });
+    expect(listarPorCaso).not.toHaveBeenCalled();
+    expect(listarPorContacto).not.toHaveBeenCalled();
+    const txt = el().textContent ?? '';
+    expect(txt).toContain('Aviso');
+    expect(txt).not.toContain('Enviar presupuesto');
+  });
+
+  it('con registros externos refleja el estado de carga del padre', async () => {
+    await montar({ registros: [], cargando: true });
+    expect(el().querySelector('[role="status"]')?.textContent).toContain('Cargando');
+    fixture.componentRef.setInput('cargando', false);
+    fixture.detectChanges();
+    expect(el().textContent).toContain('Todavía no se ha enviado ninguna comunicación');
+  });
+
   it('usa una lista semántica con título', async () => {
     await montar({ contactoId: 'k1' });
     expect(el().querySelector('section[aria-labelledby]')).not.toBeNull();

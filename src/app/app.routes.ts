@@ -120,11 +120,15 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/vertey-studio/vertey-studio').then((m) => m.VerteyStudioComponent),
       },
+      { path: 'usuarios', pathMatch: 'full', redirectTo: 'configuracion/usuarios' },
       {
-        path: 'usuarios',
+        path: 'configuracion',
         canActivate: [permissionGuard('Configuración')],
+        canActivateChild: [permissionGuard('Configuración')],
         loadComponent: () =>
-          import('./components/usuarios/usuarios').then((m) => m.UsuariosComponent),
+          import('./components/configuracion/configuracion').then((m) => m.ConfiguracionComponent),
+        loadChildren: () =>
+          import('./components/configuracion/configuracion.routes').then((m) => m.CONFIGURACION_ROUTES),
       },
       {
         path: 'acciones',

@@ -2,6 +2,7 @@ import { Component, ChangeDetectionStrategy, inject, input, output } from '@angu
 import { BreakpointService } from '../../../../core/services/breakpoint.service';
 import { LucideAngularModule, ArrowLeft, Edit2, Send } from 'lucide-angular';
 import { RouterLink } from '@angular/router';
+import { CASO_ESTADO_LABEL, type CasoEstado } from '../../../../interfaces';
 
 export type CasoTab = 'info' | 'hitos' | 'gestoria' | 'documentos';
 
@@ -41,6 +42,10 @@ export class CasoDetailHeaderComponent {
     ['gestoria', 'Gestoría'],
     ['documentos', 'Documentos'],
   ];
+
+  estadoLabel(estado: string): string {
+    return CASO_ESTADO_LABEL[estado as CasoEstado] ?? estado;
+  }
 
   /** Selector móvil: solo propaga valores que son pestañas válidas. */
   seleccionarTab(valor: string): void {

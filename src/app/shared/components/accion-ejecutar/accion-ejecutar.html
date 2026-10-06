@@ -56,6 +56,9 @@
       </div>
     }
 
+    <app-redactor-ia idPrefix="ae" modo="mensaje" [formato]="formatoRedaccion()" [contexto]="contexto()"
+      [borrador]="valores()" (redactado)="aplicarRedaccion($event)" />
+
     <form [formGroup]="form" class="space-y-4">
       <div>
         <label for="ae-asunto" class="form-label">Asunto</label>

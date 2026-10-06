@@ -1,6 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { AccionFormDrawerComponent } from './accion-form-drawer';
+import { RedactorIaComponent } from '../redactor-ia/redactor-ia';
+import { AccionRedaccionService } from '../../../core/services/accion-redaccion.service';
 import type { Accion, AccionInput } from '../../../interfaces/accion.interface';
 import type { DocTemplate } from '../../../interfaces/doc-template.interface';
 
@@ -22,7 +25,10 @@ describe('AccionFormDrawerComponent', () => {
 
   async function montar(inputs: Record<string, unknown> = {}) {
     TestBed.resetTestingModule();
-    await TestBed.configureTestingModule({ imports: [AccionFormDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [AccionFormDrawerComponent],
+      providers: [{ provide: AccionRedaccionService, useValue: { redactar: vi.fn() } }],
+    }).compileComponents();
     fixture = TestBed.createComponent(AccionFormDrawerComponent);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('docTemplates', plantillasDoc);
@@ -114,5 +120,28 @@ describe('AccionFormDrawerComponent', () => {
   it('cerrar emite closed', () => {
     el().querySelector<HTMLButtonElement>('[aria-label="Cerrar"]')!.click();
     expect(closed).toBe(1);
+  });
+
+  describe('Redactar con IA', () => {
+    const redactor = () => fixture.debugElement.query(By.directive(RedactorIaComponent)).componentInstance as RedactorIaComponent;
+
+    it('genera una plantilla y vuelca asunto y cuerpo en el formulario', () => {
+      expect(redactor().modo()).toBe('plantilla');
+      redactor().redactado.emit({ asunto: 'Documentación', cuerpo: 'Hola {{cliente}}' });
+      fixture.detectChanges();
+      expect(component.form.controls.asunto.value).toBe('Documentación');
+      expect(component.form.controls.cuerpo.value).toBe('Hola {{cliente}}');
+      expect(component.form.controls.cuerpo.dirty).toBe(true);
+    });
+
+    it('formato WhatsApp solo si WhatsApp es el único canal', () => {
+      expect(redactor().formato()).toBe('email');
+      component.toggleCanal('whatsapp');
+      fixture.detectChanges();
+      expect(redactor().formato()).toBe('whatsapp');
+      component.toggleCanal('gmail');
+      fixture.detectChanges();
+      expect(redactor().formato()).toBe('email');
+    });
   });
 });

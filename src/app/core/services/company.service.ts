@@ -11,6 +11,7 @@ import {
   query,
   where,
   serverTimestamp,
+  deleteField,
 } from '@angular/fire/firestore';
 import { stripUndefinedDeep } from '../firebase/sanitize';
 
@@ -23,6 +24,17 @@ export interface CompanyVerifactu {
   certTitular?: string;
   certExpiry?: string; // ISO date
   certStoredAt?: string;
+}
+
+export type LogoContentType = 'image/png' | 'image/jpeg';
+
+export interface CompanyLogo {
+  /** Ruta en Storage: companies/{cid}/branding/logo */
+  path: string;
+  url: string;
+  contentType: LogoContentType;
+  /** ISO; versiona la caché del logo en el PDF. */
+  updatedAt: string;
 }
 
 export interface Company {
@@ -45,11 +57,13 @@ export interface Company {
   direccion?: string;
   codigoPostal?: string;
   ciudad?: string;
+  website?: string;
   /** Saldo bancario real cargado manualmente, para cotejar con el sistema. */
   saldoBancario?: number;
   /** Fecha (ISO yyyy-mm-dd) en que se actualizó el saldo bancario. */
   saldoBancarioFecha?: string;
   verifactu?: CompanyVerifactu;
+  logo?: CompanyLogo;
   createdAt?: unknown;
   updatedAt?: unknown;
 }
@@ -140,5 +154,15 @@ export class CompanyService {
     this.activeCompany.update(c =>
       c && c.id === id ? { ...c, saldoBancario, saldoBancarioFecha: fecha } : c
     );
+  }
+
+  /** Elimina el campo `logo` (deleteField; updateCompany descartaría undefined) y refresca la company activa. */
+  async removeCompanyLogo(id: string): Promise<void> {
+    await updateDoc(doc(this.firestore, 'companies', id), { logo: deleteField(), updatedAt: serverTimestamp() });
+    this.activeCompany.update((c) => {
+      if (!c || c.id !== id) return c;
+      const { logo: _logo, ...rest } = c;
+      return rest;
+    });
   }
 }

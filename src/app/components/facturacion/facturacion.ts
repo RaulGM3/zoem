@@ -1,6 +1,5 @@
-import { Component, signal, computed, inject, OnInit, effect, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, computed, inject, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
-import { FormBuilder, Validators } from '@angular/forms';
 import { LucideAngularModule, Settings, Plus } from 'lucide-angular';
 import type { Invoice, InvoiceLinea } from '../../core/services/invoice.service';
 import { CasosService } from '../../core/services/casos.service';
@@ -8,7 +7,7 @@ import { UsersService } from '../../core/services/users';
 import { InvoiceService } from '../../core/services/invoice.service';
 import type { InvoiceFormPayload } from './components/factura-drawer/factura-drawer';
 import { InvoicePdfService } from '../../core/services/invoice-pdf.service';
-import { CompanyService, getLabelIdentificacion } from '../../core/services/company.service';
+import { CompanyService } from '../../core/services/company.service';
 import { ContactService } from '../../core/services/contact.service';
 import type { Contact } from '../../interfaces/contact.interface';
 import {
@@ -21,14 +20,13 @@ import { BreakpointService } from '../../core/services/breakpoint.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { ToastService } from '../../core/services/toast.service';
 import { Caso, gestoriaCompleta, Hito } from '../../interfaces';
-import type { ConfigFormGroup } from './components/facturacion-configuracion-tab/facturacion-configuracion-tab';
 import type { HoraFlat } from './components/facturacion-horas-tab/facturacion-horas-tab';
 import { FacturacionKpiCardsComponent } from './components/facturacion-kpi-cards/facturacion-kpi-cards';
 import { FacturacionCasosTabComponent } from './components/facturacion-casos-tab/facturacion-casos-tab';
 import { FacturacionArchivoTabComponent } from './components/facturacion-archivo-tab/facturacion-archivo-tab';
 import { FacturacionGastosTabComponent } from './components/facturacion-gastos-tab/facturacion-gastos-tab';
 import { FacturacionHorasTabComponent } from './components/facturacion-horas-tab/facturacion-horas-tab';
-import { FacturacionConfiguracionTabComponent } from './components/facturacion-configuracion-tab/facturacion-configuracion-tab';
+import { FacturacionAjustesComponent } from './components/facturacion-ajustes/facturacion-ajustes';
 import { FacturaDrawerComponent } from './components/factura-drawer/factura-drawer';
 import { CierreModalComponent } from './components/cierre-modal/cierre-modal';
 
@@ -56,7 +54,7 @@ type FacturacionTab = 'casos' | 'archivo' | 'facturas' | 'gastos' | 'horas' | 'c
     FacturacionArchivoTabComponent,
     FacturacionGastosTabComponent,
     FacturacionHorasTabComponent,
-    FacturacionConfiguracionTabComponent,
+    FacturacionAjustesComponent,
     FacturaDrawerComponent,
     CierreModalComponent,
     FacturacionFacturasTabComponent,
@@ -73,7 +71,6 @@ export class FacturacionComponent implements OnInit {
   private readonly contactService = inject(ContactService);
   private readonly perm = inject(PermissionService);
   private readonly toast = inject(ToastService);
-  private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
   protected readonly bp = inject(BreakpointService);
 
@@ -102,57 +99,6 @@ export class FacturacionComponent implements OnInit {
   protected seleccionarTab(id: string): void {
     const tab = this.tabs().find((t) => t.id === id);
     if (tab) this.activeTab.set(tab.id);
-  }
-
-  // --- Config ---
-  readonly savingConfig = signal(false);
-
-  readonly cifLabel = computed(() => {
-    const c = this.companyService.activeCompany();
-    return c ? getLabelIdentificacion(c) : 'CIF / NIF';
-  });
-
-  readonly configForm: ConfigFormGroup = this.fb.nonNullable.group({
-    name: ['', Validators.required],
-    cif: [''],
-    tipoPersona: ['juridica' as 'fisica' | 'juridica'],
-    verifactuEnabled: [false],
-    verifactuSandbox: [false],
-  });
-
-  constructor() {
-    effect(() => {
-      const c = this.companyService.activeCompany();
-      if (c) {
-        this.configForm.patchValue({
-          name: c.name,
-          cif: c.cif ?? '',
-          tipoPersona: c.tipoPersona ?? 'juridica',
-          verifactuEnabled: c.verifactu?.enabled ?? false,
-          verifactuSandbox: c.verifactu?.sandbox ?? false,
-        }, { emitEvent: false });
-      }
-    });
-  }
-
-  async saveConfig(): Promise<void> {
-    const company = this.companyService.activeCompany();
-    if (!company?.id || this.savingConfig()) return;
-    const { name, cif, tipoPersona, verifactuEnabled, verifactuSandbox } = this.configForm.getRawValue();
-    this.savingConfig.set(true);
-    try {
-      await this.toast.run(
-        () => this.companyService.updateCompany(company.id, {
-          name: name.trim(),
-          cif: cif.trim() || undefined,
-          tipoPersona,
-          verifactu: { ...company.verifactu, enabled: verifactuEnabled, sandbox: verifactuSandbox },
-        }),
-        { successMessage: 'Configuración guardada', errorTitle: 'No se pudo guardar la configuración' }
-      );
-    } finally {
-      this.savingConfig.set(false);
-    }
   }
 
   // --- Casos ---

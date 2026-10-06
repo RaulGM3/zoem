@@ -20,7 +20,6 @@ import { accionesSugeridasAlCompletar } from '../../core/acciones/sugerencia-hit
 import type { Accion } from '../../interfaces/accion.interface';
 import { AccionLanzadorComponent } from '../../shared/components/accion-lanzador/accion-lanzador';
 import { SugerenciaAccionComponent } from '../../shared/components/sugerencia-accion/sugerencia-accion';
-import { ComunicacionesEnviadasComponent } from '../../shared/components/comunicaciones-enviadas/comunicaciones-enviadas';
 import { cycleHitoEstado, stampEstadoChange } from '../../core/hitos/hito-estado';
 import {
   Caso, CasoDocSlot, CasoDocFile,
@@ -28,6 +27,7 @@ import {
   getContactDisplayName,
 } from '../../interfaces';
 import { CasoDetailHeaderComponent, CasoTab } from './components/caso-detail-header/caso-detail-header';
+import { CasoAccionesPanelComponent } from './components/caso-acciones-panel/caso-acciones-panel';
 import { CasoInfoTabComponent, CasoInfoFormData } from './components/caso-info-tab/caso-info-tab';
 import { CasoHitosTabComponent } from './components/caso-hitos-tab/caso-hitos-tab';
 import { CasoGestoriaTabComponent } from './components/caso-gestoria-tab/caso-gestoria-tab';
@@ -51,7 +51,7 @@ import { MovimientoFormDrawerComponent, MovimientoFormData } from './components/
     MovimientoFormDrawerComponent,
     AccionLanzadorComponent,
     SugerenciaAccionComponent,
-    ComunicacionesEnviadasComponent,
+    CasoAccionesPanelComponent,
   ],
   templateUrl: './caso-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -170,9 +170,23 @@ export class CasoDetailComponent implements OnDestroy {
   /** Sugerencia pendiente tras completar un hito de plantilla. */
   readonly sugerencia = signal<{ hito: Hito; acciones: Accion[] } | null>(null);
 
+  /** Se incrementa al cerrar el lanzador para que el panel refresque contadores y log. */
+  readonly recargaAcciones = signal(0);
+
   abrirAcciones(): void {
     if (!this.canEditCasos()) return;
     this.lanzador.set({});
+  }
+
+  /** Botón de una acción concreta en el panel: salta el selector. */
+  ejecutarAccion(accion: Accion): void {
+    if (!this.canEditCasos()) return;
+    this.lanzador.set({ accion });
+  }
+
+  cerrarLanzador(): void {
+    this.lanzador.set(null);
+    this.recargaAcciones.update((n) => n + 1);
   }
 
   aceptarSugerencia(): void {

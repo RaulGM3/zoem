@@ -8,6 +8,7 @@ import { PermissionService } from '../../../core/services/permission.service';
 import { AccionEjecucionService } from '../../../core/services/accion-ejecucion.service';
 import { DocTemplateService } from '../../../core/services/doc-template.service';
 import { CompanyService } from '../../../core/services/company.service';
+import { AccionRedaccionService } from '../../../core/services/accion-redaccion.service';
 import type { Accion } from '../../../interfaces/accion.interface';
 import type { Contact } from '../../../interfaces/contact.interface';
 
@@ -28,6 +29,7 @@ describe('AccionLanzadorComponent', () => {
         provideRouter([]),
         { provide: AccionesService, useValue: { listarPorAmbito } },
         { provide: PermissionService, useValue: { can: () => true } },
+        { provide: AccionRedaccionService, useValue: { redactar: vi.fn() } },
         { provide: AccionEjecucionService, useValue: { preparar: vi.fn(), abrir: vi.fn() } },
         { provide: DocTemplateService, useValue: { getTemplate: vi.fn() } },
         { provide: CompanyService, useValue: { activeCompany: signal({ id: 'c', name: 'D' }) } },

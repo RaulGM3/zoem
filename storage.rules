@@ -43,6 +43,14 @@ service firebase.storage {
     function esFacturaRecibida(nombre) {
       return nombre.matches('companies/[^/]+/facturas_recibidas/.*');
     }
+    // Branding de la empresa (logo): solo Admin escribe, vía su propio match.
+    function esBranding(nombre) {
+      return nombre.matches('companies/[^/]+/branding/.*');
+    }
+    // Admin de la empresa (mismo criterio que firestore.rules isCompanyAdmin), vía custom claim.
+    function isCompanyAdmin(cid) {
+      return isActiveMember(cid) && request.auth.token.get('role', null) == 'Admin';
+    }
     // Adjuntos de factura: PDF o imagen (la captura nativa devuelve JPEG; HEIC se rechaza en cliente).
     function tipoAdjuntoValido() {
       return request.resource.contentType.matches('application/pdf|image/(jpeg|png|webp)');
@@ -78,9 +86,23 @@ service firebase.storage {
     match /companies/{cid}/{allPaths=**} {
       allow read:           if (isSuper() || isActiveMember(cid)) && !esFacturaRecibida(resource.name);
       allow create, update: if !esEnvioAccion(request.resource.name)
+                            && !esBranding(request.resource.name)
                             && !esFacturaRecibida(request.resource.name)
                             && (isSuper() || (canWrite(cid) && withinSizeLimit()));
       allow delete:         if isSuper();
+    }
+
+    // Logo de la empresa: companies/{cid}/branding/logo. Lectura a miembros;
+    // escritura/borrado solo Admin (o super), objeto único `logo`, PNG/JPEG, < 1 MB.
+    // Sin subcarpetas (`{file}` es un solo segmento) y el match genérico lo excluye.
+    match /companies/{cid}/branding/{file} {
+      allow read:           if isSuper() || isActiveMember(cid);
+      allow create, update: if isSuper()
+                            || (isCompanyAdmin(cid)
+                                && file == 'logo'
+                                && request.resource.size < 1024 * 1024
+                                && request.resource.contentType.matches('image/(png|jpeg)'));
+      allow delete:         if isSuper() || (isCompanyAdmin(cid) && file == 'logo');
     }
 
     // Adjuntos de facturas recibidas (libro de IVA soportado): Admin + Gestor.

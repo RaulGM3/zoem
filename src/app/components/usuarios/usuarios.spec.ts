@@ -218,4 +218,30 @@ describe('UsuariosComponent', () => {
     expect(el().querySelector('table')).not.toBeNull();
     expect(qa('[data-permiso-modulo]')).toHaveLength(0);
   });
+  describe('modo embebido (dentro de Configuración)', () => {
+    it('embebido=true: h2#config-detalle-titulo, sin h1 y mantiene el botón de invitar', () => {
+      setup(false);
+      fixture.componentRef.setInput('embebido', true);
+      fixture.detectChanges();
+      expect(el().querySelector('h1')).toBeNull();
+      const h2 = el().querySelector<HTMLElement>('h2#config-detalle-titulo');
+      expect(h2?.textContent).toContain('Usuarios y Permisos');
+      expect(h2?.getAttribute('tabindex')).toBe('-1');
+      expect(boton('Invitar usuario')).toBeDefined();
+    });
+
+    it('embebido=true: no añade el padding de página', () => {
+      setup(false);
+      fixture.componentRef.setInput('embebido', true);
+      fixture.detectChanges();
+      expect((el().firstElementChild as HTMLElement).className).not.toContain('sm:p-6');
+    });
+
+    it('por defecto sigue mostrando h1 y el padding de página', () => {
+      setup(false);
+      expect(el().querySelector('h1')?.textContent).toContain('Usuarios y Permisos');
+      expect(el().querySelector('h2#config-detalle-titulo')).toBeNull();
+      expect((el().firstElementChild as HTMLElement).className).toContain('sm:p-6');
+    });
+  });
 });

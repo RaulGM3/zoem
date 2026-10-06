@@ -1,0 +1,96 @@
+<div class="space-y-6">
+  <header>
+    <h2 id="config-detalle-titulo" tabindex="-1" class="text-xl font-semibold outline-none" style="color:var(--text-strong)">Datos de la empresa</h2>
+    <p class="mt-1 text-sm" style="color:var(--text-muted)">Información que identifica a tu despacho en documentos y facturas.</p>
+  </header>
+
+  <section aria-labelledby="empresa-logo-titulo" class="rounded-xl p-5 space-y-3" style="border:1px solid var(--border);background:var(--surface)">
+    <h3 id="empresa-logo-titulo" class="text-sm font-semibold" style="color:var(--text-strong)">Logo</h3>
+    <app-company-logo-uploader />
+  </section>
+
+  <form [formGroup]="form" (ngSubmit)="guardar()" class="rounded-xl p-5 space-y-4" style="border:1px solid var(--border);background:var(--surface)">
+    <fieldset>
+      <legend class="form-label">Tipo de persona</legend>
+      <div class="flex flex-wrap gap-4 mt-1">
+        <label class="flex items-center gap-2 text-sm cursor-pointer" style="color:var(--text-body)">
+          <input type="radio" formControlName="tipoPersona" value="juridica" style="accent-color:var(--brand)" />
+          Jurídica (sociedad)
+        </label>
+        <label class="flex items-center gap-2 text-sm cursor-pointer" style="color:var(--text-body)">
+          <input type="radio" formControlName="tipoPersona" value="fisica" style="accent-color:var(--brand)" />
+          Física (autónomo)
+        </label>
+      </div>
+    </fieldset>
+
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div class="sm:col-span-2">
+        <label for="empresa-name" class="form-label">{{ nombreLabel() }} <span aria-hidden="true">*</span></label>
+        <input id="empresa-name" type="text" formControlName="name" class="form-input" autocomplete="organization" required
+          [attr.aria-invalid]="mostrarError('name') ? 'true' : null"
+          [attr.aria-describedby]="mostrarError('name') ? 'empresa-name-error' : null" />
+        @if (mostrarError('name')) {
+          <p id="empresa-name-error" class="mt-1 text-xs" style="color:var(--danger)">Este campo es obligatorio.</p>
+        }
+      </div>
+
+      <div>
+        <label for="empresa-cif" class="form-label">{{ cifLabel() }}</label>
+        <input id="empresa-cif" type="text" formControlName="cif" class="form-input" autocomplete="off"
+          [attr.aria-invalid]="mostrarError('cif') ? 'true' : null"
+          [attr.aria-describedby]="mostrarError('cif') ? 'empresa-cif-error' : null" />
+        @if (mostrarError('cif')) {
+          <p id="empresa-cif-error" class="mt-1 text-xs" style="color:var(--danger)">Debe tener 9 caracteres alfanuméricos.</p>
+        }
+      </div>
+
+      <div>
+        <label for="empresa-email" class="form-label">Correo electrónico</label>
+        <input id="empresa-email" type="email" formControlName="email" class="form-input" autocomplete="email"
+          [attr.aria-invalid]="mostrarError('email') ? 'true' : null"
+          [attr.aria-describedby]="mostrarError('email') ? 'empresa-email-error' : null" />
+        @if (mostrarError('email')) {
+          <p id="empresa-email-error" class="mt-1 text-xs" style="color:var(--danger)">Introduce un correo válido.</p>
+        }
+      </div>
+
+      <div>
+        <label for="empresa-telefono" class="form-label">Teléfono</label>
+        <input id="empresa-telefono" type="tel" formControlName="telefono" class="form-input" autocomplete="tel" />
+      </div>
+
+      <div>
+        <label for="empresa-web" class="form-label">Sitio web</label>
+        <input id="empresa-web" type="text" formControlName="website" class="form-input" autocomplete="url" placeholder="www.tudespacho.es" />
+      </div>
+
+      <div class="sm:col-span-2">
+        <label for="empresa-direccion" class="form-label">Dirección</label>
+        <input id="empresa-direccion" type="text" formControlName="direccion" class="form-input" autocomplete="street-address" />
+      </div>
+
+      <div>
+        <label for="empresa-cp" class="form-label">Código postal</label>
+        <input id="empresa-cp" type="text" inputmode="numeric" formControlName="codigoPostal" class="form-input" autocomplete="postal-code"
+          [attr.aria-invalid]="mostrarError('codigoPostal') ? 'true' : null"
+          [attr.aria-describedby]="mostrarError('codigoPostal') ? 'empresa-cp-error' : null" />
+        @if (mostrarError('codigoPostal')) {
+          <p id="empresa-cp-error" class="mt-1 text-xs" style="color:var(--danger)">Debe tener 5 dígitos.</p>
+        }
+      </div>
+
+      <div>
+        <label for="empresa-ciudad" class="form-label">Ciudad</label>
+        <input id="empresa-ciudad" type="text" formControlName="ciudad" class="form-input" autocomplete="address-level2" />
+      </div>
+    </div>
+
+    <div class="flex sm:justify-end pt-1">
+      <button type="submit" [disabled]="!puedeGuardar()"
+        class="max-sm:tap-target max-sm:w-full px-4 py-2 text-sm font-semibold text-white rounded-xl disabled:opacity-40 transition-colors duration-150 bg-[var(--brand)] hover:bg-[var(--brand-hover)]">
+        {{ guardando() ? 'Guardando...' : 'Guardar cambios' }}
+      </button>
+    </div>
+  </form>
+</div>

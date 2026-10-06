@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { signal } from '@angular/core';
+import { By } from '@angular/platform-browser';
 import { AccionEjecutarComponent } from './accion-ejecutar';
+import { RedactorIaComponent } from '../redactor-ia/redactor-ia';
+import { AccionRedaccionService } from '../../../core/services/accion-redaccion.service';
 import { AccionEjecucionService } from '../../../core/services/accion-ejecucion.service';
 import { DocTemplateService } from '../../../core/services/doc-template.service';
 import { CompanyService } from '../../../core/services/company.service';
@@ -46,6 +49,7 @@ describe('AccionEjecutarComponent', () => {
       providers: [
         { provide: AccionEjecucionService, useValue: { preparar, abrir } },
         { provide: DocTemplateService, useValue: { getTemplate } },
+        { provide: AccionRedaccionService, useValue: { redactar: vi.fn() } },
         { provide: CompanyService, useValue: { activeCompany: signal({ id: 'c1', name: 'Despacho Pérez' }) } },
       ],
     }).compileComponents();
@@ -231,5 +235,35 @@ describe('AccionEjecutarComponent', () => {
     component.closed.subscribe(spy);
     q<HTMLButtonElement>('[aria-label="Cerrar"]').click();
     expect(spy).toHaveBeenCalled();
+  });
+
+  describe('Redactar con IA', () => {
+    const redactor = () => fixture.debugElement.query(By.directive(RedactorIaComponent)).componentInstance as RedactorIaComponent;
+
+    it('modo mensaje con el contexto real y el borrador actual', async () => {
+      await montar();
+      expect(redactor().modo()).toBe('mensaje');
+      expect(redactor().contexto()?.['cliente']).toBe(component.contexto()['cliente']);
+      expect(redactor().borrador()).toEqual(component.form.getRawValue());
+    });
+
+    it('el formato sigue al canal elegido', async () => {
+      await montar();
+      expect(redactor().formato()).toBe('email');
+      component.elegirCanal('whatsapp');
+      fixture.detectChanges();
+      expect(redactor().formato()).toBe('whatsapp');
+    });
+
+    it('vuelca el texto y no lo pisa al cambiar destinatarios', async () => {
+      await montar();
+      redactor().redactado.emit({ asunto: 'Vista mañana', cuerpo: 'Hola Ana, mañana es la vista.' });
+      await flush();
+      expect(component.form.getRawValue()).toEqual({ asunto: 'Vista mañana', cuerpo: 'Hola Ana, mañana es la vista.' });
+      component.alternarContacto('k2');
+      await flush();
+      expect(component.form.getRawValue().cuerpo).toBe('Hola Ana, mañana es la vista.');
+      expect(component.puedePreparar()).toBe(true);
+    });
   });
 });

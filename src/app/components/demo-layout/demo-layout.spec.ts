@@ -128,3 +128,37 @@ describe('DemoLayoutComponent (mobile)', () => {
     if (link) expect(link.className).toContain('hover:bg-[var(--surface-2)]');
   });
 });
+
+describe('DemoLayoutComponent (menú Configuración)', () => {
+  function montar(puede: (modulo: string) => boolean): DemoLayoutComponent {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [DemoLayoutComponent],
+      providers: [
+        provideRouter([]),
+        { provide: AuthService, useValue: fakeAuth },
+        { provide: PermissionService, useValue: { ...fakePerm, can: (m: string) => puede(m) } },
+      ],
+    });
+    TestBed.overrideComponent(DemoLayoutComponent, {
+      remove: { imports: [AgenteLanzadorComponent, NotificacionesPanelComponent] },
+      add: { imports: [AgenteLanzadorStub, NotificacionesPanelStub] },
+    });
+    return TestBed.createComponent(DemoLayoutComponent).componentInstance;
+  }
+  const items = (c: DemoLayoutComponent) => c.visibleCategories().flatMap((cat) => cat.items);
+
+  it('muestra "Configuración" (/configuracion) a quien puede ver el módulo', () => {
+    const it_ = items(montar(() => true)).find((i) => i.name === 'Configuración');
+    expect(it_?.href).toBe('/configuracion');
+  });
+
+  it('ya no lista "Usuarios y Permisos" por separado', () => {
+    expect(items(montar(() => true)).some((i) => i.name === 'Usuarios y Permisos' || i.href === '/usuarios')).toBe(false);
+  });
+
+  it('oculta "Configuración" a quien no puede ver el módulo', () => {
+    const c = montar((m) => m !== 'Configuración');
+    expect(items(c).some((i) => i.href === '/configuracion')).toBe(false);
+  });
+});

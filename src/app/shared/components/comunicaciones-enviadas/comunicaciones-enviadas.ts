@@ -5,7 +5,11 @@ import { UsersService } from '../../../core/services/users';
 import { CANAL_LABELS, type AccionRegistro } from '../../../interfaces/accion.interface';
 import { formatearFechaEs } from '../../../core/acciones/contexto-accion';
 
-/** Historial "Comunicaciones enviadas" de un contacto o de un caso. */
+/**
+ * Historial "Comunicaciones enviadas" de un contacto o de un caso. Si el padre
+ * ya tiene los registros (p. ej. para contar envíos), los pasa por `registros`
+ * + `cargando` y el componente no consulta Firestore.
+ */
 @Component({
   selector: 'app-comunicaciones-enviadas',
   imports: [LucideAngularModule],
@@ -47,12 +51,16 @@ export class ComunicacionesEnviadasComponent {
 
   readonly contactoId = input<string | null>(null);
   readonly casoId = input<string | null>(null);
+  readonly registrosExternos = input<AccionRegistro[] | undefined>(undefined, { alias: 'registros' });
+  readonly cargandoExterno = input(false, { alias: 'cargando' });
 
   readonly FileTextIcon = FileText;
   readonly canalLabels = CANAL_LABELS;
 
-  readonly registros = signal<AccionRegistro[]>([]);
-  readonly cargando = signal(true);
+  private readonly cargados = signal<AccionRegistro[]>([]);
+  private readonly cargandoPropio = signal(true);
+  readonly registros = computed(() => this.registrosExternos() ?? this.cargados());
+  readonly cargando = computed(() => (this.registrosExternos() ? this.cargandoExterno() : this.cargandoPropio()));
   readonly error = signal(false);
   private readonly nombres = computed(
     () => new Map(this.users.members().map((m) => [m.userId, `${m.nombre}${m.apellido ? ' ' + m.apellido : ''}`])),
@@ -62,23 +70,23 @@ export class ComunicacionesEnviadasComponent {
     effect(() => {
       const contacto = this.contactoId();
       const caso = this.casoId();
-      if (!contacto && !caso) return;
+      if (this.registrosExternos() || (!contacto && !caso)) return;
       void this.cargar(contacto, caso);
     });
   }
 
   private async cargar(contacto: string | null, caso: string | null): Promise<void> {
-    this.cargando.set(true);
+    this.cargandoPropio.set(true);
     this.error.set(false);
     try {
-      this.registros.set(
+      this.cargados.set(
         contacto ? await this.registrosService.listarPorContacto(contacto) : await this.registrosService.listarPorCaso(caso!),
       );
     } catch (e) {
       console.error('[acciones] historial', e);
       this.error.set(true);
     } finally {
-      this.cargando.set(false);
+      this.cargandoPropio.set(false);
     }
   }
 

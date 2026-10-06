@@ -3,6 +3,8 @@ import { TestBed } from '@angular/core/testing';
 import { Storage } from '@angular/fire/storage';
 import { InvoicePdfService } from './invoice-pdf.service';
 import { CompanyService } from './company.service';
+import { CompanyLogoService } from './company-logo.service';
+import jsPDF from 'jspdf';
 import type { Company } from './company.service';
 import type { Invoice } from './invoice.service';
 import type { VerifactuEstado } from '../../interfaces/verifactu.interface';
@@ -52,6 +54,7 @@ describe('InvoicePdfService — QR Verifactu (D11)', () => {
       providers: [
         { provide: Storage, useValue: {} },
         { provide: CompanyService, useValue: { activeCompany: () => company } },
+        { provide: CompanyLogoService, useValue: { cargarDataUrl: vi.fn(async () => null) } },
       ],
     });
     service = TestBed.inject(InvoicePdfService);
@@ -132,5 +135,97 @@ describe('InvoicePdfService — QR Verifactu (D11)', () => {
     expect(pdf).toContain('Doc. identificaci');
     expect(pdf).toContain('PAA123456');
     expect(pdf).not.toContain('(NIF: PAA123456)');
+  });
+});
+
+describe('InvoicePdfService — logo de empresa', () => {
+  const api = jsPDF.API as unknown as Record<string, (...a: unknown[]) => unknown>;
+  const LOGO = { path: 'companies/c-1/branding/logo', url: 'https://x/l', contentType: 'image/png' as const, updatedAt: '2026-01-01T00:00:00.000Z' };
+  const conLogo = { id: 'c-1', name: 'Despacho SL', cif: 'B12345678', logo: LOGO } as Company;
+  const sinLogo = { id: 'c-1', name: 'Despacho SL', cif: 'B12345678' } as Company;
+  let cargarDataUrl: ReturnType<typeof vi.fn>;
+  let service: InvoicePdfService;
+
+  beforeEach(() => {
+    cargarDataUrl = vi.fn(async () => ({ dataUrl: PNG_1X1, format: 'PNG', w: 400, h: 100 }));
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: Storage, useValue: {} },
+        { provide: CompanyService, useValue: { activeCompany: () => null } },
+        { provide: CompanyLogoService, useValue: { cargarDataUrl } },
+      ],
+    });
+    service = TestBed.inject(InvoicePdfService);
+    (service as unknown as ConQr).generateQrDataUrl = (async () => PNG_1X1) as ConQr['generateQrDataUrl'];
+  });
+
+  const generar = async (c: Company, inv: Invoice = factura()): Promise<string> =>
+    leer(await service['buildPdf'](inv, c));
+  /** Posición Y (mm desde arriba) con la que jsPDF escribió el nombre de la empresa. */
+  const yNombre = (pdf: string): number => {
+    const m = /([\d.]+) ([\d.]+) Td\s*\(Despacho SL\) Tj/.exec(pdf);
+    if (!m) throw new Error('nombre no encontrado en el PDF');
+    return 297 - Number(m[2]) / (72 / 25.4);
+  };
+  const imagenes = (pdf: string) => (pdf.match(/\/Subtype \/Image/g) ?? []).length;
+
+  it('con logo: dibuja la imagen en el margen con dimensiones encajadas (400x100px -> 40x10mm)', async () => {
+    const add = vi.spyOn(api, 'addImage');
+    const pdf = await generar(conLogo);
+    expect(cargarDataUrl).toHaveBeenCalledWith(LOGO);
+    expect(imagenes(pdf)).toBeGreaterThan(0);
+    const [data, fmt, x, y, w, h] = add.mock.calls[0] as unknown[];
+    expect(data).toBe(PNG_1X1);
+    expect(fmt).toBe('PNG');
+    expect([x, y]).toEqual([20, 12]);
+    expect(w as number).toBeCloseTo(40);
+    expect(h as number).toBeCloseTo(10);
+    add.mockRestore();
+  });
+
+  it('con logo: el nombre de la empresa queda debajo del logo', async () => {
+    const pdf = await generar(conLogo);
+    expect(yNombre(pdf)).toBeCloseTo(12 + 10 + 6, 1);
+  });
+
+  it('logo con JPEG usa formato JPEG', async () => {
+    cargarDataUrl.mockResolvedValue({ dataUrl: PNG_1X1, format: 'JPEG', w: 100, h: 100 });
+    const add = vi.spyOn(api, 'addImage');
+    // el dataUrl real es PNG: jsPDF puede rechazarlo -> fallback, pero el intento debe usar JPEG
+    await generar(conLogo);
+    expect(add.mock.calls[0][1]).toBe('JPEG');
+    add.mockRestore();
+  });
+
+  it('sin logo: no llama al servicio y el layout es el de siempre', async () => {
+    const pdf = await generar(sinLogo);
+    expect(cargarDataUrl).not.toHaveBeenCalled();
+    expect(imagenes(pdf)).toBe(0);
+    expect(yNombre(pdf)).toBeCloseTo(22, 1);
+  });
+
+  it.each([
+    ['devuelve null', () => cargarDataUrl.mockResolvedValue(null)],
+    ['lanza', () => cargarDataUrl.mockRejectedValue(new Error('boom'))],
+  ])('fallo al cargar el logo (%s): PDF igual que sin logo, solo el QR', async (_n, preparar) => {
+    preparar();
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const inv = factura({ estado: 'pendiente', tipoRegistro: 'alta', qrUrl: QR_URL });
+    const base = imagenes(await generar(sinLogo, inv));
+    expect(base).toBeGreaterThan(0); // el QR
+    const pdf = await generar(conLogo, inv);
+    expect(imagenes(pdf)).toBe(base); // sin imagen extra
+    expect(yNombre(pdf)).toBeCloseTo(22, 1);
+  });
+
+  it('addImage lanza: el PDF se genera igual con layout original', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const add = vi.spyOn(api, 'addImage').mockImplementationOnce(() => {
+      throw new Error('decode');
+    });
+    const pdf = await generar(conLogo);
+    expect(pdf).toContain('%PDF');
+    expect(yNombre(pdf)).toBeCloseTo(22, 1);
+    add.mockRestore();
   });
 });

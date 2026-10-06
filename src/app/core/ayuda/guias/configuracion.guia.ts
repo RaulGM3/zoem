@@ -4,11 +4,11 @@ export const GUIA_CONFIGURACION: Guia = {
   id: 'configuracion',
   titulo: 'Usuarios y Permisos',
   modulo: 'Configuración',
-  ruta: '/usuarios',
-  resumen: 'La gestión de accesos del equipo: quién entra al despacho, con qué rol y qué puede hacer en cada módulo.',
+  ruta: '/configuracion',
+  resumen: 'El área de Configuración del despacho (datos de la empresa, facturación y tesorería) y, dentro, la gestión de accesos del equipo: quién entra al despacho, con qué rol y qué puede hacer en cada módulo.',
   paraQue:
     'Poner en marcha el despacho: invitar al equipo, decidir qué ve y qué puede hacer cada rol, y atender las solicitudes de permiso.',
-  claves: ['equipo', 'miembros', 'roles', 'accesos', 'administración', 'personal', 'configurar despacho'],
+  claves: ['configuración', 'datos de la empresa', 'logo', 'equipo', 'miembros', 'roles', 'accesos', 'administración', 'personal', 'configurar despacho'],
   tareas: [
     {
       id: 'invitar-usuario',
@@ -16,7 +16,7 @@ export const GUIA_CONFIGURACION: Guia = {
       claves: ['añadir miembro', 'alta', 'nuevo usuario', 'invitación', 'enlace', 'empleado', 'dar acceso'],
       requiere: { modulo: 'Configuración', capacidad: 'crear' },
       pasos: [
-        'En "Usuarios y Permisos", pulsa "Invitar usuario".',
+        'En "Configuración", abre "Usuarios y permisos" y pulsa "Invitar usuario".',
         'Escribe el "Correo electrónico" y elige el "Rol".',
         'Pulsa "Generar invitación".',
         'Pulsa "Copiar enlace" y envíaselo a la persona por el medio que prefieras.',

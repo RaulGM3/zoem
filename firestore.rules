@@ -111,7 +111,14 @@ service cloud.firestore {
       allow get:    if isSuper() || isMember(cid);
       allow list:   if isSuper();
       allow create: if isSuper();                       // alta de empresa = superusuario
-      allow update: if isSuper() || isManager(cid);     // settings + saldo bancario (tesorería)
+      // settings + saldo bancario (tesorería). Campos de plataforma solo super;
+      // `logo` (branding) solo Admin.
+      allow update: if isSuper()
+                    || (isManager(cid)
+                        && !request.resource.data.diff(resource.data).affectedKeys()
+                             .hasAny(['plan', 'isActive', 'slug', 'createdAt'])
+                        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['logo'])
+                            || isCompanyAdmin(cid)));
       allow delete: if isSuper();
 
       // ---- members: doc id == userId ---------------------------------

@@ -231,7 +231,7 @@ export { accionDocUrl } from './accionDocUrl';
 // ─── Custom claims (Storage rules) ───────────────────────────────────────────
 // Sincroniza companyId/role/estado/isSuperUser en el JWT para que las Storage
 // rules puedan verificar membresía sin firestore.get() (que solo lee (default)).
-export { syncMemberClaims, syncSuperuserClaim, backfillMemberClaims } from './customClaims';
+export { syncMemberClaims, syncSuperuserClaim, backfillMemberClaims, syncMyClaims } from './customClaims';
 
 // ─── Feed ICS del calendario ──────────────────────────────────────────────────
 export { calendarFeed } from './calendarFeed/calendarFeedHttp';

@@ -17,7 +17,7 @@ export const RUTAS_POR_MODULO: Record<Modulo, string> = {
   Tesorería: '/tesoreria',
   RecepciónIA: '/recepcion-ia',
   Informes: '/informes',
-  Configuración: '/usuarios',
+  Configuración: '/configuracion',
 };
 
 export interface NavegacionToolsDeps {

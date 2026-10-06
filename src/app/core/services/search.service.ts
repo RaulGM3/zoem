@@ -22,7 +22,7 @@ export class SearchService {
   readonly categories: readonly SearchCategoryMeta[] = [
     { key: 'contactos', label: 'Contactos', route: '/contactos', placeholder: 'Buscar por nombre, teléfono o email...' },
     { key: 'casos', label: 'Casos', route: '/casos', placeholder: 'Buscar por título o descripción...' },
-    { key: 'personal', label: 'Personal', route: '/usuarios', placeholder: 'Buscar por nombre, teléfono o email...' },
+    { key: 'personal', label: 'Personal', route: '/configuracion/usuarios', placeholder: 'Buscar por nombre, teléfono o email...' },
   ];
 
   readonly category = signal<SearchCategory | null>(null);
@@ -57,7 +57,7 @@ export class SearchService {
   syncToRoute(url: string): void {
     if (url.startsWith('/contactos')) { this.category.set('contactos'); return; }
     if (url.startsWith('/casos')) { this.category.set('casos'); return; }
-    if (url.startsWith('/usuarios')) { this.category.set('personal'); return; }
+    if (url.startsWith('/configuracion/usuarios')) { this.category.set('personal'); return; }
     this.clear();
   }
 
