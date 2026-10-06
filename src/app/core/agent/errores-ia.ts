@@ -27,3 +27,29 @@ export function mensajeDeError(e: unknown): string {
     ? 'El asistente está saturado ahora mismo. Espera unos segundos y vuelve a intentarlo.'
     : 'No he podido contactar con el asistente. Vuelve a intentarlo en un momento.';
 }
+
+/**
+ * Pausas antes de cada reintento cuando el modelo responde 429/503. Dos
+ * intentos más, con espera creciente: suficiente para pasar un pico de cuota
+ * sin dejar al usuario esperando más de unos segundos extra.
+ */
+export const ESPERAS_REINTENTO_MS = [1500, 4000] as const;
+
+/**
+ * Ejecuta `fn` y la repite SOLO si falla por saturación. Cualquier otro error
+ * sale a la primera: reintentar un 400 es gastar tiempo para fallar igual.
+ *
+ * `fn` debe ser repetible sin efectos: una llamada al modelo con los mismos
+ * contenidos, nunca algo que ejecute tools.
+ */
+export async function conReintento<T>(fn: () => Promise<T>): Promise<T> {
+  for (let intento = 0; ; intento++) {
+    try {
+      return await fn();
+    } catch (e) {
+      const espera = ESPERAS_REINTENTO_MS[intento];
+      if (espera === undefined || !esSaturacion(e)) throw e;
+      await new Promise((r) => setTimeout(r, espera));
+    }
+  }
+}

@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { esSaturacion, mensajeDeError } from './errores-ia';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { ESPERAS_REINTENTO_MS, conReintento, esSaturacion, mensajeDeError } from './errores-ia';
 
 /** Forma real de un AIError del SDK de Firebase AI ante una cuota agotada. */
 const errorSdk429 = Object.assign(
@@ -47,5 +47,44 @@ describe('mensajeDeError', () => {
 
   it('da un mensaje genérico para el resto de fallos', () => {
     expect(mensajeDeError(new Error('lo que sea'))).toMatch(/no he podido contactar/i);
+  });
+});
+
+describe('conReintento', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  const saturado = () => Object.assign(new Error('[429 ] Resource exhausted'), { customErrorData: { status: 429 } });
+
+  /** Lanza la operación y avanza el reloj falso hasta que termina. */
+  async function correr<T>(fn: () => Promise<T>) {
+    const p = conReintento(fn);
+    p.catch(() => undefined);
+    await vi.runAllTimersAsync();
+    return p;
+  }
+
+  it('devuelve el resultado a la primera si no falla', async () => {
+    const fn = vi.fn(async () => 'ok');
+    await expect(correr(fn)).resolves.toBe('ok');
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('reintenta la saturación y sale adelante si se recupera', async () => {
+    const fn = vi.fn<() => Promise<string>>().mockRejectedValueOnce(saturado()).mockResolvedValue('ok');
+    await expect(correr(fn)).resolves.toBe('ok');
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it('se rinde tras agotar las esperas y relanza el último error', async () => {
+    const fn = vi.fn(async () => { throw saturado(); });
+    await expect(correr(fn)).rejects.toThrow(/429/);
+    expect(fn).toHaveBeenCalledTimes(ESPERAS_REINTENTO_MS.length + 1);
+  });
+
+  it('NO reintenta un error que no es de saturación', async () => {
+    const fn = vi.fn(async () => { throw new Error('[400 ] Invalid'); });
+    await expect(correr(fn)).rejects.toThrow(/400/);
+    expect(fn).toHaveBeenCalledTimes(1);
   });
 });

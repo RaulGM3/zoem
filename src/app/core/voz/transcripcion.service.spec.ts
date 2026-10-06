@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { AiService } from '../services/ai.service';
 import { ErrorDictado } from './error-dictado';
 import { MAX_DURACION_MS } from './audio-validacion';
+import { MENSAJE_FALLO } from './dictado-estado';
 import { TranscripcionService } from './transcripcion.service';
 import type { AudioCapturado } from './grabador.port';
 
@@ -113,6 +114,45 @@ describe('TranscripcionService', () => {
 
     await expect(svc.transcribir(audio())).rejects.toMatchObject({ motivo: 'red', cause: causa });
     expect(consola).toHaveBeenCalledWith(expect.stringContaining('dictado'), causa);
+
+    consola.mockRestore();
+  });
+});
+
+describe('TranscripcionService — cuota del modelo agotada (429)', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  const saturado = () =>
+    Object.assign(new Error('AI: Error fetching from https://x: [429 ] Resource exhausted. (AI/fetch-error)'), {
+      customErrorData: { status: 429 },
+    });
+
+  async function transcribirConReloj(svc: TranscripcionService) {
+    const p = svc.transcribir(audio());
+    p.catch(() => undefined);
+    await vi.runAllTimersAsync();
+    return p;
+  }
+
+  it('reintenta y transcribe si el modelo se recupera', async () => {
+    let llamadas = 0;
+    const { svc, generateContent } = montar(() => {
+      if (llamadas++ === 0) throw saturado();
+      return { response: { text: () => 'Hola' } };
+    });
+
+    await expect(transcribirConReloj(svc)).resolves.toBe('Hola');
+    expect(generateContent).toHaveBeenCalledTimes(2);
+  });
+
+  it('si sigue saturado, falla como "saturado" y NO culpa a la conexión', async () => {
+    const consola = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { svc } = montar(() => { throw saturado(); });
+
+    await expect(transcribirConReloj(svc)).rejects.toMatchObject({ motivo: 'saturado' });
+    expect(MENSAJE_FALLO.saturado).not.toMatch(/conexión/i);
+    expect(MENSAJE_FALLO.saturado).toMatch(/saturad/i);
 
     consola.mockRestore();
   });

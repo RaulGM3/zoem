@@ -1,7 +1,7 @@
 import { inject, Injectable, signal } from '@angular/core';
 import type { Content, EnhancedGenerateContentResponse, FunctionCall, GenerativeModel } from 'firebase/ai';
 import { AiService } from '../services/ai.service';
-import { esSaturacion, mensajeDeError } from './errores-ia';
+import { conReintento, mensajeDeError } from './errores-ia';
 import { AgentToolRegistry } from './agent-tool-registry';
 import type { ToolArgs } from './agent-tool';
 
@@ -22,13 +22,6 @@ import type { ToolArgs } from './agent-tool';
  * "busca el caso → ábrelo" y corta en seco cualquier bucle.
  */
 export const MAX_VUELTAS = 5;
-
-/**
- * Pausas antes de cada reintento cuando el modelo responde 429/503. Dos
- * intentos más, con espera creciente: suficiente para pasar un pico de cuota
- * sin dejar al usuario mirando los puntitos más de unos segundos extra.
- */
-export const ESPERAS_REINTENTO_MS = [1500, 4000] as const;
 
 const SIN_SALIDA =
   'Lo siento, no he podido completar la petición: me he quedado dando vueltas. ' +
@@ -190,17 +183,10 @@ export class AgentChatService {
   }
 
   /** Una llamada al modelo, reintentada solo si el fallo es de saturación. */
-  private async generar(model: GenerativeModel, contents: Content[]): Promise<EnhancedGenerateContentResponse> {
-    for (let intento = 0; ; intento++) {
-      try {
-        // Copia: `contents` sigue creciendo y la llamada debe ver solo lo de ahora.
-        return (await model.generateContent({ contents: [...contents] })).response;
-      } catch (e) {
-        const espera = ESPERAS_REINTENTO_MS[intento];
-        if (espera === undefined || !esSaturacion(e)) throw e;
-        await new Promise((r) => setTimeout(r, espera));
-      }
-    }
+  private generar(model: GenerativeModel, contents: Content[]): Promise<EnhancedGenerateContentResponse> {
+    // Copia: `contents` sigue creciendo y la llamada debe ver solo lo de ahora.
+    const snapshot = [...contents];
+    return conReintento(async () => (await model.generateContent({ contents: snapshot })).response);
   }
 
   /** Ejecuta en paralelo todas las tools de un turno; ninguna puede lanzar. */

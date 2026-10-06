@@ -29,6 +29,7 @@ export const MOTIVOS_FALLO = [
   'no_soportado',
   'sin_voz',
   'red',
+  'saturado',
   'desconocido',
   'muy_corto',
   'vacio',
@@ -90,6 +91,7 @@ export const MENSAJE_FALLO: Record<MotivoFallo, string> = {
   no_soportado: 'Este navegador no puede grabar audio en un formato compatible.',
   sin_voz: 'No se ha detectado voz. Acércate al micrófono e inténtalo otra vez.',
   red: 'No se ha podido transcribir el dictado. Comprueba la conexión e inténtalo de nuevo.',
+  saturado: 'El servicio de transcripción está saturado ahora mismo. Espera unos segundos y vuelve a dictar.',
   desconocido: 'No se ha podido completar el dictado. Inténtalo de nuevo.',
 };
 

@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Content } from 'firebase/ai';
 import { TestBed } from '@angular/core/testing';
-import { AgentChatService, ESPERAS_REINTENTO_MS, MAX_VUELTAS } from './agent-chat.service';
+import { AgentChatService, MAX_VUELTAS } from './agent-chat.service';
+import { ESPERAS_REINTENTO_MS } from './errores-ia';
 import { AgentToolRegistry } from './agent-tool-registry';
 import { AiService } from '../services/ai.service';
 

@@ -1,4 +1,5 @@
 import { inject, Injectable } from '@angular/core';
+import { conReintento, esSaturacion } from '../agent/errores-ia';
 import { AiService } from '../services/ai.service';
 import { normalizarMimeAudio } from './audio-mime';
 import { validarAudio } from './audio-validacion';
@@ -61,14 +62,16 @@ export class TranscripcionService {
 
     let crudo: string;
     try {
-      const result = await model.generateContent([{ inlineData: { data, mimeType } }]);
+      // Transcribir es repetible sin efectos: un 429 puntual se reintenta solo.
+      const result = await conReintento(() => model.generateContent([{ inlineData: { data, mimeType } }]));
       crudo = result.response.text();
     } catch (e) {
-      // "red" es lo que ve el usuario, pero aquí cae CUALQUIER rechazo del
-      // modelo (cuota, App Check, formato, bloqueo). Sin este registro el
-      // tooltip culpa a la conexión y la causa real se pierde.
+      // Aquí cae CUALQUIER rechazo del modelo (cuota, App Check, formato,
+      // bloqueo). La saturación se distingue porque el usuario solo tiene que
+      // esperar; el resto se queda en "red". Sin este registro la causa real
+      // se pierde detrás del mensaje amable.
       console.error('[dictado] La transcripción ha fallado:', e);
-      throw new ErrorDictado('red', e);
+      throw new ErrorDictado(esSaturacion(e) ? 'saturado' : 'red', e);
     }
 
     const texto = limpiarTranscripcion(crudo);
