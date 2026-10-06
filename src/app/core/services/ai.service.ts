@@ -7,6 +7,7 @@ import {
   GenerativeModel,
   getAI,
   getGenerativeModel,
+  ThinkingLevel,
   TypedSchema,
   VertexAIBackend,
 } from 'firebase/ai';
@@ -56,6 +57,10 @@ export class AiService {
    * Sin `responseSchema`: aquí la respuesta es lenguaje natural y, cuando toca,
    * llamadas a herramientas. Se pasa una lista vacía de declaraciones como
    * ausencia de `tools` — Gemini rechaza un bloque de tools vacío.
+   *
+   * Razonamiento en `LOW`: el agente encadena varias llamadas por petición
+   * ("busca → abre → responde") y con el razonamiento por defecto cada vuelta
+   * tarda segundos. Elegir una tool y redactar dos frases no lo necesita.
    */
   getToolModel(
     functionDeclarations: FunctionDeclaration[],
@@ -64,6 +69,7 @@ export class AiService {
     return getGenerativeModel(this.instance, {
       model: GEMINI_MODEL,
       systemInstruction,
+      generationConfig: { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } },
       ...(functionDeclarations.length ? { tools: [{ functionDeclarations }] } : {}),
     });
   }

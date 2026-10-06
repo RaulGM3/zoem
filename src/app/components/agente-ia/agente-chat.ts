@@ -200,6 +200,7 @@ export class AgenteChatComponent {
   readonly mensajes = this.chat.mensajes;
   readonly escribiendo = this.chat.pensando;
   readonly error = this.chat.error;
+  readonly puedeReintentar = this.chat.puedeReintentar;
 
   readonly sugerencias = computed(() =>
     SUGERENCIAS[this.modo()].map((texto) => ({ texto, segmentos: dividirEnSegmentos(texto) })),
@@ -229,6 +230,10 @@ export class AgenteChatComponent {
 
   limpiar(): void {
     this.chat.limpiar();
+  }
+
+  reintentar(): void {
+    void this.chat.reintentar();
   }
 
   /**

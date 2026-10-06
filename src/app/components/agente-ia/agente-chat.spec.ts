@@ -14,8 +14,10 @@ function montar() {
     mensajes: signal([]),
     pensando: signal(false),
     error: signal<string | null>(null),
+    puedeReintentar: signal(false),
     send,
     limpiar: vi.fn(),
+    reintentar: vi.fn(async () => {}),
   };
 
   const grabador = { soportado: () => true, iniciar: vi.fn() } as unknown as Grabador;
@@ -190,5 +192,44 @@ describe('AgenteChatComponent — estructura de scroll', () => {
     // El relleno inferior gigante existía solo para dejar hueco al composer
     // flotante. Si vuelve, vuelve el bug.
     expect(log(fixture).className).not.toMatch(/\bpb-(2[0-9]|[3-9][0-9])\b/);
+  });
+});
+
+describe('AgenteChatComponent — avisos de error', () => {
+  beforeEach(() => TestBed.resetTestingModule());
+
+  const banner = (f: ReturnType<typeof montar>['fixture']) =>
+    f.nativeElement.querySelector('[role="alert"]') as HTMLElement | null;
+
+  it('muestra el error en un aviso con botón para reintentar', () => {
+    const { fixture, chat } = montar();
+    chat.error.set('El asistente está saturado ahora mismo.');
+    chat.puedeReintentar.set(true);
+    fixture.detectChanges();
+
+    const boton = banner(fixture)?.querySelector('button') as HTMLButtonElement;
+    expect(banner(fixture)?.textContent).toContain('saturado');
+    boton.click();
+    expect(chat.reintentar).toHaveBeenCalled();
+  });
+
+  it('sin opción de reintento, el aviso no ofrece el botón', () => {
+    const { fixture, chat } = montar();
+    chat.error.set('Algo ha fallado.');
+    fixture.detectChanges();
+
+    expect(banner(fixture)?.querySelector('button')).toBeNull();
+  });
+
+  it('un texto larguísimo sin espacios (una URL) parte línea en vez de desbordar', () => {
+    const { fixture, chat } = montar();
+    (chat.mensajes as ReturnType<typeof signal<unknown[]>>).set([
+      { id: '1', texto: 'https://' + 'x'.repeat(300), entrante: true, hora: '17:05' },
+    ]);
+    fixture.detectChanges();
+
+    const log = fixture.nativeElement.querySelector('[role="log"]') as HTMLElement;
+    expect(log.className).toContain('overflow-x-hidden');
+    expect(log.querySelector('p')?.className).toContain('[overflow-wrap:anywhere]');
   });
 });

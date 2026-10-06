@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { Content } from 'firebase/ai';
 import { TestBed } from '@angular/core/testing';
-import { AgentChatService, MAX_VUELTAS } from './agent-chat.service';
+import { AgentChatService, ESPERAS_REINTENTO_MS, MAX_VUELTAS } from './agent-chat.service';
 import { AgentToolRegistry } from './agent-tool-registry';
 import { AiService } from '../services/ai.service';
 
@@ -17,16 +18,26 @@ type FakeRun = (name: string, args: Record<string, unknown>) => Promise<{
 
 /** Modelo falso: devuelve los turnos en orden y repite el último si se pasan. */
 function fakeAi(turnos: Turno[]) {
-  const sendMessage = vi.fn(async (input: unknown) => {
-    void input;
-    const t = turnos[Math.min(sendMessage.mock.calls.length - 1, turnos.length - 1)];
+  const generateContent = vi.fn(async (req: { contents: Content[] }) => {
+    void req;
+    const t = turnos[Math.min(generateContent.mock.calls.length - 1, turnos.length - 1)];
+    const parts = t.calls?.length
+      ? t.calls.map((functionCall) => ({ functionCall }))
+      : [{ text: t.text ?? '' }];
     return {
-      response: { text: () => t.text ?? '', functionCalls: () => t.calls },
+      response: {
+        text: () => t.text ?? '',
+        functionCalls: () => t.calls,
+        candidates: [{ content: { role: 'model', parts } }],
+      },
     };
   });
-  const startChat = vi.fn(() => ({ sendMessage }));
-  return { getToolModel: vi.fn(() => ({ startChat })), startChat, sendMessage };
+  return { getToolModel: vi.fn(() => ({ generateContent })), generateContent };
 }
+
+/** Contenidos que recibió el modelo en la llamada `n` (0-based). */
+const contenidosDe = (ai: ReturnType<typeof fakeAi>, n: number) =>
+  ai.generateContent.mock.calls[n]![0].contents;
 
 function setup(turnos: Turno[], run: ReturnType<typeof vi.fn<FakeRun>> = vi.fn<FakeRun>(async () => ({ ok: true, data: { total: 1 } }))) {
   const ai = fakeAi(turnos);
@@ -58,7 +69,7 @@ describe('AgentChatService — conversación simple', () => {
     const { chat, ai } = setup([{ text: 'hola' }]);
     await chat.send('   ');
     expect(chat.mensajes()).toEqual([]);
-    expect(ai.sendMessage).not.toHaveBeenCalled();
+    expect(ai.generateContent).not.toHaveBeenCalled();
   });
 
   it('baja la bandera de "pensando" al terminar', async () => {
@@ -100,9 +111,10 @@ describe('AgentChatService — herramientas', () => {
 
     await chat.send('busca');
 
-    expect(ai.sendMessage).toHaveBeenNthCalledWith(2, [
-      { functionResponse: { name: 'buscar_casos', response: { total: 7 } } },
-    ]);
+    expect(contenidosDe(ai, 1).at(-1)).toEqual({
+      role: 'function',
+      parts: [{ functionResponse: { name: 'buscar_casos', response: { total: 7 } } }],
+    });
   });
 
   it('resuelve varias llamadas de un mismo turno', async () => {
@@ -123,7 +135,7 @@ describe('AgentChatService — herramientas', () => {
     await chat.send('busca todo');
 
     expect(run).toHaveBeenCalledTimes(2);
-    expect((ai.sendMessage.mock.calls[1]![0] as unknown[]).length).toBe(2);
+    expect(contenidosDe(ai, 1).at(-1)?.parts).toHaveLength(2);
   });
 
   it('anota en el mensaje qué acciones se ejecutaron, para que la UI las pueda pintar', async () => {
@@ -140,31 +152,138 @@ describe('AgentChatService — herramientas', () => {
     await chat.send('bucle');
 
     expect(run).toHaveBeenCalledTimes(MAX_VUELTAS);
-    expect(ai.sendMessage).toHaveBeenCalledTimes(MAX_VUELTAS + 1);
+    expect(ai.generateContent).toHaveBeenCalledTimes(MAX_VUELTAS + 1);
     expect(chat.mensajes().at(-1)?.texto).toMatch(/no he podido/i);
   });
 });
 
 describe('AgentChatService — errores', () => {
-  beforeEach(() => TestBed.resetTestingModule());
+  beforeEach(() => {
+    TestBed.resetTestingModule();
+    vi.useFakeTimers();
+  });
+  afterEach(() => vi.useRealTimers());
 
-  it('un fallo del modelo no rompe la app: queda en el signal de error', async () => {
-    const ai = fakeAi([]);
-    ai.sendMessage.mockRejectedValue(new Error('429 quota'));
-    TestBed.configureTestingModule({
-      providers: [
-        AgentChatService,
-        { provide: AiService, useValue: ai },
-        { provide: AgentToolRegistry, useValue: { declarations: () => [], run: vi.fn() } },
-      ],
+  const saturado = () =>
+    Object.assign(new Error('AI: Error fetching from https://x: [429 ] Resource exhausted. (AI/fetch-error)'), {
+      customErrorData: { status: 429 },
     });
-    const chat = TestBed.inject(AgentChatService);
 
-    await chat.send('hola');
+  /** `send` espera entre reintentos: hay que avanzar el reloj falso. */
+  async function enviar(chat: AgentChatService, texto: string) {
+    const p = chat.send(texto);
+    await vi.runAllTimersAsync();
+    await p;
+  }
 
-    expect(chat.error()).toContain('429 quota');
+  it('un fallo del modelo no rompe la app: queda en el signal de error, en lenguaje humano', async () => {
+    const { chat, ai } = setup([]);
+    ai.generateContent.mockRejectedValue(saturado());
+
+    await enviar(chat, 'hola');
+
+    expect(chat.error()).toMatch(/saturado/i);
+    expect(chat.error()).not.toMatch(/https?:\/\//);
     expect(chat.pensando()).toBe(false);
-    expect(chat.mensajes().at(-1)?.entrante).toBe(true);
+  });
+
+  it('el error se avisa UNA vez: en el banner, sin duplicarlo como burbuja del agente', async () => {
+    const { chat, ai } = setup([]);
+    ai.generateContent.mockRejectedValue(saturado());
+
+    await enviar(chat, 'hola');
+
+    expect(chat.mensajes().map((m) => m.entrante)).toEqual([false]);
+  });
+
+  it('reintenta solo ante saturación (429) y sale adelante si el modelo se recupera', async () => {
+    const { chat, ai } = setup([{ text: 'Ya está.' }]);
+    ai.generateContent.mockRejectedValueOnce(saturado());
+
+    await enviar(chat, 'hola');
+
+    expect(ai.generateContent).toHaveBeenCalledTimes(2);
+    expect(chat.error()).toBeNull();
+    expect(chat.mensajes().at(-1)?.texto).toBe('Ya está.');
+  });
+
+  it('se rinde tras agotar los reintentos', async () => {
+    const { chat, ai } = setup([]);
+    ai.generateContent.mockRejectedValue(saturado());
+
+    await enviar(chat, 'hola');
+
+    expect(ai.generateContent).toHaveBeenCalledTimes(ESPERAS_REINTENTO_MS.length + 1);
+  });
+
+  it('NO reintenta errores que no son de saturación', async () => {
+    const { chat, ai } = setup([]);
+    ai.generateContent.mockRejectedValue(new Error('[400 ] Invalid argument'));
+
+    await enviar(chat, 'hola');
+
+    expect(ai.generateContent).toHaveBeenCalledTimes(1);
+    expect(chat.error()).toMatch(/no he podido contactar/i);
+  });
+
+  it('el reintento tras una tool NO vuelve a ejecutarla: reenvía el mismo resultado', async () => {
+    const run = vi.fn<FakeRun>(async () => ({ ok: true, data: { abierto: true } }));
+    const { chat, ai } = setup([{ calls: [{ name: 'abrir_contacto', args: {} }] }, { text: 'Abierto.' }], run);
+    ai.generateContent
+      .mockImplementationOnce(ai.generateContent.getMockImplementation()!)
+      .mockRejectedValueOnce(saturado());
+
+    await enviar(chat, 'abre a Juan');
+
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(contenidosDe(ai, 2)).toEqual(contenidosDe(ai, 1));
+    expect(chat.mensajes().at(-1)?.texto).toBe('Abierto.');
+  });
+
+  it('si la acción YA se hizo y luego falla, lo dice sin ofrecer repetirla', async () => {
+    const run = vi.fn<FakeRun>(async () => ({ ok: true, data: {} }));
+    const { chat, ai } = setup([{ calls: [{ name: 'abrir_contacto', args: {} }] }], run);
+    ai.generateContent
+      .mockImplementationOnce(ai.generateContent.getMockImplementation()!)
+      .mockRejectedValue(saturado());
+
+    await enviar(chat, 'abre a Juan');
+
+    const ultimo = chat.mensajes().at(-1);
+    expect(ultimo?.entrante).toBe(true);
+    expect(ultimo?.acciones).toEqual(['abrir_contacto']);
+    expect(ultimo?.texto).toMatch(/revisa la pantalla/i);
+    expect(chat.error()).toBeNull();
+    expect(chat.puedeReintentar()).toBe(false);
+  });
+
+  it('reintentar() reenvía la última pregunta sin duplicar la burbuja del usuario', async () => {
+    const { chat, ai } = setup([{ text: 'Ahora sí.' }]);
+    ai.generateContent.mockRejectedValueOnce(new Error('[500 ] Internal'));
+    await enviar(chat, 'hola');
+    expect(chat.puedeReintentar()).toBe(true);
+
+    const p = chat.reintentar();
+    await vi.runAllTimersAsync();
+    await p;
+
+    expect(chat.mensajes().map((m) => [m.entrante, m.texto])).toEqual([
+      [false, 'hola'],
+      [true, 'Ahora sí.'],
+    ]);
+    expect(chat.error()).toBeNull();
+    expect(chat.puedeReintentar()).toBe(false);
+  });
+
+  it('limpiar() también olvida el error y la opción de reintentar', async () => {
+    const { chat, ai } = setup([]);
+    ai.generateContent.mockRejectedValue(new Error('[500 ] Internal'));
+    await enviar(chat, 'hola');
+
+    chat.limpiar();
+
+    expect(chat.error()).toBeNull();
+    expect(chat.puedeReintentar()).toBe(false);
   });
 });
 
