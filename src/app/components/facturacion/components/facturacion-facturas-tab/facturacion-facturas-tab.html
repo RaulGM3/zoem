@@ -121,8 +121,11 @@
     }
   </ng-template>
 
-  <app-responsive-list [items]="filteredInvoices()" trackBy="id"
-    [emptyText]="loading() ? 'Cargando facturas…' : 'No hay facturas que coincidan con los filtros'">
+  @if (loading() && filteredInvoices().length === 0) {
+  <app-skeleton variante="tabla" [filas]="6" etiqueta="Cargando facturas…" />
+} @else {
+<app-responsive-list [items]="filteredInvoices()" trackBy="id"
+    emptyText="No hay facturas que coincidan con los filtros">
 
     <!-- Tabla (escritorio) -->
     <ng-template [appListTable]="filteredInvoices()" let-rows>
@@ -347,4 +350,5 @@
       </article>
     </ng-template>
   </app-responsive-list>
+}
 </div>

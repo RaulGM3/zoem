@@ -1,4 +1,5 @@
 import { Component, signal, computed, inject, viewChild, type ElementRef, DestroyRef } from '@angular/core';
+import { BarraNavegacionComponent } from '../../shared/components/barra-navegacion/barra-navegacion';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
@@ -61,7 +62,7 @@ export interface NavCategory {
 
 @Component({
   selector: 'app-demo-layout',
-  imports: [
+  imports: [BarraNavegacionComponent, 
     RouterOutlet, RouterLink, RouterLinkActive, LucideAngularModule, AgenteLanzadorComponent, FocusTrapDirective, NotificacionesPanelComponent,
   ],
   templateUrl: './demo-layout.html',

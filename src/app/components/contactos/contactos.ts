@@ -1,4 +1,5 @@
 import { Component, signal, computed, inject, effect, ChangeDetectionStrategy } from '@angular/core';
+import { SkeletonComponent } from '../../shared/components/skeleton/skeleton';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DecimalPipe } from '@angular/common';
 import { RouterLink, ActivatedRoute, Router, type ParamMap } from '@angular/router';
@@ -45,7 +46,7 @@ const KPI_ROTATIVA: readonly { status: ContactStatus; titulo: string; detalle: s
 @Component({
   selector: 'app-contactos',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
+  imports: [SkeletonComponent, 
     RouterLink, LucideAngularModule, DecimalPipe, ImportarContactosComponent, ContactoDrawerComponent,
     EstadoContactoDialogComponent, AccionLanzadorComponent, ActionMenuComponent, OverlayShellComponent,
     ResponsiveListComponent, ListCardDirective, ListTableDirective,

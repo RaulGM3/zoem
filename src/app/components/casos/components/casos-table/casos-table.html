@@ -1,7 +1,7 @@
+@if (loading()) {
+  <app-skeleton variante="tabla" [filas]="8" etiqueta="Cargando casos..." />
+} @else {
 <div class="sm:overflow-hidden sm:rounded-xl sm:border sm:border-[var(--border)] sm:bg-[var(--surface)]">
-  @if (loading()) {
-    <div class="p-10 text-center text-sm" style="color:var(--text-faint)">Cargando casos...</div>
-  } @else {
     <app-responsive-list [items]="casos()" trackBy="id" emptyText="No se encontraron casos">
     <ng-template [appListTable]="casos()" let-rows>
     <div class="overflow-x-auto">
@@ -149,8 +149,8 @@
       </article>
     </ng-template>
     </app-responsive-list>
-  }
 </div>
+}
 
 <!-- Dropdown contextual -->
 @if (activeDropdown() && dropdownPos()) {

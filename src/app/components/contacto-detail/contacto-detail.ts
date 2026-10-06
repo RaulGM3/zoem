@@ -34,11 +34,12 @@ import {
 import { AccionLanzadorComponent } from '../../shared/components/accion-lanzador/accion-lanzador';
 import { ComunicacionesEnviadasComponent } from '../../shared/components/comunicaciones-enviadas/comunicaciones-enviadas';
 import { ContactoDocumentosComponent } from './components/contacto-documentos/contacto-documentos';
+import { SkeletonComponent } from '../../shared/components/skeleton/skeleton';
 import { etiquetaDocumentoContacto } from '../../core/fiscal/documento-contacto';
 
 @Component({
   selector: 'app-contacto-detail',
-  imports: [LucideAngularModule, DecimalPipe, EstadoContactoDialogComponent, ContactoDocumentosComponent, AccionLanzadorComponent, ComunicacionesEnviadasComponent, ActionMenuComponent],
+  imports: [LucideAngularModule, DecimalPipe, EstadoContactoDialogComponent, ContactoDocumentosComponent, AccionLanzadorComponent, ComunicacionesEnviadasComponent, ActionMenuComponent, SkeletonComponent],
   templateUrl: './contacto-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -70,6 +71,8 @@ export class ContactoDetailComponent {
   protected readonly bp = inject(BreakpointService);
 
   contacto = signal<Contact | null>(null);
+  /** true hasta que termina la carga (bien o mal): evita mostrar "no encontrado" mientras carga. */
+  readonly cargando = signal(true);
 
   // Notas — borrador editable con autoguardado (ver onNotesInput).
   notesDraft = signal('');
@@ -108,6 +111,15 @@ export class ContactoDetailComponent {
    * fallaba en silencio (sin toast) porque el `effect()` no capturaba errores.
    */
   private async loadContactData(contactId: string): Promise<void> {
+    this.cargando.set(true);
+    try {
+      await this.loadContactDataConAviso(contactId);
+    } finally {
+      this.cargando.set(false);
+    }
+  }
+
+  private async loadContactDataConAviso(contactId: string): Promise<void> {
     await this.toast.run(
       async () => {
         const [c] = await Promise.all([

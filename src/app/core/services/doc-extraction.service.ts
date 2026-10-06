@@ -1,6 +1,5 @@
 import { inject, Injectable } from '@angular/core';
 import { Schema } from 'firebase/ai';
-import * as mammoth from 'mammoth';
 import { AiService } from './ai.service';
 import { TemplateVariable, TemplateVariableType } from '../../interfaces';
 
@@ -81,6 +80,8 @@ export class DocExtractionService {
       throw new Error('El documento Word supera el límite de 15MB. Reduce el tamaño del archivo.');
     }
     const arrayBuffer = await file.arrayBuffer();
+    // mammoth es pesado y solo se usa al subir un .docx: se carga bajo demanda.
+    const mammoth = await import('mammoth');
     const { value: sourceHtml } = await mammoth.convertToHtml({ arrayBuffer });
     if (!sourceHtml.trim()) {
       throw new Error('No se pudo extraer contenido del documento Word.');

@@ -308,6 +308,10 @@
     />
   }
 </div>
+} @else if (cargando()) {
+  <div class="p-4 sm:p-6">
+    <app-skeleton variante="detalle" etiqueta="Cargando contacto..." />
+  </div>
 } @else {
   <div class="p-4 text-center sm:p-6" style="color:var(--text-muted)">
     <p>Contacto no encontrado.</p>

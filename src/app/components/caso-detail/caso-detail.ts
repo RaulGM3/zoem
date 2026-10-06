@@ -2,6 +2,7 @@ import {
   Component, OnDestroy, signal, computed, effect, untracked,
   ChangeDetectionStrategy, inject,
 } from '@angular/core';
+import { SkeletonComponent } from '../../shared/components/skeleton/skeleton';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { combineLatest, debounceTime, map, of, switchMap } from 'rxjs';
@@ -40,7 +41,7 @@ import { MovimientoFormDrawerComponent, MovimientoFormData } from './components/
 
 @Component({
   selector: 'app-caso-detail',
-  imports: [
+  imports: [SkeletonComponent, 
     RouterLink,
     CasoDetailHeaderComponent,
     CasoInfoTabComponent,

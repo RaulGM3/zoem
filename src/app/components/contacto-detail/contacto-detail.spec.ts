@@ -211,6 +211,20 @@ describe('ContactoDetailComponent', () => {
       expect(navigate).toHaveBeenCalledWith(['/contactos']);
     });
 
+    it('mientras carga muestra un skeleton y no "Contacto no encontrado"', async () => {
+      getContact.mockReturnValue(new Promise(() => {}));
+      await crear();
+      expect(el().querySelector('app-skeleton')).not.toBeNull();
+      expect(el().textContent).not.toContain('Contacto no encontrado.');
+    });
+
+    it('si la carga falla deja de mostrar el skeleton', async () => {
+      getContact.mockRejectedValue(new Error('red'));
+      await crear();
+      expect(el().querySelector('app-skeleton')).toBeNull();
+      expect(el().textContent).toContain('Contacto no encontrado.');
+    });
+
     it('el botón Editar lleva al listado con la intención de edición', async () => {
       await crear();
       await click(boton('Editar'));

@@ -1,4 +1,5 @@
 import { Component, ChangeDetectionStrategy, input, output, signal, computed, effect, inject, untracked } from '@angular/core';
+import { SkeletonComponent } from '../../../../shared/components/skeleton/skeleton';
 import { NgTemplateOutlet } from '@angular/common';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -48,7 +49,7 @@ interface SeguimientoReintento {
 @Component({
   selector: 'app-facturacion-facturas-tab',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
+  imports: [SkeletonComponent, 
     LucideAngularModule, DecimalPipe, FormsModule, NgTemplateOutlet, ActionMenuComponent, OverlayShellComponent,
     ResponsiveListComponent, ListCardDirective, ListTableDirective,
   ],

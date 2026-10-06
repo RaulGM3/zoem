@@ -27,7 +27,10 @@
       </ul>
 </ng-template>
 
-<app-responsive-list [items]="casos()" trackBy="id" [emptyText]="loading() ? 'Cargando casos…' : 'No hay casos abiertos'">
+@if (loading() && casos().length === 0) {
+  <app-skeleton variante="tabla" [filas]="6" etiqueta="Cargando casos…" />
+} @else {
+<app-responsive-list [items]="casos()" trackBy="id" emptyText="No hay casos abiertos">
 <ng-template [appListTable]="casos()" let-rows>
 <div class="overflow-x-auto">
   <table class="w-full text-sm">
@@ -166,3 +169,4 @@
   </article>
 </ng-template>
 </app-responsive-list>
+}

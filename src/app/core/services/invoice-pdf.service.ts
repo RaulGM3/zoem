@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { Storage, ref, uploadBytes, getDownloadURL } from '@angular/fire/storage';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+// jsPDF + autotable pesan ~140 KB gzip: se cargan al generar el primer PDF, no al abrir Facturación.
+import type jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 import type { Invoice } from './invoice.service';
 import { normalizeLinea } from './invoice.service';
@@ -58,7 +58,11 @@ export class InvoicePdfService {
   }
 
   private async buildPdf(invoice: Invoice, company: Company): Promise<Blob> {
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const [{ default: JsPDF }, { default: autoTable }] = await Promise.all([
+      import('jspdf'),
+      import('jspdf-autotable'),
+    ]);
+    const doc = new JsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const margin = 20;
     const pageW = 210;
     const right = pageW - margin;

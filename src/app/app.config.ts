@@ -1,5 +1,6 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { provideRouter, withComponentInputBinding, withPreloading } from '@angular/router';
+import { PrecargaLigera } from './core/navegacion/precarga-ligera';
 import { provideAgentTools } from './core/agent/agent-tools';
 import { provideFirebaseApp, initializeApp, getApp } from '@angular/fire/app';
 import { provideAppCheck, initializeAppCheck, ReCaptchaEnterpriseProvider } from '@angular/fire/app-check';
@@ -26,7 +27,7 @@ declare global {
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes, withComponentInputBinding()),
+    provideRouter(routes, withComponentInputBinding(), withPreloading(PrecargaLigera)),
     provideAgentTools(),
     provideFirebaseApp(() => initializeApp(environment.firebase)),
     provideAppCheck(() => {

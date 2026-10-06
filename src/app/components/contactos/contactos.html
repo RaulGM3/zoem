@@ -150,7 +150,7 @@
       }
 
       @if (contactService.isLoading()) {
-        <div class="py-12 text-center text-sm" style="color:var(--text-faint)">Cargando contactos...</div>
+        <app-skeleton variante="lista" [filas]="6" etiqueta="Cargando contactos..." />
       } @else {
         <!-- Contacts: rejilla de fichas (escritorio) / lista compacta (móvil) -->
         @if (filtered().length === 0) {

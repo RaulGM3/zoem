@@ -1,4 +1,5 @@
 import { Component, ChangeDetectionStrategy, input, output, signal } from '@angular/core';
+import { SkeletonComponent } from '../../../../shared/components/skeleton/skeleton';
 import { DecimalPipe } from '@angular/common';
 import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -16,7 +17,7 @@ import {
 @Component({
   selector: 'app-facturacion-casos-tab',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
+  imports: [SkeletonComponent, 
     LucideAngularModule, DecimalPipe, RouterLink, NgTemplateOutlet, ActionMenuComponent,
     ResponsiveListComponent, ListCardDirective, ListTableDirective,
   ],
