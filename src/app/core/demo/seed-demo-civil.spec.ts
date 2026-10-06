@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { construirSeedDemo, planDeEscritura, ultimaFacturaPorAnio, type ContextoSeed, type DocSeed } from './seed-demo-civil';
+import {
+  construirSeedDemo, pathsObsoletos, planDeEscritura, ultimaFacturaPorAnio, type ContextoSeed, type DocSeed,
+} from './seed-demo-civil';
 import { claveFactura } from '../facturas-recibidas/clave-factura';
 
 const CID = 'cid-demo';
@@ -11,8 +13,11 @@ const ctx = (over: Partial<ContextoSeed> = {}): ContextoSeed => ({
   ],
   hoy: new Date(2026, 9, 6, 9, 30),
   ultimaFacturaPorAnio: {},
+  agente: { agentId: 'agente-demo', crear: true },
   ...over,
 });
+
+const RAICES = ['invoices/', 'llamadas/', 'iaContacts/', 'agentMappings/'];
 
 const de = (docs: DocSeed[], coleccion: string) =>
   docs.filter((d) => {
@@ -28,22 +33,24 @@ const doc = (docs: DocSeed[], sufijo: string) => {
 describe('construirSeedDemo', () => {
   it('genera el volumen de una empresa movida', () => {
     const { docs } = construirSeedDemo(ctx());
-    expect(de(docs, 'contactos')).toHaveLength(10);
+    expect(de(docs, 'contactos').length).toBeGreaterThanOrEqual(12);
     expect(de(docs, 'casoPlantillas')).toHaveLength(5);
     expect(de(docs, 'casos')).toHaveLength(10);
     expect(de(docs, 'hitos').length).toBeGreaterThan(60);
     expect(de(docs, 'invoices').length).toBeGreaterThanOrEqual(6);
-    expect(de(docs, 'cuentas')).toHaveLength(3);
-    expect(de(docs, 'extracto').length).toBeGreaterThan(5);
-    expect(de(docs, 'movimientos_generales').length).toBeGreaterThan(5);
-    expect(de(docs, 'eventos').length).toBeGreaterThan(10);
+    expect(de(docs, 'extracto').length).toBeGreaterThan(20);
+    expect(de(docs, 'movimientos_generales').length).toBeGreaterThan(40);
+    expect(de(docs, 'eventos').length).toBeGreaterThanOrEqual(30);
     expect(de(docs, 'acciones').length).toBeGreaterThan(3);
+    expect(de(docs, 'llamadas').length).toBeGreaterThanOrEqual(8);
+    expect(de(docs, 'iaContacts').length).toBeGreaterThanOrEqual(4);
+    expect(de(docs, 'actividad').length).toBeGreaterThanOrEqual(40);
   });
 
-  it('todo vive bajo la empresa salvo las facturas emitidas (colección raíz)', () => {
+  it('todo vive bajo la empresa salvo las colecciones raíz (facturas, llamadas, Recepción IA)', () => {
     const { docs } = construirSeedDemo(ctx());
     for (const d of docs) {
-      expect(d.path.startsWith(`companies/${CID}/`) || d.path.startsWith('invoices/')).toBe(true);
+      expect(d.path.startsWith(`companies/${CID}/`) || RAICES.some((r) => d.path.startsWith(r))).toBe(true);
     }
   });
 
@@ -129,6 +136,118 @@ describe('construirSeedDemo', () => {
     [...docs, ...facturasRecibidas].forEach((d) => visitar(d.data));
   });
 
+  describe('tesorería', () => {
+    const movs = (docs: DocSeed[]) => [
+      ...de(docs, 'movimientos_generales'),
+      ...docs.filter((d) => d.path.includes('/gestoria/')),
+    ].map((d) => d.data as Record<string, any>);
+
+    it('dos cuentas: cuenta corriente del Banco Santander y caja', () => {
+      const cuentas = de(construirSeedDemo(ctx()).docs, 'cuentas').map((d) => d.data);
+      expect(cuentas).toHaveLength(2);
+      expect(cuentas).toEqual(expect.arrayContaining([
+        expect.objectContaining({ tipo: 'banco', entidad: 'Banco Santander', activa: true }),
+        expect.objectContaining({ tipo: 'caja', activa: true }),
+      ]));
+    });
+
+    it('todos los movimientos apuntan a una cuenta sembrada', () => {
+      const { docs } = construirSeedDemo(ctx());
+      const ids = new Set(de(docs, 'cuentas').map((d) => d.path.split('/').pop()));
+      for (const m of movs(docs)) expect(ids.has(m['cuentaId'])).toBe(true);
+    });
+
+    it('hay entradas y salidas en cada uno de los últimos 6 meses (gráficos del dashboard)', () => {
+      const ms = movs(construirSeedDemo(ctx()).docs);
+      for (let i = 0; i < 6; i++) {
+        const d = new Date(2026, 9 - i, 1);
+        const mes = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const delMes = ms.filter((m) => String(m['fecha']).startsWith(mes));
+        expect(delMes.some((m) => m['esEntrada']), `entradas ${mes}`).toBe(true);
+        expect(delMes.some((m) => !m['esEntrada']), `salidas ${mes}`).toBe(true);
+        expect(delMes.some((m) => m['tipo'] === 'honorario'), `honorarios ${mes}`).toBe(true);
+      }
+    });
+
+    it('los movimientos de los últimos días quedan pendientes de aprobar (sin campo aprobado)', () => {
+      const recientes = movs(construirSeedDemo(ctx()).docs).filter((m) => m['fecha'] > '2026-10-02');
+      expect(recientes.length).toBeGreaterThan(0);
+      for (const m of recientes) expect(m).not.toHaveProperty('aprobado');
+    });
+
+    it('el saldo bancario de la cuenta es el último saldo del extracto', () => {
+      const { docs } = construirSeedDemo(ctx());
+      for (const c of de(docs, 'cuentas').filter((d) => d.data['tipo'] === 'banco')) {
+        const lineas = docs
+          .filter((d) => d.path.startsWith(`${c.path}/extracto/`))
+          .map((d) => d.data as Record<string, any>)
+          .sort((a, b) => String(a['fecha']).localeCompare(String(b['fecha'])));
+        expect(lineas.length).toBeGreaterThan(0);
+        expect(c.data['saldoBancario']).toBe(lineas.at(-1)!['saldoPosterior']);
+      }
+    });
+
+    it('varios cierres de caja con totales que cuadran', () => {
+      const cierres = de(construirSeedDemo(ctx()).docs, 'cierres_caja').map((d) => d.data as Record<string, any>);
+      expect(cierres.length).toBeGreaterThanOrEqual(3);
+      expect(new Set(cierres.map((c) => c['fecha'])).size).toBe(cierres.length);
+      for (const c of cierres) {
+        const suma = (k: string) => Math.round(c['cuentas'].reduce((s: number, x: any) => s + x[k], 0) * 100) / 100;
+        expect(c['totales']).toEqual({ ingresos: suma('ingresos'), egresos: suma('egresos'), sistemaTotal: suma('sistema'), aprobadoTotal: suma('aprobado') });
+        expect(c['cuentas']).toHaveLength(2);
+      }
+    });
+  });
+
+  describe('Recepción IA', () => {
+    it('llamadas del agente de la empresa, con contactos existentes y nuevos', () => {
+      const { docs } = construirSeedDemo(ctx());
+      const llamadas = de(docs, 'llamadas').map((d) => d.data as Record<string, any>);
+      const contactos = de(docs, 'contactos').map((d) => ({ id: d.path.split('/').pop(), ...d.data }) as Record<string, any>);
+      const digitos = (s?: string) => (s ?? '').replace(/\D/g, '');
+      const telefonos = new Set(contactos.flatMap((c) => [digitos(c['phone']), digitos(c['mobile'])]).filter(Boolean));
+
+      for (const l of llamadas) {
+        expect(l['agentId']).toBe('agente-demo');
+        expect(l['transcripcion'].length).toBeGreaterThanOrEqual(4);
+        expect(l['resumen']).toBeTruthy();
+      }
+      const conocidas = llamadas.filter((l) => l['contactId'] || telefonos.has(digitos(l['datosCapturados'].telefono)));
+      expect(conocidas.length).toBeGreaterThanOrEqual(3);
+      expect(llamadas.length - conocidas.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('crea el mapeo del agente solo si la empresa no tiene uno', () => {
+      expect(de(construirSeedDemo(ctx()).docs, 'agentMappings')).toHaveLength(1);
+      const sinCrear = construirSeedDemo(ctx({ agente: { agentId: 'agente-real', crear: false } })).docs;
+      expect(de(sinCrear, 'agentMappings')).toHaveLength(0);
+      expect(de(sinCrear, 'llamadas').every((d) => d.data['agentId'] === 'agente-real')).toBe(true);
+    });
+
+    it('leads pendientes para la tarjeta del dashboard', () => {
+      const leads = de(construirSeedDemo(ctx()).docs, 'iaContacts').map((d) => d.data as Record<string, any>);
+      expect(leads.every((l) => l['companyId'] === CID)).toBe(true);
+      expect(leads.filter((l) => l['status'] === 'pendiente').length).toBeGreaterThanOrEqual(3);
+    });
+  });
+
+  describe('agenda', () => {
+    it('eventos de casos y de empresa, pasados y futuros', () => {
+      const ev = de(construirSeedDemo(ctx()).docs, 'eventos').map((d) => d.data as Record<string, any>);
+      expect(ev.filter((e) => e['fecha'] < '2026-10-06').length).toBeGreaterThanOrEqual(8);
+      expect(ev.filter((e) => e['fecha'] >= '2026-10-06').length).toBeGreaterThanOrEqual(15);
+      expect(ev.filter((e) => e['recurrencia'] !== 'ninguna').length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('seguimientos del primer Admin, alguno vencido (tarjeta "Mis seguimientos")', () => {
+      const segs = de(construirSeedDemo(ctx()).docs, 'eventos')
+        .map((d) => d.data as Record<string, any>)
+        .filter((e) => e['origen']?.tipo === 'seguimiento_contacto' && e['responsableId'] === 'u-admin');
+      expect(segs.length).toBeGreaterThanOrEqual(2);
+      expect(segs.some((e) => e['fecha'] < '2026-10-06')).toBe(true);
+    });
+  });
+
   it('exige al menos un miembro activo', () => {
     expect(() => construirSeedDemo(ctx({ miembros: [] }))).toThrow();
   });
@@ -147,6 +266,24 @@ describe('planDeEscritura', () => {
   it('parte en lotes del tamaño máximo', () => {
     const docs = Array.from({ length: 7 }, (_, i) => d(`companies/c/hitos/${i}`));
     expect(planDeEscritura(docs, new Set(), 3).lotes.map((l) => l.length)).toEqual([3, 3, 1]);
+  });
+});
+
+describe('pathsObsoletos', () => {
+  it('borra docs demo de versiones anteriores que ya no están en el seed, nunca datos reales', () => {
+    const seed: DocSeed[] = [{ path: 'companies/c/cuentas/demo-cuenta-santander', data: {} }];
+    expect(pathsObsoletos(
+      [
+        'companies/c/cuentas/demo-cuenta-santander',
+        'companies/c/cuentas/demo-cuenta-operativa',
+        'companies/c/cuentas/demo-cuenta-operativa/extracto/demo-linea-01',
+        'companies/c/cuentas/cuenta-real',
+      ],
+      seed,
+    )).toEqual([
+      'companies/c/cuentas/demo-cuenta-operativa',
+      'companies/c/cuentas/demo-cuenta-operativa/extracto/demo-linea-01',
+    ]);
   });
 });
 

@@ -6,8 +6,9 @@
 
   <p class="text-sm text-slate-400">
     Carga en la empresa elegida un despacho de abogado civil con actividad: contactos, plantillas, casos con hitos
-    y horas, gestoría, tesorería (cuentas, extractos, gastos, facturas recibidas, retiros, cierre de caja),
-    facturas emitidas, agenda, acciones y feed de actividad. Las fechas son relativas a hoy: vuelve a cargarla
+    y horas, gestoría, tesorería (cuenta Santander y caja con 6 meses de movimientos, extracto, facturas
+    recibidas, retiros y cierres de caja), facturas emitidas, llamadas de Recepción IA, agenda, acciones y feed
+    de actividad. Las llamadas nuevas avisan a los gestores (una vez). Las fechas son relativas a hoy: vuelve a cargarla
     antes de cada demo y parecerá de esta semana.
   </p>
 
@@ -24,6 +25,14 @@
         }
       </select>
     </div>
+
+    <label class="flex items-start gap-2 text-sm text-slate-300">
+      <input type="checkbox" formControlName="documentos" class="mt-0.5 accent-violet-500" />
+      <span>
+        Generar y subir documentos a los casos (contratos, demandas, hojas de encargo… unos 20 .docx).
+        Tarda un par de minutos; los que ya existan no se duplican.
+      </span>
+    </label>
 
     <label class="flex items-start gap-2 text-sm text-slate-300">
       <input type="checkbox" formControlName="confirmado" class="mt-0.5 accent-violet-500" />
@@ -71,7 +80,11 @@
     @if (resultado(); as r) {
       <div class="rounded-xl border border-slate-800">
         <p class="border-b border-slate-800 px-4 py-3 text-sm text-slate-300">
-          {{ r.documentos }} documentos · {{ r.facturasRecibidasNuevas }} facturas recibidas nuevas
+          {{ r.documentos }} registros · {{ r.facturasRecibidasNuevas }} facturas recibidas nuevas
+          · {{ r.archivosSubidos }} archivos subidos
+          @if (r.obsoletosBorrados > 0) {
+            · {{ r.obsoletosBorrados }} datos demo antiguos borrados
+          }
           @if (r.omitidos > 0) {
             · {{ r.omitidos }} registros ya existentes sin tocar
           }

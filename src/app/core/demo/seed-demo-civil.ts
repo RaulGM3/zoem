@@ -10,14 +10,19 @@
  *   así que cargar la demo no dispara un push por documento.
  * - Las facturas recibidas van aparte: sus rules exigen transacción con el
  *   contador correlativo, `createdBy == auth.uid` y `createdAt == request.time`.
+ * - Tesorería cuadra como en la app: el saldo de sistema es la suma de
+ *   movimientos (la apertura es un movimiento `ajuste`), el saldo bancario es el
+ *   último `saldoPosterior` del extracto y los retiros no entran en los saldos.
  */
 import { desglosarIva, type TipoIva } from '../../interfaces/iva';
 import { RESUMEN_FINANCIERO_VACIO, type ResumenFinanciero } from '../../interfaces/caso.interface';
+import type { Modulo } from '../permissions/permissions';
 import { claveFactura } from '../facturas-recibidas/clave-factura';
 import {
-  ACCIONES, ACTIVIDAD, CASOS, CONTACTOS, CUENTAS, EVENTOS, EXTRACTO_SUELTO, GENERALES, PLANTILLAS,
-  RECIBIDAS, REGISTROS_ACCION, RETIROS,
-  type ContactoDemo, type CuentaDemo, type HitoDemo, type MovDemo,
+  ACCIONES, ACTIVIDAD, APERTURA_HACE, CASOS, CONTACTOS, CUENTAS, DIAS_HASTA_APROBAR, DIAS_HASTA_BANCO,
+  EVENTOS, EXTRACTO_SUELTO, LEADS, LLAMADAS, PLANTILLAS, PUNTUALES, RECURRENTES, REGISTROS_ACCION,
+  RETIRO_MENSUAL, SEGUIMIENTOS,
+  type ContactoDemo, type CuentaDemo, type HitoDemo, type MovDemo, type ProveedorDemo,
 } from './datos-demo-civil';
 
 export interface MiembroSeed {
@@ -33,6 +38,8 @@ export interface ContextoSeed {
   hoy: Date;
   /** Último número de la serie `F-AAAA-NNNN` por año (facturas reales). */
   ultimaFacturaPorAnio: Record<string, number>;
+  /** Agente de Recepción IA de la empresa; `crear` si aún no tiene mapeo. */
+  agente: { agentId: string; crear: boolean };
 }
 
 export interface DocSeed {
@@ -52,8 +59,10 @@ export interface SeedDemo {
   facturasRecibidas: FacturaRecibidaSeed[];
 }
 
-/** Prefijo de los ids de facturas demo en la colección raíz `invoices`. */
-export const prefijoFacturaDemo = (companyId: string) => `demo-${companyId}-`;
+/** Prefijo de los ids demo en colecciones raíz (compartidas entre empresas). */
+export const prefijoRaiz = (companyId: string) => `demo-${companyId}-`;
+/** Id del agente que se crea si la empresa no tiene ninguno. */
+export const agenteDemoId = (companyId: string) => `demo-agente-${companyId}`;
 
 export function ultimaFacturaPorAnio(
   facturas: readonly { id: string; invoiceNumber?: string }[],
@@ -61,7 +70,7 @@ export function ultimaFacturaPorAnio(
 ): Record<string, number> {
   const out: Record<string, number> = {};
   for (const fa of facturas) {
-    if (fa.id.startsWith(prefijoFacturaDemo(companyId))) continue;
+    if (fa.id.startsWith(prefijoRaiz(companyId))) continue;
     const mt = /^F-(\d{4})-(\d+)$/.exec(fa.invoiceNumber ?? '');
     if (mt) out[mt[1]] = Math.max(out[mt[1]] ?? 0, Number(mt[2]));
   }
@@ -72,6 +81,8 @@ export function ultimaFacturaPorAnio(
 
 const pad = (n: number, w = 2) => String(n).padStart(w, '0');
 const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+const euros = (n: number) => n.toFixed(2).replace('.', ',');
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
 function sinUndefined<T>(v: T): T {
   if (Array.isArray(v)) return v.map(sinUndefined) as T;
@@ -118,6 +129,13 @@ function resumenDe(movs: readonly MovDemo[]): ResumenFinanciero {
 
 const HORAS_AGENDA = ['09:30', '11:00', '12:30', '16:00', '17:30'];
 
+/** Movimiento ya resuelto a un doc concreto (de caso o general). */
+interface MovSembrado extends MovDemo {
+  id: string;
+  aprobadoAhora: boolean;
+  casoKey?: string;
+}
+
 export function construirSeedDemo(ctx: ContextoSeed): SeedDemo {
   if (ctx.miembros.length === 0) throw new Error('La empresa no tiene miembros activos');
 
@@ -133,9 +151,19 @@ export function construirSeedDemo(ctx: ContextoSeed): SeedDemo {
     const d = dia(offset);
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   };
+  const offsetDe = (y: number, m: number, d: number) => Math.round((new Date(y, m, d, 12).getTime() - hoy.getTime()) / 86_400_000);
+  /** Meses desde el actual (k = 0) hacia atrás. */
+  const mesAtras = (k: number) => {
+    const d = new Date(hoy.getFullYear(), hoy.getMonth() - k, 1);
+    const y = d.getFullYear();
+    const m = d.getMonth();
+    return { y, m, label: `${MESES[m]} ${y}`, sufijo: `${y}${pad(m + 1)}`, dias: new Date(y, m + 1, 0).getDate() };
+  };
+  const aprobadoSegun = (mv: MovDemo) => mv.aprobado && mv.offset <= -DIAS_HASTA_APROBAR;
 
   const cid = ctx.companyId;
   const C = (p: string) => `companies/${cid}/${p}`;
+  const R = (col: string, key: string) => `${col}/${prefijoRaiz(cid)}${key}`;
   const docs: DocSeed[] = [];
   const put = (path: string, data: Record<string, unknown>) => docs.push({ path, data: sinUndefined(data) });
 
@@ -143,6 +171,9 @@ export function construirSeedDemo(ctx: ContextoSeed): SeedDemo {
   const yo = admins[0] ?? ctx.miembros[0];
   const equipo = [yo, ...ctx.miembros.filter((x) => x !== yo)];
   const quien = (i: number) => equipo[i % equipo.length];
+
+  /** Feed de actividad: [módulo, frase, offset, entidad, hh]. Se ordena y numera al final. */
+  const feed: { modulo: Modulo; accion: string; offset: number; entidadId?: string; hh: number }[] = [];
 
   // --- Plantillas
   for (const p of PLANTILLAS) {
@@ -169,7 +200,7 @@ export function construirSeedDemo(ctx: ContextoSeed): SeedDemo {
     const d = contacto.type === 'persona_fisica' ? contacto.direccion : contacto.direccionSocial;
     const amount = r2(fa.lineas.reduce((s, [, b]) => s + b, 0));
     const vat = r2(amount * 0.21);
-    const id = `${prefijoFacturaDemo(cid)}${fa.key}`;
+    const id = `${prefijoRaiz(cid)}${fa.key}`;
     facturaInfo.set(fa.key, { id, total: r2(amount + vat), status: fa.status, contacto: ci });
     put(`invoices/${id}`, {
       companyId: cid,
@@ -193,7 +224,7 @@ export function construirSeedDemo(ctx: ContextoSeed): SeedDemo {
   }
 
   // --- Casos, hitos, slots y gestoría
-  const movsPorCuenta: (MovDemo & { id: string | null; retiro?: boolean })[] = [];
+  const sembrados: MovSembrado[] = [];
   const hitosRecientes: { id: string; off: number; casoKey: string; titulo: string; uid: string }[] = [];
   let resumenCerrado: ResumenFinanciero | null = null;
 
@@ -243,16 +274,17 @@ export function construirSeedDemo(ctx: ContextoSeed): SeedDemo {
     });
 
     for (const mv of caso.movs) {
+      const aprobado = aprobadoSegun(mv);
       put(C(`casos/${id}/gestoria/${movId(mv.key)}`), {
         casoId: id, companyId: cid, tipo: mv.tipo, concepto: mv.concepto, importe: mv.importe,
         esEntrada: mv.esEntrada, fecha: iso(mv.offset), cuentaId: CUENTAS[mv.cuenta].id,
         createdBy: resp.uid, createdAt: dia(mv.offset, 11),
-        aprobado: mv.aprobado,
-        aprobadoAt: mv.aprobado ? dia(Math.min(mv.offset + 1, 0), 9) : undefined,
-        aprobadoPor: mv.aprobado ? yo.uid : undefined,
+        aprobado: aprobado || undefined,
+        aprobadoAt: aprobado ? dia(Math.min(mv.offset + 1, 0), 9) : undefined,
+        aprobadoPor: aprobado ? yo.uid : undefined,
         ...desglose(mv.importe, mv.iva),
       });
-      movsPorCuenta.push({ ...mv, id: movId(mv.key) });
+      sembrados.push({ ...mv, id: movId(mv.key), aprobadoAhora: aprobado, casoKey: caso.key });
     }
 
     let slotsTotal = 0;
@@ -312,114 +344,151 @@ export function construirSeedDemo(ctx: ContextoSeed): SeedDemo {
     });
   }
 
-  // --- Gastos generales del despacho + facturas recibidas
+  // --- Movimientos generales: apertura + recurrentes de 6 meses + puntuales
   const facturasRecibidas: FacturaRecibidaSeed[] = [];
-  for (const mv of GENERALES) {
-    const id = `demo-mg-${mv.key}`;
-    const rec = RECIBIDAS[mv.key];
-    let frId: string | undefined;
-    if (rec) {
-      const fecha = dia(mv.offset);
-      const ejercicio = fecha.getFullYear();
-      const numero = rec.numero(ejercicio);
-      frId = claveFactura(rec.proveedor.nif, numero);
-      const { baseImponible, cuotaIva, tipoIva } = desglose(mv.importe, mv.iva);
-      facturasRecibidas.push({
-        id: frId, ejercicio,
-        data: {
-          companyId: cid, tipoFactura: 'F1', claveOperacion: '01',
-          proveedor: { ...rec.proveedor, pais: 'ES' }, numero,
-          fechaExpedicion: iso(mv.offset - 1), fechaOperacion: iso(mv.offset - 1), fechaRegistro: iso(mv.offset),
-          periodo303: { ejercicio, trimestre: Math.floor(fecha.getMonth() / 3) + 1 },
-          lineasIva: [{ base: baseImponible, tipo: tipoIva, cuota: cuotaIva }],
-          total: mv.importe, porcentajeDeducible: 100, concepto: mv.concepto, categoria: rec.categoria,
-          qrValidacion: { estado: 'sin_qr' },
-          extraccion: { origen: 'manual', discrepancias: [] },
-          movimientoId: id, estado: 'registrada',
-        },
-      });
-    }
+  const registrarRecibida = (mv: MovDemo, movimientoId: string, proveedor: ProveedorDemo, numero: string, categoria: string) => {
+    const fecha = dia(mv.offset);
+    const ejercicio = fecha.getFullYear();
+    const id = claveFactura(proveedor.nif, numero);
+    const { baseImponible, cuotaIva, tipoIva } = desglose(mv.importe, mv.iva);
+    facturasRecibidas.push({
+      id, ejercicio,
+      data: {
+        companyId: cid, tipoFactura: 'F1', claveOperacion: '01',
+        proveedor: { ...proveedor, pais: 'ES' }, numero,
+        fechaExpedicion: iso(mv.offset - 1), fechaOperacion: iso(mv.offset - 1), fechaRegistro: iso(mv.offset),
+        periodo303: { ejercicio, trimestre: Math.floor(fecha.getMonth() / 3) + 1 },
+        lineasIva: [{ base: baseImponible, tipo: tipoIva, cuota: cuotaIva }],
+        total: mv.importe, porcentajeDeducible: 100, concepto: mv.concepto, categoria,
+        qrValidacion: { estado: 'sin_qr' },
+        extraccion: { origen: 'manual', discrepancias: [] },
+        movimientoId, estado: 'registrada',
+      },
+    });
+    return id;
+  };
+  const general = (mv: MovDemo, id: string, frId?: string) => {
+    const aprobado = aprobadoSegun(mv);
     put(C(`movimientos_generales/${id}`), {
       companyId: cid, tipo: mv.tipo, concepto: mv.concepto, importe: mv.importe, esEntrada: mv.esEntrada,
       fecha: iso(mv.offset), cuentaId: CUENTAS[mv.cuenta].id,
       createdBy: yo.uid, createdAt: dia(mv.offset, 10),
-      aprobado: mv.aprobado,
-      aprobadoAt: mv.aprobado ? dia(Math.min(mv.offset + 1, 0), 9) : undefined,
-      aprobadoPor: mv.aprobado ? yo.uid : undefined,
+      aprobado: aprobado || undefined,
+      aprobadoAt: aprobado ? dia(Math.min(mv.offset + 1, 0), 9) : undefined,
+      aprobadoPor: aprobado ? yo.uid : undefined,
       facturaRecibidaId: frId,
       ...desglose(mv.importe, mv.iva),
     });
-    movsPorCuenta.push({ ...mv, id });
-  }
+    sembrados.push({ ...mv, id, aprobadoAhora: aprobado });
+  };
 
-  for (const r of RETIROS) {
-    put(C(`retiros/demo-retiro-${r.key}`), {
-      companyId: cid, concepto: r.concepto, importe: r.importe, fecha: iso(r.offset),
-      cuentaId: CUENTAS.operativa.id, notas: 'Transferencia a cuenta personal', createdBy: yo.uid, createdAt: dia(r.offset, 9),
-    });
-    movsPorCuenta.push({
-      key: r.key, tipo: 'otro', concepto: r.concepto, importe: r.importe, esEntrada: false,
-      offset: r.offset, iva: 0, cuenta: 'operativa', aprobado: true, id: null, retiro: true,
-    });
-  }
-
-  // --- Cuentas + extracto bancario (40 días) + cierre de caja
-  const signo = (mv: MovDemo) => (mv.esEntrada ? mv.importe : -mv.importe);
-  const cierreCuentas: Record<string, unknown>[] = [];
-  const totales = { ingresos: 0, egresos: 0, sistemaTotal: 0, aprobadoTotal: 0 };
   for (const [k, cu] of Object.entries(CUENTAS) as [CuentaDemo, (typeof CUENTAS)[CuentaDemo]][]) {
-    const movs = movsPorCuenta.filter((mv) => mv.cuenta === k).sort((a, b) => a.offset - b.offset);
-    let saldo = r2(cu.inicial + movs.filter((mv) => mv.offset < -40).reduce((s, mv) => s + signo(mv), 0));
-    const recientes = movs.filter((mv) => mv.offset >= -40);
+    general(
+      { key: `apertura-${k}`, tipo: 'ajuste', concepto: `Saldo de apertura — ${cu.nombre}`, importe: cu.apertura, esEntrada: true, offset: -APERTURA_HACE, iva: 0, cuenta: k, aprobado: true },
+      `demo-mg-apertura-${k}`,
+    );
+  }
+  for (let k = 5; k >= 0; k--) {
+    const mes = mesAtras(k);
+    for (const r of RECURRENTES) {
+      if (r.trimestral && mes.m % 3 !== 0) continue;
+      const offset = offsetDe(mes.y, mes.m, Math.min(r.dia, mes.dias));
+      if (offset > 0) continue;
+      const mv: MovDemo = {
+        key: `${r.key}-${mes.sufijo}`, tipo: r.tipo, concepto: r.concepto.replace('{mes}', mes.label),
+        importe: r.importe, esEntrada: r.esEntrada, offset, iva: r.iva, cuenta: r.cuenta, aprobado: true,
+      };
+      const id = `demo-mg-${mv.key}`;
+      const frId = r.recibida
+        ? registrarRecibida(mv, id, r.recibida.proveedor, `${r.recibida.prefijo}-${mes.sufijo}`, r.recibida.categoria)
+        : undefined;
+      general(mv, id, frId);
+    }
+  }
+  for (const p of PUNTUALES) {
+    const id = `demo-mg-${p.key}`;
+    const frId = p.recibida
+      ? registrarRecibida(p, id, p.recibida.proveedor, p.recibida.numero(dia(p.offset).getFullYear()), p.recibida.categoria)
+      : undefined;
+    general(p, id, frId);
+  }
+
+  // Retiros del titular: no son movimientos de cuenta en la app (no entran en saldos).
+  for (let k = 1; k <= RETIRO_MENSUAL.meses; k++) {
+    const mes = mesAtras(k);
+    const offset = offsetDe(mes.y, mes.m, RETIRO_MENSUAL.dia);
+    put(C(`retiros/demo-retiro-${mes.sufijo}`), {
+      companyId: cid, concepto: RETIRO_MENSUAL.concepto.replace('{mes}', mes.label), importe: RETIRO_MENSUAL.importe,
+      fecha: iso(offset), cuentaId: CUENTAS.santander.id, notas: 'Transferencia a cuenta personal',
+      createdBy: yo.uid, createdAt: dia(offset, 9),
+    });
+  }
+
+  // --- Cuentas + extracto bancario (60 días)
+  const signo = (mv: MovDemo) => (mv.esEntrada ? mv.importe : -mv.importe);
+  const VENTANA_EXTRACTO = 60;
+  for (const [k, cu] of Object.entries(CUENTAS) as [CuentaDemo, (typeof CUENTAS)[CuentaDemo]][]) {
+    const movs = sembrados.filter((mv) => mv.cuenta === k).sort((a, b) => a.offset - b.offset);
+    let saldo: number;
 
     if (cu.tipo === 'banco') {
+      saldo = r2(movs.filter((mv) => mv.offset < -VENTANA_EXTRACTO).reduce((s, mv) => s + signo(mv), 0));
       const lineas = [
-        ...recientes.map((mv) => ({
-          concepto: (mv.retiro ? 'TRANSFERENCIA EMITIDA — ' : mv.esEntrada ? 'ABONO — ' : 'CARGO — ') + mv.concepto.toUpperCase(),
-          importe: signo(mv),
-          offset: mv.offset,
-          estado: mv.retiro ? 'ignorado' : mv.offset <= -4 ? 'casado' : 'pendiente',
-          movimientoId: !mv.retiro && mv.offset <= -4 ? mv.id ?? undefined : undefined,
-        })),
+        ...movs
+          .filter((mv) => mv.offset >= -VENTANA_EXTRACTO && mv.offset <= -DIAS_HASTA_BANCO)
+          .map((mv) => ({
+            concepto: (mv.esEntrada ? 'ABONO — ' : 'CARGO — ') + mv.concepto.toUpperCase(),
+            importe: signo(mv), offset: mv.offset,
+            estado: mv.aprobadoAhora ? 'casado' : 'pendiente',
+            movimientoId: mv.aprobadoAhora ? mv.id : undefined,
+          })),
         ...(EXTRACTO_SUELTO[k] ?? []).map((e) => ({ ...e, estado: 'pendiente', movimientoId: undefined })),
       ].sort((a, b) => a.offset - b.offset);
       lineas.forEach((l, i) => {
         saldo = r2(saldo + l.importe);
-        put(C(`cuentas/${cu.id}/extracto/demo-linea-${pad(i + 1)}`), {
+        put(C(`cuentas/${cu.id}/extracto/demo-linea-${pad(i + 1, 3)}`), {
           cuentaId: cu.id, companyId: cid, fecha: iso(l.offset), concepto: l.concepto, importe: r2(l.importe),
           saldoPosterior: saldo, estado: l.estado, movimientoId: l.movimientoId,
           importadoPor: yo.uid, importadoAt: dia(-1, 8),
         });
       });
     } else {
-      saldo = r2(saldo + recientes.reduce((s, mv) => s + signo(mv), 0));
+      // Caja: el saldo "real" es el arqueo, que coincide con lo aprobado.
+      saldo = r2(movs.filter((mv) => mv.aprobadoAhora).reduce((s, mv) => s + signo(mv), 0));
     }
 
     put(C(`cuentas/${cu.id}`), {
       companyId: cid, nombre: cu.nombre, tipo: cu.tipo, entidad: cu.entidad, iban: cu.iban,
       saldoBancario: saldo, saldoBancarioFecha: iso(-1), activa: true,
-      createdAt: dia(-240), updatedAt: dia(-1, 8),
-    });
-
-    const hastaCierre = movs.filter((mv) => mv.offset <= -7);
-    const ventana = hastaCierre.filter((mv) => mv.offset >= -37);
-    const sistema = r2(cu.inicial + hastaCierre.reduce((s, mv) => s + signo(mv), 0));
-    const aprobado = r2(cu.inicial + hastaCierre.filter((mv) => mv.aprobado).reduce((s, mv) => s + signo(mv), 0));
-    const ingresos = r2(ventana.filter((mv) => mv.esEntrada).reduce((s, mv) => s + mv.importe, 0));
-    const egresos = r2(ventana.filter((mv) => !mv.esEntrada).reduce((s, mv) => s + mv.importe, 0));
-    totales.ingresos = r2(totales.ingresos + ingresos);
-    totales.egresos = r2(totales.egresos + egresos);
-    totales.sistemaTotal = r2(totales.sistemaTotal + sistema);
-    totales.aprobadoTotal = r2(totales.aprobadoTotal + aprobado);
-    cierreCuentas.push({
-      cuentaId: cu.id, nombre: cu.nombre, tipo: cu.tipo, ingresos, egresos,
-      sistema, aprobado, saldoReal: sistema, diferencia: 0, conciliado: true,
+      createdAt: dia(-APERTURA_HACE), updatedAt: dia(-1, 8),
     });
   }
-  put(C('cierres_caja/demo-cierre-01'), {
-    fecha: iso(-7), companyId: cid, creadoPor: yo.uid, creadoAt: dia(-7, 19),
-    notas: 'Cierre mensual. Todo cuadrado con los extractos.',
-    cuentas: cierreCuentas, totales,
+
+  // --- Cierres de caja: fin de los 3 meses anteriores + la semana pasada
+  const fechasCierre = [3, 2, 1]
+    .map((k) => { const mes = mesAtras(k); return { offset: offsetDe(mes.y, mes.m, mes.dias), notas: `Cierre de ${mes.label}. Conciliado con el extracto bancario.` }; })
+    .concat([{ offset: -7, notas: 'Cierre semanal. Descuadre de 12,40 € en caja: ticket de parking sin registrar.' }])
+    .filter((c, i, arr) => arr.findIndex((x) => x.offset === c.offset) === i);
+  fechasCierre.forEach(({ offset, notas }, ci) => {
+    const ultimoCierre = ci === fechasCierre.length - 1;
+    const cuentas = (Object.entries(CUENTAS) as [CuentaDemo, (typeof CUENTAS)[CuentaDemo]][]).map(([k, cu]) => {
+      const hasta = sembrados.filter((mv) => mv.cuenta === k && mv.offset <= offset);
+      const ingresos = r2(hasta.filter((mv) => mv.esEntrada).reduce((s, mv) => s + mv.importe, 0));
+      const egresos = r2(hasta.filter((mv) => !mv.esEntrada).reduce((s, mv) => s + mv.importe, 0));
+      const aprobado = r2(hasta.filter((mv) => mv.aprobadoAhora).reduce((s, mv) => s + signo(mv), 0));
+      const descuadre = ultimoCierre && cu.tipo === 'caja' ? -12.4 : 0;
+      return {
+        cuentaId: cu.id, nombre: cu.nombre, tipo: cu.tipo, ingresos, egresos,
+        sistema: r2(ingresos - egresos), aprobado,
+        saldoReal: r2(aprobado + descuadre), diferencia: descuadre, conciliado: descuadre === 0,
+      };
+    });
+    const suma = (key: 'ingresos' | 'egresos' | 'sistema' | 'aprobado') => r2(cuentas.reduce((s, c) => s + c[key], 0));
+    put(C(`cierres_caja/demo-cierre-${iso(offset).replaceAll('-', '')}`), {
+      fecha: iso(offset), companyId: cid, creadoPor: yo.uid, creadoAt: dia(offset, 19), notas, cuentas,
+      totales: { ingresos: suma('ingresos'), egresos: suma('egresos'), sistemaTotal: suma('sistema'), aprobadoTotal: suma('aprobado') },
+    });
+    feed.push({ modulo: 'Tesorería', accion: `Cerró la caja del ${iso(offset).split('-').reverse().join('/')}`, offset, hh: 19 });
   });
 
   // --- Contactos (proyectos activos y facturado real)
@@ -455,17 +524,55 @@ export function construirSeedDemo(ctx: ContextoSeed): SeedDemo {
       createdAt: dia(Math.min(off, 0) - 3), updatedAt: dia(Math.min(off, 0) - 1),
     });
   });
-  const respSeguimiento = quien(3);
-  put(C('eventos/demo-evento-seguimiento-01'), {
-    companyId: cid, titulo: 'Enviar presupuesto a Antonio Pérez Gómez', fecha: iso(2), todoDia: true,
-    estado: 'confirmado', recurrencia: 'ninguna', prioridad: 'alta', color: 'amarillo',
-    invitados: [respSeguimiento.uid], responsableId: respSeguimiento.uid, entregable: 'Presupuesto y hoja de encargo',
-    origen: {
-      tipo: 'seguimiento_contacto', contactoId: contactoId(3), contactoNombre: nombreContacto(CONTACTOS[3]),
-      statusOrigen: 'potencial', statusDestino: 'pendiente_presupuesto',
-    },
-    creadoPor: respSeguimiento.uid, updatedBy: respSeguimiento.uid, createdAt: dia(-4, 18), updatedAt: dia(-4, 18),
+  SEGUIMIENTOS.forEach((s, i) => {
+    const resp = s.responsable === 0 ? yo : quien(s.responsable);
+    put(C(`eventos/demo-evento-seguimiento-${pad(i + 1)}`), {
+      companyId: cid, titulo: s.titulo, fecha: iso(s.offset), todoDia: true,
+      estado: s.estado, recurrencia: 'ninguna', prioridad: 'alta', color: 'amarillo',
+      invitados: [resp.uid], responsableId: resp.uid, entregable: s.entregable,
+      origen: {
+        tipo: 'seguimiento_contacto', contactoId: contactoId(s.contacto), contactoNombre: nombreContacto(CONTACTOS[s.contacto]),
+        statusOrigen: s.desde, statusDestino: s.hasta,
+      },
+      creadoPor: resp.uid, updatedBy: resp.uid, createdAt: dia(Math.min(s.offset, 0) - 4, 18), updatedAt: dia(Math.min(s.offset, 0) - 4, 18),
+    });
   });
+
+  // --- Recepción IA: agente, llamadas y leads
+  const { agentId } = ctx.agente;
+  if (ctx.agente.crear) {
+    put(`agentMappings/${agentId}`, { agentId, companyId: cid, label: 'Recepción IA (demo)', createdAt: dia(-90), updatedAt: dia(-90) });
+  }
+  for (const ll of LLAMADAS) {
+    const [hh, mm] = ll.hora.split(':').map(Number);
+    const id = `${prefijoRaiz(cid)}llamada-${ll.key}`;
+    put(`llamadas/${id}`, {
+      conversationId: id,
+      agentId,
+      estado: ll.estado,
+      duracionSegundos: ll.turnos.length * 23 + 11,
+      resumen: ll.resumen,
+      tituloResumen: ll.titulo,
+      transcripcion: ll.turnos.map(([rol, mensaje], i) => ({ rol: rol === 'a' ? 'agente' : 'usuario', mensaje, segundosEnLlamada: i * 23 })),
+      exitosa: ll.estado === 'completada',
+      datosCapturados: {
+        nombreCliente: ll.nombre, telefono: ll.telefono, especialidadJuridica: ll.especialidad,
+        nivelUrgencia: ll.urgencia, descripcionCaso: ll.descripcion,
+      },
+      creadoEn: dia(-ll.hace, hh, mm),
+      contactId: ll.contacto !== undefined ? contactoId(ll.contacto) : undefined,
+    });
+    feed.push({ modulo: 'RecepciónIA', accion: `Revisó la llamada de ${ll.nombre ?? ll.telefono}`, offset: -ll.hace, hh: Math.min(hh + 1, 20) });
+  }
+  for (const l of LEADS) {
+    put(R('iaContacts', `lead-${l.key}`), {
+      companyId: cid, contactType: l.tipo, contactDate: iso(-l.hace), contactTime: l.hora,
+      clientName: l.nombre, category: l.categoria, description: l.descripcion, urgency: l.urgencia,
+      score: l.score, status: l.status, clientPhone: l.telefono, clientEmail: l.email, clientCompany: l.empresa,
+      duration: l.duracion, assignedToId: l.status === 'en_proceso' ? yo.uid : undefined,
+      createdAt: dia(-l.hace, 9), updatedAt: dia(-l.hace, 9),
+    });
+  }
 
   // --- Acciones + historial de ejecuciones
   for (const a of ACCIONES) {
@@ -491,17 +598,31 @@ export function construirSeedDemo(ctx: ContextoSeed): SeedDemo {
       casoId: casoId(h.casoKey), hitoId: h.id, hitoTitulo: h.titulo, tipo: 'estado',
       autorId: h.uid, estadoAnterior: 'en_progreso', estadoNuevo: 'completado', createdAt: dia(h.off, 18),
     });
+    if (h.off >= -21) feed.push({ modulo: 'Casos', accion: `Completó el hito "${h.titulo}"`, offset: h.off, entidadId: casoId(h.casoKey), hh: 18 });
   }
-  ACTIVIDAD.forEach(([modulo, accion, hace, entidad], i) => {
-    const a = quien(i);
+  for (const mv of sembrados) {
+    if (mv.offset < -21) continue;
+    feed.push({
+      modulo: 'Tesorería', accion: `Registró el movimiento "${mv.concepto}" (${euros(mv.importe)} €)`,
+      offset: mv.offset, entidadId: mv.casoKey ? casoId(mv.casoKey) : undefined, hh: 10,
+    });
+  }
+  for (const [modulo, accion, hace, entidad] of ACTIVIDAD) {
     const entidadId = !entidad ? undefined
       : entidad.startsWith('contacto:') ? contactoId(Number(entidad.split(':')[1]))
       : casoId(entidad);
-    put(C(`actividad/demo-act-${pad(i + 1)}`), {
-      companyId: cid, autorId: a.uid, autorNombre: a.nombre, accion, modulo, entidadId,
-      createdAt: dia(-hace, 9 + (i % 8), (i * 7) % 60),
+    feed.push({ modulo, accion, offset: -hace, entidadId, hh: 12 });
+  }
+  feed
+    .sort((a, b) => b.offset - a.offset || b.hh - a.hh || a.accion.localeCompare(b.accion))
+    .slice(0, 80)
+    .forEach((f, i) => {
+      const a = quien(i);
+      put(C(`actividad/demo-act-${pad(i + 1, 3)}`), {
+        companyId: cid, autorId: a.uid, autorNombre: a.nombre, accion: f.accion, modulo: f.modulo, entidadId: f.entidadId,
+        createdAt: dia(f.offset, f.hh, (i * 7) % 60),
+      });
     });
-  });
 
   return { docs, facturasRecibidas };
 }
@@ -524,6 +645,16 @@ export function planDeEscritura(
   return { lotes, omitidos: docs.length - pendientes.length };
 }
 
+/**
+ * Docs demo (id `demo-…`) de cargas anteriores que ya no forman parte del seed
+ * (p. ej. cuentas renombradas). Nunca devuelve docs sin prefijo demo: los datos
+ * reales de la empresa no se tocan.
+ */
+export function pathsObsoletos(existentes: readonly string[], seed: readonly DocSeed[]): string[] {
+  const vigentes = new Set(seed.map((d) => d.path));
+  return existentes.filter((p) => p.split('/').pop()!.startsWith('demo-') && !vigentes.has(p));
+}
+
 /** Resumen legible por colección (para la UI). */
 export function contarPorColeccion(docs: readonly DocSeed[]): Record<string, number> {
   const out: Record<string, number> = {};
@@ -534,5 +665,3 @@ export function contarPorColeccion(docs: readonly DocSeed[]): Record<string, num
   }
   return out;
 }
-
-

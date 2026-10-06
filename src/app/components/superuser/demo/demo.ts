@@ -27,6 +27,7 @@ export class DemoComponent {
 
   readonly form = this.fb.nonNullable.group({
     companyId: [EMPRESA_DEMO, Validators.required],
+    documentos: [true],
     confirmado: [false, Validators.requiredTrue],
   });
 
@@ -50,10 +51,11 @@ export class DemoComponent {
     this.resultado.set(null);
     this.error.set(null);
     try {
-      const res = await this.seed.cargar(this.form.getRawValue().companyId, (p) => this.progreso.set(p));
+      const { companyId, documentos } = this.form.getRawValue();
+      const res = await this.seed.cargar(companyId, { documentos }, (p) => this.progreso.set(p));
       this.resultado.set(res);
       this.form.controls.confirmado.setValue(false);
-      this.toast.success(`Demo cargada: ${res.documentos} documentos`);
+      this.toast.success(`Demo cargada: ${res.documentos} registros, ${res.archivosSubidos} archivos`);
     } catch (err) {
       console.error('[DemoComponent] seed', err);
       this.error.set(err instanceof Error ? err.message : String(err));
