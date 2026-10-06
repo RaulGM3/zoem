@@ -19,6 +19,7 @@ export class LoginComponent {
   readonly errorMessage = signal('');
   readonly mode = signal<'login' | 'reset'>('login');
   readonly resetSentTo = signal('');
+  readonly showPassword = signal(false);
 
   readonly form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],

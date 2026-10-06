@@ -98,4 +98,26 @@ describe('LoginComponent — olvidé la contraseña', () => {
 
     expect(el.querySelector('#password')).toBeTruthy();
   });
+
+  it('toggles password visibility with the eye button', async () => {
+    const { fixture, el } = await setup();
+    const input = el.querySelector('#password') as HTMLInputElement;
+    const toggle = el.querySelector('.password-toggle') as HTMLButtonElement;
+
+    expect(input.type).toBe('password');
+    expect(toggle.getAttribute('aria-label')).toBe('Mostrar contraseña');
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+
+    toggle.click();
+    fixture.detectChanges();
+
+    expect(input.type).toBe('text');
+    expect(toggle.getAttribute('aria-label')).toBe('Ocultar contraseña');
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+
+    toggle.click();
+    fixture.detectChanges();
+
+    expect(input.type).toBe('password');
+  });
 });
