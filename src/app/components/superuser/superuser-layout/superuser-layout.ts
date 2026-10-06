@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   Bot,
   Building2,
+  Database,
   LucideAngularModule,
   Shield,
   Users,
@@ -24,6 +25,7 @@ export class SuperuserLayoutComponent implements OnInit {
   readonly BotIcon = Bot;
   readonly ArrowLeftIcon = ArrowLeft;
   readonly AlertTriangleIcon = AlertTriangle;
+  readonly DatabaseIcon = Database;
 
   private readonly companyService = inject(CompanyService);
 

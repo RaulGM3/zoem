@@ -211,6 +211,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/superuser/errors/errors').then((m) => m.ErrorsComponent),
       },
+      {
+        path: 'demo',
+        loadComponent: () =>
+          import('./components/superuser/demo/demo').then((m) => m.DemoComponent),
+      },
     ],
   },
   {
