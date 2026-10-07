@@ -43,6 +43,8 @@ class AccionLanzadorStubComponent {
 class ComunicacionesEnviadasStubComponent {
   readonly contactoId = input<string | null>(null);
   readonly casoId = input<string | null>(null);
+  readonly puedeLanzar = input(false);
+  readonly lanzar = output<void>();
 }
 
 const ANA = {

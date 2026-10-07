@@ -40,6 +40,8 @@ class AccionLanzadorStubComponent {
 @Component({ selector: 'app-comunicaciones-enviadas', template: '<p>historial</p>', changeDetection: ChangeDetectionStrategy.OnPush })
 class ComunicacionesStubComponent {
   readonly contactoId = input<string | null>(null);
+  readonly puedeLanzar = input(false);
+  readonly lanzar = output<void>();
 }
 
 const ANA = {
@@ -190,6 +192,38 @@ describe('ContactoDetailComponent', () => {
     it('muestra el historial de comunicaciones del contacto', async () => {
       await crear();
       expect(el().querySelector('app-comunicaciones-enviadas')).not.toBeNull();
+    });
+
+    it('desde el historial se puede lanzar una acción', async () => {
+      await crear();
+      const historial = fixture.debugElement.query(d => d.name === 'app-comunicaciones-enviadas')
+        .componentInstance as ComunicacionesStubComponent;
+      expect(historial.puedeLanzar()).toBe(true);
+      historial.lanzar.emit();
+      await estable();
+      expect(lanzador()).not.toBeNull();
+    });
+
+    it('sin permiso de edición el historial no ofrece lanzar', async () => {
+      denegados.add('Contactos:editar');
+      await crear();
+      const historial = fixture.debugElement.query(d => d.name === 'app-comunicaciones-enviadas')
+        .componentInstance as ComunicacionesStubComponent;
+      expect(historial.puedeLanzar()).toBe(false);
+    });
+  });
+
+  describe('casos', () => {
+    it('"Nuevo caso" abre el alta de caso con este cliente ya elegido', async () => {
+      await crear();
+      await click(boton('Nuevo caso'));
+      expect(navigate).toHaveBeenCalledWith(['/casos'], { queryParams: { newCaso: '1', contactId: 'c1' } });
+    });
+
+    it('sin permiso para crear casos no hay "Nuevo caso"', async () => {
+      denegados.add('Casos:crear');
+      await crear();
+      expect(boton('Nuevo caso')).toBeUndefined();
     });
   });
 

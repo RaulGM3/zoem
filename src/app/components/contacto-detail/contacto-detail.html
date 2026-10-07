@@ -192,7 +192,17 @@
 
       <!-- Casos -->
       <div class="rounded-xl p-5" style="background:var(--surface);border:1px solid var(--border)">
-        <h2 class="text-sm font-semibold mb-3" style="color:var(--text-body)">Casos ({{ casos().length }})</h2>
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <h2 class="text-sm font-semibold" style="color:var(--text-body)">Casos ({{ casos().length }})</h2>
+          @if (perm.can('Casos', 'crear')) {
+            <button type="button" (click)="nuevoCaso()"
+              class="tap-target inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)]"
+              style="border:1px solid var(--border);color:var(--brand)"
+              [attr.aria-label]="'Nuevo caso para ' + getDisplayName(c)">
+              <lucide-icon [img]="PlusIcon" class="w-3.5 h-3.5" aria-hidden="true" />Nuevo caso
+            </button>
+          }
+        </div>
         @if (casos().length === 0) {
           <p class="text-sm text-center py-6" style="color:var(--text-faint)">Sin casos asociados</p>
         }
@@ -273,8 +283,8 @@
         </div>
       </div>
 
-      <!-- Comunicaciones enviadas -->
-      <app-comunicaciones-enviadas [contactoId]="id()" />
+      <!-- Acciones enviadas -->
+      <app-comunicaciones-enviadas [contactoId]="id()" [puedeLanzar]="perm.can('Contactos', 'editar')" (lanzar)="abrirAcciones()" />
 
       <!-- Notas -->
       <div class="rounded-xl p-5" style="background:var(--surface);border:1px solid var(--border)">

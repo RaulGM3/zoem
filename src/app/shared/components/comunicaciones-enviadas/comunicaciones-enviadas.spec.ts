@@ -60,7 +60,7 @@ describe('ComunicacionesEnviadasComponent', () => {
   it('estado vacío', async () => {
     listarPorContacto.mockResolvedValue([]);
     await montar({ contactoId: 'k1' });
-    expect(el().textContent).toContain('Todavía no se ha enviado ninguna comunicación');
+    expect(el().textContent).toContain('Todavía no se ha enviado ninguna acción');
   });
 
   it('error de carga inline sin romper', async () => {
@@ -83,12 +83,38 @@ describe('ComunicacionesEnviadasComponent', () => {
     expect(el().querySelector('[role="status"]')?.textContent).toContain('Cargando');
     fixture.componentRef.setInput('cargando', false);
     fixture.detectChanges();
-    expect(el().textContent).toContain('Todavía no se ha enviado ninguna comunicación');
+    expect(el().textContent).toContain('Todavía no se ha enviado ninguna acción');
   });
 
   it('usa una lista semántica con título', async () => {
     await montar({ contactoId: 'k1' });
     expect(el().querySelector('section[aria-labelledby]')).not.toBeNull();
     expect(el().querySelector('ul')).not.toBeNull();
+  });
+
+  it('es un bloque para que respete el espaciado vertical del padre', async () => {
+    await montar({ contactoId: 'k1' });
+    expect(el().classList).toContain('block');
+  });
+
+  it('se titula como lo que es: el historial de acciones enviadas', async () => {
+    await montar({ contactoId: 'k1' });
+    expect(el().querySelector('h2')?.textContent?.trim()).toBe('Acciones enviadas');
+    expect(el().textContent).toContain('Mensajes y documentos enviados desde Acciones');
+  });
+
+  it('sin puedeLanzar no ofrece lanzar una acción', async () => {
+    await montar({ contactoId: 'k1' });
+    expect(el().querySelector('[data-testid="lanzar-accion"]')).toBeNull();
+  });
+
+  it('con puedeLanzar ofrece lanzar una acción y emite lanzar', async () => {
+    await montar({ contactoId: 'k1', puedeLanzar: true });
+    const lanzar = vi.fn();
+    fixture.componentInstance.lanzar.subscribe(lanzar);
+    const btn = el().querySelector<HTMLButtonElement>('[data-testid="lanzar-accion"]');
+    expect(btn?.textContent?.trim()).toBe('Lanzar acción');
+    btn!.click();
+    expect(lanzar).toHaveBeenCalledOnce();
   });
 });

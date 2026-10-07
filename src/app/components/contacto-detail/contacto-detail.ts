@@ -6,7 +6,7 @@ import { Router } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import {
   LucideAngularModule, ArrowLeft, Edit, Phone, Mail, MapPin,
-  Building2, Calendar, Tag, CalendarClock, CircleAlert, Send,
+  Building2, Calendar, Tag, CalendarClock, CircleAlert, Send, Plus,
 } from 'lucide-angular';
 import { BreakpointService } from '../../core/services/breakpoint.service';
 import { ActionMenuComponent, type MenuAction } from '../../shared/components/action-menu/action-menu';
@@ -55,6 +55,7 @@ export class ContactoDetailComponent {
   readonly CalendarClockIcon = CalendarClock;
   readonly CircleAlertIcon = CircleAlert;
   readonly SendIcon = Send;
+  readonly PlusIcon = Plus;
 
   id = input.required<string>();
 
@@ -322,6 +323,13 @@ export class ContactoDetailComponent {
 
   verCaso(caso: Caso): void {
     this.router.navigate(['/casos', caso.id]);
+  }
+
+  /** Atajo: abre el alta de caso en /casos con este cliente ya elegido
+   * (casos.ts consume `newCaso` + `contactId` y limpia la URL). */
+  nuevoCaso(): void {
+    if (!this.perm.can('Casos', 'crear')) return;
+    this.router.navigate(['/casos'], { queryParams: { newCaso: '1', contactId: this.id() } });
   }
 
   /** Navega a la lista de contactos con intención de edición: abre el drawer

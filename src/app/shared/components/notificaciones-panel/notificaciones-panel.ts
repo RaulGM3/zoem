@@ -81,7 +81,7 @@ const ICONOS: Record<NotificacionTipo, LucideIconData> = {
           aria-label="Notificaciones"
           tabindex="-1"
           class="absolute right-0 top-full z-50 mt-2 flex max-h-[28rem] w-96 max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl shadow-2xl outline-none"
-          style="background:var(--surface);border:1px solid var(--border)"
+          style="background:var(--popover);border:1px solid var(--border)"
           (keydown.escape)="close(true)">
           <div class="flex items-center justify-between px-4 py-3" style="border-bottom:1px solid var(--border)">
             <h2 class="text-sm font-semibold" style="color:var(--text-strong)">Notificaciones</h2>
