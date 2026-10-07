@@ -90,6 +90,7 @@ export class UsuariosComponent implements OnInit, OnDestroy {
   readonly actividad = signal<Actividad[]>([]);
 
   readonly isLoading = this.usersService.isLoading;
+  readonly members = this.usersService.members;
   readonly activos = this.usersService.activos;
   readonly pendientes = this.usersService.pendientes;
   readonly isAdmin = this.permissionService.isAdmin;

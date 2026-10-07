@@ -1,6 +1,6 @@
   <div class="space-y-4">
     <!-- Lista de cuentas -->
-    @if (loading()) {
+    @if (loading() && cuentas().length === 0) {
       <p class="text-sm" style="color:var(--text-muted)">Cargando...</p>
     } @else if (cuentas().length === 0 && !showForm()) {
       <p class="text-sm text-center py-8" style="color:var(--text-faint)">No hay cuentas configuradas.</p>

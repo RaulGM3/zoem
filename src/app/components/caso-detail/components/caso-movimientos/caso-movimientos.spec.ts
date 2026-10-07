@@ -70,8 +70,14 @@ describe('CasoMovimientosComponent', () => {
     fixture.detectChanges();
   };
 
-  it('muestra la carga y el estado vacío', () => {
+  it('mantiene las filas durante una recarga (sin parpadeo)', () => {
     set({ loading: true });
+    expect(tarjeta().textContent).not.toContain('Cargando movimientos...');
+    expect(filas()).toHaveLength(MOVS.length);
+  });
+
+  it('muestra la carga y el estado vacío', () => {
+    set({ loading: true, movimientos: [] });
     expect(tarjeta().textContent).toContain('Cargando movimientos...');
     set({ loading: false, movimientos: [] });
     expect(tarjeta().textContent).toContain('Sin movimientos registrados');

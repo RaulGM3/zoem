@@ -268,10 +268,20 @@ describe('ContactosComponent', () => {
     });
 
     it('muestra el estado de carga', async () => {
+      contacts.set([]);
       isLoading.set(true);
       await crear();
       expect(el().textContent).toContain('Cargando contactos...');
       expect(tarjetas()).toHaveLength(0);
+    });
+
+    it('mantiene las fichas durante una recarga (sin parpadeo)', async () => {
+      await crear();
+      const antes = tarjeta('Ana López');
+      isLoading.set(true);
+      fixture.detectChanges();
+      expect(el().textContent).not.toContain('Cargando contactos...');
+      expect(tarjeta('Ana López')).toBe(antes);
     });
 
     it('oculta las acciones para las que no hay permiso', async () => {

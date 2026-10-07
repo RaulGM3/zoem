@@ -70,7 +70,7 @@
   }
 
   <!-- Loading -->
-  @if (folderService.isLoading() || fileService.isLoading()) {
+  @if ((folderService.isLoading() || fileService.isLoading()) && folderService.folders().length === 0 && fileService.files().length === 0) {
     <div class="text-center py-10 text-sm" style="color:var(--text-faint)">Cargando documentos...</div>
   } @else {
 

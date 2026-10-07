@@ -42,6 +42,8 @@ export class ContactFileService {
 
   readonly files = signal<ContactFile[]>([]);
   readonly isLoading = signal(false);
+  /** Entidad cuyos datos hay en memoria: recargar la misma no vacía la lista (evita parpadeo). */
+  private cargadoPara: string | null = null;
 
   private get companyId(): string {
     const id = this.companyService.activeCompany()?.id;
@@ -59,7 +61,10 @@ export class ContactFileService {
    */
   async loadFiles(contactId: string): Promise<void> {
     this.isLoading.set(true);
-    this.files.set([]);
+    if (this.cargadoPara !== contactId) {
+      this.files.set([]);
+      this.cargadoPara = contactId;
+    }
     try {
       const base = [
         where('companyId', '==', this.companyId),

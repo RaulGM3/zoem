@@ -146,6 +146,8 @@ describe('PlantillaDocumentosTabComponent', () => {
   });
 
   it('muestra el estado de carga', async () => {
+    folderService.folders.set([]);
+    fileService.files.set([]);
     folderService.isLoading.set(true);
     await estable();
     expect(el().textContent).toContain('Cargando...');

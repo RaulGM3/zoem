@@ -24,7 +24,7 @@
 />
 
 <!-- Event list -->
-@if (loading()) {
+@if (loading() && eventos().length === 0) {
   <div class="mt-6 flex items-center justify-center py-12">
     <div class="h-8 w-8 animate-spin rounded-full border-4 border-violet-200 border-t-violet-600"></div>
   </div>

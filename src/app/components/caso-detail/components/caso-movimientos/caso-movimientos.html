@@ -159,7 +159,7 @@
     }
   </div>
 
-  @if (loading()) {
+  @if (loading() && movimientos().length === 0) {
     <div class="p-8 text-center text-sm" style="color:var(--text-faint)">Cargando movimientos...</div>
   } @else if (movimientos().length === 0) {
     <div class="p-10 text-center text-sm" style="color:var(--text-faint)">

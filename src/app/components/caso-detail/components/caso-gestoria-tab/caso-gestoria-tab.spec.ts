@@ -112,7 +112,7 @@ describe('CasoGestoriaTabComponent', () => {
     set({ canEdit: false, canDelete: false });
     expect(boton('Añadir', tabla)).toBeUndefined();
     expect(tabla.querySelector('[aria-label="Eliminar movimiento"]')).toBeNull();
-    set({ movimientosLoading: true });
+    set({ movimientosLoading: true, movimientos: [] });
     expect(tabla.textContent).toContain('Cargando movimientos...');
   });
 

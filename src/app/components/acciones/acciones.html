@@ -15,7 +15,7 @@
     }
   </div>
 
-  @if (loading()) {
+  @if (loading() && acciones().length === 0) {
     <p class="text-sm" style="color:var(--text-faint)" role="status">Cargando acciones...</p>
   } @else if (acciones().length === 0) {
     <div class="rounded-xl p-8 text-center" style="background:var(--surface);border:1px solid var(--border)">

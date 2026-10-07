@@ -149,7 +149,7 @@
 
       }
 
-      @if (contactService.isLoading()) {
+      @if (contactService.isLoading() && contactService.contacts().length === 0) {
         <app-skeleton variante="lista" [filas]="6" etiqueta="Cargando contactos..." />
       } @else {
         <!-- Contacts: rejilla de fichas (escritorio) / lista compacta (móvil) -->

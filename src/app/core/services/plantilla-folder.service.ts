@@ -24,6 +24,8 @@ export class PlantillaFolderService {
 
   readonly folders = signal<PlantillaFolder[]>([]);
   readonly isLoading = signal(false);
+  /** Entidad cuyos datos hay en memoria: recargar la misma no vacía la lista (evita parpadeo). */
+  private cargadoPara: string | null = null;
 
   private get companyId(): string {
     const id = this.companyService.activeCompany()?.id;
@@ -33,7 +35,10 @@ export class PlantillaFolderService {
 
   async loadFolders(plantillaId: string): Promise<void> {
     this.isLoading.set(true);
-    this.folders.set([]);
+    if (this.cargadoPara !== plantillaId) {
+      this.folders.set([]);
+      this.cargadoPara = plantillaId;
+    }
     try {
       const q = query(
         collection(this.firestore, 'plantilla_folders'),

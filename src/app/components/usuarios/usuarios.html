@@ -70,7 +70,7 @@
 
       @if (activeTab() === 'usuarios') {
         <div class="p-4 space-y-3">
-          @if (isLoading()) {
+          @if (isLoading() && members().length === 0) {
             <div class="flex items-center justify-center py-8 text-slate-600 text-sm">Cargando usuarios...</div>
           } @else {
             <app-responsive-list [items]="filteredUsuarios()" trackBy="id" emptyText="No se encontraron usuarios">

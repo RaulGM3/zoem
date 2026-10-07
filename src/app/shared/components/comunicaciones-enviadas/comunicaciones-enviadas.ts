@@ -36,7 +36,7 @@ import { formatearFechaEs } from '../../../core/acciones/contexto-accion';
           </button>
         }
       </div>
-      @if (cargando()) {
+      @if (cargando() && registros().length === 0) {
         <p role="status" class="text-sm" style="color:var(--text-faint)">Cargando...</p>
       } @else if (error()) {
         <p role="alert" class="text-sm" style="color:var(--danger)">No se pudo cargar el historial de comunicaciones.</p>

@@ -22,7 +22,7 @@
   </div>
 
   <!-- Loading -->
-  @if (isLoading()) {
+  @if (isLoading() && total() === 0) {
     <div class="flex items-center justify-center py-16 text-slate-500">
       <lucide-icon [img]="RefreshIcon" [size]="20" class="animate-spin" />
       <span class="ml-2 text-sm">Cargando errores...</span>
@@ -38,7 +38,7 @@
   }
 
   <!-- Table -->
-  @if (!isLoading() && total() > 0) {
+  @if (total() > 0) {
     <div class="overflow-hidden rounded-xl border border-slate-800">
       <table class="w-full text-sm">
         <thead class="border-b border-slate-800 bg-slate-900">

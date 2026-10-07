@@ -1,4 +1,4 @@
-@if (loading()) {
+@if (loading() && plantillas().length === 0) {
   <div class="text-center text-slate-600 py-12 text-sm">Cargando plantillas...</div>
 } @else if (plantillas().length === 0) {
   <div class="bg-white rounded-xl border border-slate-200 p-12 text-center">

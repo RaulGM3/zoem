@@ -12,7 +12,7 @@
     }
   </div>
 
-  @if (cargando()) {
+  @if (cargando() && acciones().length === 0) {
     <p class="text-sm text-slate-700" role="status">Cargando acciones...</p>
   } @else if (errorCarga()) {
     <p class="text-sm text-red-700" role="alert">

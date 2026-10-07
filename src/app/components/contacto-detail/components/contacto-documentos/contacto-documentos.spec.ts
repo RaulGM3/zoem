@@ -143,6 +143,8 @@ describe('ContactoDocumentosComponent', () => {
   });
 
   it('muestra el estado de carga y el vacío', async () => {
+    folderService.folders.set([]);
+    fileService.files.set([]);
     folderService.isLoading.set(true);
     await montar();
     expect(seccion().textContent).toContain('Cargando documentos...');

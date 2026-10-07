@@ -268,7 +268,7 @@
             </div>
           }
 
-          @if (folderService.isLoading() || fileService.isLoading()) {
+          @if ((folderService.isLoading() || fileService.isLoading()) && folderService.folders().length === 0 && fileService.files().length === 0) {
             <p class="text-center text-xs font-medium text-slate-600 py-4">Cargando...</p>
           } @else if (docCurrentFolders().length === 0 && docCurrentFiles().length === 0) {
             <div class="rounded-lg border border-dashed border-slate-200 py-6 text-center text-xs text-slate-600">

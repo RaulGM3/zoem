@@ -1,4 +1,4 @@
-@if (loading()) {
+@if (loading() && casos().length === 0) {
   <app-skeleton variante="tabla" [filas]="8" etiqueta="Cargando casos..." />
 } @else {
 <div class="sm:overflow-hidden sm:rounded-xl sm:border sm:border-[var(--border)] sm:bg-[var(--surface)]">

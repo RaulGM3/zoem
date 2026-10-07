@@ -66,6 +66,7 @@ export class RecepcionIAComponent implements OnInit {
   readonly Link2Icon = Link2;
 
   readonly loading = this.llamadasSvc.loading;
+  readonly llamadas = this.llamadasSvc.llamadas;
 
   readonly filterEstado = signal('');
   readonly search = signal('');

@@ -29,7 +29,7 @@ import { CANAL_LABELS, type Accion } from '../../../interfaces/accion.interface'
         </button>
       </div>
       <div class="flex-1 overflow-y-auto p-4">
-        @if (cargando()) {
+        @if (cargando() && acciones().length === 0) {
           <p role="status" class="text-sm" style="color:var(--text-faint)">Cargando acciones...</p>
         } @else if (acciones().length === 0) {
           <div class="text-sm space-y-2" style="color:var(--text-muted)">

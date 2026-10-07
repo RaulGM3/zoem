@@ -25,6 +25,8 @@ export class ContactFolderService {
 
   readonly folders = signal<ContactFolder[]>([]);
   readonly isLoading = signal(false);
+  /** Entidad cuyos datos hay en memoria: recargar la misma no vacía la lista (evita parpadeo). */
+  private cargadoPara: string | null = null;
 
   private get companyId(): string {
     const id = this.companyService.activeCompany()?.id;
@@ -34,7 +36,10 @@ export class ContactFolderService {
 
   async loadFolders(contactId: string): Promise<void> {
     this.isLoading.set(true);
-    this.folders.set([]);
+    if (this.cargadoPara !== contactId) {
+      this.folders.set([]);
+      this.cargadoPara = contactId;
+    }
     try {
       const q = query(
         collection(this.firestore, 'contact_folders'),

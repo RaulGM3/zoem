@@ -3,7 +3,7 @@
 <!-- ── Columna principal (~70%) ───────────────────────── -->
 <div class="flex-1 min-w-0 space-y-4">
 
-  @if (loading()) {
+  @if (loading() && folders().length === 0 && slots().length === 0 && files().length === 0) {
     <div class="flex items-center justify-center h-32 text-sm" style="color:var(--text-faint)">
       <lucide-icon [img]="LoaderIcon" class="w-4 h-4 mr-2 animate-spin" />
       Cargando documentos...

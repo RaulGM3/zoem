@@ -31,6 +31,8 @@ export class PlantillaFileService {
 
   readonly files = signal<PlantillaFile[]>([]);
   readonly isLoading = signal(false);
+  /** Entidad cuyos datos hay en memoria: recargar la misma no vacía la lista (evita parpadeo). */
+  private cargadoPara: string | null = null;
 
   private get companyId(): string {
     const id = this.companyService.activeCompany()?.id;
@@ -44,7 +46,10 @@ export class PlantillaFileService {
 
   async loadFiles(plantillaId: string): Promise<void> {
     this.isLoading.set(true);
-    this.files.set([]);
+    if (this.cargadoPara !== plantillaId) {
+      this.files.set([]);
+      this.cargadoPara = plantillaId;
+    }
     try {
       const q = query(
         collection(this.firestore, 'plantilla_files'),

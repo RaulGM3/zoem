@@ -33,7 +33,7 @@
   </div>
 
   <!-- Lista -->
-  @if (loading()) {
+  @if (loading() && movimientosEnriquecidos().length === 0) {
     <div class="p-8 text-center text-sm" style="color:var(--text-faint)">Cargando movimientos...</div>
   } @else if (movimientosEnriquecidos().length === 0) {
     <div class="p-10 text-center text-sm" style="color:var(--text-faint)">

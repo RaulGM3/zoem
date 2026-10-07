@@ -127,7 +127,7 @@
 </div>
 
 <!-- Loading state -->
-@if (loading()) {
+@if (loading() && llamadas().length === 0) {
   <div class="rounded-[18px] py-16 text-center text-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text-muted)">
     Cargando llamadas...
   </div>

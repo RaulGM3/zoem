@@ -203,7 +203,7 @@ describe('CasoDocumentosTabComponent', () => {
 
   describe('estado general', () => {
     it('muestra la carga y oculta el contenido y el panel', () => {
-      set({ loading: true });
+      set({ loading: true, folders: [], slots: [], files: [] });
       expect(el().textContent).toContain('Cargando documentos...');
       expect(qa('.px-4.py-3')).toHaveLength(0);
       expect(panel()).toBeNull();
