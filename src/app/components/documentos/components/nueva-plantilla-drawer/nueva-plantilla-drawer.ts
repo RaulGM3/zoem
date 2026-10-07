@@ -1,7 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject, output, signal, computed } from '@angular/core';
 import {
   LucideAngularModule,
-  X,
   Upload,
   FileText,
   Sparkles,
@@ -11,16 +10,16 @@ import {
   ChevronUp,
   ArrowLeft,
 } from 'lucide-angular';
+import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 import { DocExtractionService } from '../../../../core/services/doc-extraction.service';
 import { DocTemplateService } from '../../../../core/services/doc-template.service';
-import { FocusTrapDirective } from '../../../../shared/directives/focus-trap.directive';
 import type { TemplateVariable, TemplateVariableType } from '../../../../interfaces';
 
 type DrawerStep = 'upload' | 'procesando' | 'revision' | 'error';
 
 @Component({
   selector: 'app-nueva-plantilla-drawer',
-  imports: [LucideAngularModule, FocusTrapDirective],
+  imports: [LucideAngularModule, OverlayShellComponent],
   templateUrl: './nueva-plantilla-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -30,8 +29,6 @@ export class NuevaPlantillaDrawerComponent {
 
   readonly saved = output<string>();
   readonly closed = output<void>();
-
-  readonly XIcon = X;
   readonly UploadIcon = Upload;
   readonly FileTextIcon = FileText;
   readonly SparklesIcon = Sparkles;

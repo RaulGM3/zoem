@@ -1,24 +1,5 @@
-<div class="fixed inset-0 z-50 flex justify-end">
-  <div class="absolute inset-0 bg-black/40" (click)="closed.emit()" aria-hidden="true"></div>
-  <div class="relative flex flex-col w-full max-w-md shadow-2xl"
-    style="background:var(--popover);border-left:1px solid var(--border)"
-    role="dialog" aria-label="Retirar honorarios">
-    <!-- Header -->
-    <div class="flex items-center justify-between px-6 py-4 shrink-0" style="border-bottom:1px solid var(--border)">
-      <div>
-        <h2 class="text-base font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Retirar honorarios</h2>
-        <p class="text-xs mt-0.5" style="color:var(--text-muted)">Retiro de fondos independiente de un caso</p>
-      </div>
-      <button type="button" (click)="closed.emit()"
-        class="rounded-xl p-1.5 transition-colors duration-150"
-        style="color:var(--text-muted)"
-        (mouseenter)="$any($event.currentTarget).style.background='var(--surface-2)'"
-        (mouseleave)="$any($event.currentTarget).style.background=''">
-        <lucide-icon [img]="XIcon" class="size-5"></lucide-icon>
-      </button>
-    </div>
-
-    <div class="flex-1 overflow-y-auto p-6 space-y-4">
+<app-overlay-shell [open]="true" title="Retirar honorarios" subtitle="Retiro de fondos independiente de un caso" size="md" (closed)="closed.emit()">
+    <div class="p-6 space-y-4">
       <div>
         <label class="form-label">Concepto *</label>
         <input type="text" placeholder="Ej. Retiro honorarios Q2 2025"
@@ -58,7 +39,7 @@
     </div>
 
     <!-- Footer -->
-    <div class="flex justify-end gap-2 px-6 py-4 shrink-0" style="border-top:1px solid var(--border)">
+    <div footer class="flex justify-end gap-2 px-6 py-4">
       <button type="button" (click)="closed.emit()"
         class="px-4 py-2 text-sm rounded-xl transition-colors duration-150"
         style="color:var(--text-body)"
@@ -75,5 +56,4 @@
         {{ saving() ? 'Guardando...' : 'Registrar retiro' }}
       </button>
     </div>
-  </div>
-</div>
+</app-overlay-shell>

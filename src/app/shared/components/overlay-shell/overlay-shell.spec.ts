@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Component, signal } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { OverlayShellComponent } from './overlay-shell';
@@ -6,7 +6,7 @@ import { OverlayShellComponent } from './overlay-shell';
 @Component({
   imports: [OverlayShellComponent],
   template: `
-    <app-overlay-shell [open]="open()" [title]="'Mi título'" [variant]="variant()" (closed)="closes = closes + 1">
+    <app-overlay-shell [open]="open()" [title]="'Mi título'" [variant]="variant()" [size]="size()" (closed)="closes = closes + 1">
       <button header-actions type="button" id="ha">Acción</button>
       <p id="body">Cuerpo</p>
       <button footer type="button" id="ft">Guardar</button>
@@ -16,6 +16,7 @@ import { OverlayShellComponent } from './overlay-shell';
 class HostComponent {
   readonly open = signal(true);
   readonly variant = signal<'drawer' | 'modal'>('drawer');
+  readonly size = signal<'md' | 'lg' | undefined>(undefined);
   closes = 0;
 }
 
@@ -106,11 +107,25 @@ describe('OverlayShellComponent', () => {
     expect(footer.classList.contains('sticky')).toBe(true);
   });
 
-  it('desktop drawer is a right side panel', () => {
+  it('desktop drawer is a wide centered modal', () => {
     const f = setup(false);
+    const root = f.nativeElement.querySelector('.fixed.inset-0') as HTMLElement;
+    expect(root.classList.contains('items-center')).toBe(true);
+    expect(root.classList.contains('justify-center')).toBe(true);
     const dlg = f.nativeElement.querySelector('[role="dialog"]') as HTMLElement;
-    expect(dlg.classList.contains('max-w-lg')).toBe(true);
+    expect(dlg.classList.contains('max-w-3xl')).toBe(true);
+    expect(dlg.classList.contains('rounded-xl')).toBe(true);
+    expect(dlg.classList.contains('max-h-[90dvh]')).toBe(true);
     expect(dlg.classList.contains('h-dvh')).toBe(false);
+    expect(f.nativeElement.querySelector('[data-grab-handle]')).toBeNull();
+  });
+
+  it('desktop drawer size md is narrower', () => {
+    const f = setup(false);
+    f.componentInstance.size.set('md');
+    f.detectChanges();
+    const dlg = f.nativeElement.querySelector('[role="dialog"]') as HTMLElement;
+    expect(dlg.classList.contains('max-w-2xl')).toBe(true);
   });
 
   it('desktop modal is a centered dialog', () => {
@@ -129,14 +144,74 @@ describe('OverlayShellComponent', () => {
     const dlg = f.nativeElement.querySelector('[role="dialog"]') as HTMLElement;
     expect(dlg.classList.contains('rounded-t-2xl')).toBe(true);
     expect(dlg.classList.contains('max-h-[90dvh]')).toBe(true);
+    expect(dlg.classList.contains('animate-sheet-up')).toBe(true);
     expect(f.nativeElement.querySelector('[data-grab-handle]')).not.toBeNull();
   });
 
-  it('mobile drawer is full screen with safe-area top', () => {
+  it('mobile drawer is a full screen sheet that slides up', () => {
     const f = setup(true);
     const dlg = f.nativeElement.querySelector('[role="dialog"]') as HTMLElement;
     expect(dlg.classList.contains('h-dvh')).toBe(true);
     expect(dlg.classList.contains('pt-safe')).toBe(true);
-    expect(f.nativeElement.querySelector('[data-grab-handle]')).toBeNull();
+    expect(dlg.classList.contains('animate-sheet-up')).toBe(true);
+    expect(f.nativeElement.querySelector('[data-grab-handle]')).not.toBeNull();
+  });
+
+  describe('swipe down to close (mobile)', () => {
+    afterEach(() => vi.useRealTimers());
+
+    function drag(f: ComponentFixture<HostComponent>, dy: number): HTMLElement {
+      const zone = f.nativeElement.querySelector('[data-drag-zone]') as HTMLElement;
+      zone.dispatchEvent(new MouseEvent('pointerdown', { clientY: 100, bubbles: true }));
+      zone.dispatchEvent(new MouseEvent('pointermove', { clientY: 100 + dy, bubbles: true }));
+      f.detectChanges();
+      return zone;
+    }
+
+    it('follows the finger while dragging', () => {
+      const f = setup(true);
+      drag(f, 60);
+      const dlg = f.nativeElement.querySelector('[role="dialog"]') as HTMLElement;
+      expect(dlg.style.transform).toBe('translateY(60px)');
+    });
+
+    it('closes after releasing past the threshold', () => {
+      vi.useFakeTimers();
+      const f = setup(true);
+      const zone = drag(f, 160);
+      zone.dispatchEvent(new MouseEvent('pointerup', { clientY: 260, bubbles: true }));
+      f.detectChanges();
+      expect(f.componentInstance.closes).toBe(0);
+      vi.advanceTimersByTime(300);
+      expect(f.componentInstance.closes).toBe(1);
+    });
+
+    it('snaps back on a short drag', () => {
+      vi.useFakeTimers();
+      const f = setup(true);
+      const zone = drag(f, 30);
+      zone.dispatchEvent(new MouseEvent('pointerup', { clientY: 130, bubbles: true }));
+      f.detectChanges();
+      vi.advanceTimersByTime(300);
+      expect(f.componentInstance.closes).toBe(0);
+      const dlg = f.nativeElement.querySelector('[role="dialog"]') as HTMLElement;
+      expect(dlg.style.transform).toBe('translateY(0px)');
+    });
+
+    it('does not start a drag from a header button', () => {
+      vi.useFakeTimers();
+      const f = setup(true);
+      const btn = f.nativeElement.querySelector('#ha') as HTMLElement;
+      btn.dispatchEvent(new MouseEvent('pointerdown', { clientY: 100, bubbles: true }));
+      btn.dispatchEvent(new MouseEvent('pointermove', { clientY: 300, bubbles: true }));
+      btn.dispatchEvent(new MouseEvent('pointerup', { clientY: 300, bubbles: true }));
+      vi.advanceTimersByTime(300);
+      expect(f.componentInstance.closes).toBe(0);
+    });
+
+    it('is disabled on desktop', () => {
+      const f = setup(false);
+      expect(f.nativeElement.querySelector('[data-drag-zone]')).toBeNull();
+    });
   });
 });

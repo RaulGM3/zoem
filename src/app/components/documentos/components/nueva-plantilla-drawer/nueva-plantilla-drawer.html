@@ -1,24 +1,5 @@
-<div class="fixed inset-0 z-40 bg-black/40 dark:bg-black/60" (click)="closed.emit()" aria-hidden="true"></div>
-<div class="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-  <!-- `--popover`, no `--surface`: en oscuro `--surface` es translúcido y dejaría
-       ver el contenido de detrás a través del diálogo. `--popover` es opaco. -->
-  <aside class="pointer-events-auto rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
-    style="background:var(--popover);border:1px solid var(--border);color:var(--text)"
-    role="dialog" aria-modal="true" aria-labelledby="nueva-plantilla-title" appFocusTrap (escapeKey)="closed.emit()">
-
-    <div class="flex items-center justify-between px-6 py-4 border-b border-border">
-      <h2 id="nueva-plantilla-title" class="text-base font-semibold text-[var(--text-strong)]">
-        @switch (step()) {
-          @case ('revision') { Revisar plantilla }
-          @default { Nueva plantilla de documento }
-        }
-      </h2>
-      <button (click)="closed.emit()" class="p-1.5 rounded-lg text-[var(--text-muted)] hover:bg-surface-2 hover:text-[var(--text)]" aria-label="Cerrar">
-        <lucide-icon [img]="XIcon" class="w-4 h-4" />
-      </button>
-    </div>
-
-    <div class="flex-1 overflow-y-auto px-6 py-5">
+<app-overlay-shell [open]="true" [title]="step() === 'revision' ? 'Revisar plantilla' : 'Nueva plantilla de documento'" (closed)="closed.emit()">
+    <div class="px-6 py-5">
       @switch (step()) {
 
         @case ('upload') {
@@ -138,7 +119,7 @@
       }
     </div>
 
-    <div class="flex items-center justify-between gap-3 border-t border-border px-6 py-4">
+    <div footer class="flex items-center justify-between gap-3 px-6 py-4">
       @switch (step()) {
         @case ('upload') {
           <span></span>
@@ -169,5 +150,4 @@
         }
       }
     </div>
-  </aside>
-</div>
+</app-overlay-shell>

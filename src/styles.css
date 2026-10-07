@@ -231,6 +231,25 @@
     animation: vpulse 1.6s ease-in-out infinite;
   }
 
+  /* ─── Entrada de overlays (app-overlay-shell) ─── */
+  @keyframes sheet-up {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+  @keyframes modal-in {
+    from { opacity: 0; transform: translateY(8px) scale(.98); }
+    to   { opacity: 1; transform: none; }
+  }
+  .animate-sheet-up {
+    animation: sheet-up 280ms cubic-bezier(.32, .72, 0, 1);
+  }
+  .animate-modal-in {
+    animation: modal-in 180ms ease-out;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-sheet-up, .animate-modal-in { animation: none; }
+  }
+
   /* ─── Clases de utilidad ─── */
   .gradient-brand {
     background: var(--brand-gradient);

@@ -1,7 +1,7 @@
 import {
   Component, ChangeDetectionStrategy, input, output, signal, inject,
 } from '@angular/core';
-import { LucideAngularModule, X } from 'lucide-angular';
+import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 import { FormsModule } from '@angular/forms';
 import { GestoriaService } from '../../../../core/services/gestoria.service';
 import { ToastService } from '../../../../core/services/toast.service';
@@ -25,7 +25,7 @@ function localDateStr(d: Date): string {
 
 @Component({
   selector: 'app-retiro-drawer',
-  imports: [LucideAngularModule, FormsModule],
+  imports: [FormsModule, OverlayShellComponent],
   templateUrl: './retiro-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -35,8 +35,6 @@ export class RetiroDrawerComponent {
 
   readonly cuentas = input<CuentaBancaria[]>([]);
   readonly closed = output<void>();
-
-  readonly XIcon = X;
   readonly saving = signal(false);
 
   readonly form = signal<RetiroForm>({

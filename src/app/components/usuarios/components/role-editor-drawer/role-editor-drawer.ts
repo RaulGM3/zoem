@@ -8,7 +8,8 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { LucideAngularModule, X, Shield, Save, Trash2 } from 'lucide-angular';
+import { LucideAngularModule, Save, Trash2 } from 'lucide-angular';
+import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 import { PermissionService } from '../../../../core/services/permission.service';
 import {
   CAPABILITIES,
@@ -30,33 +31,11 @@ import {
  */
 @Component({
   selector: 'app-role-editor-drawer',
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, OverlayShellComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (visible()) {
-      <div class="fixed inset-0 bg-black/30 z-40" (click)="closed.emit()" aria-hidden="true"></div>
-    }
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="role-editor-title"
-      [class]="'fixed inset-y-0 right-0 z-50 w-full max-w-lg bg-white shadow-xl flex flex-col transition-transform duration-300 ' + (visible() ? 'translate-x-0' : 'translate-x-full')"
-    >
-      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-        <div class="flex items-center gap-3 min-w-0">
-          <div class="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center shrink-0">
-            <lucide-icon [img]="ShieldIcon" class="w-4 h-4 text-teal-600" />
-          </div>
-          <h2 id="role-editor-title" class="text-base font-semibold text-slate-800 truncate">
-            {{ role() ? 'Editar rol: ' + role()!.nombre : 'Nuevo rol' }}
-          </h2>
-        </div>
-        <button (click)="closed.emit()" class="p-1.5 hover:bg-slate-100 rounded-lg" aria-label="Cerrar">
-          <lucide-icon [img]="XIcon" class="w-4 h-4 text-slate-700" />
-        </button>
-      </div>
-
-      <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+    <app-overlay-shell [open]="visible()" [title]="role() ? 'Editar rol: ' + role()!.nombre : 'Nuevo rol'" (closed)="closed.emit()">
+      <div class="px-6 py-5 space-y-5">
         <div class="space-y-1.5">
           <label for="role-nombre" class="text-sm font-medium text-slate-700">
             Nombre <span class="text-red-500" aria-hidden="true">*</span>
@@ -144,7 +123,7 @@ import {
         </div>
       </div>
 
-      <div class="border-t border-slate-200 px-6 py-4 space-y-3">
+      <div footer class="px-6 py-4 space-y-3">
         <button
           type="button"
           (click)="save()"
@@ -183,7 +162,7 @@ import {
           }
         }
       </div>
-    </div>
+    </app-overlay-shell>
   `,
 })
 export class RoleEditorDrawerComponent {
@@ -197,9 +176,6 @@ export class RoleEditorDrawerComponent {
   readonly saved = output<CustomRoleDef>();
   readonly deleted = output<string>();
   readonly closed = output<void>();
-
-  readonly XIcon = X;
-  readonly ShieldIcon = Shield;
   readonly SaveIcon = Save;
   readonly Trash2Icon = Trash2;
 

@@ -8,7 +8,8 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { LucideAngularModule, X, History, Download, FileText } from 'lucide-angular';
+import { LucideAngularModule, Download, FileText } from 'lucide-angular';
+import { OverlayShellComponent } from '../overlay-shell/overlay-shell';
 import { Timestamp } from '@angular/fire/firestore';
 import { DocAuditService } from '../../../core/services/doc-audit.service';
 import type { DocAuditEvent, DocVersionEntry } from '../../../interfaces/doc-lifecycle.interface';
@@ -29,33 +30,11 @@ const ACTION_LABELS: Record<DocAuditEvent['action'], string> = {
  */
 @Component({
   selector: 'app-doc-history-panel',
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, OverlayShellComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (visible()) {
-      <div class="fixed inset-0 bg-black/30 z-40" (click)="closed.emit()" aria-hidden="true"></div>
-    }
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="doc-history-title"
-      [class]="'fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white shadow-xl flex flex-col transition-transform duration-300 ' + (visible() ? 'translate-x-0' : 'translate-x-full')"
-    >
-      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-        <div class="flex items-center gap-3 min-w-0">
-          <div class="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center shrink-0">
-            <lucide-icon [img]="HistoryIcon" class="w-4 h-4 text-violet-600" />
-          </div>
-          <h2 id="doc-history-title" class="text-base font-semibold text-slate-800 truncate">
-            Historial · {{ title() }}
-          </h2>
-        </div>
-        <button (click)="closed.emit()" class="p-1.5 hover:bg-slate-100 rounded-lg" aria-label="Cerrar">
-          <lucide-icon [img]="XIcon" class="w-4 h-4 text-slate-700" />
-        </button>
-      </div>
-
-      <div class="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+    <app-overlay-shell [open]="visible()" [title]="'Historial · ' + title()" size="md" (closed)="closed.emit()">
+      <div class="px-6 py-5 space-y-6">
         <!-- Versiones -->
         <section>
           <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Versiones</h3>
@@ -124,7 +103,7 @@ const ACTION_LABELS: Record<DocAuditEvent['action'], string> = {
           }
         </section>
       </div>
-    </div>
+    </app-overlay-shell>
   `,
 })
 export class DocHistoryPanelComponent {
@@ -138,8 +117,6 @@ export class DocHistoryPanelComponent {
 
   readonly closed = output<void>();
 
-  readonly XIcon = X;
-  readonly HistoryIcon = History;
   readonly DownloadIcon = Download;
   readonly FileTextIcon = FileText;
 

@@ -6,7 +6,8 @@ import {
   signal,
   computed,
 } from '@angular/core';
-import { LucideAngularModule, X, Mail, Shield, Send, Copy, Check } from 'lucide-angular';
+import { LucideAngularModule, Mail, Shield, Send, Copy, Check } from 'lucide-angular';
+import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { inject } from '@angular/core';
 import { FIRM_ROLES } from '../../../../interfaces/member';
@@ -23,7 +24,7 @@ export interface InviteFormData {
 
 @Component({
   selector: 'app-invite-drawer',
-  imports: [LucideAngularModule, ReactiveFormsModule],
+  imports: [LucideAngularModule, ReactiveFormsModule, OverlayShellComponent],
   templateUrl: './invite-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -39,8 +40,6 @@ export class InviteDrawerComponent {
 
   readonly submitted = output<InviteFormData>();
   readonly closed = output<void>();
-
-  readonly XIcon = X;
   readonly MailIcon = Mail;
   readonly ShieldIcon = Shield;
   readonly SendIcon = Send;

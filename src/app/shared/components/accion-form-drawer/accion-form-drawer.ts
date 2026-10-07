@@ -2,8 +2,8 @@ import {
   ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, input, output, signal,
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { LucideAngularModule, X } from 'lucide-angular';
-import { FocusTrapDirective } from '../../directives/focus-trap.directive';
+import { LucideAngularModule } from 'lucide-angular';
+import { OverlayShellComponent } from '../overlay-shell/overlay-shell';
 import {
   CANALES, CANAL_LABELS, type Accion, type AccionInput, type AmbitoAccion, type Canal,
 } from '../../../interfaces/accion.interface';
@@ -23,28 +23,12 @@ type CampoTexto = 'asunto' | 'cuerpo';
  */
 @Component({
   selector: 'app-accion-form-drawer',
-  imports: [LucideAngularModule, ReactiveFormsModule, FocusTrapDirective, RedactorIaComponent],
+  imports: [ReactiveFormsModule, OverlayShellComponent, RedactorIaComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'contents' },
   template: `
-    <div class="fixed inset-0 z-40 bg-black/30" (click)="closed.emit()" aria-hidden="true"></div>
-    <aside
-      class="fixed right-0 top-0 h-full w-full sm:max-w-md shadow-2xl z-50 flex flex-col"
-      style="background:var(--popover)"
-      role="dialog" aria-modal="true" aria-labelledby="af-title"
-      appFocusTrap (escapeKey)="closed.emit()">
-      <div class="flex items-center justify-between px-5 py-4" style="border-bottom:1px solid var(--border)">
-        <h2 id="af-title" class="text-base font-semibold"
-          style="color:var(--text-strong);font-family:var(--font-display)">
-          {{ accion() ? 'Editar acción' : 'Nueva acción' }}
-        </h2>
-        <button type="button" (click)="closed.emit()" aria-label="Cerrar"
-          class="p-2 rounded-lg min-w-11 min-h-11 flex items-center justify-center" style="color:var(--text-muted)">
-          <lucide-icon [img]="XIcon" class="w-4 h-4" />
-        </button>
-      </div>
-
-      <form [formGroup]="form" (ngSubmit)="guardar()" class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+    <app-overlay-shell [open]="true" [title]="accion() ? 'Editar acción' : 'Nueva acción'" (closed)="closed.emit()">
+      <form [formGroup]="form" (ngSubmit)="guardar()" class="px-5 py-4 space-y-4">
         <div>
           <label for="af-nombre" class="form-label">Nombre *</label>
           <input id="af-nombre" formControlName="nombre" type="text" class="form-input"
@@ -140,7 +124,7 @@ type CampoTexto = 'asunto' | 'cuerpo';
         </label>
       </form>
 
-      <div class="px-5 py-4 flex gap-3 justify-end" style="border-top:1px solid var(--border)">
+      <div footer class="px-5 py-4 flex gap-3 justify-end">
         <button type="button" (click)="closed.emit()"
           class="px-4 py-2 min-h-11 text-sm rounded-lg" style="border:1px solid var(--border);color:var(--text-muted)">
           Cancelar
@@ -150,7 +134,7 @@ type CampoTexto = 'asunto' | 'cuerpo';
           {{ saving() ? 'Guardando...' : (accion() ? 'Guardar' : 'Crear acción') }}
         </button>
       </div>
-    </aside>
+    </app-overlay-shell>
   `,
 })
 export class AccionFormDrawerComponent {
@@ -170,7 +154,6 @@ export class AccionFormDrawerComponent {
   readonly saved = output<AccionInput>();
   readonly closed = output<void>();
 
-  readonly XIcon = X;
   readonly variables = VARIABLES_ACCION;
   readonly canales = CANALES;
   readonly canalLabels = CANAL_LABELS;

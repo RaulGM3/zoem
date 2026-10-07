@@ -8,7 +8,8 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { LucideAngularModule, X, Lock, Save } from 'lucide-angular';
+import { LucideAngularModule, Save } from 'lucide-angular';
+import { OverlayShellComponent } from '../overlay-shell/overlay-shell';
 import { UsersService } from '../../../core/services/users';
 import { FIRM_ROLES_MATRIZ, type ConfigurableRole } from '../../../core/permissions/permissions';
 import type { PlantillaVisibility } from '../../../interfaces/plantilla-file.interface';
@@ -30,33 +31,11 @@ export interface DocAccessState {
  */
 @Component({
   selector: 'app-doc-access-drawer',
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, OverlayShellComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (visible()) {
-      <div class="fixed inset-0 bg-black/30 z-40" (click)="closed.emit()" aria-hidden="true"></div>
-    }
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="doc-access-title"
-      [class]="'fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white shadow-xl flex flex-col transition-transform duration-300 ' + (visible() ? 'translate-x-0' : 'translate-x-full')"
-    >
-      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-        <div class="flex items-center gap-3 min-w-0">
-          <div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center shrink-0">
-            <lucide-icon [img]="LockIcon" class="w-4 h-4 text-amber-600" />
-          </div>
-          <h2 id="doc-access-title" class="text-base font-semibold text-slate-800 truncate">
-            Acceso · {{ title() }}
-          </h2>
-        </div>
-        <button (click)="closed.emit()" class="p-1.5 hover:bg-slate-100 rounded-lg" aria-label="Cerrar">
-          <lucide-icon [img]="XIcon" class="w-4 h-4 text-slate-700" />
-        </button>
-      </div>
-
-      <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+    <app-overlay-shell [open]="visible()" [title]="'Acceso · ' + title()" size="md" (closed)="closed.emit()">
+      <div class="px-6 py-5 space-y-5">
         <label class="flex items-center justify-between gap-3 cursor-pointer">
           <span>
             <span class="block text-sm font-medium text-slate-700">{{ restrictedLabel() }}</span>
@@ -119,7 +98,7 @@ export interface DocAccessState {
         }
       </div>
 
-      <div class="border-t border-slate-200 px-6 py-4">
+      <div footer class="px-6 py-4">
         <button
           type="button"
           (click)="save()"
@@ -130,7 +109,7 @@ export interface DocAccessState {
           {{ saving() ? 'Guardando...' : 'Guardar acceso' }}
         </button>
       </div>
-    </div>
+    </app-overlay-shell>
   `,
 })
 export class DocAccessDrawerComponent {
@@ -147,8 +126,6 @@ export class DocAccessDrawerComponent {
   readonly saved = output<DocAccessState>();
   readonly closed = output<void>();
 
-  readonly XIcon = X;
-  readonly LockIcon = Lock;
   readonly SaveIcon = Save;
   readonly roles: ConfigurableRole[] = FIRM_ROLES_MATRIZ;
 

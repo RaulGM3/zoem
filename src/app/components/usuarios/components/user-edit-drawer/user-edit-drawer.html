@@ -1,40 +1,5 @@
-<!-- Backdrop -->
-@if (visible()) {
-  <div
-    class="fixed inset-0 bg-black/30 z-40"
-    (click)="close()"
-    aria-hidden="true"
-  ></div>
-}
-
-<!-- Drawer -->
-<div
-  role="dialog"
-  aria-modal="true"
-  aria-labelledby="user-edit-drawer-title"
-  [class]="'fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white shadow-xl flex flex-col transition-transform duration-300 ' + (visible() ? 'translate-x-0' : 'translate-x-full')"
->
-  <!-- Header -->
-  <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-    <div class="flex items-center gap-3 min-w-0">
-      <div class="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center shrink-0">
-        <lucide-icon [img]="UserCogIcon" class="w-4 h-4 text-violet-600" />
-      </div>
-      <h2 id="user-edit-drawer-title" class="text-base font-semibold text-slate-800 truncate">
-        {{ title() }}
-      </h2>
-    </div>
-    <button
-      (click)="close()"
-      class="p-1.5 hover:bg-slate-100 rounded-lg"
-      aria-label="Cerrar"
-    >
-      <lucide-icon [img]="XIcon" class="w-4 h-4 text-slate-700" />
-    </button>
-  </div>
-
-  <!-- Body -->
-  <div class="flex-1 overflow-y-auto px-6 py-6">
+<app-overlay-shell [open]="visible()" [title]="title()" size="md" (closed)="close()">
+  <div class="px-6 py-6">
     <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-5" novalidate>
       <div class="space-y-1.5">
         <label for="user-nombre" class="text-sm font-medium text-slate-700">
@@ -222,7 +187,7 @@
 
   <!-- Footer: zona peligrosa -->
   @if (canDelete()) {
-    <div class="border-t border-slate-200 px-6 py-4">
+    <div footer class="px-6 py-4">
       @if (confirmingDelete()) {
         <div class="flex items-center gap-2">
           <span class="text-sm text-slate-600 flex-1">¿Eliminar a este usuario?</span>
@@ -251,4 +216,4 @@
       }
     </div>
   }
-</div>
+</app-overlay-shell>

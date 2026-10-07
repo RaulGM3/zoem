@@ -8,7 +8,8 @@ import {
   effect,
   inject,
 } from '@angular/core';
-import { LucideAngularModule, X, UserCog, Shield, Save, Trash2 } from 'lucide-angular';
+import { LucideAngularModule, Shield, Save, Trash2 } from 'lucide-angular';
+import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {
@@ -46,7 +47,7 @@ type OverrideState = 'heredar' | 'permitir' | 'denegar';
 
 @Component({
   selector: 'app-user-edit-drawer',
-  imports: [LucideAngularModule, ReactiveFormsModule],
+  imports: [LucideAngularModule, ReactiveFormsModule, OverlayShellComponent],
   templateUrl: './user-edit-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -67,9 +68,6 @@ export class UserEditDrawerComponent {
   readonly saved = output<UserEditPatch>();
   readonly deleted = output<string>();
   readonly closed = output<void>();
-
-  readonly XIcon = X;
-  readonly UserCogIcon = UserCog;
   readonly ShieldIcon = Shield;
   readonly SaveIcon = Save;
   readonly Trash2Icon = Trash2;

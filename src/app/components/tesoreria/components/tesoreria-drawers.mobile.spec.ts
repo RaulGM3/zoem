@@ -89,9 +89,10 @@ describe('Drawers de Tesorería — móvil', () => {
       expect(v, formatearViolaciones(v)).toEqual([]);
     });
 
-    it('escritorio: panel lateral', async () => {
+    it('escritorio: modal centrado', async () => {
       const f = await montar(CuentasDrawerComponent, false);
-      expect(dialogo(f).className).toContain('max-w-md');
+      expect(dialogo(f).className).toContain('max-w-2xl');
+      expect(dialogo(f).className).toContain('rounded-xl');
     });
   });
 

@@ -6,6 +6,7 @@ import {
   X, Trash2, ChevronDown, ChevronUp,
   FolderPlus, FilePlus, Folder, FolderOpen, Check, Pencil, File, ArrowLeft,
 } from 'lucide-angular';
+import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 import { PlantillasService } from '../../../../core/services/plantillas.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { PlantillaFolderService } from '../../../../core/services/plantilla-folder.service';
@@ -17,7 +18,7 @@ import {
 
 @Component({
   selector: 'app-plantilla-drawer',
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, OverlayShellComponent],
   templateUrl: './plantilla-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

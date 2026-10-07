@@ -1,18 +1,5 @@
-<div class="fixed inset-0 z-40 bg-black/30" (click)="closed.emit()" aria-hidden="true"></div>
-<div class="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-  <aside class="pointer-events-auto bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
-    role="dialog" aria-modal="true" aria-labelledby="plantilla-drawer-title">
-
-    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-      <h2 id="plantilla-drawer-title" class="text-base font-semibold text-slate-800">
-        {{ plantilla() ? 'Editar plantilla' : 'Nueva plantilla' }}
-      </h2>
-      <button (click)="closed.emit()" class="p-1.5 rounded-lg hover:bg-slate-100" aria-label="Cerrar">
-        <lucide-icon [img]="XIcon" class="w-4 h-4 text-slate-700" />
-      </button>
-    </div>
-
-    <div class="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+<app-overlay-shell [open]="true" [title]="plantilla() ? 'Editar plantilla' : 'Nueva plantilla'" (closed)="closed.emit()">
+    <div class="px-6 py-5 space-y-6">
 
       <!-- Datos básicos -->
       <section class="space-y-4">
@@ -357,7 +344,7 @@
       </section>
     </div>
 
-    <div class="px-6 py-4 border-t border-slate-200 flex gap-3 justify-end">
+    <div footer class="px-6 py-4 flex gap-3 justify-end">
       <button (click)="closed.emit()"
         class="px-4 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">
         Cancelar
@@ -367,5 +354,4 @@
         {{ saving() ? 'Guardando...' : (plantilla() ? 'Guardar cambios' : 'Crear plantilla') }}
       </button>
     </div>
-  </aside>
-</div>
+</app-overlay-shell>
