@@ -27,7 +27,7 @@ import { DictadoService } from '../../core/voz/dictado.service';
         <p
           role="alert"
           class="absolute bottom-full right-0 mb-2 w-64 flex items-start gap-2 px-3 py-2 rounded-lg text-xs shadow-lg"
-          style="background:var(--surface);border:1px solid var(--danger);color:var(--danger)"
+          style="background:var(--popover);border:1px solid var(--danger);color:var(--danger)"
         >
           <lucide-icon [img]="AlertIcon" class="w-4 h-4 shrink-0 mt-px" aria-hidden="true" />
           <span>{{ detalle }}</span>

@@ -30,7 +30,7 @@ type CampoTexto = 'asunto' | 'cuerpo';
     <div class="fixed inset-0 z-40 bg-black/30" (click)="closed.emit()" aria-hidden="true"></div>
     <aside
       class="fixed right-0 top-0 h-full w-full sm:max-w-md shadow-2xl z-50 flex flex-col"
-      style="background:var(--surface)"
+      style="background:var(--popover)"
       role="dialog" aria-modal="true" aria-labelledby="af-title"
       appFocusTrap (escapeKey)="closed.emit()">
       <div class="flex items-center justify-between px-5 py-4" style="border-bottom:1px solid var(--border)">

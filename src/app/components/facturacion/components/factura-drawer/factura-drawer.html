@@ -59,7 +59,7 @@
               (blur)="cerrarLista()" />
             <ul id="cliente-buscar-lista" role="listbox" aria-label="Contactos encontrados"
               class="absolute left-0 right-0 z-10 mt-1 max-h-56 overflow-y-auto rounded-lg shadow-lg"
-              style="background:var(--surface);border:1px solid var(--border)"
+              style="background:var(--popover);border:1px solid var(--border)"
               [hidden]="!listaAbierta()">
               @for (c of opciones(); track c.id; let i = $index) {
                 <li role="option" [id]="idOpcion(i)" class="cursor-pointer px-3 py-2 text-sm"

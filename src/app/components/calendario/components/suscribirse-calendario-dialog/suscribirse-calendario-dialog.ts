@@ -25,7 +25,7 @@ import { FocusTrapDirective } from '../../../../shared/directives/focus-trap.dir
   template: `
     <div
       class="w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden"
-      style="background:var(--surface);border:1px solid var(--border)"
+      style="background:var(--popover);border:1px solid var(--border)"
       (click)="$event.stopPropagation()"
       role="dialog"
       aria-modal="true"

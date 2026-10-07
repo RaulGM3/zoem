@@ -164,7 +164,7 @@
         @if (searchMenuOpen()) {
           <div class="fixed inset-0 z-40" (click)="searchMenuOpen.set(false)"></div>
           <div class="absolute left-0 right-0 top-full z-50 mt-2 rounded-2xl p-2 shadow-lg"
-            style="border:1px solid var(--border);background:var(--surface)">
+            style="border:1px solid var(--border);background:var(--popover)">
             <p class="px-2 py-1 text-[10.5px] font-semibold uppercase tracking-[.06em]"
                style="color:var(--text-muted);font-family:var(--font-mono)">
               ¿Qué quieres buscar?
@@ -297,7 +297,7 @@
     aria-labelledby="logout-dialog-title">
     <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" (click)="logoutDialogOpen.set(false)"></div>
     <div class="relative z-10 w-full max-w-sm rounded-2xl p-6 shadow-xl"
-      style="background:var(--surface);border:1px solid var(--border)">
+      style="background:var(--popover);border:1px solid var(--border)">
       <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-full"
         style="background:color-mix(in srgb,var(--danger) 10%,transparent)">
         <span class="material-symbols-outlined" style="font-size:22px;color:var(--danger)">logout</span>

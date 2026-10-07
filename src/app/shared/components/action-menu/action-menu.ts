@@ -54,7 +54,7 @@ export interface MenuAction {
     } @else if (isOpen()) {
       <div role="menu" [attr.aria-label]="label()" (keydown)="onMenuKeydown($event)"
         class="absolute right-0 top-full z-50 mt-1 min-w-44 rounded-xl py-1 shadow-2xl"
-        style="background:var(--surface);border:1px solid var(--border)">
+        style="background:var(--popover);border:1px solid var(--border)">
         @for (a of actions(); track a.id) {
           <button type="button" role="menuitem" tabindex="-1" [attr.aria-disabled]="a.disabled ? 'true' : null"
             (click)="choose(a)"

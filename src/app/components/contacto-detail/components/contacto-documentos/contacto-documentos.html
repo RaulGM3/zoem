@@ -135,7 +135,7 @@
                     </div>
                   }
                 } @else {
-                <div class="absolute top-1.5 right-1.5 hidden group-hover:flex gap-0.5 rounded shadow-sm p-0.5" style="background:var(--surface);border:1px solid var(--border)">
+                <div class="absolute top-1.5 right-1.5 hidden group-hover:flex gap-0.5 rounded shadow-sm p-0.5" style="background:var(--popover);border:1px solid var(--border)">
                   @if (perm.can('Contactos', 'editar')) {
                     <button (click)="startRename(folder)" class="p-1 rounded text-[var(--text-faint)] transition-colors duration-150 hover:text-[var(--text-body)]"
                       aria-label="Renombrar carpeta">

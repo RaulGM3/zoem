@@ -50,7 +50,7 @@
         aria-labelledby="egresos-desglose-trigger"
         [hidden]="!desgloseAbierto()"
         class="absolute left-0 right-0 top-full z-20 mt-1 rounded-xl p-3 shadow-lg space-y-1.5"
-        style="background:var(--surface);border:1px solid var(--border)"
+        style="background:var(--popover);border:1px solid var(--border)"
       >
         @for (t of desgloseEgresos(); track t.tipo) {
           <button

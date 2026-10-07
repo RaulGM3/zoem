@@ -157,7 +157,7 @@
   <div class="fixed inset-0 z-5" (click)="activeDropdown.set(null); activeCaso.set(null); dropdownPos.set(null)"></div>
   <div
     class="fixed z-10 rounded-xl py-1 shadow-lg"
-    style="background:var(--surface);border:1px solid var(--border);width:9rem"
+    style="background:var(--popover);border:1px solid var(--border);width:9rem"
     [style.top.px]="dropdownPos()!.top"
     [style.right.px]="dropdownPos()!.right"
   >
@@ -184,7 +184,7 @@
   >
     <div
       class="relative w-full max-w-sm mx-4 rounded-2xl p-6 shadow-xl"
-      style="background:var(--surface);border:1px solid var(--border)"
+      style="background:var(--popover);border:1px solid var(--border)"
       (click)="$event.stopPropagation()"
       role="dialog"
       aria-modal="true"

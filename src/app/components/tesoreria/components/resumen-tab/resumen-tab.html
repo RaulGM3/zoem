@@ -542,7 +542,7 @@
         @if (!bp.isMobile() && hoveredDiscrepancia() === c.cuenta.id) {
           <span [id]="'discrepancia-tip-' + c.cuenta.id"
             class="absolute z-20 pointer-events-none rounded-lg px-2.5 py-2 text-xs text-center"
-            style="bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);width:11rem;background:var(--surface);border:1px solid var(--border);color:var(--text-body);box-shadow:0 4px 16px rgba(0,0,0,0.18)">
+            style="bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);width:11rem;background:var(--popover);border:1px solid var(--border);color:var(--text-body);box-shadow:0 4px 16px rgba(0,0,0,0.18)">
             Diferencia de {{ (c.diferencia < 0 ? -c.diferencia : c.diferencia) | number:'1.2-2' }} €. Haz clic para ver el desglose.
             <span class="absolute" style="top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--border)"></span>
           </span>

@@ -172,7 +172,7 @@
           class="form-input"
         />
         @if (searchResults().length > 0) {
-          <ul class="absolute top-full mt-1 left-0 right-0 rounded-lg shadow-lg z-10 overflow-hidden" style="background:var(--surface);border:1px solid var(--border)">
+          <ul class="absolute top-full mt-1 left-0 right-0 rounded-lg shadow-lg z-10 overflow-hidden" style="background:var(--popover);border:1px solid var(--border)">
             @for (r of searchResults(); track r.id) {
               <li>
                 <button
@@ -203,7 +203,7 @@
   >
     <div
       class="rounded-xl shadow-xl p-6 w-full max-w-sm mx-4"
-      style="background:var(--surface)"
+      style="background:var(--popover)"
       (click)="$event.stopPropagation()"
       role="dialog"
       aria-modal="true"

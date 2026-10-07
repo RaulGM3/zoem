@@ -22,7 +22,7 @@ let nextId = 0;
         <div role="dialog" aria-modal="true" [attr.aria-labelledby]="titleId"
           appFocusTrap (escapeKey)="closed.emit()"
           class="relative flex flex-col shadow-2xl" [class]="panelClass()"
-          style="background:var(--surface)">
+          style="background:var(--popover)">
           @if (sheet()) {
             <div class="flex justify-center pt-2" data-grab-handle aria-hidden="true">
               <span class="h-1 w-10 rounded-full" style="background:var(--border)"></span>
@@ -46,7 +46,7 @@ let nextId = 0;
           </div>
           <div data-overlay-footer
             class="sticky bottom-0 pb-safe empty:hidden"
-            style="background:var(--surface);border-top:1px solid var(--border)">
+            style="background:var(--popover);border-top:1px solid var(--border)">
             <ng-content select="[footer]" />
           </div>
         </div>
