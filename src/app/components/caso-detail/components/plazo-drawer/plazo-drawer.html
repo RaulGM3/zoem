@@ -1,0 +1,158 @@
+<app-overlay-shell [open]="visible()" [title]="titulo()" variant="drawer" size="lg" (closed)="closed.emit()">
+  <div class="px-4 py-5 space-y-5 sm:px-6">
+    <p class="text-xs rounded-lg px-3 py-2" data-beta-aviso
+      style="background:color-mix(in srgb,var(--warning) 12%,transparent);color:var(--text-body);border:1px solid color-mix(in srgb,var(--warning) 35%,transparent)">
+      <strong>BETA.</strong> {{ avisoBeta }}
+    </p>
+
+    @if (modoRevision() && revision(); as rev) {
+      <div role="status" data-banner-revision class="rounded-lg px-3 py-2 text-sm"
+        style="background:color-mix(in srgb,var(--danger) 10%,transparent);color:var(--text-strong);border:1px solid color-mix(in srgb,var(--danger) 35%,transparent)">
+        Requiere revisión: vencía el <strong>{{ formatearFecha(vencimientoAnterior()!) }}</strong>, ahora el
+        <strong>{{ formatearFecha(resultado()?.vencimiento ?? rev.origen.revision?.vencimientoNuevo ?? vencimientoAnterior()!) }}</strong>.
+        @if (rev.origen.revision?.seAdelanta) { <strong> El nuevo vencimiento es ANTERIOR.</strong> }
+      </div>
+    }
+
+    @if (!canEdit()) {
+      <p role="status" class="text-sm" style="color:var(--text-muted)">No tienes permiso para crear o aceptar plazos en este caso.</p>
+    }
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="space-y-1">
+        <label class="form-label" for="plazo-fecha">Fecha de notificación <span style="color:var(--danger)" aria-hidden="true">*</span></label>
+        <input id="plazo-fecha" type="date" required class="form-input"
+          [value]="fechaNotificacion()" [disabled]="modoRevision() || !canEdit()"
+          (input)="onFecha($any($event.target).value)" />
+      </div>
+      <div class="space-y-1">
+        <label class="form-label" for="plazo-jurisdiccion">Jurisdicción <span style="color:var(--danger)" aria-hidden="true">*</span></label>
+        <select id="plazo-jurisdiccion" required class="form-select"
+          [value]="jurisdiccion()" [disabled]="modoRevision() || !canEdit()"
+          (change)="onJurisdiccion($any($event.target).value)">
+          <option value="" [selected]="!jurisdiccion()">Elige jurisdicción</option>
+          @for (j of jurisdicciones; track j) { <option [value]="j" [selected]="j === jurisdiccion()">{{ jurisdiccionLabel[j] }}</option> }
+        </select>
+      </div>
+    </div>
+
+    <div class="space-y-1">
+      <label class="form-label" for="plazo-tipo">Tipo de plazo</label>
+      <select id="plazo-tipo" class="form-select" [value]="tipoId()" [disabled]="modoRevision() || !canEdit()" (change)="onTipo($any($event.target).value)">
+        <option value="" [selected]="!tipoId()">Personalizado</option>
+        @for (t of tiposDisponibles(); track t.id) { <option [value]="t.id" [selected]="t.id === tipoId()">{{ t.etiqueta }}</option> }
+      </select>
+      <p class="text-xs" style="color:var(--text-faint)">Es solo una sugerencia: puedes ajustar la cantidad y la unidad.</p>
+    </div>
+
+    @if (!tipoId() && !modoRevision()) {
+      <div class="space-y-1">
+        <label class="form-label" for="plazo-nombre">Nombre del plazo</label>
+        <input id="plazo-nombre" type="text" class="form-input" placeholder="Plazo procesal" [value]="etiquetaPersonal()"
+          [disabled]="!canEdit()" (input)="etiquetaPersonal.set($any($event.target).value)" />
+      </div>
+    }
+
+    <div class="grid grid-cols-2 gap-3">
+      <div class="space-y-1">
+        <label class="form-label" for="plazo-cantidad">Cantidad <span style="color:var(--danger)" aria-hidden="true">*</span></label>
+        <input id="plazo-cantidad" type="number" min="1" step="1" required class="form-input"
+          [value]="cantidad()" [disabled]="modoRevision() || !canEdit()" (input)="onCantidad($any($event.target).value)" />
+      </div>
+      <div class="space-y-1">
+        <label class="form-label" for="plazo-unidad">Unidad</label>
+        <select id="plazo-unidad" class="form-select" [value]="unidad()" [disabled]="modoRevision() || !canEdit()" (change)="onUnidad($any($event.target).value)">
+          <option value="dias" [selected]="unidad() === 'dias'">Días hábiles</option>
+          <option value="meses" [selected]="unidad() === 'meses'">Meses</option>
+          <option value="anios" [selected]="unidad() === 'anios'">Años</option>
+        </select>
+      </div>
+    </div>
+
+    <label class="flex items-center gap-2 text-sm max-sm:min-h-11" style="color:var(--text-body)">
+      <input id="plazo-urgente" type="checkbox" style="accent-color:var(--brand)"
+        [checked]="urgente()" [disabled]="modoRevision() || !canEdit()" (change)="onUrgente($any($event.target).checked)" />
+      Actuación urgente (agosto cuenta como hábil)
+    </label>
+
+    <section aria-labelledby="plazo-resultado-titulo" class="rounded-xl p-4 space-y-2" [attr.aria-busy]="calculando()"
+      style="background:var(--surface);border:1px solid var(--border)">
+      <h3 id="plazo-resultado-titulo" class="text-sm font-semibold" style="color:var(--text-strong)">Vencimiento calculado</h3>
+      <div aria-live="polite" aria-atomic="true" data-preview class="text-sm" style="color:var(--text-body)">
+        @if (errorCalculo()) {
+          <span style="color:var(--danger)">No se pudo calcular: {{ errorCalculo() }}</span>
+        } @else if (resultado(); as r) {
+          <p>El plazo vence el <strong data-vencimiento>{{ formatearFecha(r.vencimiento) }}</strong>.</p>
+          <p>Día de gracia (art. 135 LEC): <strong data-gracia>{{ formatearFecha(r.diaGracia) }}</strong>, hasta las 15:00.</p>
+        } @else if (calculando()) {
+          <span style="color:var(--text-muted)">Calculando…</span>
+        } @else {
+          <span style="color:var(--text-muted)">Rellena fecha, jurisdicción y cantidad para ver el vencimiento.</span>
+        }
+      </div>
+    </section>
+
+    @for (a of advertencias(); track a; let primero = $first) {
+      <div role="alert" data-advertencia [attr.tabindex]="primero ? -1 : null"
+        class="flex items-start gap-2 rounded-lg px-3 py-2 text-sm"
+        style="background:color-mix(in srgb,var(--warning) 12%,transparent);color:var(--text-strong);border:1px solid color-mix(in srgb,var(--warning) 40%,transparent)">
+        <lucide-icon [img]="AlertIcon" class="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
+        <span>{{ a }}</span>
+      </div>
+    }
+
+    @if (resultado()) {
+      <fieldset class="space-y-2" data-dias-inhabiles>
+        <legend class="form-label">Días inhábiles en este plazo ({{ numInhabiles() }})</legend>
+        <p class="text-xs" style="color:var(--text-faint)">
+          Desmarca un día si en realidad es hábil para este caso (p. ej. un festivo que no aplica). El vencimiento se recalcula.
+        </p>
+        @if (items().length === 0) {
+          <p class="text-sm" style="color:var(--text-muted)">Ningún día inhábil dentro del plazo.</p>
+        } @else {
+          <ul class="space-y-1 rounded-lg p-2 max-h-64 overflow-y-auto" style="border:1px solid var(--border)">
+            @for (item of items(); track item.clave) {
+              <li class="flex items-center gap-2 rounded px-1.5 py-1 text-sm">
+                <label class="flex flex-1 items-center gap-2 cursor-pointer max-sm:min-h-11" style="color:var(--text-body)">
+                  <input type="checkbox" style="accent-color:var(--brand)" data-dia
+                    [checked]="marcado(item)" [disabled]="!canEdit()"
+                    (change)="alternar(item, $any($event.target).checked)" />
+                  <span>
+                    <span class="tabular-nums">{{ fechaDe(item) }}</span> · {{ item.etiqueta }}
+                    @if (!marcado(item)) { <span class="text-xs" style="color:var(--text-faint)"> (cuenta como hábil)</span> }
+                  </span>
+                </label>
+                @if (item.fuenteUrl) {
+                  <a [href]="item.fuenteUrl" target="_blank" rel="noopener noreferrer"
+                    class="inline-flex items-center gap-1 text-xs underline shrink-0" style="color:var(--brand)"
+                    [attr.aria-label]="'Fuente oficial de ' + item.etiqueta + ' (se abre en una pestaña nueva)'">
+                    Fuente <lucide-icon [img]="LinkIcon" class="w-3 h-3" aria-hidden="true" />
+                  </a>
+                }
+              </li>
+            }
+          </ul>
+        }
+      </fieldset>
+
+      <label class="flex items-start gap-2 text-sm rounded-lg p-3 max-sm:min-h-11" style="color:var(--text-strong);border:1px solid var(--border)">
+        <input id="plazo-confirmar" type="checkbox" class="mt-0.5" style="accent-color:var(--brand)" data-confirmar
+          [checked]="confirmado()" [disabled]="!canEdit() || calculando()"
+          (change)="confirmado.set($any($event.target).checked)" />
+        <span>He revisado los {{ numInhabiles() }} días inhábiles y el vencimiento resultante</span>
+      </label>
+    }
+  </div>
+
+  <div footer class="flex gap-3 px-4 py-4 sm:justify-end sm:px-6">
+    <button type="button" (click)="closed.emit()"
+      class="max-sm:tap-target max-sm:flex-1 px-4 py-2 text-sm rounded-lg transition-colors duration-150 hover:bg-[var(--surface-2)]"
+      style="border:1px solid var(--border);color:var(--text-muted)">
+      Cancelar
+    </button>
+    <button type="button" data-guardar (click)="guardar()" [disabled]="!puedeGuardar()"
+      class="max-sm:tap-target max-sm:flex-1 px-4 py-2 text-sm text-white rounded-lg transition-colors duration-150 bg-[var(--brand)] hover:bg-[var(--brand-hover)] disabled:opacity-50">
+      {{ saving() ? 'Guardando...' : (modoRevision() ? 'Aceptar nuevo vencimiento' : 'Guardar plazo') }}
+    </button>
+  </div>
+</app-overlay-shell>

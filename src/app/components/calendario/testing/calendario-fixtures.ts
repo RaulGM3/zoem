@@ -47,3 +47,18 @@ export function registro(extra: Partial<RegistroHoraHito> = {}): RegistroHoraHit
 export function grupos(...items: CalendarItem[]): EventGroup[] {
   return [{ date: FECHA, label: 'Mar 10', items }];
 }
+
+export function plazo(extra: Partial<CalendarItem> = {}): CalendarItem {
+  return {
+    id: 'p1',
+    title: 'Vence plazo: Contestación',
+    client: 'Todo el día',
+    type: 'reunion',
+    date: FECHA,
+    status: 'confirmada',
+    eventoEstado: 'confirmado',
+    casoId: 'caso9',
+    plazo: { requiereRevision: false },
+    ...extra,
+  };
+}

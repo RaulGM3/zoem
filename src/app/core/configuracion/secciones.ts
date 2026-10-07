@@ -1,6 +1,6 @@
-import { Building2, FileText, Landmark, LucideIconData, Users } from 'lucide-angular';
+import { Building2, CalendarX, FileText, Landmark, LucideIconData, Users } from 'lucide-angular';
 
-export type SeccionConfigId = 'empresa' | 'usuarios' | 'facturacion' | 'tesoreria';
+export type SeccionConfigId = 'empresa' | 'usuarios' | 'facturacion' | 'tesoreria' | 'dias-inhabiles';
 
 export interface SeccionConfig {
   id: SeccionConfigId;
@@ -15,6 +15,7 @@ export const SECCIONES_CONFIG: readonly SeccionConfig[] = [
   { id: 'usuarios', label: 'Usuarios y permisos', descripcion: 'Miembros, roles e invitaciones', icon: Users, ruta: '/configuracion/usuarios' },
   { id: 'facturacion', label: 'Facturación', descripcion: 'Verifactu y credenciales AEAT', icon: FileText, ruta: '/configuracion/facturacion' },
   { id: 'tesoreria', label: 'Tesorería', descripcion: 'Cuentas bancarias y cajas', icon: Landmark, ruta: '/configuracion/tesoreria' },
+  { id: 'dias-inhabiles', label: 'Días inhábiles', descripcion: 'Festivos que no cuentan en los plazos procesales (BETA)', icon: CalendarX, ruta: '/configuracion/dias-inhabiles' },
 ];
 
 /** '/configuracion/empresa?x#y' -> 'empresa'; raíz o desconocida -> null. */

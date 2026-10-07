@@ -53,6 +53,21 @@ export type ActividadInput = {
   estadoNuevo?: HitoEstado;
 };
 
+const CAMPOS_PROCESALES = ['jurisdiccion', 'partidoJudicialId', 'organoJudicial', 'numProcedimiento'] as const;
+
+/** Recorta los datos judiciales opcionales y descarta los vacíos (nunca se escriben cadenas vacías). */
+function sinCamposProcesalesVacios<T extends object>(data: T): T {
+  const copia = { ...data } as Record<string, unknown>;
+  for (const k of CAMPOS_PROCESALES) {
+    const v = copia[k];
+    if (typeof v !== 'string') continue;
+    const limpio = v.trim();
+    if (limpio) copia[k] = limpio;
+    else delete copia[k];
+  }
+  return copia as T;
+}
+
 @Injectable({ providedIn: 'root' })
 export class CasosService {
   private readonly firestore = inject(Firestore);
@@ -123,7 +138,8 @@ export class CasosService {
     return caso;
   }
 
-  async createCaso(data: CasoCreate): Promise<string> {
+  async createCaso(input: CasoCreate): Promise<string> {
+    const data = sinCamposProcesalesVacios(input);
     const companyId = this.companyId;
     let hitosToCreate: HitoNuevo[] = [];
     let plantilla: Awaited<ReturnType<typeof this.plantillasService.getPlantilla>> = null;
@@ -167,12 +183,16 @@ export class CasosService {
     return ref.id;
   }
 
-  async updateCaso(id: string, data: Partial<Pick<Caso, 'titulo' | 'descripcion' | 'tipo' | 'estado' | 'prioridad' | 'contactoIds' | 'vencimiento' | 'encargadoId'>>): Promise<void> {
+  async updateCaso(id: string, data: Partial<Pick<Caso, 'titulo' | 'descripcion' | 'tipo' | 'estado' | 'prioridad' | 'contactoIds' | 'vencimiento' | 'encargadoId' | 'jurisdiccion' | 'partidoJudicialId' | 'organoJudicial' | 'numProcedimiento'>>): Promise<void> {
     const prev = this.casos().find(c => c.id === id);
     await updateDoc(doc(this.firestore, 'companies', this.companyId, 'casos', id), {
       ...stripUndefinedDeep(data),
       // `encargadoId: undefined` explícito = "Sin asignar" → borra el campo.
       ...('encargadoId' in data && data.encargadoId === undefined ? { encargadoId: deleteField() } : {}),
+      // Igual para los datos procesales: `undefined` explícito = vaciar el campo.
+      ...Object.fromEntries(
+        CAMPOS_PROCESALES.filter(k => k in data && data[k] === undefined).map(k => [k, deleteField()]),
+      ),
       updatedBy: this.currentUid,
       updatedAt: serverTimestamp(),
     });

@@ -1,5 +1,6 @@
 import { Component, ChangeDetectionStrategy, input, output, signal } from '@angular/core';
-import { LucideAngularModule, Trash2, Plus } from 'lucide-angular';
+import { RouterLink } from '@angular/router';
+import { LucideAngularModule, Trash2, Plus, Gavel, TriangleAlert } from 'lucide-angular';
 import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 import { HorasEditorComponent, RegistrosChange } from '../horas-editor/horas-editor';
 import type { CalendarItem, ItemColor } from '../../calendario.types';
@@ -42,7 +43,7 @@ const ALL_COLORS: readonly ItemColor[] = ['violet', 'indigo', 'blue', 'green', '
  */
 @Component({
   selector: 'app-item-detalle-dialog',
-  imports: [LucideAngularModule, OverlayShellComponent, HorasEditorComponent],
+  imports: [LucideAngularModule, OverlayShellComponent, HorasEditorComponent, RouterLink],
   templateUrl: './item-detalle-dialog.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -61,6 +62,8 @@ export class ItemDetalleDialogComponent {
 
   readonly Trash2Icon = Trash2;
   readonly PlusIcon = Plus;
+  readonly GavelIcon = Gavel;
+  readonly TriangleAlertIcon = TriangleAlert;
 
   readonly HITO_ESTADOS = HITO_ESTADOS;
   readonly EVENTO_ESTADOS = EVENTO_ESTADOS;
@@ -92,6 +95,7 @@ export class ItemDetalleDialogComponent {
 
   getItemTypeLabel(item: CalendarItem): string {
     if (item.hitoEstado !== undefined) return 'Hito';
+    if (item.plazo) return 'Plazo procesal';
     const labels: Record<string, string> = {
       reunion: 'Reunión', llamada: 'Llamada', entrega: 'Entrega', recordatorio: 'Recordatorio',
     };

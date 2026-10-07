@@ -1,6 +1,8 @@
 import { Timestamp } from '@angular/fire/firestore';
 import type { Anotacion } from './caso.interface';
 import type { ContactStatus } from './contact.interface';
+import type { Jurisdiccion } from '../core/plazos/calendario-judicial';
+import type { UnidadPlazo } from '../core/plazos/computo-plazo';
 
 export type EventoPrioridad = 'alta' | 'media' | 'baja' | 'ninguna';
 export type EventoRecurrencia = 'ninguna' | 'diaria' | 'semanal' | 'mensual' | 'anual';
@@ -70,6 +72,44 @@ export interface EventoOrigenSeguimiento {
   statusDestino: ContactStatus;
 }
 
+export type EstadoPlazo = 'vigente' | 'requiere_revision' | 'cumplido' | 'vencido';
+
+/**
+ * Trazabilidad de un evento que es un plazo procesal aceptado por el usuario.
+ * Guarda la entrada, las capas de calendario usadas y los días inhábiles aceptados:
+ * nada cambia en silencio después de aceptado (ver `revision`).
+ */
+export interface OrigenPlazoProcesal {
+  tipo: 'plazo_procesal';
+  casoId: string;
+  /** Ids de capa usados en el cálculo: comunidad autónoma y, si existía, partido judicial. */
+  capas: { ca: string; partido?: string };
+  entrada: {
+    fechaNotificacion: string;
+    cantidad: number;
+    unidad: UnidadPlazo;
+    jurisdiccion: Jurisdiccion;
+    urgente?: boolean;
+    tipoPlazoId?: string;
+  };
+  aceptacion: {
+    diasInhabiles: { fecha: string; motivo: string }[];
+    excluidosPorUsuario: string[];
+    aceptadoPor: string;
+    /** ISO datetime. */
+    aceptadoAt: string;
+    vencimiento: string;
+  };
+  estadoPlazo: EstadoPlazo;
+  /** Presente si un cambio posterior de días rojos altera el vencimiento (requiere revisión humana). */
+  revision?: { vencimientoNuevo: string; seAdelanta: boolean; detectadoAt: string };
+  documentoId?: string;
+  /** Último recordatorio enviado por la Cloud Function, 'YYYY-MM-DD:N' (evita duplicados en el mismo día). */
+  ultimoAviso?: string;
+}
+
+export type EventoOrigen = EventoOrigenSeguimiento | OrigenPlazoProcesal;
+
 export interface Evento {
   id: string;
   companyId: string;
@@ -95,7 +135,7 @@ export interface Evento {
   /** Qué hay que entregar para que el compromiso se dé por cumplido. */
   entregable?: string;
   /** Presente sólo si el evento nació de un cambio de estado de contacto. */
-  origen?: EventoOrigenSeguimiento;
+  origen?: EventoOrigen;
   creadoPor: string;
   /** uid de quien hizo la última edición. */
   updatedBy?: string;
@@ -104,3 +144,8 @@ export interface Evento {
 }
 
 export type CreateEventoData = Omit<Evento, 'id' | 'companyId' | 'creadoPor' | 'updatedBy' | 'createdAt' | 'updatedAt'>;
+
+/** Un plazo procesal es un Evento con origen `plazo_procesal`. */
+export function esPlazoProcesal(evento: Evento): evento is Evento & { origen: OrigenPlazoProcesal } {
+  return evento.origen?.tipo === 'plazo_procesal';
+}

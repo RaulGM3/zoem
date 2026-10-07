@@ -54,6 +54,25 @@
           }
         </select>
       </div>
+      <div class="space-y-1">
+        <label class="form-label" for="caso-edit-jurisdiccion">Jurisdicción</label>
+        <select id="caso-edit-jurisdiccion" [value]="editJurisdiccion()" (change)="editJurisdiccion.set($any($event.target).value)" class="form-select">
+          <option value="" [selected]="!editJurisdiccion()">Sin definir</option>
+          @for (j of jurisdicciones; track j) { <option [value]="j" [selected]="j === editJurisdiccion()">{{ jurisdiccionLabel[j] }}</option> }
+        </select>
+      </div>
+      <div class="space-y-1">
+        <label class="form-label" for="caso-edit-partido">Partido judicial</label>
+        <app-partido-judicial-combobox inputId="caso-edit-partido" [value]="editPartidoJudicialId() || undefined" (cambio)="editPartidoJudicialId.set($event ?? '')" />
+      </div>
+      <div class="space-y-1">
+        <label class="form-label" for="caso-edit-organo">Órgano judicial</label>
+        <input id="caso-edit-organo" type="text" [value]="editOrganoJudicial()" (input)="editOrganoJudicial.set($any($event.target).value)" class="form-input" />
+      </div>
+      <div class="space-y-1">
+        <label class="form-label" for="caso-edit-procedimiento">Nº de procedimiento</label>
+        <input id="caso-edit-procedimiento" type="text" [value]="editNumProcedimiento()" (input)="editNumProcedimiento.set($any($event.target).value)" class="form-input" />
+      </div>
     </div>
 
     <div class="flex gap-2 pt-2">
@@ -103,6 +122,22 @@
         <div>
           <dt class="text-xs uppercase tracking-wide" style="color:var(--text-faint)">Encargado</dt>
           <dd class="mt-1" style="color:var(--text-body)">{{ encargadoNombre() }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs uppercase tracking-wide" style="color:var(--text-faint)">Jurisdicción</dt>
+          <dd class="mt-1" style="color:var(--text-body)" data-testid="dato-jurisdiccion">{{ caso().jurisdiccion ? jurisdiccionLabel[caso().jurisdiccion!] : '—' }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs uppercase tracking-wide" style="color:var(--text-faint)">Partido judicial</dt>
+          <dd class="mt-1" style="color:var(--text-body)">{{ partidoEtiqueta() }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs uppercase tracking-wide" style="color:var(--text-faint)">Órgano judicial</dt>
+          <dd class="mt-1" style="color:var(--text-body)">{{ caso().organoJudicial || '—' }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs uppercase tracking-wide" style="color:var(--text-faint)">Nº de procedimiento</dt>
+          <dd class="mt-1" style="color:var(--text-body)">{{ caso().numProcedimiento || '—' }}</dd>
         </div>
       </dl>
     </div>

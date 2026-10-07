@@ -7,10 +7,13 @@ import {
   minutesToTime,
   minutosAHoras,
   newRegistroId,
+  plazoDeEvento,
+  esEditableEnCalendario,
+  itemEsEditable,
   timeToMinutes,
 } from './agenda-utils';
 import type { CalendarItem } from './calendario.types';
-import type { CompanyMember } from '../../interfaces';
+import type { CompanyMember, Evento } from '../../interfaces';
 
 function item(extra: Partial<CalendarItem> = {}): CalendarItem {
   return { id: 'i1', title: 'Item', client: '', type: 'reunion', date: '2026-03-10', status: 'pendiente', ...extra };
@@ -101,5 +104,32 @@ describe('agenda-utils', () => {
     it('devuelve "Sin asignar" si no lo encuentra', () => {
       expect(memberName(members, 'desconocido')).toBe('Sin asignar');
     });
+  });
+});
+
+describe('plazos procesales en el calendario', () => {
+  const base = { id: 'e1', companyId: 'c', titulo: 'Reunión', fecha: '2026-03-10', todoDia: false } as Evento;
+  const plazo = (estadoPlazo: 'vigente' | 'requiere_revision'): Evento =>
+    ({
+      ...base, id: 'p1', titulo: 'Vence plazo', todoDia: true,
+      origen: { tipo: 'plazo_procesal', casoId: 'caso9', estadoPlazo },
+    }) as unknown as Evento;
+
+  it('un evento normal es editable en el calendario; un plazo procesal no', () => {
+    expect(esEditableEnCalendario(base)).toBe(true);
+    expect(esEditableEnCalendario(plazo('vigente'))).toBe(false);
+    expect(esEditableEnCalendario(plazo('requiere_revision'))).toBe(false);
+  });
+
+  it('itemEsEditable: false si el item es un plazo; true en hitos y eventos normales', () => {
+    expect(itemEsEditable(item())).toBe(true);
+    expect(itemEsEditable(item({ hitoEstado: 'pendiente' }))).toBe(true);
+    expect(itemEsEditable(item({ plazo: { requiereRevision: false } }))).toBe(false);
+  });
+
+  it('plazoDeEvento devuelve casoId y marca de revisión; {} si no es plazo', () => {
+    expect(plazoDeEvento(base)).toEqual({});
+    expect(plazoDeEvento(plazo('vigente'))).toEqual({ casoId: 'caso9', plazo: { requiereRevision: false } });
+    expect(plazoDeEvento(plazo('requiere_revision'))).toEqual({ casoId: 'caso9', plazo: { requiereRevision: true } });
   });
 });

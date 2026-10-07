@@ -16,6 +16,7 @@ import {
   Briefcase,
   Calendar,
   Flag,
+  Gavel,
   LucideAngularModule,
   type LucideIconData,
   Phone,
@@ -37,6 +38,7 @@ const ICONOS: Record<NotificacionTipo, LucideIconData> = {
   contactos: Users,
   eventos: Calendar,
   hitos: Flag,
+  plazo: Gavel,
 };
 
 /** Campana del header con badge de no leídas + panel (dropdown en escritorio, drawer en móvil). */

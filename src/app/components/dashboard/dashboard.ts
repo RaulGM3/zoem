@@ -226,20 +226,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (!uid) return [];
 
     return this.eventos()
-      .filter(e =>
-        esSeguimiento(e)
-        && e.responsableId === uid
-        && e.estado !== 'completado'
-        && e.estado !== 'cancelado'
-      )
-      .map(e => ({
-        id: e.id,
-        entregable: e.entregable ?? e.titulo,
-        contactoNombre: e.origen!.contactoNombre,
-        fecha: e.fecha,
-        vencido: esVencido(e, this.hoy),
-        link: `/contactos/${e.origen!.contactoId}`,
-      }))
+      .flatMap((e): SeguimientoVista[] => {
+        if (
+          !esSeguimiento(e)
+          || e.responsableId !== uid
+          || e.estado === 'completado'
+          || e.estado === 'cancelado'
+        ) return [];
+        return [{
+          id: e.id,
+          entregable: e.entregable ?? e.titulo,
+          contactoNombre: e.origen.contactoNombre,
+          fecha: e.fecha,
+          vencido: esVencido(e, this.hoy),
+          link: `/contactos/${e.origen.contactoId}`,
+        }];
+      })
       .sort((a, b) =>
         a.vencido === b.vencido
           ? a.fecha.localeCompare(b.fecha)

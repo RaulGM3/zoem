@@ -54,6 +54,21 @@ export const GUIA_CASOS: Guia = {
       ],
     },
     {
+      id: 'plazos-procesales-beta',
+      titulo: 'Calcular un plazo procesal (BETA)',
+      claves: ['plazo', 'plazos procesales', 'vencimiento', 'lexnet', 'notificación', 'días inhábiles', 'agosto', 'cómputo', 'partido judicial'],
+      requiere: { modulo: 'Casos', capacidad: 'editar' },
+      pasos: [
+        'Abre el caso, pulsa "Editar" y rellena "Jurisdicción" y "Partido judicial" (y, si quieres, "Órgano judicial" y "Nº de procedimiento"). Después pulsa "Guardar".',
+        'En el bloque "Plazos procesales" de la pestaña "Información", pulsa "Nuevo plazo".',
+        'Indica la "Fecha de notificación", elige un "Tipo de plazo" (solo es una sugerencia) y ajusta "Cantidad" y "Unidad" si hace falta.',
+        'Revisa el vencimiento calculado y el día de gracia (hasta las 15:00 del siguiente día hábil).',
+        'En "Días inhábiles en este plazo", desmarca los días que en realidad sean hábiles; el vencimiento se recalcula al momento. Lee también los avisos.',
+        'Marca "He revisado los días inhábiles y el vencimiento resultante" y pulsa "Guardar plazo": se crea un evento en el calendario.',
+      ],
+      nota: 'Función en pruebas: el cálculo es orientativo y la responsabilidad del cómputo es del profesional. Solo cuentan los días inhábiles confirmados en Configuración. Si cambian, el plazo pasa a "Requiere revisión" y tú decides si aceptas el nuevo vencimiento con "Revisar"; nunca se modifica solo.',
+    },
+    {
       id: 'clientes-del-caso',
       titulo: 'Vincular o quitar clientes de un caso',
       claves: ['añadir cliente', 'desvincular', 'contacto', 'parte'],

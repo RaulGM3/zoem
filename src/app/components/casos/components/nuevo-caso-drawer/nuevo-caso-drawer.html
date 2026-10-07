@@ -215,7 +215,71 @@
           />
           Sin vencimiento
         </label>
+  
+      <!-- Datos judiciales (opcional, colapsable) -->
+      <div class="space-y-3 rounded-lg p-3" style="border:1px solid var(--border-soft)">
+        <button
+          type="button"
+          data-judicial-toggle
+          (click)="judicialAbierto.set(!judicialAbierto())"
+          [attr.aria-expanded]="judicialAbierto()"
+          aria-controls="form-judicial-grupo"
+          class="tap-target flex w-full items-center justify-between gap-2 text-left text-sm font-medium"
+          style="color:var(--text-strong)"
+        >
+          Datos judiciales (opcional)
+          <lucide-icon [img]="ChevronDownIcon" class="w-4 h-4 shrink-0 transition-transform duration-150" [class.rotate-180]="judicialAbierto()" style="color:var(--text-muted)" aria-hidden="true" />
+        </button>
+        <div id="form-judicial-grupo" [hidden]="!judicialAbierto()">
+          @if (judicialAbierto()) {
+            <div class="space-y-3">
+              <div class="space-y-1">
+                <label for="form-jurisdiccion" class="form-label">Jurisdicción</label>
+                <select
+                  id="form-jurisdiccion"
+                  [value]="formJurisdiccion()"
+                  (change)="formJurisdiccion.set($any($event.target).value)"
+                  class="form-select"
+                >
+                  <option value="" [selected]="!formJurisdiccion()">Sin definir</option>
+                  @for (j of jurisdicciones; track j) {
+                    <option [value]="j" [selected]="j === formJurisdiccion()">{{ jurisdiccionLabel[j] }}</option>
+                  }
+                </select>
+              </div>
+              <div class="space-y-1">
+                <label for="form-partido" class="form-label">Partido judicial</label>
+                <app-partido-judicial-combobox
+                  inputId="form-partido"
+                  [value]="formPartidoJudicialId() || undefined"
+                  (cambio)="formPartidoJudicialId.set($event ?? '')"
+                />
+              </div>
+              <div class="space-y-1">
+                <label for="form-organo" class="form-label">Órgano judicial</label>
+                <input
+                  id="form-organo"
+                  type="text"
+                  [value]="formOrganoJudicial()"
+                  (input)="formOrganoJudicial.set($any($event.target).value)"
+                  class="form-input"
+                />
+              </div>
+              <div class="space-y-1">
+                <label for="form-procedimiento" class="form-label">Nº de procedimiento</label>
+                <input
+                  id="form-procedimiento"
+                  type="text"
+                  [value]="formNumProcedimiento()"
+                  (input)="formNumProcedimiento.set($any($event.target).value)"
+                  class="form-input"
+                />
+              </div>
+            </div>
+          }
+        </div>
       </div>
+    </div>
     </div>
 
       <div footer class="flex justify-end gap-3 px-5 py-4 sm:px-6">

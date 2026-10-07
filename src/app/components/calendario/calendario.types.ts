@@ -15,6 +15,8 @@ export interface CalendarItem {
   hitoEstado?: 'pendiente' | 'en_progreso' | 'completado' | 'cancelado';
   eventoEstado?: 'confirmado' | 'tentativo' | 'en_progreso' | 'completado' | 'cancelado';
   casoId?: string;
+  /** Presente solo si el evento es un plazo procesal (Gavel + enlace al caso). */
+  plazo?: { requiereRevision: boolean };
   horaInicio?: string;    // HH:mm — hora en la agenda
   duracionMinutos?: number; // duración en minutos (default 60)
   anotaciones?: Anotacion[];

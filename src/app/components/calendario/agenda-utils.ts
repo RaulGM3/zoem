@@ -1,5 +1,6 @@
 import type { CalendarItem, ItemColor } from './calendario.types';
-import type { CompanyMember } from '../../interfaces';
+import type { CompanyMember, Evento } from '../../interfaces';
+import { esPlazoProcesal } from '../../interfaces/evento.interface';
 
 /** Duración asumida para un item sin `duracionMinutos`. */
 export const DEFAULT_DURATION = 60;
@@ -50,4 +51,26 @@ export function itemTimeLabel(item: CalendarItem): string {
 /** Nombre del miembro a partir de su userId (para desplegables y resúmenes). */
 export function memberName(members: readonly CompanyMember[], userId: string): string {
   return members.find(m => m.userId === userId)?.nombre ?? 'Sin asignar';
+}
+
+/**
+ * Un plazo procesal se gestiona exclusivamente desde su caso: no se mueve, no se
+ * reprograma ni se elimina desde el calendario (nada cambia en silencio).
+ */
+export function esEditableEnCalendario(evento: Evento): boolean {
+  return !esPlazoProcesal(evento);
+}
+
+/** Igual que `esEditableEnCalendario`, sobre el item ya mapeado del calendario. */
+export function itemEsEditable(item: CalendarItem): boolean {
+  return !item.plazo;
+}
+
+/** Campos de CalendarItem propios de un plazo procesal ({} si el evento no lo es). */
+export function plazoDeEvento(evento: Evento): Pick<CalendarItem, 'casoId' | 'plazo'> {
+  if (!esPlazoProcesal(evento)) return {};
+  return {
+    casoId: evento.origen.casoId,
+    plazo: { requiereRevision: evento.origen.estadoPlazo === 'requiere_revision' },
+  };
 }

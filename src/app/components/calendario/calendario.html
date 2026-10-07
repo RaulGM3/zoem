@@ -2,6 +2,7 @@
   <div class="flex shrink-0 items-center justify-between gap-2">
     <h1 class="min-w-0 truncate text-[22px] font-semibold" style="color:var(--text-strong);font-family:var(--font-display)">Calendario</h1>
     <div class="flex items-center gap-2">
+      <app-dias-inhabiles-link />
       @if (perm.can('Calendario', 'ver')) {
         <button
           (click)="showSuscribirseDialog.set(true)"

@@ -35,5 +35,12 @@ export const CONFIGURACION_ROUTES: Routes = [
     loadComponent: () =>
       import('./secciones/tesoreria/tesoreria-seccion').then((m) => m.TesoreriaSeccionComponent),
   },
+  {
+    path: 'dias-inhabiles',
+    title: 'Días inhábiles',
+    data: { seccion: 'dias-inhabiles' },
+    loadComponent: () =>
+      import('../dias-inhabiles/dias-inhabiles-seccion').then((m) => m.DiasInhabilesSeccionComponent),
+  },
   { path: '**', redirectTo: '' },
 ];

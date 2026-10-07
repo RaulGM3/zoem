@@ -84,6 +84,17 @@
         <label for="empresa-ciudad" class="form-label">Ciudad</label>
         <input id="empresa-ciudad" type="text" formControlName="ciudad" class="form-input" autocomplete="address-level2" />
       </div>
+
+      <div class="sm:col-span-2">
+        <label for="empresa-ca" class="form-label">Comunidad autónoma</label>
+        <select id="empresa-ca" formControlName="ca" class="form-input" aria-describedby="empresa-ca-ayuda">
+          <option value="">Sin indicar</option>
+          @for (c of comunidades; track c[0]) {
+            <option [value]="c[0]">{{ c[1] }}</option>
+          }
+        </select>
+        <p id="empresa-ca-ayuda" class="mt-1 text-xs" style="color:var(--text-muted)">Se usa para los festivos del calendario judicial y los plazos procesales.</p>
+      </div>
     </div>
 
     <div class="flex sm:justify-end pt-1">

@@ -95,6 +95,21 @@ export const GUIA_CONFIGURACION: Guia = {
       nota: 'Las solicitudes llegan cuando alguien entra a una pantalla sin acceso y pulsa "Solicitar permiso al administrador".',
     },
     {
+      id: 'dias-inhabiles',
+      titulo: 'Revisar los días inhábiles (BETA)',
+      claves: ['festivos', 'días rojos', 'inhábiles', 'plazos procesales', 'calendario judicial', 'fiestas locales', 'partido judicial', 'confirmar festivos'],
+      requiere: { modulo: 'Configuración', capacidad: 'editar' },
+      pasos: [
+        'En "Configuración", abre "Días inhábiles". Los Gestores acceden desde Calendario, con el botón "Días inhábiles" (/calendario/dias-inhabiles).',
+        'Elige el "Calendario" (tu comunidad autónoma o un partido judicial de tus casos) y el "Año".',
+        'Pulsa "Buscar festivos oficiales" para que la IA los busque en el BOE y en los boletines oficiales. Llegan como "Propuesto · pendiente de revisar", con su fuente.',
+        'Revisa cada día abriendo su "Fuente". Pulsa "Confirmar" en un día, o "Confirmar todos los propuestos".',
+        'Para un cierre o fiesta local que falte, rellena "Fecha", "Nombre" y "Ámbito" y pulsa "Añadir día".',
+        'Para eliminar uno, pulsa "Quitar" y confirma con "Sí, quitar".',
+      ],
+      nota: 'Función BETA: el cálculo de plazos es orientativo y solo descuenta los días confirmados. La búsqueda con IA nunca confirma nada por sí sola, solo se lanza a mano y se puede repetir cada 24 horas por calendario y año. Admin y Gestor pueden editar los días inhábiles. Para que se propongan los festivos de tu comunidad, indícala en "Datos de la empresa" > "Comunidad autónoma".',
+    },
+    {
       id: 'eliminar-usuario',
       titulo: 'Eliminar a un usuario del despacho',
       claves: ['borrar', 'dar de baja', 'quitar acceso', 'despedir'],

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { signal } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { of } from 'rxjs';
+import { provideRouter } from '@angular/router';
 import { CalendarioComponent } from './calendario';
 import { CasosService } from '../../core/services/casos.service';
 import { CompanyService } from '../../core/services/company.service';
@@ -34,13 +35,14 @@ function setup(mobile: boolean): ComponentFixture<CalendarioComponent> {
   TestBed.configureTestingModule({
     imports: [CalendarioComponent],
     providers: [
+      provideRouter([]),
       { provide: CasosService, useValue: { hitosParaCalendarioStream: () => of([]) } },
       { provide: CompanyService, useValue: { activeCompany: signal({ id: 'c1' }) } },
       { provide: EventosService, useValue: { eventosStream: () => of([]) } },
       { provide: ToastService, useValue: { info: vi.fn(), run: vi.fn() } },
       { provide: UserSyncService, useValue: { currentUser: signal(null) } },
       { provide: UsersService, useValue: { members: signal([]), loadMembers: vi.fn() } },
-      { provide: PermissionService, useValue: { can: () => true } },
+      { provide: PermissionService, useValue: { can: () => true, hasRole: () => true, isSuperUser: () => false } },
     ],
   });
   const fixture = TestBed.createComponent(CalendarioComponent);

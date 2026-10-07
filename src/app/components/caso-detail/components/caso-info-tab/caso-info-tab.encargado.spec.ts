@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { signal } from '@angular/core';
+import { CompanyService } from '../../../../core/services/company.service';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { CasoInfoTabComponent, type CasoInfoFormData } from './caso-info-tab';
 import type { Caso, CompanyMember, Contact } from '../../../../interfaces';
@@ -24,7 +26,10 @@ describe('CasoInfoTabComponent — encargado', () => {
 
   async function montar(editing: boolean, caso: Caso = CASO): Promise<void> {
     TestBed.resetTestingModule();
-    TestBed.configureTestingModule({ imports: [CasoInfoTabComponent] });
+    TestBed.configureTestingModule({
+      imports: [CasoInfoTabComponent],
+      providers: [{ provide: CompanyService, useValue: { activeCompany: signal(null) } }],
+    });
     fixture = TestBed.createComponent(CasoInfoTabComponent);
     const set = (k: string, v: unknown): void => fixture.componentRef.setInput(k, v);
     set('caso', caso);

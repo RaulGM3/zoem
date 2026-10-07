@@ -14,7 +14,7 @@ import {
 import { AuthService } from '../../auth/auth.service';
 import { CompanyService } from './company.service';
 
-export type NotificacionTipo = 'llamadas' | 'casos' | 'contactos' | 'eventos' | 'hitos';
+export type NotificacionTipo = 'llamadas' | 'casos' | 'contactos' | 'eventos' | 'hitos' | 'plazo';
 
 export interface Notificacion {
   id: string;

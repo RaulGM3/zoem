@@ -26,7 +26,7 @@
                 <div class="flex h-10 w-10 flex-col items-center justify-center rounded-xl sm:h-12 sm:w-12"
                   [style.background]="'color-mix(in srgb,' + getTypeColor(event.type) + ' 14%,transparent)'"
                   [style.color]="getTypeColor(event.type)">
-                  <lucide-icon [img]="getTypeIcon(event.type)" size="20"></lucide-icon>
+                  <lucide-icon [img]="event.plazo ? GavelIcon : getTypeIcon(event.type)" size="20" aria-hidden="true"></lucide-icon>
                 </div>
                 @if (event.hitoEstado) {
                   <span class="rounded-full px-2.5 py-1 text-xs font-medium" [class]="getHitoEstadoClass(event)">
@@ -45,6 +45,26 @@
                   <div class="min-w-0">
                     <p class="truncate font-semibold" style="color:var(--text-strong)">{{ event.title }}</p>
                     <p class="truncate text-sm" style="color:var(--text-muted)">{{ event.client }}</p>
+                    @if (event.plazo) {
+                      <p class="mt-1 flex flex-wrap items-center gap-1.5">
+                        <span data-plazo class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold"
+                          style="background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger)">
+                          <lucide-icon [img]="GavelIcon" size="12" aria-hidden="true"></lucide-icon>
+                          Plazo
+                        </span>
+                        @if (event.plazo.requiereRevision) {
+                          <span data-plazo-revision class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold"
+                            style="background:color-mix(in srgb,var(--warning) 18%,transparent);color:var(--text-strong)">
+                            <lucide-icon [img]="TriangleAlertIcon" size="12" aria-hidden="true"></lucide-icon>
+                            Requiere revisión
+                          </span>
+                        }
+                        @if (event.casoId) {
+                          <a [routerLink]="['/casos', event.casoId]" [attr.aria-label]="'Ver caso de ' + event.title"
+                            class="text-xs font-medium underline max-sm:tap-target" style="color:var(--brand)">Ver caso</a>
+                        }
+                      </p>
+                    }
                   </div>
                   @if (event.hitoEstado) {
                     <div class="flex shrink-0 flex-wrap items-center gap-2">

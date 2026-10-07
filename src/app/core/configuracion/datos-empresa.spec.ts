@@ -4,7 +4,7 @@ import { cifValidator, codigoPostalValidator, normalizarDatosEmpresa } from './d
 
 const base = {
   tipoPersona: 'juridica' as const, name: '  Acme SL ', cif: ' b12345678 ', email: ' a@b.com ',
-  telefono: ' ', direccion: ' Calle 1 ', codigoPostal: '28001 ', ciudad: '', website: ' acme.com ',
+  telefono: ' ', direccion: ' Calle 1 ', codigoPostal: '28001 ', ciudad: '', website: ' acme.com ', ca: '',
 };
 
 describe('normalizarDatosEmpresa', () => {
@@ -12,8 +12,13 @@ describe('normalizarDatosEmpresa', () => {
     expect(normalizarDatosEmpresa(base)).toEqual({
       tipoPersona: 'juridica', name: 'Acme SL', cif: 'B12345678', email: 'a@b.com',
       telefono: undefined, direccion: 'Calle 1', codigoPostal: '28001', ciudad: undefined,
-      website: 'https://acme.com',
+      website: 'https://acme.com', ca: undefined,
     });
+  });
+  it('ca: acepta una comunidad válida y descarta vacío o valores desconocidos', () => {
+    expect(normalizarDatosEmpresa({ ...base, ca: 'madrid' }).ca).toBe('madrid');
+    expect(normalizarDatosEmpresa({ ...base, ca: '' }).ca).toBeUndefined();
+    expect(normalizarDatosEmpresa({ ...base, ca: 'atlantida' }).ca).toBeUndefined();
   });
   it('respeta website que ya trae protocolo', () => {
     expect(normalizarDatosEmpresa({ ...base, website: 'http://acme.com' }).website).toBe('http://acme.com');

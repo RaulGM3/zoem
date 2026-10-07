@@ -24,6 +24,7 @@ describe('resolvePrefs', () => {
       contactos: true,
       eventos: true,
       hitos: true,
+      plazo: true,
       push: true,
     });
     expect(resolvePrefs(null)).toEqual(DEFAULT_PREFS);
@@ -36,6 +37,7 @@ describe('resolvePrefs', () => {
       contactos: true,
       eventos: true,
       hitos: true,
+      plazo: true,
       push: false,
     });
   });
@@ -80,11 +82,11 @@ describe('NotificationPrefsService', () => {
     expect(h.updateDoc).toHaveBeenCalledWith({ path: 'users/u1' }, { notificationPrefs: prefs });
   });
 
-  it('save writes only the six known keys', async () => {
+  it('save writes only the seven known keys', async () => {
     await svc.save('u1', { ...DEFAULT_PREFS, extra: true } as never);
     const [, data] = h.updateDoc.mock.calls[0];
     expect(Object.keys((data as { notificationPrefs: object }).notificationPrefs).sort()).toEqual(
-      ['casos', 'contactos', 'eventos', 'hitos', 'llamadas', 'push'],
+      ['casos', 'contactos', 'eventos', 'hitos', 'llamadas', 'plazo', 'push'],
     );
   });
 

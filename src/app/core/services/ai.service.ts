@@ -53,6 +53,32 @@ export class AiService {
   }
 
   /**
+   * Modelo con Grounding con Google Search Y salida JSON en una sola llamada.
+   * Requiere que el modelo (Gemini 3+) admita `tools` junto con `responseSchema`; si el backend
+   * lo rechazara en ejecución, `FestivosIaService` tiene el plan B de dos llamadas.
+   *
+   * Términos de Google: quien muestre el resultado debe renderizar `searchEntryPoint` y las fuentes.
+   */
+  getGroundedJsonModel(schema: TypedSchema): GenerativeModel {
+    return getGenerativeModel(this.instance, {
+      model: GEMINI_MODEL,
+      tools: [{ googleSearch: {} }],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema: schema,
+      },
+    });
+  }
+
+  /** Modelo con Google Search y respuesta en texto (primera llamada del plan B de dos pasos). */
+  getGroundedTextModel(): GenerativeModel {
+    return getGenerativeModel(this.instance, {
+      model: GEMINI_MODEL,
+      tools: [{ googleSearch: {} }],
+    });
+  }
+
+  /**
    * Modelo con function calling para el agente conversacional.
    * Sin `responseSchema`: aquí la respuesta es lenguaje natural y, cuando toca,
    * llamadas a herramientas. Se pasa una lista vacía de declaraciones como

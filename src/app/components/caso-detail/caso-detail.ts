@@ -29,6 +29,7 @@ import {
 } from '../../interfaces';
 import { CasoDetailHeaderComponent, CasoTab } from './components/caso-detail-header/caso-detail-header';
 import { CasoAccionesPanelComponent } from './components/caso-acciones-panel/caso-acciones-panel';
+import { CasoPlazosComponent } from './components/caso-plazos/caso-plazos';
 import { CasoInfoTabComponent, CasoInfoFormData } from './components/caso-info-tab/caso-info-tab';
 import { CasoHitosTabComponent } from './components/caso-hitos-tab/caso-hitos-tab';
 import { CasoGestoriaTabComponent } from './components/caso-gestoria-tab/caso-gestoria-tab';
@@ -53,6 +54,7 @@ import { MovimientoFormDrawerComponent, MovimientoFormData } from './components/
     AccionLanzadorComponent,
     SugerenciaAccionComponent,
     CasoAccionesPanelComponent,
+    CasoPlazosComponent,
   ],
   templateUrl: './caso-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

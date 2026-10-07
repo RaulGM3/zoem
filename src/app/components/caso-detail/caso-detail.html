@@ -52,13 +52,16 @@
             (addContact)="addContact($event)"
             (removeContact)="removeContact($event)"
           />
-          <app-caso-acciones-panel
-            [casoId]="caso()!.id"
-            [contactos]="linkedContacts()"
-            [canEdit]="canEditCasos()"
-            [recarga]="recargaAcciones()"
-            (ejecutar)="ejecutarAccion($event)"
-          />
+          <div class="space-y-6">
+            <app-caso-plazos [caso]="caso()!" [canEdit]="canEditCasos()" />
+            <app-caso-acciones-panel
+              [casoId]="caso()!.id"
+              [contactos]="linkedContacts()"
+              [canEdit]="canEditCasos()"
+              [recarga]="recargaAcciones()"
+              (ejecutar)="ejecutarAccion($event)"
+            />
+          </div>
         </div>
       }
 

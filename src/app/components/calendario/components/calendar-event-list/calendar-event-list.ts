@@ -1,8 +1,9 @@
 import { Component, ChangeDetectionStrategy, input, output, signal, inject, DestroyRef } from '@angular/core';
 import {
   LucideAngularModule, LucideIconData,
-  Calendar, Phone, Users, FileText, Bell,
+  Calendar, Phone, Users, FileText, Bell, Gavel, TriangleAlert,
 } from 'lucide-angular';
+import { RouterLink } from '@angular/router';
 import type { CalendarItem, EventGroup } from '../../calendario.types';
 import type { HitoEstado } from '../../../../interfaces';
 import {
@@ -25,7 +26,7 @@ function todayStr(): string {
 
 @Component({
   selector: 'app-calendar-event-list',
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, RouterLink],
   templateUrl: './calendar-event-list.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -35,6 +36,8 @@ export class CalendarEventListComponent {
   readonly hitoStatusChanged = output<{ id: string; casoId: string; estado: HitoEstado }>();
 
   readonly CalendarIcon = Calendar;
+  readonly GavelIcon = Gavel;
+  readonly TriangleAlertIcon = TriangleAlert;
 
   private readonly destroyRef = inject(DestroyRef);
   /**

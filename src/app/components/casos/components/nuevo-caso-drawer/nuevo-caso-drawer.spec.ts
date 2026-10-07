@@ -4,6 +4,7 @@ import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { NuevoCasoDrawerComponent } from './nuevo-caso-drawer';
 import { ContactService } from '../../../../core/services/contact.service';
 import { UsersService } from '../../../../core/services/users';
+import { CompanyService } from '../../../../core/services/company.service';
 import type { Contact } from '../../../../interfaces';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
 
@@ -40,6 +41,7 @@ describe('NuevoCasoDrawerComponent', () => {
       providers: [
         { provide: ContactService, useValue: { contacts: signal([CONTACTO]), loadContacts: vi.fn() } },
         { provide: UsersService, useValue: { members: signal([]), loadMembers: vi.fn() } },
+        { provide: CompanyService, useValue: { activeCompany: signal(null) } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(NuevoCasoDrawerComponent);
@@ -120,6 +122,74 @@ describe('NuevoCasoDrawerComponent', () => {
     expect(btn.textContent).toContain('Crear caso');
     btn.click();
     expect(emitido).toBe(1);
+  });
+
+  describe('datos judiciales (opcional)', () => {
+    const toggle = (): HTMLButtonElement => el().querySelector<HTMLButtonElement>('[data-judicial-toggle]')!;
+
+    it('el grupo nace colapsado y se expande con aria-expanded', async () => {
+      await montar(true);
+      expect(toggle().getAttribute('aria-expanded')).toBe('false');
+      expect(el().querySelector('#form-jurisdiccion')).toBeNull();
+      toggle().click();
+      fixture.detectChanges();
+      expect(toggle().getAttribute('aria-expanded')).toBe('true');
+      expect(toggle().textContent).toContain('Datos judiciales (opcional)');
+      expect(el().querySelector('#form-jurisdiccion')).not.toBeNull();
+      expect(el().querySelector('app-partido-judicial-combobox')).not.toBeNull();
+      expect(el().querySelector('#form-organo')).not.toBeNull();
+      expect(el().querySelector('#form-procedimiento')).not.toBeNull();
+    });
+
+    it('sin rellenar, el caso se crea sin campos judiciales', async () => {
+      await montar(true);
+      const c = fixture.componentInstance;
+      const datos: Record<string, unknown>[] = [];
+      c.saved.subscribe((d) => datos.push({ ...d }));
+      c.selectCliente(CONTACTO);
+      c.formTitulo.set('Caso');
+      c.submit();
+      for (const k of ['jurisdiccion', 'partidoJudicialId', 'organoJudicial', 'numProcedimiento']) {
+        expect(datos[0][k]).toBeUndefined();
+      }
+    });
+
+    it('emite los datos judiciales informados (recortados)', async () => {
+      await montar(true);
+      const c = fixture.componentInstance;
+      const datos: unknown[] = [];
+      c.saved.subscribe((d) => datos.push(d));
+      c.selectCliente(CONTACTO);
+      c.formTitulo.set('Caso');
+      c.formJurisdiccion.set('contencioso');
+      c.formPartidoJudicialId.set('28-21');
+      c.formOrganoJudicial.set('  Juzgado nº 3 ');
+      c.formNumProcedimiento.set(' PO 45/2026 ');
+      c.submit();
+      expect(datos[0]).toMatchObject({
+        jurisdiccion: 'contencioso', partidoJudicialId: '28-21',
+        organoJudicial: 'Juzgado nº 3', numProcedimiento: 'PO 45/2026',
+      });
+    });
+
+    it('al reabrir el drawer se limpian los datos judiciales', async () => {
+      await montar(true);
+      const c = fixture.componentInstance;
+      c.formJurisdiccion.set('civil');
+      fixture.componentRef.setInput('visible', false);
+      fixture.detectChanges();
+      fixture.componentRef.setInput('visible', true);
+      fixture.detectChanges();
+      expect(c.formJurisdiccion()).toBe('');
+    });
+
+    it('axe: sin violaciones con el grupo expandido', async () => {
+      await montar(true);
+      toggle().click();
+      fixture.detectChanges();
+      const v = await analizarA11y(el());
+      expect(v, `\n${formatearViolaciones(v)}\n`).toEqual([]);
+    });
   });
 
   it('axe: sin violaciones en móvil', async () => {

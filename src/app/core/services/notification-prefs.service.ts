@@ -7,10 +7,11 @@ export interface NotificationPrefs {
   contactos: boolean;
   eventos: boolean;
   hitos: boolean;
+  plazo: boolean;
   push: boolean;
 }
 
-export const PREF_KEYS = ['llamadas', 'casos', 'contactos', 'eventos', 'hitos', 'push'] as const;
+export const PREF_KEYS = ['llamadas', 'casos', 'contactos', 'eventos', 'hitos', 'plazo', 'push'] as const;
 
 /** Ausente = true (mismo criterio que el backend notifyUsers). */
 export const DEFAULT_PREFS: NotificationPrefs = {
@@ -19,6 +20,7 @@ export const DEFAULT_PREFS: NotificationPrefs = {
   contactos: true,
   eventos: true,
   hitos: true,
+  plazo: true,
   push: true,
 };
 

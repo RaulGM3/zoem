@@ -1,4 +1,5 @@
 import { Timestamp } from '@angular/fire/firestore';
+import type { Jurisdiccion } from '../core/plazos/calendario-judicial';
 
 export type CasoTipo = 'Legal' | 'Fiscal' | 'Laboral' | 'Mercantil' | 'Civil';
 export type CasoEstado = 'pendiente' | 'en_proceso' | 'cerrado' | 'urgente' | 'archivado';
@@ -129,6 +130,12 @@ export interface Caso {
   cierreSaldoBancario?: number;
   encargadoId?: string;
   vencimiento?: string;
+  /** Datos procesales (plazos BETA). */
+  jurisdiccion?: Jurisdiccion;
+  /** Id de `PartidoJudicial` (ver core/plazos/partidos-judiciales). */
+  partidoJudicialId?: string;
+  organoJudicial?: string;
+  numProcedimiento?: string;
   /** uid de quien creó el caso. */
   createdBy?: string;
   /** uid de quien hizo la última edición (el backend lo usa como actor en notificaciones). */
@@ -168,4 +175,9 @@ export interface CreateCasoData {
   contactoIds: string[];
   plantillaId?: string;
   encargadoId?: string;
+  /** Datos judiciales opcionales (plazos BETA). */
+  jurisdiccion?: Jurisdiccion;
+  partidoJudicialId?: string;
+  organoJudicial?: string;
+  numProcedimiento?: string;
 }

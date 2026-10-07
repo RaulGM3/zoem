@@ -1,0 +1,292 @@
+<div class="space-y-6">
+  <header>
+    <h2 id="config-detalle-titulo" tabindex="-1" class="text-xl font-semibold outline-none" style="color:var(--text-strong)">
+      Días inhábiles
+      <span class="ml-2 align-middle rounded-md px-2 py-0.5 text-xs font-semibold" style="background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand)">BETA</span>
+    </h2>
+    <p class="mt-1 text-sm" style="color:var(--text-muted)">
+      Festivos que no cuentan en el cómputo de plazos procesales. Solo los días confirmados se aplican; revísalos siempre contra la fuente oficial.
+    </p>
+    @if (!puedeEditar()) {
+      <p class="mt-2 text-xs" style="color:var(--text-muted)">Solo lectura: únicamente Admin y Gestor pueden modificar los días inhábiles.</p>
+    }
+  </header>
+
+  @if (!capaActiva()) {
+    <p class="rounded-xl p-5 text-sm" style="border:1px dashed var(--border);background:var(--surface-2);color:var(--text-muted)">
+      Tu empresa no tiene comunidad autónoma asignada, así que no hay calendario que mostrar. Cuando se asigne, aparecerá aquí junto con los partidos judiciales de tus casos.
+    </p>
+  } @else {
+    <section aria-labelledby="dias-filtros-titulo" class="rounded-xl p-5" style="border:1px solid var(--border);background:var(--surface)">
+      <h3 id="dias-filtros-titulo" class="sr-only">Calendario a revisar</h3>
+      <div class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_10rem]">
+        <div>
+          <label for="dias-capa" class="form-label">Calendario</label>
+          <select id="dias-capa" name="capa" class="form-input" [value]="capaActiva()!.id" (change)="elegirCapa($any($event.target).value)">
+            @for (c of capas(); track c.id) {
+              <option [value]="c.id" [selected]="c.id === capaActiva()!.id">{{ c.etiqueta }}</option>
+            }
+          </select>
+        </div>
+        <div>
+          <label for="dias-anio" class="form-label">Año</label>
+          <select id="dias-anio" name="anio" class="form-input" (change)="elegirAnio($any($event.target).value)">
+            @for (a of anios; track a) {
+              <option [value]="a" [selected]="a === anio()">{{ a }}</option>
+            }
+          </select>
+        </div>
+      </div>
+    </section>
+
+    @if (puedeEditar()) {
+      <section aria-labelledby="dias-busqueda-titulo" [attr.aria-busy]="buscando() ? 'true' : null"
+        class="rounded-xl p-5 space-y-4" style="border:1px solid var(--border);background:var(--surface)">
+        <h3 id="dias-busqueda-titulo" class="text-sm font-semibold" style="color:var(--text-strong)">Búsqueda de festivos oficiales (IA)</h3>
+        <p class="text-xs" style="color:var(--text-muted)">
+          Consulta el BOE y los boletines oficiales con IA (Gemini con Google Search). Lo que encuentre llega como
+          «propuesto»: revisa cada fuente y confírmalo antes de que cuente en un plazo. Solo se lanza a mano y puede repetirse cada 24 horas por calendario y año.
+        </p>
+        <div class="flex flex-wrap items-center gap-3">
+          <button type="button" (click)="pedirBusqueda()" [disabled]="botonBuscarDeshabilitado()"
+            [attr.aria-describedby]="disponibleDesde() ? 'dias-buscar-ayuda' : null"
+            class="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50 max-sm:tap-target"
+            style="background:var(--brand)">
+            <lucide-icon [img]="SearchIcon" class="size-4" aria-hidden="true"></lucide-icon>
+            Buscar festivos oficiales {{ anio() }}
+          </button>
+          @if (disponibleDesde(); as desde) {
+            <span id="dias-buscar-ayuda" class="text-xs" style="color:var(--text-muted)">Podrás volver a buscar a partir de {{ desde }}</span>
+          }
+        </div>
+
+        @if (buscando()) {
+          <p role="status" class="text-sm" style="color:var(--text-muted)">Buscando festivos oficiales de {{ anio() }}… puede tardar hasta un minuto.</p>
+        }
+        @if (errorBusqueda(); as msg) {
+          <div role="alert" class="rounded-lg p-3 text-sm" style="border:1px solid color-mix(in srgb,var(--danger) 35%,transparent);background:color-mix(in srgb,var(--danger) 6%,transparent);color:var(--text-strong)">{{ msg }}</div>
+        }
+
+        @if (resultado(); as r) {
+          <div class="space-y-4 rounded-lg p-4" style="background:var(--surface-2)">
+            <p role="status" class="text-sm font-semibold" style="color:var(--text-strong)">
+              Búsqueda completada: {{ textoPropuestos() }} (pendientes de revisar en la lista de abajo).
+            </p>
+
+            @if (r.descartadas.length) {
+              <div>
+                <h4 class="mb-1 text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted)">Fechas descartadas ({{ r.descartadas.length }})</h4>
+                <ul class="space-y-1 text-xs" style="color:var(--text-body)">
+                  @for (d of r.descartadas; track d.fecha + d.motivo) {
+                    <li><span class="font-medium">{{ fechaConDiaSemana(d.fecha) }}</span>: {{ textoDescarte(d.motivo, anio()) }}</li>
+                  }
+                </ul>
+              </div>
+            }
+
+            @if (r.fuentes.length) {
+              <div>
+                <h4 class="mb-1 text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted)">Fuentes consultadas</h4>
+                <ul class="space-y-1 text-xs">
+                  @for (fu of r.fuentes; track fu.uri) {
+                    <li>
+                      <a [href]="fu.uri" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 underline" style="color:var(--brand)">
+                        {{ fu.titulo }}<span class="sr-only"> (se abre en una pestaña nueva)</span>
+                        <lucide-icon [img]="ExternalLinkIcon" class="size-3" aria-hidden="true"></lucide-icon>
+                      </a>
+                    </li>
+                  }
+                </ul>
+              </div>
+            }
+
+            @if (sugerenciasGoogle(); as sugerencias) {
+              <div>
+                <h4 class="mb-1 text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted)">Sugerencias de Google Search</h4>
+                <iframe sandbox="allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"
+                  title="Sugerencias de búsqueda de Google relacionadas con esta consulta"
+                  [srcdoc]="sugerencias" class="h-24 w-full rounded-lg" style="border:0"></iframe>
+              </div>
+            }
+          </div>
+        }
+      </section>
+    }
+
+    @if (cargando()) {
+      <p role="status" class="text-sm" style="color:var(--text-muted)">Cargando días inhábiles…</p>
+    } @else if (error()) {
+      <div role="alert" class="flex flex-wrap items-center gap-3 rounded-xl p-4 text-sm" style="border:1px solid color-mix(in srgb,var(--danger) 35%,transparent);background:color-mix(in srgb,var(--danger) 6%,transparent);color:var(--text-strong)">
+        <span>No se pudieron cargar los días inhábiles. Comprueba tu conexión e inténtalo de nuevo.</span>
+        <button type="button" (click)="reintentar()" class="rounded-lg px-3 py-1.5 text-xs font-semibold max-sm:tap-target" style="background:var(--surface-2);color:var(--text-body)">Reintentar</button>
+      </div>
+    } @else {
+      @if (sinConfirmados()) {
+        <section aria-labelledby="dias-aviso-titulo" class="rounded-xl p-5 space-y-3" style="border:1px solid color-mix(in srgb,var(--warning) 45%,transparent);background:color-mix(in srgb,var(--warning) 8%,transparent)">
+          <h3 id="dias-aviso-titulo" class="flex items-center gap-2 text-sm font-semibold" style="color:var(--text-strong)">
+            <lucide-icon [img]="AlertIcon" class="size-4" aria-hidden="true"></lucide-icon>
+            No hay días inhábiles confirmados para {{ anio() }} en {{ capaActiva()!.etiqueta }}.
+          </h3>
+          <p class="text-sm" style="color:var(--text-body)">
+            Sin ellos, los plazos que calcules no descontarán festivos de este calendario y podrían vencer antes de lo que parece.
+          </p>
+        </section>
+      }
+
+      @if (ultimaBusqueda(); as ub) {
+        <p class="text-xs" style="color:var(--text-muted)">Última búsqueda: {{ ub.fecha }} por {{ ub.nombre }}</p>
+      }
+
+      <section aria-labelledby="dias-lista-titulo" class="rounded-xl p-5 space-y-5" style="border:1px solid var(--border);background:var(--surface)">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h3 id="dias-lista-titulo" class="text-sm font-semibold" style="color:var(--text-strong)">Días de {{ anio() }}</h3>
+          @if (puedeEditar() && hayPropuestos()) {
+            <button type="button" (click)="confirmarTodos()" [disabled]="ocupado()"
+              class="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-50 max-sm:tap-target"
+              style="background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand)">
+              <lucide-icon [img]="CheckCheckIcon" class="size-4" aria-hidden="true"></lucide-icon>
+              Confirmar todos los propuestos
+            </button>
+          }
+        </div>
+
+        @for (g of grupos(); track g.ambito) {
+          <div>
+            <h4 class="mb-2 text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted)">{{ g.label }}</h4>
+            <ul class="divide-y rounded-lg" style="border:1px solid var(--border);border-color:var(--border)">
+              @for (d of g.dias; track d.fecha) {
+                <li class="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2.5" style="border-color:var(--border)">
+                  <div class="min-w-0 flex-1">
+                    <p class="text-sm font-medium" style="color:var(--text-strong)">{{ d.nombre }}</p>
+                    <p class="text-xs" style="color:var(--text-muted)">
+                      {{ fechaConDiaSemana(d.fecha) }} · {{ d.origen === 'ia' ? 'IA' : 'Manual' }}
+                    </p>
+                  </div>
+                  @if (d.estado === 'confirmado') {
+                    <span class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold" style="background:color-mix(in srgb,var(--success) 14%,transparent);color:var(--text-strong)">
+                      <lucide-icon [img]="CheckIcon" class="size-3" aria-hidden="true"></lucide-icon>
+                      Confirmado
+                    </span>
+                  } @else {
+                    <span class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold" style="background:color-mix(in srgb,var(--warning) 18%,transparent);color:var(--text-strong)">
+                      Propuesto · pendiente de revisar
+                    </span>
+                  }
+                  @if (d.fuenteUrl) {
+                    <a [href]="d.fuenteUrl" target="_blank" rel="noopener noreferrer"
+                      [attr.aria-label]="'Fuente de ' + d.nombre + ' (se abre en una pestaña nueva)'"
+                      class="inline-flex items-center gap-1 text-xs font-medium underline max-sm:tap-target" style="color:var(--brand)">
+                      Fuente
+                      <lucide-icon [img]="ExternalLinkIcon" class="size-3" aria-hidden="true"></lucide-icon>
+                    </a>
+                  }
+                  @if (puedeEditar()) {
+                    <div class="flex items-center gap-2">
+                      @if (d.estado === 'propuesto') {
+                        <button type="button" (click)="confirmar(d)" [disabled]="ocupado()"
+                          class="rounded-lg px-2.5 py-1 text-xs font-semibold disabled:opacity-50 max-sm:tap-target"
+                          style="background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand)">Confirmar<span class="sr-only"> día {{ d.nombre }}</span></button>
+                      }
+                      <button type="button" (click)="pedirQuitar(d)" [disabled]="ocupado()"
+                        class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold disabled:opacity-50 max-sm:tap-target"
+                        style="background:var(--surface-2);color:var(--danger)">
+                        <lucide-icon [img]="Trash2Icon" class="size-3" aria-hidden="true"></lucide-icon>
+                        <span>Quitar<span class="sr-only"> {{ d.nombre }}</span></span>
+                      </button>
+                    </div>
+                  }
+                </li>
+              }
+            </ul>
+          </div>
+        } @empty {
+          <p class="text-sm" style="color:var(--text-muted)">Todavía no hay días registrados para {{ anio() }} en este calendario.</p>
+        }
+      </section>
+
+      @if (puedeEditar()) {
+        <form [formGroup]="form" (ngSubmit)="anadirManual()" class="rounded-xl p-5 space-y-4" style="border:1px solid var(--border);background:var(--surface)" novalidate>
+          <h3 class="text-sm font-semibold" style="color:var(--text-strong)">Añadir día inhábil manual</h3>
+          <div class="grid gap-4 sm:grid-cols-[10rem_minmax(0,1fr)_10rem]">
+            <div>
+              <label for="dia-fecha" class="form-label">Fecha <span aria-hidden="true">*</span></label>
+              <input id="dia-fecha" type="date" formControlName="fecha" class="form-input" required
+                [attr.min]="anio() + '-01-01'" [attr.max]="anio() + '-12-31'"
+                [attr.aria-invalid]="mostrarError('fecha') ? 'true' : null"
+                [attr.aria-describedby]="mostrarError('fecha') ? 'dia-fecha-error' : null" />
+              @if (mostrarError('fecha')) {
+                <p id="dia-fecha-error" class="mt-1 text-xs" style="color:var(--danger)">
+                  @if (form.controls.fecha.hasError('otroAnio')) { La fecha debe ser de {{ anio() }}. } @else { Indica la fecha. }
+                </p>
+              }
+            </div>
+            <div>
+              <label for="dia-nombre" class="form-label">Nombre <span aria-hidden="true">*</span></label>
+              <input id="dia-nombre" type="text" formControlName="nombre" class="form-input" autocomplete="off" required
+                [attr.aria-invalid]="mostrarError('nombre') ? 'true' : null"
+                [attr.aria-describedby]="mostrarError('nombre') ? 'dia-nombre-error' : null" />
+              @if (mostrarError('nombre')) {
+                <p id="dia-nombre-error" class="mt-1 text-xs" style="color:var(--danger)">Escribe el nombre del día.</p>
+              }
+            </div>
+            <div>
+              <label for="dia-ambito" class="form-label">Ámbito</label>
+              <select id="dia-ambito" formControlName="ambito" class="form-input">
+                @for (a of ambitos; track a[0]) {
+                  <option [value]="a[0]">{{ a[1] }}</option>
+                }
+              </select>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <button type="submit" [disabled]="ocupado()"
+              class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 max-sm:tap-target" style="background:var(--brand)">
+              <lucide-icon [img]="PlusIcon" class="size-4" aria-hidden="true"></lucide-icon>
+              Añadir día
+            </button>
+            <p class="text-xs" style="color:var(--text-muted)">Un día añadido a mano entra como confirmado.</p>
+          </div>
+        </form>
+      }
+    }
+  }
+</div>
+
+@if (diaAQuitar(); as dia) {
+  <app-overlay-shell [open]="true" title="Confirmar quitar día inhábil" variant="modal" (closed)="cancelarQuitar()">
+    <div class="p-5">
+      <h3 class="mb-1 text-sm font-semibold" style="color:var(--text-strong)">¿Quitar este día inhábil?</h3>
+      <p class="text-xs" style="color:var(--text-muted)">
+        {{ dia.nombre }} ({{ fechaConDiaSemana(dia.fecha) }}). Se recordará como descartado y la búsqueda con IA no volverá a proponerlo.
+      </p>
+    </div>
+    <div footer class="flex gap-2 px-5 py-3">
+      <button type="button" (click)="cancelarQuitar()"
+        class="flex-1 rounded-lg px-4 py-2 text-sm font-medium max-sm:tap-target" style="background:var(--surface-2);color:var(--text-body)">Cancelar</button>
+      <button type="button" (click)="quitarConfirmado()"
+        class="flex-1 rounded-lg px-4 py-2 text-sm font-medium text-white max-sm:tap-target" style="background:var(--danger)">
+        Sí, quitar<span class="sr-only"> {{ dia.nombre }}</span>
+      </button>
+    </div>
+  </app-overlay-shell>
+}
+
+@if (confirmarRebusqueda()) {
+  <app-overlay-shell [open]="true" title="Confirmar nueva búsqueda" variant="modal" (closed)="cancelarRebusqueda()">
+    <div class="p-5">
+      <h3 class="mb-1 text-sm font-semibold" style="color:var(--text-strong)">¿Volver a buscar?</h3>
+      <p class="text-xs" style="color:var(--text-muted)">
+        @if (ultimaBusqueda(); as ub) {
+          Ya se buscó el {{ ub.fecha }} por {{ ub.nombre }}. ¿Volver a buscar?
+        }
+        Los días que ya confirmaste o añadiste a mano no se tocan.
+      </p>
+    </div>
+    <div footer class="flex gap-2 px-5 py-3">
+      <button type="button" (click)="cancelarRebusqueda()"
+        class="flex-1 rounded-lg px-4 py-2 text-sm font-medium max-sm:tap-target" style="background:var(--surface-2);color:var(--text-body)">Cancelar</button>
+      <button type="button" (click)="confirmarYBuscar()"
+        class="flex-1 rounded-lg px-4 py-2 text-sm font-medium text-white max-sm:tap-target" style="background:var(--brand)">Sí, volver a buscar</button>
+    </div>
+  </app-overlay-shell>
+}

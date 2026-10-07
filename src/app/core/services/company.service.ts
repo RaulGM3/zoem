@@ -14,6 +14,7 @@ import {
   deleteField,
 } from '@angular/fire/firestore';
 import { stripUndefinedDeep } from '../firebase/sanitize';
+import type { ComunidadAutonoma } from '../../interfaces/company';
 
 export interface CompanyVerifactu {
   enabled: boolean;
@@ -51,6 +52,8 @@ export interface Company {
    *  para persona física es el NIF. Siempre se almacena en este campo. */
   cif?: string;
   plan?: string;
+  /** Comunidad autónoma de la empresa (define la capa de calendario judicial por defecto). */
+  ca?: ComunidadAutonoma;
   isActive: boolean;
   email?: string;
   telefono?: string;

@@ -80,6 +80,27 @@ describe('CasosService: campos de actor (updatedBy/createdBy)', () => {
     expect(hito.asignadoA).toBe('u9');
   });
 
+  it('createCaso persiste los datos judiciales informados (recortados)', async () => {
+    await service.createCaso({
+      titulo: 'T', jurisdiccion: 'civil', partidoJudicialId: '28-21',
+      organoJudicial: '  Juzgado 5  ', numProcedimiento: ' 123/2026 ',
+    } as Parameters<CasosService['createCaso']>[0]);
+    const payload = mockAddDoc.mock.calls[0][1];
+    expect(payload).toMatchObject({
+      jurisdiccion: 'civil', partidoJudicialId: '28-21', organoJudicial: 'Juzgado 5', numProcedimiento: '123/2026',
+    });
+  });
+
+  it('createCaso omite los datos judiciales vacíos (no escribe cadenas vacías)', async () => {
+    await service.createCaso({
+      titulo: 'T', jurisdiccion: '', partidoJudicialId: '', organoJudicial: '   ', numProcedimiento: '',
+    } as unknown as Parameters<CasosService['createCaso']>[0]);
+    const payload = mockAddDoc.mock.calls[0][1];
+    for (const k of ['jurisdiccion', 'partidoJudicialId', 'organoJudicial', 'numProcedimiento']) {
+      expect(payload).not.toHaveProperty(k);
+    }
+  });
+
   it('updateCaso escribe updatedBy', async () => {
     await service.updateCaso('k1', { titulo: 'N' });
     expect(mockUpdateDoc.mock.calls[0][1].updatedBy).toBe('me');
@@ -95,6 +116,18 @@ describe('CasosService: campos de actor (updatedBy/createdBy)', () => {
   it('updateCaso con encargadoId undefined explícito borra el campo', async () => {
     await service.updateCaso('k1', { encargadoId: undefined });
     expect(mockUpdateDoc.mock.calls[0][1].encargadoId).toBe('__del__');
+  });
+
+  it('updateCaso con campos judiciales undefined explícitos los borra; los ausentes no se tocan', async () => {
+    await service.updateCaso('k1', { jurisdiccion: undefined, partidoJudicialId: undefined, organoJudicial: undefined, numProcedimiento: undefined });
+    const payload = mockUpdateDoc.mock.calls[0][1];
+    expect(payload.jurisdiccion).toBe('__del__');
+    expect(payload.partidoJudicialId).toBe('__del__');
+    expect(payload.organoJudicial).toBe('__del__');
+    expect(payload.numProcedimiento).toBe('__del__');
+    mockUpdateDoc.mockClear();
+    await service.updateCaso('k1', { titulo: 'X' });
+    expect('jurisdiccion' in mockUpdateDoc.mock.calls[0][1]).toBe(false);
   });
 
   it('updateCaso sin encargadoId no toca el campo', async () => {

@@ -20,7 +20,10 @@ import { CalendarNavComponent } from './components/calendar-nav/calendar-nav';
 import { DayScheduleComponent, type ItemTimeChange } from './components/day-schedule/day-schedule';
 import { NuevoEventoDrawerComponent } from '../eventos/components/nuevo-evento-drawer/nuevo-evento-drawer';
 import { SuscribirseCalendarioDialogComponent } from './components/suscribirse-calendario-dialog/suscribirse-calendario-dialog';
+import { DiasInhabilesLinkComponent } from '../dias-inhabiles/dias-inhabiles-link';
 import type { ItemColor } from './calendario.types';
+import { itemEsEditable, plazoDeEvento } from './agenda-utils';
+import { puedeVerPlazo } from '../../core/plazos/plazo-evento';
 
 function timeToMinutes(time: string): number {
   const parts = time.split(':').map(Number);
@@ -78,7 +81,7 @@ function mondayOf(d: Date): string {
   selector: 'app-calendario',
   imports: [
     CalendarNavComponent, DayScheduleComponent, NuevoEventoDrawerComponent,
-    SuscribirseCalendarioDialogComponent, LucideAngularModule,
+    SuscribirseCalendarioDialogComponent, LucideAngularModule, DiasInhabilesLinkComponent,
   ],
   templateUrl: './calendario.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -92,6 +95,9 @@ export class CalendarioComponent {
   private readonly userSync = inject(UserSyncService);
   private readonly usersService = inject(UsersService);
   readonly perm = inject(PermissionService);
+  /** Reactivo: los plazos procesales solo se muestran a quien puede leer Casos. */
+  private readonly puedeVerCasos = computed(() => this.perm.can('Casos', 'ver'));
+  private readonly puedeVerCasos$ = toObservable(this.puedeVerCasos);
   private readonly breakpoint = inject(BreakpointService);
   readonly isMobile = this.breakpoint.isMobile;
   private readonly nav = viewChild(CalendarNavComponent);
@@ -136,13 +142,16 @@ export class CalendarioComponent {
         combineLatest([
           this.casosService.hitosParaCalendarioStream(),
           this.eventosService.eventosStream(),
+          this.puedeVerCasos$,
         ]),
       ),
-      map(([hitos, eventos]) => [
+      map(([hitos, eventos, puedeVerCasos]) => [
         ...hitos
           .filter(h => h.estado !== 'cancelado' && h.fechaEstimada)
           .map(h => this.hitoToItem(h)),
-        ...eventos.map(e => this.eventoToItem(e)),
+        ...eventos
+          .filter(e => puedeVerPlazo(puedeVerCasos, e))
+          .map(e => this.eventoToItem(e)),
       ]),
     ),
     { initialValue: [] as CalendarItem[] },
@@ -335,13 +344,21 @@ export class CalendarioComponent {
     );
   }
 
+  /** Los plazos procesales se gestionan desde el caso: el calendario nunca los muta. */
+  private esItemBloqueado(id: string): boolean {
+    const item = this.allItems().find(i => i.id === id);
+    return !!item && !itemEsEditable(item);
+  }
+
   async updateEventoEstado(event: { id: string; estado: EventoEstado }): Promise<void> {
+    if (this.esItemBloqueado(event.id)) return;
     await this.toast.run(() => this.eventosService.updateEvento(event.id, { estado: event.estado }), {
       errorTitle: 'No se pudo cambiar el estado del evento',
     });
   }
 
   async updateItemTime(event: ItemTimeChange): Promise<void> {
+    if (event.itemType === 'evento' && this.esItemBloqueado(event.id)) return;
     await this.toast.run(
       async () => {
         if (event.horaInicio === null) {
@@ -406,6 +423,7 @@ export class CalendarioComponent {
   }
 
   async onDeleteEvento({ id }: { id: string }): Promise<void> {
+    if (this.esItemBloqueado(id)) return;
     await this.toast.run(() => this.eventosService.deleteEvento(id), {
       successMessage: 'Evento eliminado',
       errorTitle: 'No se pudo eliminar el evento',
@@ -443,6 +461,7 @@ export class CalendarioComponent {
         ? { duracionMinutos: timeToMinutes(e.horaFin) - timeToMinutes(e.horaInicio) }
         : {}),
       ...(e.anotaciones ? { anotaciones: e.anotaciones } : {}),
+      ...plazoDeEvento(e),
     };
   }
 

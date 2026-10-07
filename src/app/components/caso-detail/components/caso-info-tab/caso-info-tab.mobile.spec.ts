@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { signal } from '@angular/core';
+import { CompanyService } from '../../../../core/services/company.service';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { CasoInfoTabComponent } from './caso-info-tab';
 import type { Caso, Contact } from '../../../../interfaces';
@@ -15,7 +17,10 @@ describe('CasoInfoTabComponent — responsive', () => {
 
   async function montar(editing: boolean): Promise<void> {
     TestBed.resetTestingModule();
-    TestBed.configureTestingModule({ imports: [CasoInfoTabComponent] });
+    TestBed.configureTestingModule({
+      imports: [CasoInfoTabComponent],
+      providers: [{ provide: CompanyService, useValue: { activeCompany: signal(null) } }],
+    });
     fixture = TestBed.createComponent(CasoInfoTabComponent);
     const set = (k: string, v: unknown): void => fixture.componentRef.setInput(k, v);
     set('caso', CASO);

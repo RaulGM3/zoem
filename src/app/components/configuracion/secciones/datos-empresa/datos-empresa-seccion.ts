@@ -10,6 +10,7 @@ import {
   normalizarDatosEmpresa,
   type DatosEmpresaForm,
 } from '../../../../core/configuracion/datos-empresa';
+import { CA_LABELS, type ComunidadAutonoma } from '../../../../interfaces/company';
 import { CompanyLogoUploaderComponent } from '../../../../shared/components/company-logo-uploader/company-logo-uploader';
 
 @Component({
@@ -33,8 +34,10 @@ export class DatosEmpresaSeccionComponent {
     codigoPostal: ['', codigoPostalValidator],
     ciudad: [''],
     website: [''],
+    ca: [''],
   });
 
+  protected readonly comunidades = Object.entries(CA_LABELS) as [ComunidadAutonoma, string][];
   protected readonly guardando = signal(false);
 
   private readonly tipoPersona = toSignal(
@@ -61,6 +64,7 @@ export class DatosEmpresaSeccionComponent {
         codigoPostal: c.codigoPostal ?? '',
         ciudad: c.ciudad ?? '',
         website: c.website ?? '',
+        ca: c.ca ?? '',
       });
     });
   }

@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy, input, output, signal, computed, effect, inject } from '@angular/core';
-import { LucideAngularModule, X, Plus, Search } from 'lucide-angular';
+import { LucideAngularModule, X, Plus, Search, ChevronDown } from 'lucide-angular';
 import type { CasoEstado, CasoPrioridad, CasoTipo, CreateCasoData } from '../../../../interfaces';
 import type { CasoPlantilla } from '../../../../interfaces';
 import type { Contact } from '../../../../interfaces';
@@ -7,10 +7,12 @@ import { getContactDisplayName } from '../../../../interfaces';
 import { ContactService } from '../../../../core/services/contact.service';
 import { UsersService } from '../../../../core/services/users';
 import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
+import { PartidoJudicialComboboxComponent } from '../../../../shared/components/partido-judicial-combobox/partido-judicial-combobox';
+import { JURISDICCIONES, JURISDICCION_LABEL, type Jurisdiccion } from '../../../../core/plazos/calendario-judicial';
 
 @Component({
   selector: 'app-nuevo-caso-drawer',
-  imports: [LucideAngularModule, OverlayShellComponent],
+  imports: [LucideAngularModule, OverlayShellComponent, PartidoJudicialComboboxComponent],
   templateUrl: './nuevo-caso-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -31,6 +33,9 @@ export class NuevoCasoDrawerComponent {
   readonly XIcon = X;
   readonly PlusIcon = Plus;
   readonly SearchIcon = Search;
+  readonly ChevronDownIcon = ChevronDown;
+  readonly jurisdicciones = JURISDICCIONES;
+  readonly jurisdiccionLabel = JURISDICCION_LABEL;
 
   readonly estados: readonly CasoEstado[] = ['pendiente', 'en_proceso', 'cerrado', 'urgente', 'archivado'];
   readonly tipos: readonly CasoTipo[] = ['Legal', 'Fiscal', 'Laboral', 'Mercantil', 'Civil'];
@@ -45,6 +50,11 @@ export class NuevoCasoDrawerComponent {
   readonly formSinVencimiento = signal(false);
   readonly formPlantillaId = signal('');
   readonly formEncargadoId = signal('');
+  readonly judicialAbierto = signal(false);
+  readonly formJurisdiccion = signal<Jurisdiccion | ''>('');
+  readonly formPartidoJudicialId = signal('');
+  readonly formOrganoJudicial = signal('');
+  readonly formNumProcedimiento = signal('');
 
   readonly clienteSeleccionado = signal<Contact | null>(null);
   readonly buscadorQuery = signal('');
@@ -100,6 +110,11 @@ export class NuevoCasoDrawerComponent {
     this.formSinVencimiento.set(false);
     this.formPlantillaId.set('');
     this.formEncargadoId.set('');
+    this.judicialAbierto.set(false);
+    this.formJurisdiccion.set('');
+    this.formPartidoJudicialId.set('');
+    this.formOrganoJudicial.set('');
+    this.formNumProcedimiento.set('');
     this.clienteSeleccionado.set(null);
     this.buscadorQuery.set('');
     this.showDropdown.set(false);
@@ -155,6 +170,10 @@ export class NuevoCasoDrawerComponent {
       contactoIds: [cliente.id],
       plantillaId: this.formPlantillaId() || undefined,
       encargadoId: this.formEncargadoId() || undefined,
+      jurisdiccion: this.formJurisdiccion() || undefined,
+      partidoJudicialId: this.formPartidoJudicialId() || undefined,
+      organoJudicial: this.formOrganoJudicial().trim() || undefined,
+      numProcedimiento: this.formNumProcedimiento().trim() || undefined,
     });
   }
 }

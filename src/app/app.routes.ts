@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './auth/auth.guard';
 import { superUserGuard } from './auth/superuser.guard';
 import { permissionGuard } from './auth/permission.guard';
+import { rolGuard } from './auth/role.guard';
 
 export const routes: Routes = [
   {
@@ -63,6 +64,16 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/facturacion/facturacion').then(
             (m) => m.FacturacionComponent
+          ),
+      },
+      {
+        // Gestor puede mantener los días inhábiles sin abrir el resto de Configuración (mismo permiso que firestore.rules).
+        path: 'calendario/dias-inhabiles',
+        canActivate: [permissionGuard('Calendario'), rolGuard('Admin', 'Gestor')],
+        title: 'Días inhábiles',
+        loadComponent: () =>
+          import('./components/dias-inhabiles/dias-inhabiles-pagina').then(
+            (m) => m.DiasInhabilesPaginaComponent
           ),
       },
       {

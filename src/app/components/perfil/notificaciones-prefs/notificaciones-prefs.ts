@@ -102,6 +102,7 @@ export class NotificacionesPrefsComponent {
     { key: 'contactos', label: 'Contactos asignados', hint: 'Cuando te asignan un contacto.' },
     { key: 'eventos', label: 'Eventos', hint: 'Cuando te invitan a un evento del calendario.' },
     { key: 'hitos', label: 'Hitos asignados', hint: 'Cuando te asignan un hito de un caso.' },
+    { key: 'plazo', label: 'Plazos procesales', hint: 'Avisos de vencimiento y de plazos que requieren revisión.' },
     { key: 'push', label: 'Recibir notificaciones push', hint: 'Avisos en tu móvil o navegador, además de los de la app.' },
   ];
 
@@ -111,6 +112,7 @@ export class NotificacionesPrefsComponent {
     contactos: DEFAULT_PREFS.contactos,
     eventos: DEFAULT_PREFS.eventos,
     hitos: DEFAULT_PREFS.hitos,
+    plazo: DEFAULT_PREFS.plazo,
     push: DEFAULT_PREFS.push,
   });
 

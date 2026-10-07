@@ -3,7 +3,7 @@ import {
   signal, computed, viewChild, ElementRef, effect, inject, DestroyRef,
 } from '@angular/core';
 import { BreakpointService } from '../../../../core/services/breakpoint.service';
-import { LucideAngularModule, X, Clock, Scissors, Euro, Flag, CalendarClock } from 'lucide-angular';
+import { LucideAngularModule, X, Clock, Scissors, Euro, Flag, CalendarClock, Gavel } from 'lucide-angular';
 import { ItemDetalleDialogComponent } from '../item-detalle-dialog/item-detalle-dialog';
 import type { CalendarItem, EventGroup, ItemColor } from '../../calendario.types';
 import type { CompanyMember, EventoEstado, HitoEstado, RegistroHoraHito } from '../../../../interfaces';
@@ -20,6 +20,7 @@ import {
   DEFAULT_DURATION,
   clamp,
   effectiveColor,
+  itemEsEditable,
   itemTimeLabel,
   memberName,
   minutesToTime,
@@ -222,6 +223,7 @@ export class DayScheduleComponent {
   readonly EuroIcon = Euro;
   readonly FlagIcon = Flag;
   readonly CalendarClockIcon = CalendarClock;
+  readonly GavelIcon = Gavel;
 
   private readonly destroyRef = inject(DestroyRef);
   private readonly breakpoint = inject(BreakpointService);
@@ -749,7 +751,11 @@ export class DayScheduleComponent {
     return Math.min(startMinutes, 22 * 60);
   }
 
+  /** Un plazo procesal es de solo lectura en el calendario: se gestiona desde su caso. */
+  readonly esEditable = itemEsEditable;
+
   scheduleItem(item: CalendarItem): void {
+    if (!itemEsEditable(item)) return;
     const start = this.findAvailableSlot(item);
     if (item.hitoEstado !== undefined) {
       // Un hito se programa creando su primer segmento de horas.
@@ -769,6 +775,7 @@ export class DayScheduleComponent {
 
   unscheduleItem(event: MouseEvent, item: CalendarItem): void {
     event.stopPropagation();
+    if (!itemEsEditable(item)) return;
     this.itemTimeChanged.emit({
       id: item.id,
       casoId: item.casoId,
@@ -791,7 +798,7 @@ export class DayScheduleComponent {
   // ── drag: mover ──────────────────────────────────────────────────────
 
   onItemPointerDown(event: PointerEvent, item: CalendarItem): void {
-    if (!this.canDrag(event)) { this.tapPending = true; return; }
+    if (!itemEsEditable(item) || !this.canDrag(event)) { this.tapPending = true; return; }
     if ((event.target as HTMLElement).closest('.resize-handle')) return;
     event.preventDefault();
     event.stopPropagation();
@@ -824,6 +831,7 @@ export class DayScheduleComponent {
   /** Ajuste de duración por teclado (flechas) para usuarios sin puntero. */
   onResizeKeydown(event: KeyboardEvent, item: CalendarItem): void {
     event.stopPropagation();
+    if (!itemEsEditable(item)) return;
     if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
     event.preventDefault();
     const delta = event.key === 'ArrowUp' ? SNAP_MINUTES : -SNAP_MINUTES;
@@ -842,6 +850,7 @@ export class DayScheduleComponent {
   onResizePointerDown(event: PointerEvent, item: CalendarItem): void {
     event.preventDefault();
     event.stopPropagation();
+    if (!itemEsEditable(item)) return;
 
     const area = this.scheduleAreaRef()?.nativeElement;
     if (!area) return;

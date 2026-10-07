@@ -5,6 +5,7 @@ import { DatosEmpresaSeccionComponent } from './datos-empresa-seccion';
 import { CompanyService } from '../../../../core/services/company.service';
 import { CompanyLogoService } from '../../../../core/services/company-logo.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { CA_LABELS } from '../../../../interfaces/company';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
 
 describe('DatosEmpresaSeccionComponent', () => {
@@ -123,6 +124,20 @@ describe('DatosEmpresaSeccionComponent', () => {
     f.detectChanges();
     await f.whenStable();
     expect(q<HTMLInputElement>('#empresa-name').value).toBe('Editado');
+  });
+
+  it('selector de comunidad autónoma: opciones de CA_LABELS, precarga y guarda ca', async () => {
+    company.set({ ...(company() as object), ca: 'madrid' });
+    await montar();
+    const sel = q<HTMLSelectElement>('#empresa-ca');
+    expect(sel.value).toBe('madrid');
+    expect(sel.options.length).toBe(Object.keys(CA_LABELS).length + 1);
+    expect(q('label[for="empresa-ca"]').textContent).toContain('Comunidad autónoma');
+    sel.value = 'cataluna';
+    sel.dispatchEvent(new Event('change'));
+    f.detectChanges();
+    await f.componentInstance.guardar();
+    expect(updateCompany).toHaveBeenCalledWith('co', expect.objectContaining({ ca: 'cataluna' }));
   });
 
   it('incluye el uploader de logo y pasa AXE', async () => {

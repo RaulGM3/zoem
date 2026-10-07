@@ -36,6 +36,7 @@ describe('ConfiguracionComponent (shell)', () => {
               { path: 'usuarios', component: SeccionStub },
               { path: 'facturacion', component: SeccionStub },
               { path: 'tesoreria', component: SeccionStub },
+              { path: 'dias-inhabiles', component: SeccionStub },
             ],
           },
         ]),
@@ -52,7 +53,7 @@ describe('ConfiguracionComponent (shell)', () => {
     expect(nav().getAttribute('aria-labelledby')).toBe(h1s[0].id);
   });
 
-  it('lista las cuatro secciones en orden con su descripción', async () => {
+  it('lista todas las secciones en orden con su descripción', async () => {
     await harness.navigateByUrl('/configuracion');
     const links = Array.from(nav().querySelectorAll('a'));
     expect(links.map((a) => a.getAttribute('href'))).toEqual(SECCIONES_CONFIG.map((s) => s.ruta));

@@ -2,6 +2,10 @@ import { Component, ChangeDetectionStrategy, input, output, signal, effect, comp
 import { LucideAngularModule, User, X, Mail, Phone, Hash } from 'lucide-angular';
 import type { Caso, CasoEstado, CasoPrioridad, CasoTipo, CompanyMember, Contact } from '../../../../interfaces';
 import { getContactDisplayName } from '../../../../interfaces';
+import { JURISDICCIONES, JURISDICCION_LABEL } from '../../../../core/plazos/calendario-judicial';
+import type { Jurisdiccion } from '../../../../core/plazos/calendario-judicial';
+import { partidoPorId } from '../../../../core/plazos/partidos-judiciales';
+import { PartidoJudicialComboboxComponent } from '../../../../shared/components/partido-judicial-combobox/partido-judicial-combobox';
 import { etiquetaDocumentoContacto } from '../../../../core/fiscal/documento-contacto';
 
 export interface CasoInfoFormData {
@@ -13,12 +17,17 @@ export interface CasoInfoFormData {
   vencimiento?: string;
   /** `undefined` = Sin asignar (el servicio borra el campo). */
   encargadoId?: string;
+  /** Datos procesales: `undefined` = vaciar el campo (el servicio lo borra). */
+  jurisdiccion?: Jurisdiccion;
+  partidoJudicialId?: string;
+  organoJudicial?: string;
+  numProcedimiento?: string;
 }
 
 @Component({
   selector: 'app-caso-info-tab',
   host: { style: 'display: block' },
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, PartidoJudicialComboboxComponent],
   templateUrl: './caso-info-tab.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -54,6 +63,17 @@ export class CasoInfoTabComponent {
   readonly editPrioridad = signal<CasoPrioridad>('media');
   readonly editVencimiento = signal('');
   readonly editEncargadoId = signal('');
+  readonly editJurisdiccion = signal<Jurisdiccion | ''>('');
+  readonly editPartidoJudicialId = signal('');
+  readonly editOrganoJudicial = signal('');
+  readonly editNumProcedimiento = signal('');
+
+  readonly jurisdicciones = JURISDICCIONES;
+  readonly jurisdiccionLabel = JURISDICCION_LABEL;
+  readonly partidoEtiqueta = computed(() => {
+    const p = partidoPorId(this.caso().partidoJudicialId ?? '');
+    return p ? `${p.nombre} (${p.provincia})` : '—';
+  });
 
   readonly activeMembers = computed(() => this.members().filter(m => m.estado === 'activo'));
   /**
@@ -96,6 +116,10 @@ export class CasoInfoTabComponent {
         this.editPrioridad.set(c.prioridad);
         this.editVencimiento.set(c.vencimiento ?? '');
         this.editEncargadoId.set(c.encargadoId ?? '');
+        this.editJurisdiccion.set(c.jurisdiccion ?? '');
+        this.editPartidoJudicialId.set(c.partidoJudicialId ?? '');
+        this.editOrganoJudicial.set(c.organoJudicial ?? '');
+        this.editNumProcedimiento.set(c.numProcedimiento ?? '');
       }
     });
   }
@@ -111,6 +135,10 @@ export class CasoInfoTabComponent {
       prioridad: this.editPrioridad(),
       vencimiento: this.editVencimiento() || undefined,
       encargadoId: this.editEncargadoId() || undefined,
+      jurisdiccion: this.editJurisdiccion() || undefined,
+      partidoJudicialId: this.editPartidoJudicialId() || undefined,
+      organoJudicial: this.editOrganoJudicial().trim() || undefined,
+      numProcedimiento: this.editNumProcedimiento().trim() || undefined,
     });
   }
 

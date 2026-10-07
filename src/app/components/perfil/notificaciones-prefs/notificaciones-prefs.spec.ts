@@ -66,7 +66,7 @@ describe('NotificacionesPrefsComponent', () => {
     push.enableWeb.mockResolvedValue(true);
   });
 
-  it('renders six labelled switches, all on by default', async () => {
+  it('renders seven labelled switches, all on by default', async () => {
     await setup();
     const labels: Record<string, string> = {
       llamadas: 'Llamadas nuevas',
@@ -74,6 +74,7 @@ describe('NotificacionesPrefsComponent', () => {
       contactos: 'Contactos asignados',
       eventos: 'Eventos',
       hitos: 'Hitos asignados',
+      plazo: 'Plazos procesales',
       push: 'Recibir notificaciones push',
     };
     for (const [name, label] of Object.entries(labels)) {

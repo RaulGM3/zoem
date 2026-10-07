@@ -1,4 +1,5 @@
 import type { AbstractControl, ValidationErrors } from '@angular/forms';
+import { CA_LABELS, type ComunidadAutonoma } from '../../interfaces/company';
 
 export type TipoPersonaEmpresa = 'fisica' | 'juridica';
 
@@ -12,6 +13,8 @@ export interface DatosEmpresaForm {
   codigoPostal: string;
   ciudad: string;
   website: string;
+  /** Comunidad autónoma o '' si no se ha elegido. */
+  ca: string;
 }
 
 export interface DatosEmpresaPayload {
@@ -24,7 +27,10 @@ export interface DatosEmpresaPayload {
   codigoPostal?: string;
   ciudad?: string;
   website?: string;
+  ca?: ComunidadAutonoma;
 }
+
+const esCa = (v: string): v is ComunidadAutonoma => Object.hasOwn(CA_LABELS, v);
 
 const limpio = (v: string | null | undefined): string | undefined => {
   const t = (v ?? '').trim();
@@ -43,6 +49,7 @@ export function normalizarDatosEmpresa(raw: DatosEmpresaForm): DatosEmpresaPaylo
     direccion: limpio(raw.direccion),
     codigoPostal: limpio(raw.codigoPostal),
     ciudad: limpio(raw.ciudad),
+    ca: esCa(raw.ca) ? raw.ca : undefined,
     website: website && !/^https?:\/\//i.test(website) ? `https://${website}` : website,
   };
 }
