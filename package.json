@@ -12,7 +12,8 @@
     "cap:ios": "ng build && npx cap sync && npx cap open ios",
     "cap:android": "ng build && npx cap sync && npx cap open android",
     "deploy": "ng build --configuration production && firebase deploy --project vertey-b924b",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "sync:plazos": "node scripts/sync-plazos-functions.mjs"
   },
   "private": true,
   "packageManager": "npm@11.11.0",

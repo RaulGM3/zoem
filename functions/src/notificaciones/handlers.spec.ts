@@ -19,6 +19,7 @@ beforeEach(() => {
     managerIds: vi.fn(async () => ['admin1', 'gestor1']),
     activeMemberIds: vi.fn(async () => ['u1', 'u2', 'u3']),
     isMember: vi.fn(async (_cid: string, uid: string) => uid.startsWith('u')),
+    casosViewerIds: vi.fn(async () => ['u1', 'u2', 'u3']),
   };
 });
 
@@ -184,6 +185,34 @@ describe('handleContactoWritten', () => {
       after: { ...persona, assignedTo: 'u1', createdBy: 'u1' },
     });
     expect(notify).not.toHaveBeenCalled();
+  });
+});
+
+describe('handleEventoWritten — plazos procesales', () => {
+  it('un plazo nuevo para "todos" solo avisa a quien puede ver Casos y enlaza al caso', async () => {
+    deps.casosViewerIds = vi.fn(async () => ['u1', 'u2']);
+    await handleEventoWritten(deps, {
+      cid: 'c1',
+      before: undefined,
+      after: {
+        titulo: 'Vence plazo: Apelación',
+        invitados: 'todos',
+        creadoPor: 'u1',
+        origen: { tipo: 'plazo_procesal', casoId: 'caso9' },
+      },
+    });
+    expect(deps.notify).toHaveBeenCalledWith(
+      expect.objectContaining({ userIds: ['u2'], tipo: 'plazo', titulo: 'Nuevo plazo procesal', route: '/casos/caso9' }),
+    );
+  });
+  it('si nadie más puede ver Casos, no notifica', async () => {
+    deps.casosViewerIds = vi.fn(async () => ['u1']);
+    await handleEventoWritten(deps, {
+      cid: 'c1',
+      before: undefined,
+      after: { titulo: 'Vence plazo: X', invitados: 'todos', creadoPor: 'u1', origen: { tipo: 'plazo_procesal', casoId: 'c' } },
+    });
+    expect(deps.notify).not.toHaveBeenCalled();
   });
 });
 

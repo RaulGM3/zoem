@@ -1,7 +1,7 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
 
-export type TipoNotificacion = 'llamadas' | 'casos' | 'contactos' | 'eventos' | 'hitos';
+export type TipoNotificacion = 'llamadas' | 'casos' | 'contactos' | 'eventos' | 'hitos' | 'plazo';
 
 export interface NotifyParams {
   companyId: string;

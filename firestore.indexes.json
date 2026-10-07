@@ -135,6 +135,14 @@
       ]
     },
     {
+      "collectionGroup": "eventos",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "origen.tipo", "order": "ASCENDING" },
+        { "fieldPath": "origen.estadoPlazo", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "facturas_recibidas",
       "queryScope": "COLLECTION",
       "fields": [

@@ -220,6 +220,12 @@ export {
   onHitoWritten,
 } from './notificaciones/triggers';
 
+// ─── Plazos procesales (BETA) ────────────────────────────────────────────────
+// Recálculo al cambiar días rojos confirmados (marca requiere_revision, nunca cambia la fecha)
+// y avisos diarios de vencimiento.
+export { onDiasRojosWritten } from './plazos/onDiasRojosWritten';
+export { recordatorioPlazos } from './plazos/recordatorioPlazos';
+
 // ─── Documentos clasificados ─────────────────────────────────────────────────
 // URL firmada de corta vida + auditoría server-side (no falsificable).
 export { getClassifiedDocUrl } from './classifiedDocUrl';

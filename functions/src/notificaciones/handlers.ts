@@ -17,6 +17,8 @@ export interface TriggerDeps {
   /** uids de todos los miembros activos. */
   activeMemberIds(companyId: string): Promise<string[]>;
   isMember(companyId: string, uid: string): Promise<boolean>;
+  /** uids de miembros activos con permiso de lectura sobre el módulo Casos. */
+  casosViewerIds(companyId: string): Promise<string[]>;
 }
 
 interface Actor {
@@ -136,6 +138,7 @@ export interface EventoData extends Actor {
   titulo?: string;
   invitados?: string[] | 'todos';
   responsableId?: string;
+  origen?: { tipo?: string; casoId?: string };
 }
 
 export async function handleEventoWritten(
@@ -146,8 +149,25 @@ export async function handleEventoWritten(
   const necesitaMiembros = c.before?.invitados === 'todos' || c.after.invitados === 'todos';
   const miembros = necesitaMiembros ? await deps.activeMemberIds(c.cid) : [];
 
-  const userIds = destinatariosEvento(c.before, c.after, miembros, actorDe(c.after, !!c.before));
+  let userIds = destinatariosEvento(c.before, c.after, miembros, actorDe(c.after, !!c.before));
   if (userIds.length === 0) return;
+
+  // Un plazo procesal revela el caso: solo se avisa a quien puede ver Casos.
+  const origen = c.after.origen;
+  if (origen?.tipo === 'plazo_procesal') {
+    const pueden = new Set(await deps.casosViewerIds(c.cid));
+    userIds = userIds.filter((id) => pueden.has(id));
+    if (userIds.length === 0) return;
+    await deps.notify({
+      companyId: c.cid,
+      userIds,
+      tipo: 'plazo',
+      titulo: 'Nuevo plazo procesal',
+      cuerpo: c.after.titulo ?? '',
+      route: `/casos/${origen.casoId}`,
+    });
+    return;
+  }
 
   await deps.notify({
     companyId: c.cid,

@@ -1,6 +1,7 @@
 import * as admin from 'firebase-admin';
 import { getFirestore } from 'firebase-admin/firestore';
 import { onDocumentCreated, onDocumentWritten } from 'firebase-functions/v2/firestore';
+import { cargarDestinatariosCasos, type DbLectura } from '../plazos/destinatarios';
 import {
   handleCasoWritten,
   handleContactoWritten,
@@ -45,6 +46,7 @@ function buildDeps(): TriggerDeps {
     managerIds: (cid) => members(cid, ['Admin', 'Gestor']),
     activeMemberIds: (cid) => members(cid),
     isMember: async (cid, uid) => (await db.doc(`companies/${cid}/members/${uid}`).get()).exists,
+    casosViewerIds: (cid) => cargarDestinatariosCasos(db as unknown as DbLectura, cid),
   };
 }
 
