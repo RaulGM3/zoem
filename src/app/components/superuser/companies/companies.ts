@@ -10,6 +10,7 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import {
   Building2,
   Check,
+  LogIn,
   LucideAngularModule,
   Pencil,
   Plus,
@@ -20,6 +21,7 @@ import {
 import { CA_LABELS, Company, CompanyPlan, RUBRO_LABELS, TipoPersona } from '../../../interfaces/company';
 import { SuperuserService } from '../../../services/superuser';
 import { ToastService } from '../../../core/services/toast.service';
+import { CompanyService } from '../../../core/services/company.service';
 
 @Component({
   selector: 'app-companies',
@@ -35,6 +37,7 @@ export class CompaniesComponent {
   readonly Trash2Icon = Trash2;
   readonly XIcon = X;
   readonly CheckIcon = Check;
+  readonly LogInIcon = LogIn;
 
   readonly caLabels = CA_LABELS;
   readonly rubroLabels = RUBRO_LABELS;
@@ -43,6 +46,7 @@ export class CompaniesComponent {
   private fb = inject(FormBuilder);
   private svc = inject(SuperuserService);
   private readonly toast = inject(ToastService);
+  private readonly companyService = inject(CompanyService);
 
   companies = toSignal(this.svc.getCompanies(), { initialValue: [] });
   search = signal('');
@@ -160,6 +164,12 @@ export class CompaniesComponent {
         this.toast.fromError(err, { title: 'No se pudo guardar la empresa', retry: () => this.save() });
       },
     });
+  }
+
+  /** Entra a la empresa como si el superusuario fuera miembro. */
+  entrar(id: string | undefined): void {
+    if (!id) return;
+    this.companyService.entrarComoSuperuser(id);
   }
 
   delete(id: string | undefined): void {

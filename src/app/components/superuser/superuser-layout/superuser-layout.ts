@@ -38,7 +38,7 @@ export class SuperuserLayoutComponent implements OnInit {
 
   selectCompany(event: Event): void {
     const id = (event.target as HTMLSelectElement).value;
-    const company = this.companies().find((c) => c.id === id);
-    if (company) this.companyService.setActiveCompany(company);
+    if (!id) return;
+    this.companyService.entrarComoSuperuser(id);
   }
 }

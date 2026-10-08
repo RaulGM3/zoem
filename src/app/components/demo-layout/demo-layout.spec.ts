@@ -4,6 +4,7 @@ import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { DemoLayoutComponent } from './demo-layout';
 import { AgenteLanzadorComponent } from '../agente-ia/agente-lanzador';
+import { CompanyService } from '../../core/services/company.service';
 import { AuthService } from '../../auth/auth.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { SearchService } from '../../core/services/search.service';
@@ -28,6 +29,9 @@ function q(f: ComponentFixture<DemoLayoutComponent>, sel: string): HTMLElement |
   return (f.nativeElement as HTMLElement).querySelector(sel);
 }
 
+// El aviso de modo superusuario lee la empresa activa.
+const fakeCompany = { modoSuperuser: () => false, activeCompany: () => null };
+
 describe('DemoLayoutComponent (mobile)', () => {
   let fixture: ComponentFixture<DemoLayoutComponent>;
 
@@ -38,6 +42,7 @@ describe('DemoLayoutComponent (mobile)', () => {
       providers: [
         provideRouter([]),
         { provide: AuthService, useValue: fakeAuth },
+        { provide: CompanyService, useValue: fakeCompany },
         { provide: PermissionService, useValue: fakePerm },
       ],
     });
@@ -137,6 +142,7 @@ describe('DemoLayoutComponent (menú Configuración)', () => {
       providers: [
         provideRouter([]),
         { provide: AuthService, useValue: fakeAuth },
+        { provide: CompanyService, useValue: fakeCompany },
         { provide: PermissionService, useValue: { ...fakePerm, can: (m: string) => puede(m) } },
       ],
     });

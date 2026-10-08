@@ -39,6 +39,7 @@ export class AuthService {
         if (user) {
           await this.userSync.syncUser(user.uid, user.email ?? '', user.displayName);
           await this.companyService.loadMyCompanies(user.uid);
+          if (this.userSync.isSuperUser()) await this.companyService.restaurarEmpresaSuperuser();
           // Storage autoriza con custom claims: alinearlos con la empresa activa.
           const companyId = this.companyService.activeCompany()?.id;
           if (companyId) void this.claimsSync.sync(companyId);

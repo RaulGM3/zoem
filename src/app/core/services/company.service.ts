@@ -1,4 +1,5 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import {
   Firestore,
   collection,
@@ -86,13 +87,23 @@ export interface CompanyMember {
   company?: Company;
 }
 
+/** localStorage: empresa en la que el superusuario entró sin ser miembro. */
+export const CLAVE_EMPRESA_SUPERUSER = 'zoem.superuser.empresa';
+
 @Injectable({ providedIn: 'root' })
 export class CompanyService {
   private readonly firestore = inject(Firestore);
+  private readonly document = inject(DOCUMENT);
 
   readonly myMemberships = signal<CompanyMember[]>([]);
   readonly activeCompany = signal<Company | null>(null);
   readonly allCompanies = signal<Company[]>([]);
+
+  /** El superusuario está dentro de una empresa de la que no es miembro. */
+  readonly modoSuperuser = computed(() => {
+    const id = this.activeCompany()?.id;
+    return !!id && !this.myMemberships().some((m) => m.companyId === id);
+  });
 
   async loadMyCompanies(userId: string): Promise<void> {
     // Membresía vive en companies/{cid}/members/{uid} → collectionGroup para todas las empresas del user.
@@ -115,6 +126,49 @@ export class CompanyService {
 
   setActiveCompany(company: Company): void {
     this.activeCompany.set(company);
+  }
+
+  /**
+   * El superusuario opera la empresa como si fuera suya: las rules ya lo dejan
+   * pasar (isSuper). Se persiste la elección y se recarga la app entera para que
+   * ningún servicio singleton conserve datos ni listeners de la empresa anterior;
+   * restaurarEmpresaSuperuser la activa tras el login.
+   */
+  entrarComoSuperuser(companyId: string): void {
+    this.guardarEmpresaSuperuser(companyId);
+    this.document.location.assign('/');
+  }
+
+  /** Vuelve a la empresa propia (primera membresía) desde el panel de superusuario. */
+  salirModoSuperuser(): void {
+    this.guardarEmpresaSuperuser(null);
+    this.document.location.assign('/superuser/companies');
+  }
+
+  /** Tras el login: reactiva la empresa en la que el superusuario había entrado. */
+  async restaurarEmpresaSuperuser(): Promise<void> {
+    const id = this.leerEmpresaSuperuser();
+    if (!id) return;
+    const company = await this.getCompany(id);
+    if (company) this.activeCompany.set(company);
+    else this.guardarEmpresaSuperuser(null);
+  }
+
+  private leerEmpresaSuperuser(): string | null {
+    try {
+      return localStorage.getItem(CLAVE_EMPRESA_SUPERUSER);
+    } catch {
+      return null;
+    }
+  }
+
+  private guardarEmpresaSuperuser(id: string | null): void {
+    try {
+      if (id) localStorage.setItem(CLAVE_EMPRESA_SUPERUSER, id);
+      else localStorage.removeItem(CLAVE_EMPRESA_SUPERUSER);
+    } catch {
+      // Sin storage la elección dura solo hasta la próxima recarga.
+    }
   }
 
   async loadAllCompanies(): Promise<void> {
