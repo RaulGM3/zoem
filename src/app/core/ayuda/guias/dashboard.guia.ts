@@ -7,6 +7,11 @@ export const GUIA_DASHBOARD: Guia = {
   ruta: '/',
   resumen: 'La pantalla de inicio: un resumen del despacho con el dinero, las llamadas, tus seguimientos y la agenda.',
   paraQue: 'Saber en un vistazo cómo va el despacho y qué tienes pendiente hoy, sin entrar pantalla por pantalla.',
+  aSaber: [
+    'Es un resumen: pulsa cualquier bloque para ir al detalle.',
+    'Tus seguimientos pendientes salen de los "Próximo paso" programados al cambiar el estado de un contacto.',
+    'Cada persona ve solo los datos de los módulos que su rol puede ver.',
+  ],
   claves: ['inicio', 'panel', 'resumen', 'home', 'portada', 'indicadores'],
   tareas: [
     {

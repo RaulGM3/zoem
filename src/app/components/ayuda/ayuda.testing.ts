@@ -46,6 +46,7 @@ export const GUIAS_DE_PRUEBA: readonly Guia[] = [
     ruta: '/tesoreria',
     resumen: 'Cuentas y movimientos.',
     paraQue: 'Saber cuánto dinero hay.',
+    aSaber: ['Solo suman los movimientos aprobados.'],
     claves: [],
     tareas: [{ id: 'cierre', titulo: 'Hacer un cierre de caja', pasos: ['Pulsa "Cierre de caja".'], claves: [] }],
   },

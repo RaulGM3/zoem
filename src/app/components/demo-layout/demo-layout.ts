@@ -12,6 +12,7 @@ import type { Modulo } from '../../core/permissions/permissions';
 import type { FirmRole } from '../../interfaces/member';
 import { AgenteLanzadorComponent } from '../agente-ia/agente-lanzador';
 import { NotificacionesPanelComponent } from '../../shared/components/notificaciones-panel/notificaciones-panel';
+import { AyudaContextualComponent } from '../../shared/components/ayuda-contextual/ayuda-contextual';
 import {
   LucideAngularModule,
   LucideIconData,
@@ -64,6 +65,7 @@ export interface NavCategory {
   selector: 'app-demo-layout',
   imports: [BarraNavegacionComponent, 
     RouterOutlet, RouterLink, RouterLinkActive, LucideAngularModule, AgenteLanzadorComponent, FocusTrapDirective, NotificacionesPanelComponent,
+    AyudaContextualComponent,
   ],
   templateUrl: './demo-layout.html',
 })

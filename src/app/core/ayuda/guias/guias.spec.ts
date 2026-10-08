@@ -31,10 +31,19 @@ describe('GUIAS — cobertura', () => {
     expect(GUIA_IDS.filter(id => !escritas.has(id))).toEqual([]);
   });
 
-  it('la ruta de una guía de módulo es la misma a la que navega el agente', () => {
-    for (const g of GUIAS) {
-      if (g.modulo) expect(g.ruta, g.id).toBe(RUTAS_POR_MODULO[g.modulo]);
+  it('cada módulo con guía tiene una cuya ruta es la misma a la que navega el agente', () => {
+    // Un módulo puede tener varias guías (Configuración: usuarios y Acciones),
+    // pero una de ellas tiene que documentar la pantalla principal del módulo.
+    const modulos = new Set(GUIAS.flatMap(g => (g.modulo ? [g.modulo] : [])));
+    for (const m of modulos) {
+      const rutas = GUIAS.filter(g => g.modulo === m).map(g => g.ruta);
+      expect(rutas, m).toContain(RUTAS_POR_MODULO[m]);
     }
+  });
+
+  it('ninguna pantalla está reclamada por dos guías', () => {
+    const rutas = GUIAS.filter(g => g.id !== 'general').flatMap(g => [g.ruta, ...(g.otrasRutas ?? [])]);
+    expect(rutas.filter((r, i) => rutas.indexOf(r) !== i)).toEqual([]);
   });
 });
 
@@ -44,6 +53,13 @@ describe('GUIAS — forma del contenido', () => {
       expect(g.resumen.trim(), g.id).not.toBe('');
       expect(g.paraQue.trim(), g.id).not.toBe('');
       expect(g.tareas.length, g.id).toBeGreaterThan(0);
+    }
+  });
+
+  it('toda guía dice lo que hay que saber, para el modal de ayuda de cada pantalla', () => {
+    for (const g of GUIAS) {
+      expect(g.aSaber?.length ?? 0, g.id).toBeGreaterThan(0);
+      expect(g.aSaber?.every(a => a.trim() !== ''), g.id).toBe(true);
     }
   });
 

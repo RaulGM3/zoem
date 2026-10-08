@@ -7,6 +7,12 @@ export const GUIA_GENERAL: Guia = {
   ruta: '/',
   resumen: 'Cómo moverte por Vertey: el menú lateral, la búsqueda global y el asistente.',
   paraQue: 'Orientarte el primer día y saber dónde está cada cosa antes de entrar en detalle.',
+  aSaber: [
+    'En el menú solo aparecen las pantallas que tu rol puede ver; si te falta alguna, pide acceso al administrador.',
+    'La barra de búsqueda de arriba busca contactos, casos o personas del equipo: elige primero la categoría.',
+    'El icono de ayuda de la barra superior te explica la pantalla en la que estás.',
+    'El asistente Vertey IA está siempre disponible en el botón flotante.',
+  ],
   claves: ['empezar', 'inicio', 'menú', 'navegación', 'orientación', 'básico'],
   tareas: [
     {

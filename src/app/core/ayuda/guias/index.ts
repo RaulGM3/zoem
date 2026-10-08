@@ -1,5 +1,6 @@
 import type { Modulo } from '../../permissions/permissions';
 import type { Guia } from '../guia';
+import { GUIA_ACCIONES } from './acciones.guia';
 import { GUIA_AGENTE_IA } from './agente-ia.guia';
 import { GUIA_CALENDARIO } from './calendario.guia';
 import { GUIA_CASOS } from './casos.guia';
@@ -31,6 +32,7 @@ export const GUIAS: readonly Guia[] = [
   GUIA_RECEPCION_IA,
   GUIA_AGENTE_IA,
   GUIA_CONFIGURACION,
+  GUIA_ACCIONES,
   GUIA_PERFIL,
 ];
 

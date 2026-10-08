@@ -8,6 +8,13 @@ export const GUIA_CONTACTOS: Guia = {
   resumen: 'El CRM del despacho: clientes y contactos, personas físicas o jurídicas, con su estado y sus seguimientos.',
   paraQue:
     'Tener a cada cliente con sus datos, saber en qué fase está y qué le debe entregar el despacho, y llegar desde él a sus casos, facturas y documentos.',
+  aSaber: [
+    'Para guardar un contacto basta un email o un móvil; un DNI, NIE o NIF mal escrito no te deja continuar.',
+    'Al cambiar el estado puedes programar el "Próximo paso", que crea un seguimiento en el calendario del responsable.',
+    'Con "Acciones…" le envías mensajes ya redactados por correo o WhatsApp; cada envío queda en "Acciones enviadas".',
+    'Desde la ficha puedes abrir un caso nuevo para el contacto con "Nuevo caso".',
+    'Eliminar un contacto no se puede deshacer.',
+  ],
   claves: ['crm', 'clientes', 'personas', 'empresas', 'leads'],
   tareas: [
     {
@@ -102,8 +109,32 @@ export const GUIA_CONTACTOS: Guia = {
       claves: ['nuevo caso', 'expediente', 'crear caso'],
       requiere: { modulo: 'Casos', capacidad: 'crear' },
       pasos: [
-        'En la lista de contactos, pulsa "Abrir caso para este contacto".',
+        'En la lista de contactos pulsa "Abrir caso para este contacto", o en su ficha, en "Casos", pulsa "Nuevo caso".',
         'Se abre el formulario de caso nuevo con ese cliente ya seleccionado. Complétalo y pulsa "Crear caso".',
+      ],
+    },
+    {
+      id: 'accion-contacto',
+      titulo: 'Enviar un mensaje a un contacto con una acción',
+      claves: ['acciones', 'notificar', 'avisar', 'correo', 'email', 'whatsapp', 'presupuesto', 'comunicación'],
+      requiere: { modulo: 'Contactos', capacidad: 'editar' },
+      pasos: [
+        'En la lista pulsa "Acciones para este contacto", o abre su ficha y pulsa "Acciones…".',
+        'En "Elige una acción", selecciona la que quieras enviar.',
+        'Repasa el "Asunto" y el "Mensaje": ya vienen rellenos con los datos del contacto.',
+        'En "Enviar por", elige el canal y pulsa "Preparar mensaje".',
+        'Pulsa "Abrir en …" para revisarlo en Gmail, Outlook, tu correo o WhatsApp y envíalo desde allí.',
+      ],
+      nota: 'Solo aparecen las acciones activas que se ejecutan desde un contacto. Si no hay ninguna, se crean en la pantalla Acciones.',
+    },
+    {
+      id: 'acciones-enviadas',
+      titulo: 'Ver qué se le ha enviado a un contacto',
+      claves: ['historial', 'comunicaciones', 'enviados', 'mensajes', 'acciones enviadas'],
+      pasos: [
+        'Abre la ficha del contacto.',
+        'En "Acciones enviadas" ves cada mensaje y documento enviado desde Acciones, con quién lo envió y cuándo.',
+        'Para enviar otro, pulsa "Lanzar acción".',
       ],
     },
     {

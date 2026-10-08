@@ -8,6 +8,12 @@ export const GUIA_CONFIGURACION: Guia = {
   resumen: 'El área de Configuración del despacho (datos de la empresa, facturación y tesorería) y, dentro, la gestión de accesos del equipo: quién entra al despacho, con qué rol y qué puede hacer en cada módulo.',
   paraQue:
     'Poner en marcha el despacho: invitar al equipo, decidir qué ve y qué puede hacer cada rol, y atender las solicitudes de permiso.',
+  aSaber: [
+    'Por defecto solo los administradores entran en Configuración.',
+    'Vertey no envía las invitaciones por correo: copias el enlace y lo compartes tú. Caduca a los 7 días.',
+    'Los permisos individuales son excepciones sobre el rol y afectan solo a esa persona.',
+    'La columna Admin de la matriz de permisos no se puede modificar.',
+  ],
   claves: ['configuración', 'datos de la empresa', 'logo', 'equipo', 'miembros', 'roles', 'accesos', 'administración', 'personal', 'configurar despacho'],
   tareas: [
     {

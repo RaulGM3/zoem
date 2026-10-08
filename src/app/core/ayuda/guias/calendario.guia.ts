@@ -8,6 +8,12 @@ export const GUIA_CALENDARIO: Guia = {
   resumen: 'La agenda del despacho: los eventos del equipo y los hitos de los casos, por semana o por mes.',
   paraQue:
     'Ver qué toca cada día, programar reuniones y plazos, registrar las horas trabajadas en cada hito y llevar la agenda a tu calendario habitual.',
+  aSaber: [
+    'Muestra a la vez los eventos del equipo y los hitos de los casos.',
+    'Las horas trabajadas se registran en cada hito y después aparecen en Facturación, en "Registro de Horas".',
+    'La suscripción para Google, Outlook o Apple es de solo lectura; "Regenerar" invalida el enlace anterior.',
+    'Eliminar un evento no se puede deshacer.',
+  ],
   claves: ['agenda', 'eventos', 'citas', 'reuniones', 'plazos', 'horario', 'horas'],
   tareas: [
     {

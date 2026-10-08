@@ -9,6 +9,11 @@ export const GUIA_DOCUMENTOS: Guia = {
     'Plantillas de documentos: subes un escrito, la IA detecta los datos que cambian y después generas versiones nuevas en segundos.',
   paraQue:
     'Dejar de reescribir los mismos escritos: contratos, hojas de encargo o demandas se rellenan con los datos de cada cliente.',
+  aSaber: [
+    'Una plantilla de documento nace de un PDF o un Word: la IA detecta los datos que cambian y los convierte en variables.',
+    'Revisa siempre las variables detectadas antes de generar documentos.',
+    'Estas plantillas también se pueden adjuntar a las Acciones para enviarlas rellenas al cliente.',
+  ],
   claves: ['plantillas de documentos', 'escritos', 'contratos', 'word', 'pdf', 'variables', 'generar documento'],
   tareas: [
     {

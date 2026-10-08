@@ -129,6 +129,18 @@
                     style="color:var(--brand)">Ir a {{ g.titulo }}</a>
                 </header>
 
+                @if (g.aSaber?.length) {
+                  <section aria-labelledby="ayuda-a-saber" class="rounded-xl p-4 space-y-2"
+                    style="background:color-mix(in srgb,var(--brand) 7%,var(--surface-2))">
+                    <h3 id="ayuda-a-saber" class="text-sm font-semibold" style="color:var(--text-strong)">Lo que tienes que saber</h3>
+                    <ul class="list-disc space-y-1 pl-5 text-sm" style="color:var(--text-body)">
+                      @for (punto of g.aSaber; track $index) {
+                        <li>{{ punto }}</li>
+                      }
+                    </ul>
+                  </section>
+                }
+
                 @for (t of g.tareas; track t.id) {
                   <section [attr.aria-labelledby]="'ayuda-tarea-' + t.id" class="pt-5"
                     style="border-top:1px solid var(--border)">

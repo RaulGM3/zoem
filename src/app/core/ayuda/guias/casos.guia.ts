@@ -12,9 +12,17 @@ export const GUIA_CASOS: Guia = {
   titulo: 'Casos',
   modulo: 'Casos',
   ruta: '/casos',
+  otrasRutas: ['/plantillas'],
   resumen: 'Los expedientes del despacho: cada caso reúne sus clientes, hitos, movimientos de dinero y documentos.',
   paraQue:
     'Seguir cada asunto de principio a fin: qué hay que hacer y cuándo, cuánto se ha cobrado y gastado, y qué documentos faltan.',
+  aSaber: [
+    'Un caso necesita al menos un cliente y un título.',
+    'Si lo creas desde una plantilla, se copian sus hitos, sus documentos requeridos y sus acciones sugeridas.',
+    'Los cobros y gastos del caso se registran en su pestaña "Gestoría" y llegan solos a Facturación y Tesorería.',
+    'Con "Notificar / Acciones" envías al cliente mensajes ya redactados; cada envío queda en "Acciones enviadas".',
+    'Al completar ciertos hitos, Vertey te sugiere avisar al cliente. Nunca envía nada sin que lo confirmes.',
+  ],
   claves: ['expedientes', 'asuntos', 'plazos', 'vencimientos', 'seguimiento'],
   tareas: [
     {
@@ -106,6 +114,31 @@ export const GUIA_CASOS: Guia = {
       nota: 'En cada archivo puedes previsualizar, descargar, subir una nueva versión, ver el historial y gestionar quién tiene acceso.',
     },
     {
+      id: 'notificar-caso',
+      titulo: 'Notificar al cliente o lanzar una acción desde un caso',
+      claves: ['acciones', 'avisar', 'mensaje', 'correo', 'email', 'whatsapp', 'enviar documento', 'comunicación'],
+      requiere: { modulo: 'Casos', capacidad: 'editar' },
+      pasos: [
+        'Abre el caso y pulsa "Notificar / Acciones", o elige una de las "Acciones disponibles" en la pestaña "Información".',
+        'Si el caso tiene varios clientes, marca los "Destinatarios". Si quieres, asocia el envío a un "Hito".',
+        'Repasa el "Asunto" y el "Mensaje": ya vienen rellenos con los datos del caso y del cliente.',
+        'En "Enviar por", elige el canal y pulsa "Preparar mensaje".',
+        'Pulsa "Abrir en …" para revisarlo en Gmail, Outlook, tu correo o WhatsApp y envíalo desde allí. También puedes usar "Copiar texto".',
+      ],
+      nota: 'Cada acción muestra si está "Sin enviar" o cuántas veces se ha "Enviada" y cuándo fue la última. Debajo, "Acciones enviadas" guarda el historial. Las acciones se crean en la pantalla Acciones.',
+    },
+    {
+      id: 'sugerencia-hito',
+      titulo: 'Avisar al cliente cuando se completa un hito',
+      claves: ['sugerencia', 'notificar', 'hito completado', 'listo', 'avisar'],
+      requiere: { modulo: 'Casos', capacidad: 'editar' },
+      pasos: [
+        'Completa un hito que tenga una acción sugerida en su plantilla.',
+        'Arriba del caso aparece «¿Notificar al cliente que … está listo?».',
+        'Pulsa "Notificar" para abrir la acción ya preparada, o "Ahora no" para descartarla.',
+      ],
+    },
+    {
       id: 'eliminar-caso',
       titulo: 'Eliminar un caso',
       claves: ['borrar', 'quitar', 'dar de baja'],
@@ -141,7 +174,7 @@ export const GUIA_CASOS: Guia = {
       pasos: [
         'En "Gestión de Casos", pulsa "Plantillas".',
         'Pulsa "Abrir plantilla" en la que quieras cambiar.',
-        'Muévete por las pestañas "Datos básicos", "Hitos", "Estructura de costos" y "Documentos de referencia".',
+        'Muévete por las pestañas "Datos básicos", "Hitos", "Estructura de costos", "Documentos de referencia" y "Acciones".',
         'Para borrarla, pulsa "Eliminar plantilla" en su tarjeta.',
       ],
     },

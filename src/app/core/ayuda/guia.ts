@@ -13,6 +13,7 @@ export const GUIA_IDS = [
   'contactos',
   'casos',
   'configuracion',
+  'acciones',
   'calendario',
   'documentos',
   'facturacion',
@@ -54,8 +55,19 @@ export interface Guia {
   readonly modulo: Modulo | null;
   /** Ruta de la pantalla que documenta. */
   readonly ruta: string;
+  /**
+   * Otras pantallas que explica esta guía, además de `ruta` (p. ej. las
+   * plantillas de caso viven en `/plantillas` pero se documentan en Casos).
+   * La ayuda contextual del toolbar las usa para elegir la guía de la pantalla.
+   */
+  readonly otrasRutas?: readonly string[];
   readonly resumen: string;
   readonly paraQue: string;
+  /**
+   * Lo imprescindible de la pantalla en frases cortas: reglas, límites y
+   * avisos que conviene conocer antes de usarla. Lo muestra el modal de ayuda.
+   */
+  readonly aSaber?: readonly string[];
   readonly tareas: readonly TareaGuia[];
   readonly claves: readonly string[];
 }

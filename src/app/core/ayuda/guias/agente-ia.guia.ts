@@ -8,6 +8,11 @@ export const GUIA_AGENTE_IA: Guia = {
   resumen: 'El asistente Vertey IA: un chat al que le preguntas o le pides cosas con tus palabras, escribiendo o dictando.',
   paraQue:
     'Hacer más rápido lo de siempre: preguntar cómo se hace algo, encontrar un contacto o un caso, ir a una pantalla o dejar un formulario ya rellenado.',
+  aSaber: [
+    'El agente solo ve y hace lo que tus permisos te permiten a ti.',
+    'Solo en modo "Acciones" prepara formularios; nunca guarda por ti.',
+    'El dictado nunca se envía solo: siempre lo revisas antes.',
+  ],
   claves: ['asistente', 'chat', 'ia', 'inteligencia artificial', 'vertey ia', 'copiloto', 'bot'],
   tareas: [
     {

@@ -7,6 +7,10 @@ export const GUIA_PERFIL: Guia = {
   ruta: '/perfil',
   resumen: 'Tu información personal y profesional dentro de Vertey.',
   paraQue: 'Mantener al día tus datos, los de tu despacho y tu ficha profesional.',
+  aSaber: [
+    'Aquí cambias tus propios datos; tu rol y tus permisos los decide el administrador.',
+    'El indicador "Perfil completado" te dice cuánto te falta por rellenar.',
+  ],
   claves: ['cuenta', 'mis datos', 'usuario', 'ajustes personales'],
   tareas: [
     {

@@ -5,7 +5,6 @@ import {
   computed,
   ElementRef,
   inject,
-  InjectionToken,
   input,
   PendingTasks,
   signal,
@@ -14,19 +13,12 @@ import {
 import { RouterLink } from '@angular/router';
 import { LifeBuoy, LucideAngularModule, Search, Sparkles } from 'lucide-angular';
 import { buscarGuias } from '../../core/ayuda/buscar-guias';
-import { cargarGuias } from '../../core/ayuda/cargar-guias';
+import { CARGADOR_GUIAS } from '../../core/ayuda/cargador-guias.token';
 import { guiaPorId, guiasVisibles } from '../../core/ayuda/filtro-guias';
 import type { Guia } from '../../core/ayuda/guia';
 import { PermissionService } from '../../core/services/permission.service';
 
-/**
- * De dónde salen las guías. Es un token para que los tests inyecten guías de
- * juguete; en la app resuelve al import diferido del contenido real.
- */
-export const CARGADOR_GUIAS = new InjectionToken<() => Promise<readonly Guia[]>>('CARGADOR_GUIAS', {
-  providedIn: 'root',
-  factory: () => cargarGuias,
-});
+export { CARGADOR_GUIAS };
 
 type EstadoAyuda = 'cargando' | 'error' | 'guia' | 'sin-acceso' | 'no-existe';
 

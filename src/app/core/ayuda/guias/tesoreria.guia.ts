@@ -8,6 +8,11 @@ export const GUIA_TESORERIA: Guia = {
   resumen: 'La contabilidad de los casos y su cotejo con el banco: cuentas, movimientos, conciliación, cierres de caja y reportes.',
   paraQue:
     'Saber cuánto dinero hay de verdad, comprobar que lo registrado en Vertey coincide con el banco y sacar los números del periodo.',
+  aSaber: [
+    'El saldo aprobado de cada cuenta solo suma los movimientos aprobados.',
+    'Los cobros y gastos de un caso se registran en el caso, no aquí; aquí van los gastos de oficina y los ajustes.',
+    'Necesitas al menos una cuenta para conciliar extractos y hacer cierres de caja.',
+  ],
   claves: ['bancos', 'caja', 'dinero', 'contabilidad', 'saldo', 'cuentas bancarias', 'movimientos', 'conciliación'],
   tareas: [
     {

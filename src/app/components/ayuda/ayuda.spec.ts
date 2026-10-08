@@ -29,6 +29,13 @@ describe('AyudaComponent — guías', () => {
     expect(enlace?.textContent).toContain('Ir a Casos');
   });
 
+  it('muestra lo que hay que saber de la guía', async () => {
+    const f = await montarAyuda({ guia: 'tesoreria' });
+    const seccion = el(f).querySelector('section[aria-labelledby="ayuda-a-saber"]');
+    expect(seccion?.textContent).toContain('Lo que tienes que saber');
+    expect(seccion?.querySelector('li')?.textContent).toContain('Solo suman los movimientos aprobados.');
+  });
+
   it('marca la guía activa en la navegación', async () => {
     const f = await montarAyuda({ guia: 'casos' });
     const activo = el(f).querySelector('nav[aria-label="Guías"] [aria-current="page"]');

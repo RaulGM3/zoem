@@ -8,6 +8,11 @@ export const GUIA_RECEPCION_IA: Guia = {
   resumen: 'El asistente que atiende y cualifica las llamadas del despacho, con su transcripción y un resumen de cada una.',
   paraQue:
     'No perder ninguna llamada: ver quién llamó y para qué, y convertirla en un contacto o en un caso sin volver a teclear los datos.',
+  aSaber: [
+    'Cada llamada llega con su transcripción y un resumen.',
+    'Las llamadas de alguien que ya está en el CRM aparecen como "Contacto registrado".',
+    'Puedes convertir una llamada en un contacto o en un caso sin volver a escribir los datos.',
+  ],
   claves: ['llamadas', 'teléfono', 'recepcionista', 'leads', 'transcripción', 'atención telefónica'],
   tareas: [
     {

@@ -8,6 +8,12 @@ export const GUIA_FACTURACION: Guia = {
   resumen: 'La suma de la gestoría de los casos abiertos, la emisión de facturas y el cierre controlado de cada caso.',
   paraQue:
     'Facturar lo trabajado, llevar el control de qué está cobrado, y cerrar cada caso solo cuando sus cuentas cuadran.',
+  aSaber: [
+    'Las facturas de un caso salen de los movimientos registrados en su pestaña "Gestoría".',
+    'Con Verifactu activado, el NIF del cliente es obligatorio y la factura enviada a la AEAT ya no se puede editar.',
+    'El "Modo sandbox" envía a las pruebas de la AEAT, no al entorno real.',
+    'Cerrar un caso lo pasa a "Archivo"; desde ahí "Reabrir" lo devuelve a los casos abiertos.',
+  ],
   claves: ['facturas', 'cobros', 'honorarios', 'verifactu', 'aeat', 'iva', 'cierre de caso'],
   tareas: [
     {
