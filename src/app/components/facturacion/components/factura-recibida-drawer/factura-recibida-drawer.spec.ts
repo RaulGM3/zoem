@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { cupoDePruebas } from '../../../../../testing/cupo-pruebas';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { FacturaRecibidaDrawerComponent, type FacturaRecibidaPayload } from './factura-recibida-drawer';
 import { FacturaExtractionService, type DatosExtraidos, type ResultadoExtraccion } from '../../../../core/services/factura-extraction.service';
@@ -12,16 +13,19 @@ describe('FacturaRecibidaDrawerComponent', () => {
   let cierres: number;
   let extraer: ReturnType<typeof vi.fn>;
   let leerQr: ReturnType<typeof vi.fn>;
+  let cupo: ReturnType<typeof cupoDePruebas>['cupo'];
   const el = (): HTMLElement => fixture.nativeElement;
   const q = <T extends HTMLElement>(sel: string): T => el().querySelector<T>(sel)!;
 
   async function montar(): Promise<void> {
     TestBed.resetTestingModule();
+    const prueba = cupoDePruebas();
+    cupo = prueba.cupo;
     extraer = vi.fn().mockResolvedValue({ ok: false, mensaje: 'sin IA' } satisfies ResultadoExtraccion);
     leerQr = vi.fn().mockResolvedValue(null);
     await TestBed.configureTestingModule({
       imports: [FacturaRecibidaDrawerComponent],
-      providers: [
+      providers: [...prueba.providers, 
         { provide: FacturaExtractionService, useValue: { extraer } },
         { provide: QrDecodeService, useValue: { leer: leerQr } },
       ],
@@ -210,6 +214,30 @@ describe('FacturaRecibidaDrawerComponent', () => {
         concepto: 'Material',
     };
     const EXTRAIDOS: ResultadoExtraccion = { ok: true, datos: DATOS_EXTRAIDOS };
+
+    it('sin cupo el selector de archivos de la factura no se abre (click cancelado) y el modal lo explica el servicio', () => {
+      cupo.puedeSubir.mockReturnValue(false);
+      for (const id of ['fr-archivo', 'fr-foto']) {
+        const click = new MouseEvent('click', { cancelable: true, bubbles: true });
+        q<HTMLInputElement>(`#${id}`).dispatchEvent(click);
+        expect(click.defaultPrevented, id).toBe(true);
+      }
+      expect(cupo.puedeSubir).toHaveBeenCalled();
+    });
+
+    it('con cupo el click abre el selector con normalidad', () => {
+      const click = new MouseEvent('click', { cancelable: true, bubbles: true });
+      q<HTMLInputElement>('#fr-archivo').dispatchEvent(click);
+      expect(click.defaultPrevented).toBe(false);
+    });
+
+    it('si el archivo elegido no cabe en el cupo, no se adjunta ni se envía a la IA', async () => {
+      cupo.admitir.mockReturnValue([]);
+      await elegir('fr-archivo', pdf());
+      expect(cupo.admitir).toHaveBeenCalled();
+      expect(extraer).not.toHaveBeenCalled();
+      expect(el().querySelector('[data-archivo-adjunto]')).toBeNull();
+    });
 
     it('ofrece subir archivo (PDF/imágenes) y hacer foto (capture=environment)', () => {
       expect(q('#fr-archivo').getAttribute('accept')).toBe(ACCEPT_FACTURA);
@@ -595,7 +623,7 @@ describe('FacturaRecibidaDrawerComponent — captura nativa (@capacitor/camera)'
     extraer = vi.fn().mockResolvedValue({ ok: false, mensaje: 'sin IA' } satisfies ResultadoExtraccion);
     await TestBed.configureTestingModule({
       imports: [FacturaRecibidaDrawerComponent],
-      providers: [
+      providers: [...cupoDePruebas().providers, 
         { provide: FacturaExtractionService, useValue: { extraer } },
         { provide: QrDecodeService, useValue: { leer: vi.fn().mockResolvedValue(null) } },
         { provide: CapturaArchivoService, useValue: { esNativo: () => nativo, capturar, validar: (a: File) => ({ ok: true, archivo: a }) } },

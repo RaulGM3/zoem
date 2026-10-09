@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { cupoDePruebas } from '../../../testing/cupo-pruebas';
 import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
@@ -89,6 +90,7 @@ describe('ContactoDetailComponent — móvil', () => {
       imports: [ContactoDetailComponent],
       providers: [
         provideRouter([]),
+        ...cupoDePruebas().providers,
         { provide: ContactService, useValue: { getContact: vi.fn().mockResolvedValue(contacto), updateContact: vi.fn() } },
         { provide: ContactFolderService, useValue: { folders: signal<ContactFolder[]>([]), isLoading: signal(false), loadFolders: vi.fn().mockResolvedValue(undefined) } },
         { provide: ContactFileService, useValue: { files: signal<ContactFile[]>([]), isLoading: signal(false), loadFiles: vi.fn().mockResolvedValue(undefined) } },

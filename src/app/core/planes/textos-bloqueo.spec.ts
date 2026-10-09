@@ -28,6 +28,14 @@ describe('textosBloqueo', () => {
     expect(textosBloqueo({ tipo: 'cupo', recurso: 'usuarios', usado: 3, limite: 3 }, base).titulo).toBe('Has usado tus 3 usuarios del plan Free');
     expect(textosBloqueo({ tipo: 'cupo', recurso: 'documentosMB', usado: 500, limite: 500 }, base).titulo).toBe('Has llenado tus 500 MB de documentos del plan Free');
     expect(textosBloqueo({ tipo: 'cupo', recurso: 'documentosMB', usado: 20000, limite: 20000 }, { ...base, plan: 'pro' }).titulo).toBe('Has llenado tus 20 GB de documentos del plan Pro');
+    expect(textosBloqueo({ tipo: 'cupo', recurso: 'documentosMB', usado: 500, limite: 500 }, base).descripcion).toContain('siguen accesibles');
+  });
+  it('documentos con detalle (el archivo elegido no cabe): lo cuenta con las cifras exactas y conserva lo subido', () => {
+    const t = textosBloqueo({ tipo: 'cupo', recurso: 'documentosMB', usado: 498, limite: 500, detalle: 'No queda espacio: te quedan 2 MB y el archivo ocupa 5 MB.' }, base);
+    expect(t.titulo).toBe('Este archivo no cabe en tus 500 MB del plan Free');
+    expect(t.descripcion).toContain('No queda espacio: te quedan 2 MB y el archivo ocupa 5 MB.');
+    expect(t.descripcion).toContain('Tus documentos actuales se conservan');
+    expect(t.cta).toBe('Hazte PRO');
   });
   it('función: "Esta función está en el plan Pro" con la descripción de la función', () => {
     const t = textosBloqueo({ tipo: 'funcion', recurso: 'tesoreria' }, base);

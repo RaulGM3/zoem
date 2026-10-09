@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { cupoDePruebas } from '../../../../../testing/cupo-pruebas';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { FacturaRecibidaDrawerComponent } from './factura-recibida-drawer';
 import { vi } from 'vitest';
@@ -10,7 +11,7 @@ import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
 
 async function montar(): Promise<ComponentFixture<FacturaRecibidaDrawerComponent>> {
   TestBed.resetTestingModule();
-  await TestBed.configureTestingModule({ imports: [FacturaRecibidaDrawerComponent], providers: [extraccionFalsa()] }).compileComponents();
+  await TestBed.configureTestingModule({ imports: [FacturaRecibidaDrawerComponent], providers: [...cupoDePruebas().providers, extraccionFalsa()] }).compileComponents();
   const fixture = TestBed.createComponent(FacturaRecibidaDrawerComponent);
   fixture.componentRef.setInput('fechaHoy', '2026-04-05');
   fixture.detectChanges();
@@ -38,7 +39,7 @@ describe('FacturaRecibidaDrawerComponent — accesibilidad (axe)', () => {
     const capturar = vi.fn().mockResolvedValue({ ok: false, mensaje: 'Sin permiso para usar la cámara o las fotos.' });
     await TestBed.configureTestingModule({
       imports: [FacturaRecibidaDrawerComponent],
-      providers: [extraccionFalsa(), { provide: CapturaArchivoService, useValue: { esNativo: () => true, capturar, validar: vi.fn() } }],
+      providers: [...cupoDePruebas().providers, extraccionFalsa(), { provide: CapturaArchivoService, useValue: { esNativo: () => true, capturar, validar: vi.fn() } }],
     }).compileComponents();
     const f = TestBed.createComponent(FacturaRecibidaDrawerComponent);
     f.componentRef.setInput('fechaHoy', '2026-04-05');
@@ -120,7 +121,7 @@ describe('FacturaRecibidaDrawerComponent — accesibilidad (axe)', () => {
     const qr = parseQrVerifactu('https://prewww2.aeat.es/wlpl/TIKE-CONT/ValidarQR?nif=B12345674&numserie=F-1&fecha=02-04-2026&importe=99.00');
     await TestBed.configureTestingModule({
       imports: [FacturaRecibidaDrawerComponent],
-      providers: [extraccionFalsa(), { provide: QrDecodeService, useValue: { leer: vi.fn().mockResolvedValue(qr) } }],
+      providers: [...cupoDePruebas().providers, extraccionFalsa(), { provide: QrDecodeService, useValue: { leer: vi.fn().mockResolvedValue(qr) } }],
     }).compileComponents();
     const f = TestBed.createComponent(FacturaRecibidaDrawerComponent);
     f.componentRef.setInput('fechaHoy', '2026-04-05');

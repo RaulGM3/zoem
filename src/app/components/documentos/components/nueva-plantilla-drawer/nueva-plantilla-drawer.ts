@@ -10,6 +10,7 @@ import {
   ChevronUp,
   ArrowLeft,
 } from 'lucide-angular';
+import { AlmacenamientoCupoService } from '../../../../core/planes/almacenamiento-cupo.service';
 import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 import { DocExtractionService } from '../../../../core/services/doc-extraction.service';
 import { DocTemplateService } from '../../../../core/services/doc-template.service';
@@ -26,6 +27,7 @@ type DrawerStep = 'upload' | 'procesando' | 'revision' | 'error';
 export class NuevaPlantillaDrawerComponent {
   private readonly extractionService = inject(DocExtractionService);
   private readonly templateService = inject(DocTemplateService);
+  private readonly cupo = inject(AlmacenamientoCupoService);
 
   readonly saved = output<string>();
   readonly closed = output<void>();
@@ -64,9 +66,14 @@ export class NuevaPlantillaDrawerComponent {
     this.formName().trim().length > 0 && this.extractedHtml().trim().length > 0 && this.variables().length > 0
   );
 
+  /** Antes de abrir el selector: sin cupo se cancela el click y el servicio muestra el modal de mejora. */
+  onAbrirSelector(event: Event): void {
+    if (!this.cupo.puedeSubir()) event.preventDefault();
+  }
+
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
+    const [file] = this.cupo.admitir(Array.from(input.files ?? []).slice(0, 1));
     if (file) this.setFile(file);
     input.value = '';
   }
@@ -74,7 +81,9 @@ export class NuevaPlantillaDrawerComponent {
   onDrop(event: DragEvent): void {
     event.preventDefault();
     this.isDragging.set(false);
-    const file = event.dataTransfer?.files?.[0];
+    // La fuente se guarda en Storage: sin cupo no se acepta el drop (modal de mejora) y, si no cabe, tampoco.
+    if (!this.cupo.puedeSubir()) return;
+    const [file] = this.cupo.admitir(Array.from(event.dataTransfer?.files ?? []).slice(0, 1));
     if (file) this.setFile(file);
   }
 

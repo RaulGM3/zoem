@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CasoDocSlotRowComponent } from './caso-doc-slot-row';
 import type { CasoDocSlot } from '../../../../interfaces';
+import { cupoDePruebas } from '../../../../../testing/cupo-pruebas';
 
 const slot = (extra: Record<string, unknown> = {}): CasoDocSlot =>
   ({ id: 's1', folderId: null, name: 'DNI', status: 'pendiente', ...extra }) as unknown as CasoDocSlot;
@@ -10,6 +11,7 @@ describe('CasoDocSlotRowComponent', () => {
   let fixture: ComponentFixture<CasoDocSlotRowComponent>;
   let eventos: string[];
   let subidos: File[];
+  let cupo: ReturnType<typeof cupoDePruebas>['cupo'];
 
   const el = (): HTMLElement => fixture.nativeElement;
   const texto = (): string => el().textContent?.replace(/\s+/g, ' ').trim() ?? '';
@@ -25,7 +27,9 @@ describe('CasoDocSlotRowComponent', () => {
 
   beforeEach(async () => {
     TestBed.resetTestingModule();
-    await TestBed.configureTestingModule({ imports: [CasoDocSlotRowComponent] }).compileComponents();
+    const prueba = cupoDePruebas();
+    cupo = prueba.cupo;
+    await TestBed.configureTestingModule({ imports: [CasoDocSlotRowComponent], providers: prueba.providers }).compileComponents();
     fixture = TestBed.createComponent(CasoDocSlotRowComponent);
     const c = fixture.componentInstance;
     eventos = [];
@@ -60,6 +64,26 @@ describe('CasoDocSlotRowComponent', () => {
       input.value = '';
       input.dispatchEvent(new Event('change'));
       expect(subidos).toEqual([file]);
+    });
+
+    it('sin cupo NO abre el selector de archivos (el servicio ya mostró el modal de mejora)', () => {
+      cupo.puedeSubir.mockReturnValue(false);
+      render(slot());
+      const input = el().querySelector<HTMLInputElement>('#upload-slot-s1')!;
+      const spy = vi.spyOn(input, 'click');
+      boton('Subir')!.click();
+      expect(cupo.puedeSubir).toHaveBeenCalled();
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('si el archivo elegido no cabe, no se emite la subida', () => {
+      cupo.admitir.mockReturnValue([]);
+      render(slot());
+      const input = el().querySelector<HTMLInputElement>('#upload-slot-s1')!;
+      Object.defineProperty(input, 'files', { value: [new File(['x'], 'enorme.pdf')], configurable: true });
+      input.dispatchEvent(new Event('change'));
+      expect(cupo.admitir).toHaveBeenCalled();
+      expect(subidos).toHaveLength(0);
     });
 
     it('no emite si se cancela el selector', () => {

@@ -7,6 +7,7 @@ import { ContactFileService } from '../../../../core/services/contact-file.servi
 import { UploadQueueService } from '../../../../core/services/upload-queue.service';
 import { PermissionService } from '../../../../core/services/permission.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { cupoDePruebas } from '../../../../../testing/cupo-pruebas';
 import type { ContactFile, ContactFolder } from '../../../../interfaces';
 
 const FOLDERS = [{ id: 'f1', contactId: 'c1', parentId: null, name: 'Identidad' }] as ContactFolder[];
@@ -47,6 +48,7 @@ describe('ContactoDocumentosComponent — móvil', () => {
     await TestBed.configureTestingModule({
       imports: [ContactoDocumentosComponent],
       providers: [
+        ...cupoDePruebas().providers,
         { provide: ContactFolderService, useValue: { folders: signal(FOLDERS), isLoading: signal(false), updateFolder: vi.fn(), deleteFolder: vi.fn(), createFolder: vi.fn() } },
         { provide: ContactFileService, useValue: { files: signal(FILES), isLoading: signal(false), deleteFile, uploadFile: vi.fn() } },
         { provide: UploadQueueService, useValue: { enqueue: vi.fn() } },

@@ -4,6 +4,8 @@ import {
 import {
   LucideAngularModule, FolderPlus, Upload, Folder, FolderOpen, Check, X, Pencil, Download, Trash2,
 } from 'lucide-angular';
+import { AlmacenamientoCupoService } from '../../../../core/planes/almacenamiento-cupo.service';
+import { AlmacenamientoMedidorComponent } from '../../../../shared/components/almacenamiento-medidor/almacenamiento-medidor';
 import { ContactFolderService } from '../../../../core/services/contact-folder.service';
 import { ContactFileService } from '../../../../core/services/contact-file.service';
 import { UploadQueueService } from '../../../../core/services/upload-queue.service';
@@ -25,7 +27,8 @@ import type { ContactFolder, ContactFile } from '../../../../interfaces';
 @Component({
   selector: 'app-contacto-documentos',
   host: { class: 'block' },
-  imports: [LucideAngularModule, ActionMenuComponent, ResponsiveListComponent, ListCardDirective, ListTableDirective],
+  imports: [LucideAngularModule, ActionMenuComponent, ResponsiveListComponent, ListCardDirective, ListTableDirective,
+    AlmacenamientoMedidorComponent],
   templateUrl: './contacto-documentos.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -39,6 +42,7 @@ export class ContactoDocumentosComponent {
   readonly perm = inject(PermissionService);
   protected readonly bp = inject(BreakpointService);
   private readonly doc = inject(DOCUMENT);
+  private readonly cupo = inject(AlmacenamientoCupoService);
 
   readonly FolderPlusIcon = FolderPlus;
   readonly UploadIcon = Upload;
@@ -173,11 +177,18 @@ export class ContactoDocumentosComponent {
     await this.folderService.deleteFolder(folderId);
   }
 
+  /** Antes de abrir el selector: sin cupo se cancela el click y el servicio muestra el modal de mejora. */
+  onAbrirSelector(event: Event): void {
+    if (!this.cupo.puedeSubir()) event.preventDefault();
+  }
+
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const files = Array.from(input.files ?? []);
+    const elegidos = Array.from(input.files ?? []);
     input.value = '';
     if (!this.perm.can('Contactos', 'crear')) return;
+    // Solo los que caben en el cupo (el primero que no cabe abre el modal con cuánto queda).
+    const files = this.cupo.admitir(elegidos);
     for (const file of files) {
       this.uploadQueue.enqueue(
         () => this.fileService.uploadFile(this.contactId(), this.currentFolderId(), file),

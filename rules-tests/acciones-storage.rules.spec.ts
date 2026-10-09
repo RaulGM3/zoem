@@ -63,8 +63,8 @@ describe('storage acciones_envios', () => {
     await assertFails(getBytes(ref(env.unauthenticatedContext().storage(), `companies/${CID}/acciones_envios/r1.docx`)));
   });
 
-  it('el resto de companies/** sigue igual (no regresión): usuario sube un pdf a casos', async () => {
+  it('el resto de companies/** sigue igual (no regresión): usuario sube un pdf a invoices', async () => {
     const s = storageDe(env, 'usuario');
-    await assertSucceeds(uploadBytes(ref(s, `companies/${CID}/casos/k1/doc.pdf`), bytes(), { contentType: 'application/pdf' }));
+    await assertSucceeds(uploadBytes(ref(s, `companies/${CID}/invoices/doc.pdf`), bytes(), { contentType: 'application/pdf' }));
   });
 });

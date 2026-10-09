@@ -20,6 +20,7 @@ import {
   getDownloadURL,
 } from '@angular/fire/storage';
 import { Auth } from '@angular/fire/auth';
+import { AlmacenamientoCupoService } from '../planes/almacenamiento-cupo.service';
 import { CompanyService } from './company.service';
 import { DocAuditService } from './doc-audit.service';
 import { ErrorService } from './error.service';
@@ -51,6 +52,7 @@ export class DocTemplateService {
   private readonly docAudit = inject(DocAuditService);
   private readonly errorService = inject(ErrorService);
   private readonly permissionService = inject(PermissionService);
+  private readonly cupoAlmacenamiento = inject(AlmacenamientoCupoService);
 
   readonly templates = signal<DocTemplate[]>([]);
   readonly loading = signal(false);
@@ -125,6 +127,9 @@ export class DocTemplateService {
     const companyId = this.companyId;
     const docRef = doc(this.templatesRef);
 
+    // La fuente (.pdf/.docx) es almacenamiento de la empresa: si no cabe, ni se sube (modal de mejora).
+    if (input.sourceFile) this.cupoAlmacenamiento.asegurar(input.sourceFile.size);
+
     let sourceStoragePath: string | undefined;
     let sourceDownloadUrl: string | undefined;
     let html = input.html;
@@ -152,6 +157,8 @@ export class DocTemplateService {
         sourceMimeType: input.sourceFile?.type,
         sourceStoragePath,
         sourceDownloadUrl,
+        // Tamaño de la fuente: lo suma el contador de documentos (Function onDocTemplateUso).
+        sourceSizeBytes: input.sourceFile?.size,
         createdBy: this.auth.currentUser?.uid ?? '',
         deleted: false,
         visibleTo: 'all',

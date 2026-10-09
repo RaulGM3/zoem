@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CasoDocFileRowComponent } from './caso-doc-file-row';
 import type { CasoDocFile } from '../../../../interfaces';
+import { cupoDePruebas } from '../../../../../testing/cupo-pruebas';
 
 const file = (extra: Record<string, unknown> = {}): CasoDocFile =>
   ({ id: 'a1', folderId: null, name: 'nota.txt', downloadUrl: 'http://x/nota', mimeType: 'text/plain', sizeBytes: 2048, ...extra }) as unknown as CasoDocFile;
@@ -10,6 +11,7 @@ describe('CasoDocFileRowComponent', () => {
   let fixture: ComponentFixture<CasoDocFileRowComponent>;
   let eventos: string[];
   let resubidos: File[];
+  let cupo: ReturnType<typeof cupoDePruebas>['cupo'];
 
   const el = (): HTMLElement => fixture.nativeElement;
   const texto = (): string => el().textContent?.replace(/\s+/g, ' ').trim() ?? '';
@@ -24,7 +26,9 @@ describe('CasoDocFileRowComponent', () => {
 
   beforeEach(async () => {
     TestBed.resetTestingModule();
-    await TestBed.configureTestingModule({ imports: [CasoDocFileRowComponent] }).compileComponents();
+    const prueba = cupoDePruebas();
+    cupo = prueba.cupo;
+    await TestBed.configureTestingModule({ imports: [CasoDocFileRowComponent], providers: prueba.providers }).compileComponents();
     fixture = TestBed.createComponent(CasoDocFileRowComponent);
     const c = fixture.componentInstance;
     eventos = [];
@@ -94,6 +98,24 @@ describe('CasoDocFileRowComponent', () => {
     Object.defineProperty(input, 'files', { value: [nuevo], configurable: true });
     input.dispatchEvent(new Event('change'));
     expect(resubidos).toEqual([nuevo]);
+  });
+
+  it('sin cupo NO abre el selector de la nueva versión', () => {
+    cupo.puedeSubir.mockReturnValue(false);
+    render(file());
+    const input = el().querySelector<HTMLInputElement>('#reupload-file-a1')!;
+    const spy = vi.spyOn(input, 'click');
+    porLabel('Subir nueva versión')!.click();
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('si la nueva versión no cabe, no se emite la resubida', () => {
+    cupo.admitir.mockReturnValue([]);
+    render(file());
+    const input = el().querySelector<HTMLInputElement>('#reupload-file-a1')!;
+    Object.defineProperty(input, 'files', { value: [new File(['x'], 'v2.txt')], configurable: true });
+    input.dispatchEvent(new Event('change'));
+    expect(resubidos).toEqual([]);
   });
 
   it('pide confirmación para eliminar', () => {

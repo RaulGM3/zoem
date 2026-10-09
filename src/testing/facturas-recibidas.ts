@@ -8,6 +8,7 @@ import { FacturaExtractionService } from '../app/core/services/factura-extractio
 import { LibroRecibidasExportService } from '../app/core/services/libro-recibidas-export.service';
 import { CompanyService } from '../app/core/services/company.service';
 import { GestoriaService } from '../app/core/services/gestoria.service';
+import { cupoDePruebas } from './cupo-pruebas';
 import type { MovimientoGestoria } from '../app/interfaces/gestoria.interface';
 import type { FacturaRecibida } from '../app/interfaces/factura-recibida.interface';
 
@@ -99,6 +100,7 @@ export async function montarTab(fake: FakeSvc, mobile = false, empresa: { name: 
       { provide: GestoriaService, useValue: gestoria },
       { provide: CompanyService, useValue: { activeCompany: signal({ id: 'co', ...empresa }) } },
       extraccionFalsa(),
+      ...cupoDePruebas().providers,
     ],
   }).compileComponents();
   const fixture: ComponentFixture<FacturacionGastosTabComponent> = TestBed.createComponent(FacturacionGastosTabComponent);

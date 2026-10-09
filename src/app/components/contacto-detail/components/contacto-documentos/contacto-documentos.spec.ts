@@ -8,6 +8,7 @@ import { UploadQueueService } from '../../../../core/services/upload-queue.servi
 import { PermissionService } from '../../../../core/services/permission.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import type { ContactFile, ContactFolder } from '../../../../interfaces';
+import { cupoDePruebas } from '../../../../../testing/cupo-pruebas';
 
 interface RunOptions { successMessage?: string; errorTitle?: string; onSuccess?: () => void }
 
@@ -26,6 +27,7 @@ describe('ContactoDocumentosComponent', () => {
   let fixture: ComponentFixture<ContactoDocumentosComponent>;
   let denegados: Set<string>;
   let enqueue: ReturnType<typeof vi.fn>;
+  let cupo: ReturnType<typeof cupoDePruebas>['cupo'];
   let folderService: {
     folders: ReturnType<typeof signal<ContactFolder[]>>;
     isLoading: ReturnType<typeof signal<boolean>>;
@@ -81,6 +83,8 @@ describe('ContactoDocumentosComponent', () => {
       }
     };
     enqueue = vi.fn();
+    const prueba = cupoDePruebas();
+    cupo = prueba.cupo;
     folderService = {
       folders: signal<ContactFolder[]>(FOLDERS),
       isLoading: signal(false),
@@ -99,6 +103,7 @@ describe('ContactoDocumentosComponent', () => {
     await TestBed.configureTestingModule({
       imports: [ContactoDocumentosComponent],
       providers: [
+        ...prueba.providers,
         { provide: ContactFolderService, useValue: folderService },
         { provide: ContactFileService, useValue: fileService },
         { provide: UploadQueueService, useValue: { enqueue } },
@@ -229,6 +234,41 @@ describe('ContactoDocumentosComponent', () => {
     ]);
     await enqueue.mock.calls[1][0]();
     expect(fileService.uploadFile).toHaveBeenCalledWith('c1', 'f1', dos);
+  });
+
+  it('sin cupo el selector de archivos no se abre (se cancela el click) y no se encola nada', async () => {
+    cupo.puedeSubir.mockReturnValue(false);
+    await montar();
+    const input = q<HTMLInputElement>('input[type="file"]', seccion());
+    const click = new MouseEvent('click', { cancelable: true, bubbles: true });
+    input.dispatchEvent(click);
+    expect(cupo.puedeSubir).toHaveBeenCalled();
+    expect(click.defaultPrevented).toBe(true);
+    expect(enqueue).not.toHaveBeenCalled();
+  });
+
+  it('con cupo el click abre el selector con normalidad', async () => {
+    await montar();
+    const click = new MouseEvent('click', { cancelable: true, bubbles: true });
+    q<HTMLInputElement>('input[type="file"]', seccion()).dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(false);
+  });
+
+  it('solo se encolan los archivos elegidos que caben en el cupo', async () => {
+    await montar();
+    const input = q<HTMLInputElement>('input[type="file"]', seccion());
+    const [cabe, noCabe] = [new File(['x'], 'cabe.pdf'), new File(['x'], 'enorme.pdf')];
+    cupo.admitir.mockReturnValue([cabe]);
+    Object.defineProperty(input, 'files', { value: [cabe, noCabe], configurable: true });
+    input.dispatchEvent(new Event('change'));
+    expect(cupo.admitir).toHaveBeenCalledWith([cabe, noCabe]);
+    expect(enqueue).toHaveBeenCalledTimes(1);
+    expect(enqueue.mock.calls[0][1]).toBe('cabe.pdf');
+  });
+
+  it('muestra el medidor de almacenamiento en la cabecera de documentos', async () => {
+    await montar();
+    expect(seccion().querySelector('app-almacenamiento-medidor')).not.toBeNull();
   });
 
   it('descarga y elimina un archivo tras confirmar', async () => {

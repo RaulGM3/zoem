@@ -1,7 +1,7 @@
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest';
 import { assertFails, assertSucceeds, type RulesTestEnvironment } from '@firebase/rules-unit-testing';
 import { doc, setDoc } from 'firebase/firestore';
-import { ref, uploadBytes } from 'firebase/storage';
+import { getBytes, ref, uploadBytes } from 'firebase/storage';
 import { crearEntorno, storageDe, CID } from './helpers';
 import { derechosParaDoc } from '../functions/src/planes/derechosDoc';
 import type { Suscripcion } from '../functions/src/planes/catalogo';
@@ -108,10 +108,37 @@ describe('storage · cuota de documentos', () => {
     await assertFails(subir('usuario', rutaCaso(), 50 * MB + 1));
   });
 
-  it('el resto de rutas de la empresa NO consumen esta cuota (acciones, facturas recibidas)', async () => {
-    await empresa(sus({ plan: 'pro' }), 5_000 * MB);
-    await assertSucceeds(subir('gestor', `companies/${CID}/facturas_recibidas/f1.pdf`, 10));
-    await assertSucceeds(subir('usuario', `companies/${CID}/docTemplates/t1/plantilla.html`, 10));
+  it('plantillas HTML y facturas generadas (invoices) no consumen la cuota (derivados del sistema / texto)', async () => {
+    await empresa(sus({ plan: 'free' }), 500 * MB);
+    await assertSucceeds(subir('usuario', `companies/${CID}/docTemplates/t1/template.html`, 10));
+    await assertSucceeds(subir('usuario', `companies/${CID}/invoices/i1.pdf`, 10));
+  });
+
+  it('facturas recibidas (adjuntos) SÍ consumen la cuota de documentos', async () => {
+    await empresa(sus({ plan: 'pro' }), 20_000 * MB - 100);
+    const f = () => `companies/${CID}/facturas_recibidas/${++n}_f.pdf`;
+    await assertSucceeds(subir('gestor', f(), 100));
+    await assertFails(subir('gestor', f(), 101));
+    await empresa(sus({ plan: 'free' }), 500 * MB);
+    await assertFails(subir('admin', f(), 1));
+    await empresa(sus({ plan: 'enterprise' }), 9_999 * MB);
+    await assertSucceeds(subir('admin', f(), 100));
+  });
+
+  it('archivo fuente de plantilla de documento (docTemplates/*/source) SÍ consume la cuota', async () => {
+    const r = () => `companies/${CID}/docTemplates/t1/source/${++n}_p.docx`;
+    await empresa(sus({ plan: 'free' }), 500 * MB - 100);
+    await assertSucceeds(subir('usuario', r(), 100));
+    await assertFails(subir('usuario', r(), 101));
+    await assertSucceeds(subir('super', r(), 101));
+  });
+
+  it('no se puede almacenar en rutas arbitrarias de la empresa para esquivar la cuota', async () => {
+    await empresa(sus({ plan: 'free' }), 500 * MB);
+    for (const ruta of ['varios/x.bin', 'casos/k1/otra/x.bin', 'casos/k1/x.bin', 'documentos/x.bin', 'uploads/a/b.bin']) {
+      await assertFails(subir('usuario', `companies/${CID}/${ruta}`, 10));
+      await assertFails(subir('admin', `companies/${CID}/${ruta}`, 10));
+    }
   });
 
   it('no se puede esquivar el cupo subiendo a otra ruta equivalente del bloque genérico', async () => {
@@ -119,5 +146,30 @@ describe('storage · cuota de documentos', () => {
     // mayúsculas / segmentos extra siguen dentro de casos/*/docs/ o contacts/
     await assertFails(subir('usuario', `companies/${CID}/casos/k1/docs/a/b/c/x.pdf`, 10));
     await assertFails(subir('usuario', `companies/${CID}/contacts/ct1/x.pdf`, 10));
+  });
+});
+
+describe('storage · bajada de plan con la empresa por encima del cupo (nada se oculta ni se bloquea al leer)', () => {
+  it('con uso > límite se LEEN los archivos existentes (casos, contactos, facturas) y solo se deniegan subidas nuevas', async () => {
+    await empresa(sus({ plan: 'free' }), 800 * MB); // pro -> free: 800 MB usados de 500 MB
+    const caso = rutaCaso();
+    const contacto = rutaContacto();
+    const factura = `companies/${CID}/facturas_recibidas/ya.pdf`;
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      for (const r of [caso, contacto, factura]) await uploadBytes(ref(ctx.storage(), r), bytes(10), { contentType: 'application/pdf' });
+    });
+    for (const uid of ['usuario', 'viewer', 'admin']) {
+      await assertSucceeds(getBytes(ref(storageDeUid(uid), caso)));
+      await assertSucceeds(getBytes(ref(storageDeUid(uid), contacto)));
+    }
+    await assertSucceeds(getBytes(ref(storageDeUid('gestor'), factura)));
+    await assertSucceeds(getBytes(ref(storageDeUid('super'), caso)));
+    await assertFails(subir('usuario', rutaCaso(), 1));
+    await assertFails(subir('usuario', rutaContacto(), 1));
+  });
+
+  it('el superusuario sigue pudiendo leer y subir', async () => {
+    await empresa(sus({ plan: 'free' }), 800 * MB);
+    await assertSucceeds(subir('super', rutaCaso(), 10));
   });
 });

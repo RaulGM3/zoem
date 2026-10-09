@@ -11,12 +11,17 @@
 
 import { periodoMensual } from './periodo';
 
-export type TipoUso = 'caso' | 'contacto' | 'plantilla' | 'miembro' | 'archivo' | 'accion';
+/**
+ * `archivo` = doc_files, contact_files y doc_slots (todas sus versiones); `factura` = adjunto de una factura
+ * recibida; `docTemplate` = archivo fuente de una plantilla de documento. Los tres suman a `documentosBytes`.
+ */
+export type TipoUso = 'caso' | 'contacto' | 'plantilla' | 'miembro' | 'archivo' | 'accion' | 'factura' | 'docTemplate';
 export type CampoUso = 'casosActivos' | 'contactos' | 'plantillas' | 'usuarios' | 'documentosBytes' | 'accionesMes' | 'iaMensajesMes';
 type Datos = Record<string, unknown> | undefined;
 
 export const CAMPO_DE: Record<TipoUso, CampoUso> = {
   caso: 'casosActivos', contacto: 'contactos', plantilla: 'plantillas', miembro: 'usuarios', archivo: 'documentosBytes', accion: 'accionesMes',
+  factura: 'documentosBytes', docTemplate: 'documentosBytes',
 };
 
 const ESTADOS_CASO_ACTIVO = new Set(['pendiente', 'en_proceso', 'urgente']);
@@ -27,6 +32,30 @@ const ESTADOS_CASO_ACTIVO = new Set(['pendiente', 'en_proceso', 'urgente']);
  */
 export function docUsoDe(tipo: TipoUso, cuando: Date, zona: string): string {
   return tipo === 'accion' ? periodoMensual(cuando, zona).clave : 'total';
+}
+
+const bytesValidos = (n: unknown): number => (typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : 0);
+
+/**
+ * Bytes que ocupa un doc de archivo en Storage: TODAS sus versiones (resubir no borra el blob anterior) más el
+ * blob actual de primer nivel si no está ya en `versions` (slots generados desde plantilla, docs legados).
+ * Se deduplica por `storagePath`. Un doc borrado (soft delete) o un slot retirado ("pendiente") libera su
+ * espacio en el cupo: es la forma en que la persona recupera espacio. Los blobs NO se tocan nunca.
+ */
+export function bytesArchivo(d: Record<string, unknown>): number {
+  if (d['deleted'] === true || d['status'] === 'pendiente') return 0;
+  const porRuta = new Map<string, number>();
+  let sinRuta = 0;
+  const sumar = (ruta: unknown, size: unknown) => {
+    if (typeof ruta === 'string' && ruta) {
+      if (!porRuta.has(ruta)) porRuta.set(ruta, bytesValidos(size));
+    } else sinRuta += bytesValidos(size);
+  };
+  const versiones = Array.isArray(d['versions']) ? (d['versions'] as Record<string, unknown>[]) : [];
+  for (const v of versiones) sumar(v?.['storagePath'], v?.['sizeBytes']);
+  sumar(d['storagePath'], d['sizeBytes']);
+  // Legado sin versions ni ruta: solo el tamaño de primer nivel (ya sumado en `sinRuta`).
+  return [...porRuta.values()].reduce((a, b) => a + b, sinRuta);
 }
 
 /** Cuánto "pesa" un doc en su contador (0 si no cuenta). */
@@ -41,10 +70,9 @@ function valor(tipo: TipoUso, id: string, d: Datos, esDemo: boolean): number {
     case 'plantilla':
     case 'accion': return 1;
     case 'miembro': return d['estado'] === 'activo' ? 1 : 0;
-    case 'archivo': {
-      const bytes = d['sizeBytes'];
-      return d['deleted'] === true || typeof bytes !== 'number' || bytes < 0 ? 0 : bytes;
-    }
+    case 'archivo': return bytesArchivo(d);
+    case 'factura': return bytesValidos((d['adjunto'] as Record<string, unknown> | undefined)?.['size']);
+    case 'docTemplate': return d['deleted'] === true ? 0 : bytesValidos(d['sourceSizeBytes']);
   }
 }
 

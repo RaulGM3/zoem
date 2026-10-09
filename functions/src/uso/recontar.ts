@@ -32,13 +32,18 @@ export async function recontarUso(cid: string): Promise<Partial<Record<CampoUso,
       .then((s) => s.docs.map((d) => ({ id: d.id, data: d.data() as Datos }))),
   ]);
   const archivosCaso = (await Promise.all(casos.map((c) => leer(`companies/${cid}/casos/${c.id}/doc_files`)))).flat();
+  // Todo lo que ocupa Storage y cuenta en `documentosBytes`: archivos de caso, slots, archivos de contacto,
+  // adjuntos de facturas recibidas y fuentes de plantillas de documento.
+  const slotsCaso = (await Promise.all(casos.map((c) => leer(`companies/${cid}/casos/${c.id}/doc_slots`)))).flat();
+  const [facturas, docTemplates] = await Promise.all([leer(`companies/${cid}/facturas_recibidas`), leer(`companies/${cid}/docTemplates`)]);
 
   const total: Partial<Record<CampoUso, number>> = {
     casosActivos: totalDe('caso', casos, esDemo),
     contactos: totalDe('contacto', contactos, esDemo),
     plantillas: totalDe('plantilla', plantillas, esDemo),
     usuarios: totalDe('miembro', miembros, esDemo),
-    documentosBytes: totalDe('archivo', [...archivosCaso, ...filesContacto], esDemo),
+    documentosBytes: totalDe('archivo', [...archivosCaso, ...slotsCaso, ...filesContacto], esDemo)
+      + totalDe('factura', facturas, esDemo) + totalDe('docTemplate', docTemplates, esDemo),
   };
   await db.doc(`companies/${cid}/uso/total`).set(total, { merge: true });
   logger.info('Uso recalculado', { cid, total, campos: Object.values(CAMPO_DE).length });

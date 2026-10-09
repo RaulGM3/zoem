@@ -20,7 +20,7 @@
               class="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-10 cursor-pointer transition-colors"
               [class]="isDragging() ? 'border-ia bg-[color-mix(in_srgb,var(--accent-ia)_12%,transparent)]' : 'border-border hover:border-ia hover:bg-surface-2'"
               (drop)="onDrop($event)" (dragover)="onDragOver($event)" (dragleave)="isDragging.set(false)">
-              <input type="file" class="sr-only" accept=".pdf,.docx" (change)="onFileSelected($event)" />
+              <input type="file" class="sr-only" accept=".pdf,.docx" (click)="onAbrirSelector($event)" (change)="onFileSelected($event)" />
               @if (file(); as f) {
                 <lucide-icon [img]="FileTextIcon" class="w-8 h-8 text-ia" />
                 <p class="text-sm font-medium text-[var(--text-body)]">{{ f.name }}</p>

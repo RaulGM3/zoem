@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { cupoDePruebas } from '../../../../../testing/cupo-pruebas';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { CasoDocSlotRowComponent } from './caso-doc-slot-row';
 import type { CasoDocSlot } from '../../../../interfaces';
@@ -17,7 +18,7 @@ describe('CasoDocSlotRowComponent — móvil', () => {
   async function montar(mobile: boolean, s: CasoDocSlot, inputs: Record<string, unknown> = {}): Promise<void> {
     TestBed.resetTestingModule();
     mockViewport(mobile);
-    TestBed.configureTestingModule({ imports: [CasoDocSlotRowComponent] });
+    TestBed.configureTestingModule({ imports: [CasoDocSlotRowComponent], providers: cupoDePruebas().providers });
     fixture = TestBed.createComponent(CasoDocSlotRowComponent);
     const c = fixture.componentInstance;
     eventos = [];

@@ -66,7 +66,9 @@ export function textosBloqueo(m: MotivoBloqueo, c: ContextoTextoBloqueo): TextoB
     case 'accionesMes': return { ...base, titulo: mensual('acciones'), descripcion: 'Mejora tu plan para tener más acciones cada mes.' };
     case 'iaMensajesMes': return { ...base, titulo: mensual('mensajes de IA'), descripcion: 'Mejora tu plan para tener más IA cada mes.' };
     case 'documentosMB':
-      return { ...base, titulo: `Has llenado tus ${almacenamiento(n)} de documentos del plan ${plan}`, descripcion: 'Tus documentos actuales se conservan. Mejora tu plan para subir más.' };
+      return m.detalle
+        ? { ...base, titulo: `Este archivo no cabe en tus ${almacenamiento(n)} del plan ${plan}`, descripcion: `${m.detalle} Tus documentos actuales se conservan. Mejora tu plan para subir más.` }
+        : { ...base, titulo: `Has llenado tus ${almacenamiento(n)} de documentos del plan ${plan}`, descripcion: 'Tus documentos actuales se conservan y siguen accesibles. Mejora tu plan para subir más.' };
     default: return { ...base, titulo: usado(String(m.recurso)), descripcion: descripcionCupo };
   }
 }

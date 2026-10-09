@@ -3,7 +3,7 @@ import { deltaUso, docUsoDe, sumarUso, type UsoDb } from './uso';
 
 describe('docUsoDe', () => {
   it('los contadores no mensuales viven en `total`', () => {
-    for (const t of ['caso', 'contacto', 'plantilla', 'miembro', 'archivo'] as const) {
+    for (const t of ['caso', 'contacto', 'plantilla', 'miembro', 'archivo', 'factura', 'docTemplate'] as const) {
       expect(docUsoDe(t, new Date('2026-03-05T10:00:00Z'), 'Europe/Madrid')).toBe('total');
     }
   });
@@ -54,6 +54,46 @@ describe('deltaUso · miembros y archivos', () => {
     expect(deltaUso('archivo', 'f', undefined, { sizeBytes: 1000, deleted: false }, false)).toBe(1000);
     expect(deltaUso('archivo', 'f', { sizeBytes: 1000, deleted: false }, { sizeBytes: 1000, deleted: true }, false)).toBe(-1000);
     expect(deltaUso('archivo', 'f', undefined, { deleted: false }, false)).toBe(0);
+  });
+});
+
+describe('deltaUso · bytes de TODAS las versiones almacenadas', () => {
+  const v = (n: number, size: number, path = `p/v${n}`) => ({ version: n, storagePath: path, sizeBytes: size });
+  it('un archivo con historial cuenta todas sus versiones (los blobs viejos siguen en Storage)', () => {
+    const d = { sizeBytes: 300, storagePath: 'p/v3', version: 3, versions: [v(1, 100), v(2, 200), v(3, 300)] };
+    expect(deltaUso('archivo', 'f', undefined, d, false)).toBe(600);
+  });
+  it('subir una versión nueva suma solo la nueva; borrar el archivo libera todas', () => {
+    const antes = { sizeBytes: 100, storagePath: 'p/v1', versions: [v(1, 100)] };
+    const despues = { sizeBytes: 250, storagePath: 'p/v2', versions: [v(1, 100), v(2, 250)] };
+    expect(deltaUso('archivo', 'f', antes, despues, false)).toBe(250);
+    expect(deltaUso('archivo', 'f', despues, { ...despues, deleted: true }, false)).toBe(-350);
+  });
+  it('no cuenta dos veces el blob actual si está en versions y en los campos de primer nivel', () => {
+    const d = { sizeBytes: 100, storagePath: 'p/v1', versions: [v(1, 100)] };
+    expect(deltaUso('archivo', 'f', undefined, d, false)).toBe(100);
+  });
+  it('legado sin versions: cuenta sizeBytes', () => {
+    expect(deltaUso('archivo', 'f', undefined, { sizeBytes: 70, storagePath: 'p/x' }, false)).toBe(70);
+  });
+  it('slot subido o generado cuenta; slot retirado (pendiente) o borrado libera', () => {
+    const subido = { status: 'subido', sizeBytes: 40, storagePath: 'p/s2', versions: [v(1, 30, 'p/s1'), v(2, 40, 'p/s2')] };
+    expect(deltaUso('archivo', 's', undefined, subido, false)).toBe(70);
+    expect(deltaUso('archivo', 's', undefined, { status: 'generado', sizeBytes: 55, storagePath: 'p/g' }, false)).toBe(55);
+    const retirado = { status: 'pendiente', sizeBytes: null, storagePath: null, versions: [v(1, 30, 'p/s1')] };
+    expect(deltaUso('archivo', 's', undefined, retirado, false)).toBe(0);
+    expect(deltaUso('archivo', 's', undefined, { status: 'pendiente' }, false)).toBe(0);
+    expect(deltaUso('archivo', 's', subido, { ...subido, deleted: true }, false)).toBe(-70);
+  });
+  it('valores inválidos no cuentan', () => {
+    expect(deltaUso('archivo', 'f', undefined, { versions: [{ storagePath: 'a', sizeBytes: -5 }, { storagePath: 'b', sizeBytes: 'x' }] }, false)).toBe(0);
+  });
+  it('adjunto de factura recibida cuenta su size; fuente de plantilla de documento cuenta sourceSizeBytes', () => {
+    expect(deltaUso('factura', 'fr', undefined, { adjunto: { storagePath: 'a', size: 900 } }, false)).toBe(900);
+    expect(deltaUso('factura', 'fr', undefined, { estado: 'registrada' }, false)).toBe(0);
+    expect(deltaUso('docTemplate', 't', undefined, { sourceSizeBytes: 500 }, false)).toBe(500);
+    expect(deltaUso('docTemplate', 't', undefined, { nombre: 'sin fuente' }, false)).toBe(0);
+    expect(deltaUso('docTemplate', 't', { sourceSizeBytes: 500 }, { sourceSizeBytes: 500, deleted: true }, false)).toBe(-500);
   });
 });
 

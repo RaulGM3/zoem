@@ -16,6 +16,7 @@ import { DocAuditService } from '../../../../core/services/doc-audit.service';
 import { PermissionService } from '../../../../core/services/permission.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import type { CasoDocFile, CasoDocFolder, CasoDocSlot } from '../../../../interfaces';
+import { cupoDePruebas } from '../../../../../testing/cupo-pruebas';
 import type { DocVersionEntry } from '../../../../interfaces/doc-lifecycle.interface';
 
 @Component({ selector: 'app-caso-doc-preview', template: '', changeDetection: ChangeDetectionStrategy.OnPush })
@@ -84,6 +85,8 @@ describe('CasoDocumentosTabComponent', () => {
   let fixture: ComponentFixture<CasoDocumentosTabComponent>;
   let component: CasoDocumentosTabComponent;
   let isAdmin: ReturnType<typeof signal<boolean>>;
+  let cupo: ReturnType<typeof cupoDePruebas>['cupo'];
+  let limiteMB = Infinity;
   let docAudit: { log: ReturnType<typeof vi.fn> };
   let classifiedUrl: { getUrl: ReturnType<typeof vi.fn> };
   let casoDocService: {
@@ -162,10 +165,13 @@ describe('CasoDocumentosTabComponent', () => {
       return result;
     };
 
+    const prueba = cupoDePruebas({ limiteMB, usadoMB: 120 });
+    cupo = prueba.cupo;
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [CasoDocumentosTabComponent],
       providers: [
+        ...prueba.providers,
         { provide: CasoDocService, useValue: casoDocService },
         { provide: ClassifiedUrlService, useValue: classifiedUrl },
         { provide: DocAuditService, useValue: docAudit },
@@ -495,6 +501,29 @@ describe('CasoDocumentosTabComponent', () => {
       ]);
     });
 
+    it('sin cupo NO se abre ningún selector de archivos (ni archivos ni carpeta)', () => {
+      cupo.puedeSubir.mockReturnValue(false);
+      const spy = vi.spyOn(HTMLInputElement.prototype, 'click');
+      boton('Subir archivos')!.click();
+      boton('Subir carpeta')!.click();
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('el salto "subir" desde el checklist tampoco abre el selector sin cupo', () => {
+      cupo.puedeSubir.mockReturnValue(false);
+      const spy = vi.spyOn(HTMLInputElement.prototype, 'click');
+      component.triggerSlotUpload('s1');
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('solo se suben los archivos elegidos que caben (el resto lo explica el modal)', () => {
+      const [cabe, noCabe] = [archivo('cabe.pdf'), archivo('enorme.pdf')];
+      cupo.admitir.mockReturnValue([cabe]);
+      seleccionar(q<HTMLInputElement>('#upload-free'), cabe, noCabe);
+      expect(cupo.admitir).toHaveBeenCalledWith([cabe, noCabe]);
+      expect(emitidos.uploadFile.map(e => e.file)).toEqual([cabe]);
+    });
+
     it('sube una carpeta entera aplanada', () => {
       const spy = vi.spyOn(HTMLInputElement.prototype, 'click');
       boton('Subir carpeta')!.click();
@@ -564,6 +593,13 @@ describe('CasoDocumentosTabComponent', () => {
     it('se bloquea mientras hay una operación en curso', () => {
       set({ busy: true });
       expect(Array.from(panel()!.querySelectorAll('button')).every(b => b.disabled)).toBe(true);
+    });
+  });
+
+  describe('medidor de almacenamiento', () => {
+    it('la sección de documentos incluye el medidor (se pinta solo con plan de límite finito)', () => {
+      expect(el().querySelector('app-almacenamiento-medidor')).not.toBeNull();
+      expect(el().querySelector('app-almacenamiento-medidor [data-estado]')).toBeNull(); // plan ilimitado en este test
     });
   });
 });

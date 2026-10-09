@@ -20,10 +20,17 @@ describe('evaluarEspacio', () => {
 });
 
 describe('mensajeSinEspacio', () => {
-  it('indica los MB que quedan', () => {
-    expect(mensajeSinEspacio(12)).toBe('No queda espacio: te quedan 12 MB.');
+  it('indica los MB que quedan y los que ocupa el archivo', () => {
+    expect(mensajeSinEspacio(12, 20 * MB)).toBe('No queda espacio: te quedan 12 MB y el archivo ocupa 20 MB.');
   });
   it('con menos de 1 MB lo dice claro', () => {
-    expect(mensajeSinEspacio(0)).toBe('No queda espacio: te quedan menos de 1 MB.');
+    expect(mensajeSinEspacio(0, 5 * MB)).toBe('No queda espacio: te quedan menos de 1 MB y el archivo ocupa 5 MB.');
+  });
+  it('archivos pequeños: un decimal con coma, redondeado hacia arriba', () => {
+    expect(mensajeSinEspacio(0, 300_000)).toBe('No queda espacio: te quedan menos de 1 MB y el archivo ocupa 0,3 MB.');
+    expect(mensajeSinEspacio(0, 100)).toBe('No queda espacio: te quedan menos de 1 MB y el archivo ocupa 0,1 MB.');
+  });
+  it('archivos grandes: MB enteros hacia arriba', () => {
+    expect(mensajeSinEspacio(3, 12.2 * MB)).toBe('No queda espacio: te quedan 3 MB y el archivo ocupa 13 MB.');
   });
 });

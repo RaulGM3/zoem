@@ -21,6 +21,8 @@
       </nav>
     </div>
 
+    <app-almacenamiento-medidor />
+
     <!-- Actions -->
     <div class="flex flex-wrap items-center gap-2">
       @if (perm.can('Contactos', 'crear')) {
@@ -33,7 +35,7 @@
         <label class="tap-target inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand)] px-3 py-1.5 text-xs font-semibold text-white cursor-pointer transition-colors duration-150 hover:bg-[var(--brand-hover)]">
           <lucide-icon [img]="UploadIcon" size="13"></lucide-icon>
           Subir archivo
-          <input type="file" multiple class="hidden" (change)="onFileSelected($event)" />
+          <input type="file" multiple class="hidden" (click)="onAbrirSelector($event)" (change)="onFileSelected($event)" />
         </label>
       }
     </div>

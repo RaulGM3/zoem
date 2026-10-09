@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { cupoDePruebas } from '../../../testing/cupo-pruebas';
 import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
@@ -148,6 +149,7 @@ describe('ContactoDetailComponent', () => {
       imports: [ContactoDetailComponent],
       providers: [
         provideRouter([]),
+        ...cupoDePruebas().providers,
         { provide: ContactService, useValue: { getContact, updateContact } },
         { provide: ContactFolderService, useValue: folderService },
         { provide: ContactFileService, useValue: fileService },

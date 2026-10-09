@@ -12,6 +12,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
+import { AlmacenamientoCupoService } from '../../../../core/planes/almacenamiento-cupo.service';
 import { DecimalPipe } from '@angular/common';
 import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { LucideAngularModule, Plus, Trash2, Info, Paperclip, X, Camera, Image } from 'lucide-angular';
@@ -69,6 +70,7 @@ export class FacturaRecibidaDrawerComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
   private readonly captura = inject(CapturaArchivoService);
+  private readonly cupo = inject(AlmacenamientoCupoService);
   private readonly extraccion = inject(FacturaExtractionService);
   private readonly qrDecode = inject(QrDecodeService);
 
@@ -353,9 +355,15 @@ export class FacturaRecibidaDrawerComponent {
     return `fr-error-${campo.replace(/\./g, '-')}`;
   }
 
+  /** Antes de abrir el selector: sin cupo se cancela el click y el servicio muestra el modal de mejora. */
+  protected onAbrirSelector(event: Event): void {
+    if (!this.cupo.puedeSubir()) event.preventDefault();
+  }
+
   protected async onArchivo(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
+    // El adjunto se guarda en el almacenamiento del plan: si no cabe, ni se adjunta (el modal dice cuánto queda).
+    const [file] = this.cupo.admitir(Array.from(input.files ?? []).slice(0, 1));
     input.value = '';
     if (!file) return;
 
@@ -364,8 +372,10 @@ export class FacturaRecibidaDrawerComponent {
 
   /** Nativo: cámara o galería con @capacitor/camera. Cancelar no muestra nada; un fallo (p. ej. permiso) sí. */
   protected async onFotoNativa(origen: OrigenFoto): Promise<void> {
+    if (!this.cupo.puedeSubir()) return;
     const resultado = await this.captura.capturar(origen);
     if ('cancelado' in resultado) return;
+    if (resultado.ok && this.cupo.admitir([resultado.archivo]).length === 0) return;
     await this.procesarArchivo(resultado);
   }
 

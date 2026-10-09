@@ -48,3 +48,27 @@ export const onAccionRegistroUso = onDocumentCreated(
     await contarUso('accion', event.params['cid'], event.params['id'], undefined, event.data?.data() as Datos, new Date(event.time));
   },
 );
+
+/** Slots del checklist (doc_slots): sus subidas ocupan Storage igual que doc_files. */
+export const onSlotCasoUso = onDocumentWritten(
+  { document: 'companies/{cid}/casos/{casoId}/doc_slots/{slotId}', database: DB },
+  async (event) => {
+    await contarUso('archivo', event.params['cid'], event.params['slotId'], event.data?.before?.data() as Datos, event.data?.after?.data() as Datos);
+  },
+);
+
+/** Adjuntos de facturas recibidas (`adjunto.size`). */
+export const onFacturaRecibidaUso = onDocumentWritten(
+  { document: 'companies/{cid}/facturas_recibidas/{facturaId}', database: DB },
+  async (event) => {
+    await contarUso('factura', event.params['cid'], event.params['facturaId'], event.data?.before?.data() as Datos, event.data?.after?.data() as Datos);
+  },
+);
+
+/** Archivo fuente (.pdf/.docx) de las plantillas de documento (`sourceSizeBytes`). */
+export const onDocTemplateUso = onDocumentWritten(
+  { document: 'companies/{cid}/docTemplates/{templateId}', database: DB },
+  async (event) => {
+    await contarUso('docTemplate', event.params['cid'], event.params['templateId'], event.data?.before?.data() as Datos, event.data?.after?.data() as Datos);
+  },
+);

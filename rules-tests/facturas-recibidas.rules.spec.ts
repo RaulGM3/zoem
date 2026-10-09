@@ -20,7 +20,7 @@ import { deleteObject, getBytes, ref, uploadBytes } from 'firebase/storage';
 const CID = 'c1';
 const FACT = `companies/${CID}/facturas_recibidas`;
 const PATH_ADJ = `companies/${CID}/facturas_recibidas/F1.pdf`;
-const PATH_OTRO = `companies/${CID}/otros/doc.pdf`;
+const PATH_OTRO = `companies/${CID}/invoices/doc.pdf`;
 
 let env: RulesTestEnvironment;
 

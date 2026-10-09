@@ -10,8 +10,14 @@ export function evaluarEspacio(p: { usadoBytes: number; limiteMB: number; bytes:
   return { cabe: false, quedanMB: Math.max(0, Math.floor((limiteBytes - p.usadoBytes) / MB)) };
 }
 
-export function mensajeSinEspacio(quedanMB: number): string {
-  return quedanMB < 1
-    ? 'No queda espacio: te quedan menos de 1 MB.'
-    : `No queda espacio: te quedan ${quedanMB} MB.`;
+/** Tamaño de un archivo para el usuario: <10 MB con un decimal (coma) hacia arriba; si no, MB enteros hacia arriba. */
+function formatearMB(bytes: number): string {
+  const mb = bytes / MB;
+  if (mb >= 10) return `${Math.ceil(mb)} MB`;
+  return `${(Math.ceil(mb * 10) / 10).toString().replace('.', ',')} MB`;
+}
+
+export function mensajeSinEspacio(quedanMB: number, archivoBytes: number): string {
+  const quedan = quedanMB < 1 ? 'menos de 1 MB' : `${quedanMB} MB`;
+  return `No queda espacio: te quedan ${quedan} y el archivo ocupa ${formatearMB(archivoBytes)}.`;
 }

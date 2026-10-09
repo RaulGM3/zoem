@@ -7,6 +7,7 @@ import {
 } from 'lucide-angular';
 import type { CasoDocSlot, CasoDocFolder, CasoDocFile } from '../../../../interfaces';
 import type { DocVersionEntry } from '../../../../interfaces/doc-lifecycle.interface';
+import { AlmacenamientoCupoService } from '../../../../core/planes/almacenamiento-cupo.service';
 import { CasoDocService } from '../../../../core/services/caso-doc.service';
 import { ClassifiedUrlService } from '../../../../core/services/classified-url.service';
 import { DocAuditService } from '../../../../core/services/doc-audit.service';
@@ -19,6 +20,7 @@ import { CasoDocsChecklistComponent } from '../caso-docs-checklist/caso-docs-che
 import { CasoDocPreviewComponent, PreviewDoc } from '../caso-doc-preview/caso-doc-preview';
 import { CasoDocGeneradorComponent, GeneratedDocEvent } from '../caso-doc-generador/caso-doc-generador';
 import { DocHistoryPanelComponent } from '../../../../shared/components/doc-history-panel/doc-history-panel';
+import { AlmacenamientoMedidorComponent } from '../../../../shared/components/almacenamiento-medidor/almacenamiento-medidor';
 import { DocAccessDrawerComponent, type DocAccessState } from '../../../../shared/components/doc-access-drawer/doc-access-drawer';
 
 export interface DocUploadEvent {
@@ -63,6 +65,7 @@ interface AccessTarget {
   imports: [
     LucideAngularModule, CasoDocSlotRowComponent, CasoDocFileRowComponent, CasoDocsChecklistComponent,
     CasoDocPreviewComponent, CasoDocGeneradorComponent, DocHistoryPanelComponent, DocAccessDrawerComponent,
+    AlmacenamientoMedidorComponent,
   ],
   templateUrl: './caso-documentos-tab.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -75,6 +78,7 @@ export class CasoDocumentosTabComponent {
   private readonly docAudit = inject(DocAuditService);
   private readonly permissionService = inject(PermissionService);
   private readonly toast = inject(ToastService);
+  private readonly cupo = inject(AlmacenamientoCupoService);
 
   readonly isAdmin = this.permissionService.isAdmin;
 
@@ -206,17 +210,21 @@ export class CasoDocumentosTabComponent {
   // ── Slots requeridos ───────────────────────────────────
   /** Abre el selector de archivo de la fila de un slot (lo usa el salto desde el checklist). */
   triggerSlotUpload(slotId: string): void {
+    // Sin cupo ni se abre el selector (este salto esquiva la fila del slot, así que se comprueba aquí también).
+    if (!this.cupo.puedeSubir()) return;
     const el = document.getElementById(`upload-slot-${slotId}`) as HTMLInputElement | null;
     el?.click();
   }
 
   // ── Archivos libres ────────────────────────────────────
   triggerFreeUpload(): void {
+    if (!this.cupo.puedeSubir()) return;
     const el = document.getElementById('upload-free') as HTMLInputElement | null;
     el?.click();
   }
 
   triggerFolderUpload(): void {
+    if (!this.cupo.puedeSubir()) return;
     const el = document.getElementById('upload-folder') as HTMLInputElement | null;
     el?.click();
   }
@@ -236,9 +244,12 @@ export class CasoDocumentosTabComponent {
 
   private emitFreeUploads(files: FileList | null): void {
     if (!files || files.length === 0) return;
+    // Solo los que caben en el cupo (el primero que no cabe abre el modal con cuánto queda).
+    const admitidos = this.cupo.admitir(Array.from(files));
+    if (admitidos.length === 0) return;
     const clasificado = this.isAdmin() && this.uploadClassified();
     const folderId = this.currentFolderId();
-    for (const file of Array.from(files)) {
+    for (const file of admitidos) {
       this.uploadFile.emit({ folderId, file, clasificado });
     }
     this.uploadClassified.set(false);

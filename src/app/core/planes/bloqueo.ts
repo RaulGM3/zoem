@@ -13,6 +13,8 @@ export interface MotivoBloqueo {
   recurso: RecursoBloqueo;
   usado?: number;
   limite?: number;
+  /** Texto concreto de la causa (p. ej. "te quedan 2 MB y el archivo ocupa 5 MB"); el modal lo muestra tal cual. */
+  detalle?: string;
 }
 
 /** Lo que el llamador sabe de la escritura que ha fallado (qué cupo consume / qué función exige). */
@@ -49,7 +51,10 @@ export function motivoBloqueoPlan(
   const code = codigo(error);
 
   // Errores propios que ya SON de cupo (no ambiguos).
-  if (code === 'cupo-almacenamiento') return cupo('documentosMB', plan.derechos, uso);
+  if (code === 'cupo-almacenamiento') {
+    const detalle = (error as { message?: unknown }).message;
+    return { ...cupo('documentosMB', plan.derechos, uso), ...(typeof detalle === 'string' && detalle ? { detalle } : {}) };
+  }
   if ((error as { name?: unknown }).name === 'CupoIaAgotadoError') return cupo('iaMensajesMes', plan.derechos, uso);
   if (code === 'resource-exhausted') {
     return contexto.limite === 'iaMensajesMes' ? cupo('iaMensajesMes', plan.derechos, uso) : null;

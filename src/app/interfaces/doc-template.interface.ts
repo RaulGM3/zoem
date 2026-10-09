@@ -30,6 +30,8 @@ export interface DocTemplate extends SoftDeletable, Versioned {
   sourceFileName?: string;
   sourceMimeType?: string;
   sourceStoragePath?: string;
+  /** Tamaño en bytes del archivo fuente (cuenta en el cupo de documentos). */
+  sourceSizeBytes?: number;
   sourceDownloadUrl?: string;
   extractionError?: string;
   createdBy?: string;

@@ -61,16 +61,31 @@ service firebase.storage {
     }
 
     // ---- Cuota de documentos (documentosMB) -------------------------------------------------------
-    // Los archivos de casos (casos/*/docs/**) y de contactos (contacts/**) son los que cuentan en
-    // `companies/{cid}/uso/total.documentosBytes` (lo mantienen las Functions onArchivoCasoUso /
-    // onArchivoContactoUso a partir de los docs doc_files / contact_files). Se rechaza AQUÍ, antes de
-    // subir, para no dejar blobs huérfanos cuando Firestore rechaza después el doc de metadatos.
+    // REGLA LEGAL (no negociable): NINGÚN proceso automático borra ni oculta archivos de usuario. Superar el
+    // cupo (p. ej. tras bajar de plan) solo bloquea SUBIDAS NUEVAS (`create` abajo); lo ya subido sigue
+    // legible (los `read` no miran el cupo) y la persona puede retirarlo ella misma (soft delete en Firestore).
+    // Cuentan en `companies/{cid}/uso/total.documentosBytes` (lo mantienen las Functions a partir de los docs
+    // de metadatos): TODAS las versiones de doc_files / contact_files / doc_slots, los adjuntos de
+    // facturas_recibidas y las fuentes de docTemplates. Rutas exentas: branding (logo <1 MB, propio match),
+    // acciones_envios (adjunto transitorio de una acción, <=10 MB, ya limitado por accionesMes), invoices
+    // (PDFs que genera la app) y el HTML de docTemplates (texto). Cualquier otra ruta bajo companies/{cid}/ se
+    // deniega (ver `esRutaGenerica`) para que nadie almacene datos fuera del cupo.
+    // Se rechaza AQUÍ, antes de subir, para no dejar blobs huérfanos cuando Firestore rechaza después el doc.
     // Lee companies/{cid}.derechos y companies/{cid}/uso/total del Firestore (default) con firestore.get
     // (2 accesos cruzados por subida, el límite es 10). Sin `derechos` (empresa legada) no se restringe.
     // Misma semántica que firestore.rules (derechosVigentes: pasado `hasta` rige `despues`).
     // OJO: el contador es eventualmente consistente (~1 s) => límite blando, como en Firestore.
     function esArchivoContado(nombre) {
       return nombre.matches('companies/[^/]+/(casos/[^/]+/docs|contacts)/.*');
+    }
+    // Fuente (.pdf/.docx) subida al crear una plantilla de documento: ocupa cupo (su tamaño va en `sourceSizeBytes`).
+    function esFuentePlantilla(nombre) {
+      return nombre.matches('companies/[^/]+/docTemplates/[^/]+/source/.*');
+    }
+    // ÚNICAS rutas con escritura "genérica" (sin cupo): PDFs de factura que genera la app y HTML de plantillas.
+    // Cualquier otra ruta bajo companies/{cid}/ queda denegada, para que nadie almacene datos fuera del cupo.
+    function esRutaGenerica(nombre) {
+      return nombre.matches('companies/[^/]+/(invoices|docTemplates)/.*') && !esFuentePlantilla(nombre);
     }
     function empresaDoc(cid) {
       return firestore.get(/databases/(default)/documents/companies/$(cid)).data;
@@ -123,6 +138,7 @@ service firebase.storage {
                             && !esBranding(request.resource.name)
                             && !esFacturaRecibida(request.resource.name)
                             && !esArchivoContado(request.resource.name)
+                            && esRutaGenerica(request.resource.name)
                             && (isSuper() || (canWrite(cid) && withinSizeLimit()));
       allow delete:         if isSuper();
     }
@@ -136,6 +152,13 @@ service firebase.storage {
       allow update: if isSuper() || (canWrite(cid) && withinSizeLimit() && empresaEscribible(cid));
     }
     match /companies/{cid}/contacts/{contactPaths=**} {
+      allow create: if isSuper() || (canWrite(cid) && withinSizeLimit() && empresaEscribible(cid)
+                                     && hayCupoBytes(cid, request.resource.size));
+      allow update: if isSuper() || (canWrite(cid) && withinSizeLimit() && empresaEscribible(cid));
+    }
+
+    // Fuente de plantillas de documento: igual que el genérico + cupo en `create` y demo terminada = solo lectura.
+    match /companies/{cid}/docTemplates/{tid}/source/{srcPaths=**} {
       allow create: if isSuper() || (canWrite(cid) && withinSizeLimit() && empresaEscribible(cid)
                                      && hayCupoBytes(cid, request.resource.size));
       allow update: if isSuper() || (canWrite(cid) && withinSizeLimit() && empresaEscribible(cid));
@@ -158,7 +181,10 @@ service firebase.storage {
     // Mismo contrato que el match genérico: sin delete de cliente (auditoría).
     match /companies/{cid}/facturas_recibidas/{facturaPaths=**} {
       allow read:           if isSuper() || isManager(cid);
-      allow create, update: if isSuper() || (isManager(cid) && withinSizeLimit() && tipoAdjuntoValido());
+      // `create` consume cupo de documentos (adjuntos de factura = documentos de la empresa).
+      allow create:         if isSuper() || (isManager(cid) && withinSizeLimit() && tipoAdjuntoValido()
+                                             && empresaEscribible(cid) && hayCupoBytes(cid, request.resource.size));
+      allow update:         if isSuper() || (isManager(cid) && withinSizeLimit() && tipoAdjuntoValido());
       allow delete:         if isSuper();
     }
 

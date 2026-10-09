@@ -5,6 +5,7 @@ import {
   LucideAngularModule, X, Search, Folder, FolderOpen, ChevronRight, Check,
   Loader, AlertTriangle, Link,
 } from 'lucide-angular';
+import { AlmacenamientoCupoService } from '../../../core/planes/almacenamiento-cupo.service';
 import { CasosService } from '../../../core/services/casos.service';
 import { CasoDocService } from '../../../core/services/caso-doc.service';
 import { DocGenerationService } from '../../../core/services/doc-generation.service';
@@ -222,6 +223,7 @@ export class AnclarCasoDialogComponent implements OnInit {
   private readonly casoDocService = inject(CasoDocService);
   private readonly docGenerationService = inject(DocGenerationService);
   private readonly toast = inject(ToastService);
+  private readonly cupo = inject(AlmacenamientoCupoService);
   readonly perm = inject(PermissionService);
 
   readonly template = input.required<DocTemplate>();
@@ -334,6 +336,8 @@ export class AnclarCasoDialogComponent implements OnInit {
     // un documento a un caso también requiere la capacidad 'Documentos'/'crear',
     // no solo poder VER la plantilla.
     if (!this.perm.can('Documentos', 'crear')) return;
+    // El .docx se sube a Storage: sin cupo ni se genera (el servicio muestra el modal de mejora).
+    if (!this.cupo.puedeSubir()) return;
 
     this.anchoring.set(true);
     try {

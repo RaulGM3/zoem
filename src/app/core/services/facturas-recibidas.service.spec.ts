@@ -14,6 +14,7 @@ import {
   type DatosNuevaFactura,
 } from './facturas-recibidas.service';
 import { CompanyService } from './company.service';
+import { AlmacenamientoCupoService, CupoAlmacenamientoError } from '../planes/almacenamiento-cupo.service';
 import { claveFactura } from '../facturas-recibidas/clave-factura';
 
 const { store, getDocsMock, uploadBytesMock, autoId, httpsCallableMock } = vi.hoisted(() => ({
@@ -95,6 +96,7 @@ const pathFactura = (id = idFactura()) => `companies/${CID}/facturas_recibidas/$
 
 describe('FacturasRecibidasService', () => {
   let svc: FacturasRecibidasService;
+  const asegurar = vi.fn();
 
   beforeEach(() => {
     store.clear();
@@ -102,6 +104,7 @@ describe('FacturasRecibidasService', () => {
     getDocsMock.mockReset();
     uploadBytesMock.mockReset();
     uploadBytesMock.mockResolvedValue({});
+    asegurar.mockReset();
     httpsCallableMock.mockReset();
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -112,6 +115,7 @@ describe('FacturasRecibidasService', () => {
         { provide: Functions, useValue: { region: 'x' } },
         { provide: Auth, useValue: { currentUser: { uid: 'u1' } } },
         { provide: CompanyService, useValue: { activeCompany: signal({ id: CID, name: 'X' }) } },
+        { provide: AlmacenamientoCupoService, useValue: { asegurar } },
       ],
     });
     svc = TestBed.inject(FacturasRecibidasService);
@@ -319,6 +323,14 @@ describe('FacturasRecibidasService', () => {
         mimeType: 'application/pdf',
         size: 20,
       });
+    });
+
+    it('el adjunto consume cupo de documentos: sin espacio no se sube ni se registra nada', async () => {
+      asegurar.mockImplementation(() => { throw new CupoAlmacenamientoError(0, 20); });
+      await expect(svc.registrar(base(), { archivo: pdf() })).rejects.toBeInstanceOf(CupoAlmacenamientoError);
+      expect(asegurar).toHaveBeenCalledWith(20);
+      expect(uploadBytesMock).not.toHaveBeenCalled();
+      expect(store.has(pathFactura())).toBe(false);
     });
 
     it('un duplicado se detecta ANTES de subir: no se sube nada', async () => {

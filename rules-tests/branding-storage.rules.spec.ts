@@ -95,8 +95,8 @@ describe('storage branding/logo', () => {
     await assertFails(getBytes(ref(storageDe(env, 'ajeno'), LOGO)));
   });
 
-  it('no regresión: usuario sigue subiendo a casos', async () => {
+  it('no regresión: usuario sigue subiendo a rutas genéricas (invoices)', async () => {
     const s = storageDe(env, 'usuario');
-    await assertSucceeds(uploadBytes(ref(s, `companies/${CID}/casos/k1/doc.pdf`), bytes(), { contentType: 'application/pdf' }));
+    await assertSucceeds(uploadBytes(ref(s, `companies/${CID}/invoices/doc.pdf`), bytes(), { contentType: 'application/pdf' }));
   });
 });

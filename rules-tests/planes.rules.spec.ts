@@ -1,6 +1,6 @@
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest';
 import { assertFails, assertSucceeds, type RulesTestEnvironment } from '@firebase/rules-unit-testing';
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, where, setDoc, updateDoc, deleteDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { crearEntorno, firestoreDe, CID } from './helpers';
 import { derechosParaDoc } from '../functions/src/planes/derechosDoc';
 import type { Suscripcion } from '../functions/src/planes/catalogo';
@@ -338,6 +338,52 @@ describe('cupos de uso (contadores mantenidos por Functions)', () => {
       await uso('total', { documentosBytes: 499 * 1_048_576 });
       await assertSucceeds(subir(1_048_576));
       await assertFails(subir(2 * 1_048_576));
+    });
+  });
+
+  // REGLA LEGAL: tras una bajada de plan, lo ya subido sigue visible y la persona puede retirarlo ella misma;
+  // solo las subidas NUEVAS se deniegan. Ninguna rule oculta ni bloquea la lectura por estar por encima del cupo.
+  describe('bajada de plan con el almacenamiento por encima del cupo', () => {
+    const MB = 1_048_576;
+    const ruta = `companies/${CID}/casos/k1`;
+    const sembrar = async () => {
+      await con(sus({ plan: 'free' })); // free: 500 MB
+      await uso('total', { documentosBytes: 800 * MB });
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        const db = ctx.firestore();
+        await setDoc(doc(db, `${ruta}/doc_files/f1`), { name: 'a.pdf', sizeBytes: 5 * MB, deleted: false, clasificado: false, versions: [] });
+        await setDoc(doc(db, `${ruta}/doc_slots/s1`), { name: 'Slot', status: 'subido', sizeBytes: 5 * MB, deleted: false, clasificado: false });
+        await setDoc(doc(db, 'contact_files/cf1'), { companyId: CID, contactId: 'ct1', name: 'b.pdf', sizeBytes: 5 * MB, deleted: false, clasificado: false });
+      });
+    };
+
+    it('se LEEN doc_files, doc_slots y contact_files existentes (cualquier miembro, incluido Viewer)', async () => {
+      await sembrar();
+      for (const uid of ['admin', 'gestor', 'usuario', 'viewer']) {
+        await assertSucceeds(getDoc(doc(firestoreDe(env, uid), `${ruta}/doc_files/f1`)));
+        await assertSucceeds(getDoc(doc(firestoreDe(env, uid), `${ruta}/doc_slots/s1`)));
+        await assertSucceeds(getDoc(doc(firestoreDe(env, uid), 'contact_files/cf1')));
+      }
+      // Misma query que hace la app a un no-Admin (las rules solo dejan consultas demostrables).
+      await assertSucceeds(getDocs(query(collection(firestoreDe(env, 'usuario'), `${ruta}/doc_files`), where('clasificado', '==', false))));
+    });
+
+    it('la persona puede retirar (soft delete) y retirar un slot: borrar libera cupo, nunca se bloquea', async () => {
+      await sembrar();
+      const ahora = serverTimestamp();
+      await assertSucceeds(updateDoc(doc(firestoreDe(env, 'usuario'), `${ruta}/doc_files/f1`), { deleted: true, deletedAt: ahora }));
+      await assertSucceeds(updateDoc(doc(firestoreDe(env, 'usuario'), 'contact_files/cf1'), { deleted: true, deletedAt: ahora }));
+      await assertSucceeds(updateDoc(doc(firestoreDe(env, 'usuario'), `${ruta}/doc_slots/s1`), { status: 'pendiente', sizeBytes: null }));
+    });
+
+    it('solo se deniegan los archivos NUEVOS (doc_files y contact_files), con 1 byte ya sobra', async () => {
+      await sembrar();
+      await assertFails(setDoc(doc(firestoreDe(env, 'usuario'), `${ruta}/doc_files/nuevo`), {
+        name: 'n.pdf', sizeBytes: 1, deleted: false, clasificado: false,
+      }));
+      await assertFails(setDoc(doc(firestoreDe(env, 'usuario'), 'contact_files/nuevo'), {
+        companyId: CID, contactId: 'ct1', name: 'c.pdf', sizeBytes: 1, deleted: false, clasificado: false,
+      }));
     });
   });
 });

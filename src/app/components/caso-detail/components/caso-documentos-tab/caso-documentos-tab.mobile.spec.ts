@@ -6,6 +6,7 @@ import { CasoDocPreviewComponent } from '../caso-doc-preview/caso-doc-preview';
 import { CasoDocGeneradorComponent } from '../caso-doc-generador/caso-doc-generador';
 import { DocHistoryPanelComponent } from '../../../../shared/components/doc-history-panel/doc-history-panel';
 import { DocAccessDrawerComponent } from '../../../../shared/components/doc-access-drawer/doc-access-drawer';
+import { cupoDePruebas } from '../../../../../testing/cupo-pruebas';
 import { CasoDocService } from '../../../../core/services/caso-doc.service';
 import { ClassifiedUrlService } from '../../../../core/services/classified-url.service';
 import { DocAuditService } from '../../../../core/services/doc-audit.service';
@@ -43,6 +44,7 @@ describe('CasoDocumentosTabComponent — móvil', () => {
     TestBed.configureTestingModule({
       imports: [CasoDocumentosTabComponent],
       providers: [
+        ...cupoDePruebas().providers,
         { provide: CasoDocService, useValue: {} },
         { provide: ClassifiedUrlService, useValue: {} },
         { provide: DocAuditService, useValue: { log: vi.fn() } },

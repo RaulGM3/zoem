@@ -79,8 +79,11 @@ describe('motivoBloqueoPlan · qué errores cuentan', () => {
     }
   });
   it('CupoAlmacenamientoError => cupo de documentos aunque el contador esté desfasado', () => {
-    expect(clasificar(new CupoAlmacenamientoError(2), {}, sus({}), { documentosMB: 499 }))
-      .toEqual({ tipo: 'cupo', recurso: 'documentosMB', usado: 499, limite: 500 });
+    expect(clasificar(new CupoAlmacenamientoError(2, 5 * 1_048_576), {}, sus({}), { documentosMB: 499 }))
+      .toEqual({
+        tipo: 'cupo', recurso: 'documentosMB', usado: 499, limite: 500,
+        detalle: 'No queda espacio: te quedan 2 MB y el archivo ocupa 5 MB.', // el modal conserva las cifras exactas del error
+      });
   });
   it('CupoIaAgotadoError y functions/resource-exhausted (IA) => cupo de IA', () => {
     expect(clasificar(new CupoIaAgotadoError(), {}, sus({}), { iaMensajesMes: 30 }))

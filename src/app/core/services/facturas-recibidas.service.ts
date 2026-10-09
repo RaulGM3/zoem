@@ -14,6 +14,7 @@ import {
 import { Auth } from '@angular/fire/auth';
 import { Storage, ref, uploadBytes } from '@angular/fire/storage';
 import { Functions, httpsCallable } from '@angular/fire/functions';
+import { AlmacenamientoCupoService } from '../planes/almacenamiento-cupo.service';
 import { CompanyService } from './company.service';
 import { stripUndefinedDeep } from '../firebase/sanitize';
 import { claveFactura } from '../facturas-recibidas/clave-factura';
@@ -136,6 +137,7 @@ export class FacturasRecibidasService {
   private readonly auth = inject(Auth);
   private readonly functions = inject(Functions);
   private readonly companyService = inject(CompanyService);
+  private readonly cupoAlmacenamiento = inject(AlmacenamientoCupoService);
 
   readonly facturas = signal<FacturaRecibida[]>([]);
   readonly cargando = signal(false);
@@ -303,6 +305,8 @@ export class FacturasRecibidasService {
 
   /** Sube el archivo a `companies/{cid}/facturas_recibidas/` (la ruta que exigen las rules de Firestore y Storage). */
   private async subirAdjunto(archivo: File): Promise<NonNullable<FacturaRecibida['adjunto']>> {
+    // El adjunto es un documento de la empresa: consume cupo (si no cabe, ni se sube y se abre el modal de mejora).
+    this.cupoAlmacenamiento.asegurar(archivo.size);
     const nombreSeguro = archivo.name.replace(/[^A-Za-z0-9._-]/g, '_');
     const storagePath = `companies/${this.companyId}/facturas_recibidas/${Date.now()}_${nombreSeguro}`;
     await uploadBytes(ref(this.storage, storagePath), archivo, { contentType: archivo.type });

@@ -3,6 +3,7 @@ import {
   LucideAngularModule, CheckCircle2, FileText, FilePen, Loader, Upload, Trash2, Eye, History, Lock,
 } from 'lucide-angular';
 import type { CasoDocSlot } from '../../../../interfaces';
+import { AlmacenamientoCupoService } from '../../../../core/planes/almacenamiento-cupo.service';
 import { BreakpointService } from '../../../../core/services/breakpoint.service';
 import { ActionMenuComponent, type MenuAction } from '../../../../shared/components/action-menu/action-menu';
 
@@ -34,6 +35,7 @@ export class CasoDocSlotRowComponent {
   readonly remove = output<void>();
 
   protected readonly bp = inject(BreakpointService);
+  private readonly cupo = inject(AlmacenamientoCupoService);
 
   /** Clases de los botones de icono de escritorio (hover vía Tailwind, sin handlers inline). */
   protected readonly iconBtn =
@@ -74,12 +76,14 @@ export class CasoDocSlotRowComponent {
   private readonly fileInput = viewChild<ElementRef<HTMLInputElement>>('fileInput');
 
   triggerUpload(): void {
+    // Sin cupo ni se abre el selector: el servicio muestra el modal de mejora.
+    if (!this.cupo.puedeSubir()) return;
     this.fileInput()?.nativeElement.click();
   }
 
   onFileSelected(event: Event): void {
     const target = event.target as HTMLInputElement;
-    const file = target.files?.[0];
+    const [file] = this.cupo.admitir(Array.from(target.files ?? []).slice(0, 1));
     if (file) this.upload.emit(file);
     target.value = '';
   }

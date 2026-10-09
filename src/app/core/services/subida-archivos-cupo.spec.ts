@@ -69,7 +69,7 @@ describe('subidas de archivos respetan el cupo de almacenamiento', () => {
 
   describe('archivos de contacto', () => {
     it('sin espacio: no sube a Storage ni crea el doc, y propaga el error', async () => {
-      asegurar.mockImplementation(() => { throw new CupoAlmacenamientoError(2); });
+      asegurar.mockImplementation(() => { throw new CupoAlmacenamientoError(2, 5); });
       const svc = TestBed.inject(ContactFileService);
       await expect(svc.uploadFile('ct1', null, archivo(5))).rejects.toBeInstanceOf(CupoAlmacenamientoError);
       expect(asegurar).toHaveBeenCalledWith(5);
@@ -85,7 +85,7 @@ describe('subidas de archivos respetan el cupo de almacenamiento', () => {
     });
 
     it('resubir una versión también comprueba el espacio', async () => {
-      asegurar.mockImplementation(() => { throw new CupoAlmacenamientoError(0); });
+      asegurar.mockImplementation(() => { throw new CupoAlmacenamientoError(0, 5); });
       const svc = TestBed.inject(ContactFileService);
       await expect(svc.reuploadFile({ id: 'f1', contactId: 'ct1', folderId: null } as never, archivo(9))).rejects.toBeInstanceOf(CupoAlmacenamientoError);
       expect(m.uploadBytes).not.toHaveBeenCalled();
@@ -94,7 +94,7 @@ describe('subidas de archivos respetan el cupo de almacenamiento', () => {
 
   describe('documentos de caso', () => {
     it('subir archivo libre sin espacio: no sube nada', async () => {
-      asegurar.mockImplementation(() => { throw new CupoAlmacenamientoError(2); });
+      asegurar.mockImplementation(() => { throw new CupoAlmacenamientoError(2, 5); });
       const svc = TestBed.inject(CasoDocService);
       await expect(svc.uploadFile('k1', null, archivo(5))).rejects.toBeInstanceOf(CupoAlmacenamientoError);
       expect(m.uploadBytes).not.toHaveBeenCalled();
@@ -102,7 +102,7 @@ describe('subidas de archivos respetan el cupo de almacenamiento', () => {
     });
 
     it('subir a un slot, resubir y anclar plantilla también lo comprueban', async () => {
-      asegurar.mockImplementation(() => { throw new CupoAlmacenamientoError(2); });
+      asegurar.mockImplementation(() => { throw new CupoAlmacenamientoError(2, 5); });
       const svc = TestBed.inject(CasoDocService);
       await expect(svc.uploadSlot('k1', { id: 's1', folderId: null } as never, archivo(5))).rejects.toBeInstanceOf(CupoAlmacenamientoError);
       await expect(svc.reuploadFile('k1', { id: 'f1', folderId: null } as never, archivo(5))).rejects.toBeInstanceOf(CupoAlmacenamientoError);
