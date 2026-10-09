@@ -2,7 +2,8 @@ import * as admin from 'firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
 import { esEmpresaDemo } from '../autoservicio/suscripcion';
-import { CAMPO_DE, claveMes, deltaUso, sumarUso, type TipoUso, type UsoDb } from './uso';
+import { zonaDeEmpresa } from './periodo';
+import { CAMPO_DE, deltaUso, docUsoDe, sumarUso, type TipoUso, type UsoDb } from './uso';
 
 const dbReal: UsoDb = {
   async sumar(path, campo, delta) {
@@ -33,7 +34,9 @@ export async function contarUso(
 ): Promise<void> {
   try {
     const delta = deltaUso(tipo, id, antes, despues, await esDemoSiHaceFalta(cid, id, tipo));
-    const doc = tipo === 'accion' ? claveMes(cuando) : 'total';
+    // La zona solo hace falta para los contadores mensuales (una lectura extra por acción).
+    const zona = tipo === 'accion' ? zonaDeEmpresa((await admin.firestore().doc(`companies/${cid}`).get()).data()) : '';
+    const doc = docUsoDe(tipo, cuando, zona);
     await sumarUso(dbReal, cid, doc, CAMPO_DE[tipo], delta);
   } catch (e) {
     logger.error('contarUso falló', { tipo, cid, id, error: (e as Error).message });

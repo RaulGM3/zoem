@@ -3,6 +3,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../auth/auth.service';
 import { AutoservicioService, type DatosAlta } from '../../core/autoservicio/autoservicio.service';
 import type { ProgresoSeed } from '../../core/services/demo-seed.service';
+import { opcionesZona, zonaDelNavegador } from '../../core/planes/zonas';
 import { CA_LABELS, type ComunidadAutonoma, type TipoPersona } from '../../interfaces/company';
 
 type Fase = 'formulario' | 'trabajando' | 'avisoDemo';
@@ -111,6 +112,19 @@ const COMUNIDADES = (Object.entries(CA_LABELS) as [ComunidadAutonoma, string][])
             </div>
 
             <div class="flex flex-col gap-1.5">
+              <label for="bv-zona" class="text-sm font-medium" style="color:var(--text-strong)">Zona horaria</label>
+              <select id="bv-zona" formControlName="zonaHoraria" aria-describedby="bv-zona-ayuda"
+                class="rounded-lg border px-3 py-2 text-sm" style="border-color:var(--border);background:var(--surface-1, transparent);color:var(--text-strong)">
+                @for (z of zonas; track z.valor) {
+                  <option [value]="z.valor">{{ z.etiqueta }}</option>
+                }
+              </select>
+              <span id="bv-zona-ayuda" class="text-xs" style="color:var(--text-muted)">
+                Define cuándo empieza cada mes para los cupos de tu plan. Puedes cambiarla después en Configuración.
+              </span>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
               <label for="bv-especialidad" class="text-sm font-medium" style="color:var(--text-strong)">
                 Especialidad <span class="font-normal">(opcional)</span>
               </label>
@@ -150,11 +164,14 @@ export class BienvenidaComponent {
   private readonly auth = inject(AuthService);
 
   protected readonly comunidades = COMUNIDADES;
+  private readonly zonaInicial = zonaDelNavegador();
+  protected readonly zonas = opcionesZona(this.zonaInicial);
 
   protected readonly form = this.fb.group({
     nombre: this.fb.nonNullable.control('', [Validators.required, Validators.minLength(2), Validators.maxLength(120)]),
     tipoPersona: this.fb.control<TipoPersona | null>(null, Validators.required),
     ca: this.fb.nonNullable.control('', Validators.required),
+    zonaHoraria: this.fb.nonNullable.control(this.zonaInicial, Validators.required),
     especialidad: this.fb.nonNullable.control('', Validators.maxLength(80)),
     ejemplo: this.fb.nonNullable.control(true),
   });
@@ -211,6 +228,7 @@ export class BienvenidaComponent {
         nombre: v.nombre.trim(),
         tipoPersona: v.tipoPersona!,
         ca: v.ca as ComunidadAutonoma,
+        zonaHoraria: v.zonaHoraria,
         ...(especialidad ? { especialidad } : {}),
       };
       this.companyId = await this.autoservicio.crearEmpresa(datos);
@@ -223,7 +241,7 @@ export class BienvenidaComponent {
     if (this.form.controls.ejemplo.value) {
       try {
         this.paso.set('Preparando el despacho de ejemplo…');
-        const demoId = await this.autoservicio.crearDemo(this.form.controls.nombre.value.trim());
+        const demoId = await this.autoservicio.crearDemo(this.form.controls.nombre.value.trim(), this.form.controls.zonaHoraria.value);
         await this.autoservicio.sembrarDemo(demoId, (p) => {
           this.progreso.set(p);
           this.paso.set(`Despacho de ejemplo: ${p.paso}`);

@@ -4,6 +4,7 @@ import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, serverT
 import { crearEntorno, firestoreDe, CID } from './helpers';
 import { derechosParaDoc } from '../functions/src/planes/derechosDoc';
 import type { Suscripcion } from '../functions/src/planes/catalogo';
+import { periodoMensual, ZONA_POR_DEFECTO } from '../functions/src/uso/periodo';
 
 /**
  * Fase 3 · enforcement de planes en las rules. La forma de `derechos` sale de la MISMA función pura que
@@ -14,13 +15,11 @@ let env: RulesTestEnvironment;
 
 const DIA = 86_400_000;
 const sus = (p: Partial<Suscripcion>): Suscripcion => ({ plan: 'free', complementos: [], estado: 'activa', origen: 'manual', ...p });
-const mesActual = () => {
-  const d = new Date();
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-};
+/** Mes de cupo vigente según la zona de la empresa (por defecto Europe/Madrid), igual que `derechos.periodoUso`. */
+const mesActual = (zona: string = ZONA_POR_DEFECTO) => periodoMensual(new Date(), zona).clave;
 
 /** `derechos` tal y como los dejaría la Function `sincronizarDerechos` en el instante `ahora`. */
-const derechos = (s: Suscripcion, ahora = new Date()) => derechosParaDoc(s, ahora);
+const derechos = (s: Suscripcion, ahora = new Date(), zona?: string) => derechosParaDoc(s, ahora, zona);
 
 async function empresa(campos: Record<string, unknown>): Promise<void> {
   await env.withSecurityRulesDisabled(async (ctx) => {
@@ -240,8 +239,9 @@ describe('cupos de uso (contadores mantenidos por Functions)', () => {
   });
 
   describe('acciones por mes', () => {
+    let nr = 0;
     const registro = (uid = 'usuario') =>
-      setDoc(doc(firestoreDe(env, uid), `companies/${CID}/accion_registros/r-nuevo`), {
+      setDoc(doc(firestoreDe(env, uid), `companies/${CID}/accion_registros/r-nuevo-${++nr}`), {
         companyId: CID, accionId: 'a1', accionNombre: 'Aviso', contactoIds: ['k1'], canal: 'gmail',
         createdBy: uid, createdAt: serverTimestamp(),
       });
@@ -256,6 +256,46 @@ describe('cupos de uso (contadores mantenidos por Functions)', () => {
       await con(sus({ plan: 'free' }));
       await uso('2020-01', { accionesMes: 999 });
       await assertSucceeds(registro());
+    });
+
+    describe('mes en la zona horaria de la empresa (derechos.periodoUso)', () => {
+      it('cuenta el doc uso/<clave de periodoUso>, no el mes UTC', async () => {
+        const s = sus({ plan: 'free' });
+        // Una zona cuyo mes actual DIFIERA del UTC sería ideal, pero depende de la hora del test:
+        // usamos una clave inventada en periodoUso para probar que las rules leen ESA clave.
+        const d = derechos(s)!;
+        const futuro = Timestamp.fromMillis(Date.now() + 10 * DIA);
+        await empresa({ suscripcion: s, derechos: { ...d, periodoUso: { clave: 'zona-x', inicio: Timestamp.fromMillis(Date.now() - DIA), fin: futuro } } });
+        await uso(mesActual(), { accionesMes: 999 }); // el mes UTC/Madrid está agotado, pero no es el de periodoUso
+        await assertSucceeds(registro());
+        await uso('zona-x', { accionesMes: 15 });
+        await assertFails(registro());
+        await uso('zona-x', { accionesMes: 14 });
+        await assertSucceeds(registro());
+      });
+
+      it('periodoUso vencido y aún sin avanzar (scheduler pendiente): se trata como mes nuevo', async () => {
+        const s = sus({ plan: 'free' });
+        const d = derechos(s)!;
+        await empresa({ suscripcion: s, derechos: { ...d, periodoUso: { clave: 'viejo', inicio: Timestamp.fromMillis(Date.now() - 40 * DIA), fin: Timestamp.fromMillis(Date.now() - 1000) } } });
+        await uso('viejo', { accionesMes: 999 });
+        await assertSucceeds(registro());
+      });
+
+      it('derechos sin periodoUso (documento anterior a esta versión): no limita el cupo mensual', async () => {
+        const s = sus({ plan: 'free' });
+        const { periodoUso: _p, ...sinPeriodo } = derechos(s)!;
+        await empresa({ suscripcion: s, derechos: sinPeriodo });
+        await uso(mesActual(), { accionesMes: 999 });
+        await assertSucceeds(registro());
+      });
+
+      it('con la zona real (America/Bogota) la clave de periodoUso es la que se cuenta', async () => {
+        const s = sus({ plan: 'free' });
+        await empresa({ suscripcion: s, zonaHoraria: 'America/Bogota', derechos: derechos(s, new Date(), 'America/Bogota') });
+        await uso(mesActual('America/Bogota'), { accionesMes: 15 });
+        await assertFails(registro());
+      });
     });
   });
 
@@ -318,6 +358,23 @@ describe('integridad de contadores y derechos', () => {
     await assertFails(updateDoc(doc(firestoreDe(env, 'admin'), `companies/${CID}`), { 'derechos.limites.usuarios': null }));
     await assertFails(updateDoc(doc(firestoreDe(env, 'gestor'), `companies/${CID}`), { derechos: null }));
     await assertFails(updateDoc(doc(firestoreDe(env, 'admin'), `companies/${CID}`), { 'derechos.funciones.tesoreria': true }));
+  });
+  it('zonaHoraria: solo el Admin la cambia, debe ser un string corto', async () => {
+    const ref = (uid: string) => doc(firestoreDe(env, uid), `companies/${CID}`);
+    await assertSucceeds(updateDoc(ref('admin'), { zonaHoraria: 'America/Bogota' }));
+    await assertFails(updateDoc(ref('gestor'), { zonaHoraria: 'America/Lima' }));
+    await assertFails(updateDoc(ref('usuario'), { zonaHoraria: 'America/Lima' }));
+    await assertFails(updateDoc(ref('admin'), { zonaHoraria: 42 }));
+    await assertFails(updateDoc(ref('admin'), { zonaHoraria: '' }));
+    await assertFails(updateDoc(ref('admin'), { zonaHoraria: 'x'.repeat(65) }));
+    await assertSucceeds(updateDoc(ref('super'), { zonaHoraria: 'America/Lima' }));
+  });
+  it('un Gestor puede seguir guardando otros datos aunque el formulario reenvíe la misma zona', async () => {
+    await empresa({ suscripcion: sus({ plan: 'free' }), zonaHoraria: 'America/Bogota', derechos: derechos(sus({ plan: 'free' }), new Date(), 'America/Bogota') });
+    await assertSucceeds(updateDoc(doc(firestoreDe(env, 'gestor'), `companies/${CID}`), { zonaHoraria: 'America/Bogota', ciudad: 'Bogotá' }));
+  });
+  it('nadie escribe derechos.periodoUso desde el cliente', async () => {
+    await assertFails(updateDoc(doc(firestoreDe(env, 'admin'), `companies/${CID}`), { 'derechos.periodoUso.clave': 'x' }));
   });
   it('un Admin sigue pudiendo editar ajustes normales de la empresa', async () => {
     await assertSucceeds(updateDoc(doc(firestoreDe(env, 'admin'), `companies/${CID}`), { saldoBancario: 10 }));

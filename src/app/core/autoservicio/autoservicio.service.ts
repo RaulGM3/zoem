@@ -13,6 +13,8 @@ export interface DatosAlta {
   ca: ComunidadAutonoma;
   /** Libre y opcional (rubro/especialidad principal). */
   especialidad?: string;
+  /** IANA; define el mes de los cupos mensuales. */
+  zonaHoraria: string;
 }
 
 interface RespuestaAlta {
@@ -80,8 +82,8 @@ export class AutoservicioService {
     return this.llamar('crearEmpresaAutoservicio', datos);
   }
 
-  async crearDemo(nombre: string): Promise<string> {
-    return this.llamar('crearDespachoDemo', { nombre });
+  async crearDemo(nombre: string, zonaHoraria: string): Promise<string> {
+    return this.llamar('crearDespachoDemo', { nombre, zonaHoraria });
   }
 
   /** Las Storage rules usan claims: se alinean con el despacho demo antes de subir sus documentos. */

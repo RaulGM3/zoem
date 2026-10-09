@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Component, input, output, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { BloqueoPlanService } from '../../core/planes/bloqueo-plan.service';
 import { MejoraPlanService } from '../../core/planes/mejora-plan.service';
 import { PlanService } from '../../core/planes/plan.service';
 import { PlantillasService } from '../../core/services/plantillas.service';
@@ -33,6 +34,8 @@ class DrawerStub {
 const plantillas = signal<unknown[]>([]);
 const limite = signal(5);
 
+const abrirCupo = vi.fn();
+
 function montar() {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
@@ -41,6 +44,7 @@ function montar() {
       { provide: UsersService, useValue: { members: signal([]), loadMembers: async () => undefined } },
       { provide: ToastService, useValue: {} },
       { provide: PlanService, useValue: { limite: () => limite() } },
+      { provide: BloqueoPlanService, useValue: { abrirCupo: (l: string, u: number) => { abrirCupo(l, u); TestBed.inject(MejoraPlanService).abrir(); } } },
     ],
   });
   TestBed.overrideComponent(PlantillasComponent, {
@@ -76,6 +80,7 @@ describe('PlantillasComponent — cupo del plan', () => {
     f.componentInstance.openNew();
     expect(f.componentInstance.showForm()).toBe(false);
     expect(TestBed.inject(MejoraPlanService).abierto()).toBe(true);
+    expect(abrirCupo).toHaveBeenCalledWith('plantillas', 5); // el modal explica la causa con el recuento real
   });
 
   it('plan ilimitado nunca bloquea', () => {

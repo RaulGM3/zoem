@@ -37,6 +37,11 @@ const TEXTOS: Partial<Record<Funcion, TextoMejora>> = {
     descripcion: 'Has agotado el cupo mensual de IA de tu plan. Se renueva cada mes.',
     beneficios: ['Más mensajes de IA al mes', 'Agente IA y Recepción IA', 'Dictado, extracción de documentos y redacción'],
   },
+  documentos: {
+    titulo: 'Almacenamiento de documentos',
+    descripcion: 'Has llenado el espacio de documentos de tu plan. Mejora el plan para seguir subiendo archivos.',
+    beneficios: ['Mucho más espacio para documentos de casos y contactos', 'Tus documentos actuales se conservan', 'Sin cambios en tu forma de trabajar'],
+  },
   usuariosMultiples: {
     titulo: 'Más usuarios',
     descripcion: 'Invita a tu equipo para trabajar juntos sobre los mismos casos.',

@@ -20,6 +20,7 @@ import {
   getDownloadURL,
 } from '@angular/fire/storage';
 import { Auth } from '@angular/fire/auth';
+import { AlmacenamientoCupoService } from '../planes/almacenamiento-cupo.service';
 import { CompanyService } from './company.service';
 import { DocAuditService } from './doc-audit.service';
 import { PermissionService } from './permission.service';
@@ -40,6 +41,7 @@ export class CasoDocService {
   private readonly companyService = inject(CompanyService);
   private readonly docAudit = inject(DocAuditService);
   private readonly permissionService = inject(PermissionService);
+  private readonly cupoAlmacenamiento = inject(AlmacenamientoCupoService);
 
   readonly folders = signal<CasoDocFolder[]>([]);
   readonly slots = signal<CasoDocSlot[]>([]);
@@ -190,6 +192,8 @@ export class CasoDocService {
     file: File | Blob,
     fileName: string,
   ): Promise<{ storagePath: string; downloadUrl: string }> {
+    // Antes de subir nada: si no cabe, error + modal de mejora (sin blobs huérfanos en Storage).
+    this.cupoAlmacenamiento.asegurar(file.size);
     const storagePath = `companies/${this.companyId}/casos/${casoId}/docs/${folderId ?? 'root'}/${Date.now()}_${fileName}`;
     const storageRef = ref(this.storage, storagePath);
     await uploadBytes(storageRef, file);

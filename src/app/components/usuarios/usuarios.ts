@@ -37,6 +37,7 @@ import {
 } from '../../shared/components/responsive-list/responsive-list';
 import { BreakpointService } from '../../core/services/breakpoint.service';
 import { estadoCupo } from '../../core/planes/derechos';
+import { BloqueoPlanService } from '../../core/planes/bloqueo-plan.service';
 import { MejoraPlanService } from '../../core/planes/mejora-plan.service';
 import { PlanService } from '../../core/planes/plan.service';
 import { UsoService } from '../../core/planes/uso.service';
@@ -82,6 +83,7 @@ export class UsuariosComponent implements OnInit, OnDestroy {
   private readonly plan = inject(PlanService);
   private readonly uso = inject(UsoService);
   private readonly mejora = inject(MejoraPlanService);
+  private readonly bloqueo = inject(BloqueoPlanService);
 
   private invitationsSub?: Subscription;
   private actividadSub?: Subscription;
@@ -212,7 +214,7 @@ export class UsuariosComponent implements OnInit, OnDestroy {
       return;
     }
     if (estadoCupo(this.usuariosUsados(), this.usuariosLimite()) === 'agotado') {
-      this.mejora.abrir();
+      this.bloqueo.abrirCupo('usuarios', this.usuariosUsados());
       return;
     }
     this.inviteLink.set(null);
@@ -247,7 +249,7 @@ export class UsuariosComponent implements OnInit, OnDestroy {
     try {
       const token = await this.toast.run(
         () => this.invitationService.createInvitation(company.id, company.name, data.email, data.role, createdBy),
-        { errorTitle: 'No se pudo crear la invitación' }
+        { errorTitle: 'No se pudo crear la invitación', plan: { limite: 'usuarios' } }
       );
       if (token === undefined) return;
       this.inviteLink.set(`${window.location.origin}/invite/${token}`);

@@ -50,4 +50,54 @@ describe('MejorarPlanModalComponent', () => {
     (f.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('button[aria-label="Cerrar"]')!.click();
     expect(c).toBe(1);
   });
+
+  describe('con motivo de bloqueo', () => {
+    async function conMotivo(motivo: unknown) {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({ imports: [MejorarPlanModalComponent] });
+      const f = TestBed.createComponent(MejorarPlanModalComponent);
+      f.componentRef.setInput('open', true);
+      f.componentRef.setInput('planActual', 'free');
+      f.componentRef.setInput('motivo', motivo);
+      f.componentRef.setInput('zona', 'Europe/Madrid');
+      f.componentRef.setInput('ahora', new Date('2026-10-09T12:00:00Z'));
+      f.detectChanges();
+      await f.whenStable();
+      return f;
+    }
+    const cupo = { tipo: 'cupo', recurso: 'casosActivos', usado: 50, limite: 50 };
+
+    it('muestra el titular de la causa, el medidor, "Hazte PRO" y "Ahora no"', async () => {
+      const f = await conMotivo(cupo);
+      const el = f.nativeElement as HTMLElement;
+      expect(el.querySelector('[data-testid="titular-bloqueo"]')?.textContent).toContain('Has usado tus 50 casos del plan Free');
+      expect(el.querySelector('app-cupo')).not.toBeNull();
+      const botones = Array.from(el.querySelectorAll('button')).map((b) => b.textContent?.trim());
+      expect(botones).toContain('Hazte PRO');
+      expect(botones).toContain('Ahora no');
+    });
+    it('el titular es enfocable (tabindex -1) y recibe el foco', async () => {
+      const f = await conMotivo(cupo);
+      const h = (f.nativeElement as HTMLElement).querySelector('[data-testid="titular-bloqueo"]') as HTMLElement;
+      expect(h.getAttribute('tabindex')).toBe('-1');
+      expect(document.activeElement).toBe(h);
+    });
+    it('"Hazte PRO" emite solicitar(pro) y "Ahora no" cierra', async () => {
+      const f = await conMotivo(cupo);
+      const el = f.nativeElement as HTMLElement;
+      const eventos: string[] = [];
+      f.componentInstance.solicitar.subscribe((p) => eventos.push(`solicitar:${p}`));
+      f.componentInstance.closed.subscribe(() => eventos.push('closed'));
+      (Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Hazte PRO') as HTMLButtonElement).click();
+      (Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Ahora no') as HTMLButtonElement).click();
+      expect(eventos).toEqual(['solicitar:pro', 'closed']);
+    });
+    it('función y demo terminada: sin medidor', async () => {
+      const a = await conMotivo({ tipo: 'funcion', recurso: 'tesoreria' });
+      expect((a.nativeElement as HTMLElement).querySelector('[data-testid="titular-bloqueo"]')?.textContent).toContain('Esta función está en el plan Pro');
+      expect((a.nativeElement as HTMLElement).querySelector('app-cupo')).toBeNull();
+      const b = await conMotivo({ tipo: 'demoTerminada', recurso: 'demo' });
+      expect((b.nativeElement as HTMLElement).querySelector('[data-testid="titular-bloqueo"]')?.textContent).toContain('Tu despacho de ejemplo terminó');
+    });
+  });
 });

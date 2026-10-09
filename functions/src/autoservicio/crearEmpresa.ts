@@ -108,7 +108,7 @@ export const crearDespachoDemo = onCall<unknown, Promise<Respuesta>>(
       if (previa && (await tx.get(db.doc(`companies/${previa}`))).exists) return previa;
 
       tx.set(companyRef, {
-        ...empresaDemoDoc(v.valor.nombre, { uid, email, slug: generarSlug(`demo ${v.valor.nombre}`, sufijo(companyRef.id)), ahora }),
+        ...empresaDemoDoc(v.valor.nombre, { uid, email, slug: generarSlug(`demo ${v.valor.nombre}`, sufijo(companyRef.id)), ahora, zonaHoraria: v.valor.zonaHoraria }),
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       });

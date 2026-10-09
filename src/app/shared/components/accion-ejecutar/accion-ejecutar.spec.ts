@@ -8,6 +8,7 @@ import { AccionRedaccionService } from '../../../core/services/accion-redaccion.
 import { AccionEjecucionService } from '../../../core/services/accion-ejecucion.service';
 import { DocTemplateService } from '../../../core/services/doc-template.service';
 import { CompanyService } from '../../../core/services/company.service';
+import { BloqueoPlanService } from '../../../core/planes/bloqueo-plan.service';
 import { MejoraPlanService } from '../../../core/planes/mejora-plan.service';
 import { PlanService } from '../../../core/planes/plan.service';
 import { UsoService } from '../../../core/planes/uso.service';
@@ -37,6 +38,7 @@ describe('AccionEjecutarComponent', () => {
   let getTemplate: ReturnType<typeof vi.fn>;
   let writeText: ReturnType<typeof vi.fn>;
   let abrirMejora: ReturnType<typeof vi.fn>;
+  let manejar: ReturnType<typeof vi.fn>;
   let cupo: { usado: number; limite: number };
   const el = () => fixture.nativeElement as HTMLElement;
   const q = <T extends HTMLElement>(sel: string) => el().querySelector<T>(sel)!;
@@ -58,7 +60,8 @@ describe('AccionEjecutarComponent', () => {
         { provide: CompanyService, useValue: { activeCompany: signal({ id: 'c1', name: 'Despacho Pérez', ...empresa }) } },
         { provide: PlanService, useValue: { limite: () => cupo.limite } },
         { provide: UsoService, useValue: { usado: () => cupo.usado } },
-        { provide: MejoraPlanService, useValue: { abrir: abrirMejora } },
+        { provide: MejoraPlanService, useValue: { abrir: vi.fn() } },
+        { provide: BloqueoPlanService, useValue: { abrirCupo: abrirMejora, manejar } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(AccionEjecutarComponent);
@@ -73,6 +76,7 @@ describe('AccionEjecutarComponent', () => {
 
   beforeEach(async () => {
     abrirMejora = vi.fn();
+    manejar = vi.fn(() => false);
     cupo = { usado: 2, limite: 15 };
     preparar = vi.fn().mockResolvedValue({
       registroId: 'r1', url: 'https://mail.google.com/x', cuerpoFinal: 'Cuerpo final', excedeLimite: false,
@@ -206,6 +210,16 @@ describe('AccionEjecutarComponent', () => {
     await component.preparar();
     await flush();
     expect(el().textContent).toContain('demasiado largo');
+  });
+
+  it('si preparar falla por el plan (cupo/demo terminada), abre la mejora con la causa y NO enseña el alert de error', async () => {
+    manejar.mockReturnValue(true);
+    preparar.mockRejectedValue(Object.assign(new Error('x'), { code: 'permission-denied' }));
+    await component.preparar();
+    await flush();
+    expect(manejar).toHaveBeenCalledWith(expect.objectContaining({ code: 'permission-denied' }), { limite: 'accionesMes' });
+    expect(el().querySelector('[role="alert"]')).toBeNull();
+    expect(component.fase()).toBe('editando');
   });
 
   it('muestra el error de preparar en un alert y permite reintentar', async () => {

@@ -1,4 +1,5 @@
 import { FUNCIONES, LIMITES, type FechaFlexible, type Funcion, type Limite, type Suscripcion } from './catalogo';
+import { periodoMensual, ZONA_POR_DEFECTO } from '../uso/periodo';
 import { aFecha, derechosEfectivos, enPruebaVigente, soloLectura, demoVencida } from './derechos';
 
 /**
@@ -18,9 +19,22 @@ export interface DerechosVigentes {
   soloLectura: boolean;
 }
 
+/**
+ * Periodo de uso mensual vigente en la zona de la empresa. Las rules no pueden hacer aritmética de
+ * zonas: leen `clave` (id de `uso/{clave}`) mientras `request.time < fin`; pasado `fin` (aún sin
+ * avanzar por sincronizarDerechos/avanzarPeriodosUso) tratan el mes como nuevo.
+ */
+export interface PeriodoUsoDoc {
+  clave: string;
+  inicio: FechaFlexible;
+  fin: FechaFlexible;
+}
+
 export interface DerechosDoc extends DerechosVigentes {
   hasta: FechaFlexible;
   despues: DerechosVigentes | null;
+  /** Ausente en docs anteriores a esta versión: las rules no limitan los cupos mensuales. */
+  periodoUso?: PeriodoUsoDoc | null;
 }
 
 const MS = 1;
@@ -42,13 +56,18 @@ function proximoCambio(s: Suscripcion, ahora: Date): Date | null {
   return vigenteConFin ? aFecha(s.periodoFin) : null;
 }
 
-export function derechosParaDoc(s: Suscripcion | null | undefined, ahora: Date): DerechosDoc | null {
+export function derechosParaDoc(
+  s: Suscripcion | null | undefined,
+  ahora: Date,
+  zona: string = ZONA_POR_DEFECTO,
+): DerechosDoc | null {
   if (!s) return null;
   const hasta = proximoCambio(s, ahora);
   return {
     ...vigentes(s, ahora),
     hasta,
     despues: hasta ? vigentes(s, new Date(hasta.getTime() + MS)) : null,
+    periodoUso: periodoMensual(ahora, zona),
   };
 }
 
@@ -63,7 +82,10 @@ function estable(v: unknown): string {
 }
 
 function normalizar(d: DerechosDoc | null | undefined): string {
-  return d ? estable({ ...d, hasta: aFecha(d.hasta)?.getTime() ?? null }) : 'null';
+  if (!d) return 'null';
+  const p = d.periodoUso;
+  const periodoUso = p ? { clave: p.clave, inicio: aFecha(p.inicio)?.getTime() ?? null, fin: aFecha(p.fin)?.getTime() ?? null } : null;
+  return estable({ ...d, hasta: aFecha(d.hasta)?.getTime() ?? null, periodoUso });
 }
 
 /** ¿Hay que reescribir `derechos`? Compara por valor (fechas por milisegundos, Timestamp incluido). */

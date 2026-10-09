@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { BloqueoPlanService } from '../../core/planes/bloqueo-plan.service';
+
+let cupoContactosAgotado = false;
 import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
@@ -173,6 +176,7 @@ describe('ContactosComponent', () => {
         { provide: SearchService, useValue: { termFor: () => term } },
         { provide: PermissionService, useValue: { can: (modulo: string, cap: string) => !denegados.has(`${modulo}:${cap}`) } },
         { provide: ToastService, useValue: { run } },
+        { provide: BloqueoPlanService, useValue: { cupoAgotado: () => cupoContactosAgotado } },
         { provide: SeguimientoContactoService, useValue: seguimientos },
       ],
     });
@@ -393,6 +397,17 @@ describe('ContactosComponent', () => {
       drawer()!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       await estable();
       expect(drawer()).toBeNull();
+    });
+
+    it('con el cupo de contactos agotado, "Nuevo Contacto" no abre el alta (abre la mejora)', async () => {
+      cupoContactosAgotado = true;
+      try {
+        await crear();
+        await click(boton('Nuevo Contacto'));
+        expect(drawer()).toBeNull();
+      } finally {
+        cupoContactosAgotado = false;
+      }
     });
 
     it('tras editar, un alta nueva abre vacía y en el paso 1', async () => {

@@ -64,6 +64,8 @@ export interface Company {
   /** uid de quien creó la empresa. */
   createdBy?: string;
   isActive: boolean;
+  /** Zona horaria IANA de la empresa: define cuándo empieza el mes de los cupos mensuales. Legadas: Europe/Madrid. */
+  zonaHoraria?: string;
   email?: string;
   telefono?: string;
   direccion?: string;

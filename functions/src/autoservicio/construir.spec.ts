@@ -29,6 +29,22 @@ describe('empresaAutoservicioDoc', () => {
   });
 });
 
+describe('zonaHoraria en el alta', () => {
+  it('se guarda en la empresa y el periodoUso de `derechos` se calcula en esa zona', () => {
+    const d = empresaAutoservicioDoc(
+      { nombre: 'Pérez', tipoPersona: 'fisica', ca: 'madrid', rubro: 'abogados', zonaHoraria: 'America/Bogota' },
+      { uid: 'u1', email: 'a@b.es', slug: 'g', ahora: new Date('2026-11-01T03:00:00Z') },
+    );
+    expect(d.zonaHoraria).toBe('America/Bogota');
+    expect(d.derechos!.periodoUso!.clave).toBe('2026-10');
+  });
+  it('la demo también', () => {
+    const d = empresaDemoDoc('X', { uid: 'u1', email: 'a@b.es', slug: 'd', ahora, zonaHoraria: 'America/Lima' });
+    expect(d.zonaHoraria).toBe('America/Lima');
+    expect(d.derechos!.periodoUso!.fin).toEqual(new Date('2026-11-01T05:00:00Z'));
+  });
+});
+
 describe('empresaDemoDoc', () => {
   it('se llama "Despacho Demo – nombre", plan demo y esDemo', () => {
     const d = empresaDemoDoc('García', { uid: 'u1', email: 'a@b.es', slug: 'demo-x', ahora });

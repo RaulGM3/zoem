@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { BloqueoPlanService } from '../../core/planes/bloqueo-plan.service';
+
+let cupoContactosAgotado = false;
 import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
@@ -88,6 +91,7 @@ describe('ContactosComponent — móvil', () => {
         { provide: SearchService, useValue: { termFor: () => signal('') } },
         { provide: PermissionService, useValue: { can: (m: string, c: string) => !denegados.has(`${m}:${c}`) } },
         { provide: ToastService, useValue: { run: vi.fn(async (a: () => Promise<unknown>) => a()) } },
+        { provide: BloqueoPlanService, useValue: { cupoAgotado: () => cupoContactosAgotado } },
         { provide: SeguimientoContactoService, useValue: {} },
       ],
     });

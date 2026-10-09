@@ -60,6 +60,40 @@ service firebase.storage {
       return request.resource == null || request.resource.size < 50 * 1024 * 1024;
     }
 
+    // ---- Cuota de documentos (documentosMB) -------------------------------------------------------
+    // Los archivos de casos (casos/*/docs/**) y de contactos (contacts/**) son los que cuentan en
+    // `companies/{cid}/uso/total.documentosBytes` (lo mantienen las Functions onArchivoCasoUso /
+    // onArchivoContactoUso a partir de los docs doc_files / contact_files). Se rechaza AQUÍ, antes de
+    // subir, para no dejar blobs huérfanos cuando Firestore rechaza después el doc de metadatos.
+    // Lee companies/{cid}.derechos y companies/{cid}/uso/total del Firestore (default) con firestore.get
+    // (2 accesos cruzados por subida, el límite es 10). Sin `derechos` (empresa legada) no se restringe.
+    // Misma semántica que firestore.rules (derechosVigentes: pasado `hasta` rige `despues`).
+    // OJO: el contador es eventualmente consistente (~1 s) => límite blando, como en Firestore.
+    function esArchivoContado(nombre) {
+      return nombre.matches('companies/[^/]+/(casos/[^/]+/docs|contacts)/.*');
+    }
+    function empresaDoc(cid) {
+      return firestore.get(/databases/(default)/documents/companies/$(cid)).data;
+    }
+    function derechosVigentes(cid) {
+      let d = empresaDoc(cid).derechos;
+      return (d.hasta != null && request.time >= d.hasta) ? d.despues : d;
+    }
+    function usoBytes(cid) {
+      let p = /databases/(default)/documents/companies/$(cid)/uso/total;
+      return firestore.exists(p) ? firestore.get(p).data.get('documentosBytes', 0) : 0;
+    }
+    // La empresa admite escribir (no es una demo terminada) — misma regla que `escribible` de firestore.rules.
+    function empresaEscribible(cid) {
+      return !('derechos' in empresaDoc(cid)) || derechosVigentes(cid).soloLectura != true;
+    }
+    // ¿Cabe `bytes` más en el almacenamiento del plan? límite null = ilimitado.
+    function hayCupoBytes(cid, bytes) {
+      return !('derechos' in empresaDoc(cid))
+        || derechosVigentes(cid).limites.documentosMB == null
+        || usoBytes(cid) + bytes <= derechosVigentes(cid).limites.documentosMB * 1048576;
+    }
+
     // Todo el almacenamiento del tenant.
     // Sin `delete`: los blobs nunca se borran desde cliente — el "borrado" es
     // soft delete en Firestore y el archivo se conserva para auditoría.
@@ -88,8 +122,23 @@ service firebase.storage {
       allow create, update: if !esEnvioAccion(request.resource.name)
                             && !esBranding(request.resource.name)
                             && !esFacturaRecibida(request.resource.name)
+                            && !esArchivoContado(request.resource.name)
                             && (isSuper() || (canWrite(cid) && withinSizeLimit()));
       allow delete:         if isSuper();
+    }
+
+    // Archivos de casos y contactos: igual que el bloque genérico + cupo de almacenamiento (solo en `create`:
+    // cada subida es un objeto nuevo con nombre único; sobrescribir no añade objetos). Demo terminada = solo lectura.
+    // Lectura y borrado los siguen dando el bloque genérico (borrado: solo super).
+    match /companies/{cid}/casos/{casoId}/docs/{docPaths=**} {
+      allow create: if isSuper() || (canWrite(cid) && withinSizeLimit() && empresaEscribible(cid)
+                                     && hayCupoBytes(cid, request.resource.size));
+      allow update: if isSuper() || (canWrite(cid) && withinSizeLimit() && empresaEscribible(cid));
+    }
+    match /companies/{cid}/contacts/{contactPaths=**} {
+      allow create: if isSuper() || (canWrite(cid) && withinSizeLimit() && empresaEscribible(cid)
+                                     && hayCupoBytes(cid, request.resource.size));
+      allow update: if isSuper() || (canWrite(cid) && withinSizeLimit() && empresaEscribible(cid));
     }
 
     // Logo de la empresa: companies/{cid}/branding/logo. Lectura a miembros;

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { ToastService } from './toast.service';
 import { ErrorService } from './error.service';
+import { BloqueoPlanService } from '../planes/bloqueo-plan.service';
 
 describe('ToastService.run (envoltura con reintento)', () => {
   let toast: ToastService;
@@ -137,5 +138,41 @@ describe('ToastService.run (envoltura con reintento)', () => {
     const id = toast.toasts()[0].id;
     toast.dismiss(id);
     expect(toast.toasts()).toHaveLength(0);
+  });
+});
+
+describe('ToastService.run · bloqueos del plan', () => {
+  const manejar = vi.fn();
+  beforeEach(() => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    manejar.mockReset();
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [ToastService, { provide: ErrorService, useValue: { log: vi.fn() } }, { provide: BloqueoPlanService, useValue: { manejar } }],
+    });
+  });
+
+  it('si el error es del plan: abre la mejora (manejar=true), NO muestra toast de error y devuelve undefined', async () => {
+    manejar.mockReturnValue(true);
+    const toast = TestBed.inject(ToastService);
+    const r = await toast.run(async () => { throw Object.assign(new Error('x'), { code: 'permission-denied' }); }, { plan: { limite: 'casosActivos' } });
+    expect(r).toBeUndefined();
+    expect(manejar).toHaveBeenCalledWith(expect.objectContaining({ code: 'permission-denied' }), { limite: 'casosActivos' });
+    expect(toast.toasts()).toHaveLength(0);
+  });
+
+  it('si no es del plan (manejar=false): toast de error como siempre', async () => {
+    manejar.mockReturnValue(false);
+    const toast = TestBed.inject(ToastService);
+    await toast.run(async () => { throw new Error('boom'); });
+    expect(toast.toasts().some((t) => t.type === 'error')).toBe(true);
+  });
+
+  it('sin BloqueoPlanService disponible (entorno parcial) no rompe el flujo de errores', async () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [ToastService, { provide: ErrorService, useValue: { log: vi.fn() } }] });
+    const toast = TestBed.inject(ToastService);
+    await toast.run(async () => { throw new Error('boom'); });
+    expect(toast.toasts().some((t) => t.type === 'error')).toBe(true);
   });
 });

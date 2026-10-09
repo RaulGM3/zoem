@@ -1,12 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { claveMes, usadoDe } from './uso';
-
-describe('claveMes', () => {
-  it('yyyy-mm en UTC (igual que la Function y las rules)', () => {
-    expect(claveMes(new Date('2026-03-05T10:00:00Z'))).toBe('2026-03');
-    expect(claveMes(new Date('2026-12-31T23:59:59Z'))).toBe('2026-12');
-  });
-});
+import { usadoDe } from './uso';
 
 describe('usadoDe', () => {
   const total = { usuarios: 1, plantillas: 4, casosActivos: 7, contactos: 3, documentosBytes: 5 * 1_048_576 };

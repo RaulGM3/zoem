@@ -12,6 +12,7 @@ export interface DatosEmpresaForm {
   codigoPostal: string;
   ciudad: string;
   website: string;
+  zonaHoraria: string;
 }
 
 export interface DatosEmpresaPayload {
@@ -24,6 +25,7 @@ export interface DatosEmpresaPayload {
   codigoPostal?: string;
   ciudad?: string;
   website?: string;
+  zonaHoraria: string;
 }
 
 const limpio = (v: string | null | undefined): string | undefined => {
@@ -44,6 +46,7 @@ export function normalizarDatosEmpresa(raw: DatosEmpresaForm): DatosEmpresaPaylo
     codigoPostal: limpio(raw.codigoPostal),
     ciudad: limpio(raw.ciudad),
     website: website && !/^https?:\/\//i.test(website) ? `https://${website}` : website,
+    zonaHoraria: raw.zonaHoraria,
   };
 }
 

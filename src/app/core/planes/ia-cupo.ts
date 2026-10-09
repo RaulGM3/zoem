@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { Functions, httpsCallable } from '@angular/fire/functions';
 import { CupoIaAgotadoError } from '../agent/errores-ia';
 import { CompanyService } from '../services/company.service';
-import { MejoraPlanService } from './mejora-plan.service';
+import { BloqueoPlanService } from './bloqueo-plan.service';
 
 export type ResultadoReserva = 'agotado' | 'transitorio' | 'bloqueado';
 
@@ -28,7 +28,7 @@ export function clasificarErrorReserva(e: unknown): ResultadoReserva {
 export class IaCupoService {
   private readonly functions = inject(Functions);
   private readonly company = inject(CompanyService);
-  private readonly mejora = inject(MejoraPlanService);
+  private readonly bloqueo = inject(BloqueoPlanService);
 
   async reservar(n = 1): Promise<void> {
     const companyId = this.company.activeCompany()?.id;
@@ -41,7 +41,7 @@ export class IaCupoService {
     } catch (e) {
       const tipo = clasificarErrorReserva(e);
       if (tipo === 'agotado') {
-        this.mejora.abrir('ia');
+        this.bloqueo.abrirCupo('iaMensajesMes');
         throw new CupoIaAgotadoError();
       }
       if (tipo === 'transitorio') {

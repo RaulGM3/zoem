@@ -1,6 +1,7 @@
 // Constructores PUROS de los documentos que crean los callables de autoservicio.
 // Los valores de servidor (serverTimestamp) los añade el callable, no se mezclan acá.
 import { derechosParaDoc } from '../planes/derechosDoc';
+import { ZONA_POR_DEFECTO } from '../uso/periodo';
 import { suscripcionDemo, suscripcionInicial } from './suscripcion';
 import type { AltaEmpresa } from './validar';
 
@@ -9,6 +10,8 @@ export interface ContextoAlta {
   email: string;
   slug: string;
   ahora: Date;
+  /** Solo para la demo; en el alta real la zona viaja en `AltaEmpresa`. */
+  zonaHoraria?: string;
 }
 
 export function empresaAutoservicioDoc(alta: AltaEmpresa, ctx: ContextoAlta) {
@@ -20,6 +23,7 @@ export function empresaAutoservicioDoc(alta: AltaEmpresa, ctx: ContextoAlta) {
     ca: alta.ca,
     rubro: alta.rubro,
     ...(alta.especialidad ? { especialidad: alta.especialidad } : {}),
+    zonaHoraria: alta.zonaHoraria,
     email: ctx.email,
     isActive: true,
     status: 'active' as const,
@@ -27,25 +31,27 @@ export function empresaAutoservicioDoc(alta: AltaEmpresa, ctx: ContextoAlta) {
     autoservicio: true,
     suscripcion,
     // Denormalizado para las rules (ver planes/derechosDoc.ts); el trigger lo mantiene al cambiar `suscripcion`.
-    derechos: derechosParaDoc(suscripcion, ctx.ahora),
+    derechos: derechosParaDoc(suscripcion, ctx.ahora, alta.zonaHoraria),
   };
 }
 
 export function empresaDemoDoc(nombre: string, ctx: ContextoAlta) {
   const suscripcion = suscripcionDemo(ctx.ahora);
+  const zonaHoraria = ctx.zonaHoraria ?? ZONA_POR_DEFECTO;
   return {
     name: `Despacho Demo – ${nombre}`,
     slug: ctx.slug,
     tipoPersona: 'juridica' as const,
     ca: 'madrid' as const,
     rubro: 'abogados' as const,
+    zonaHoraria,
     email: ctx.email,
     isActive: true,
     status: 'active' as const,
     createdBy: ctx.uid,
     esDemo: true,
     suscripcion,
-    derechos: derechosParaDoc(suscripcion, ctx.ahora),
+    derechos: derechosParaDoc(suscripcion, ctx.ahora, zonaHoraria),
   };
 }
 

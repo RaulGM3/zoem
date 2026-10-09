@@ -2,7 +2,7 @@ import {
   Component, OnInit, signal, computed, ChangeDetectionStrategy, inject,
 } from '@angular/core';
 import { estadoCupo } from '../../core/planes/derechos';
-import { MejoraPlanService } from '../../core/planes/mejora-plan.service';
+import { BloqueoPlanService } from '../../core/planes/bloqueo-plan.service';
 import { PlanService } from '../../core/planes/plan.service';
 import { CupoComponent } from '../../shared/components/cupo/cupo';
 import { PlantillasService } from '../../core/services/plantillas.service';
@@ -24,7 +24,7 @@ export class PlantillasComponent implements OnInit {
   protected readonly usersService = inject(UsersService);
   private readonly toast = inject(ToastService);
   private readonly plan = inject(PlanService);
-  private readonly mejora = inject(MejoraPlanService);
+  private readonly bloqueo = inject(BloqueoPlanService);
 
   readonly usadas = computed(() => this.plantillasService.plantillas().length);
   readonly limite = computed(() => this.plan.limite('plantillas'));
@@ -54,7 +54,7 @@ export class PlantillasComponent implements OnInit {
 
   openNew(): void {
     if (this.cupoAgotado()) {
-      this.mejora.abrir();
+      this.bloqueo.abrirCupo('plantillas', this.usadas());
       return;
     }
     this.showForm.set(true);

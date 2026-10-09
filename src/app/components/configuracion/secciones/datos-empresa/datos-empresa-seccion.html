@@ -84,6 +84,18 @@
         <label for="empresa-ciudad" class="form-label">Ciudad</label>
         <input id="empresa-ciudad" type="text" formControlName="ciudad" class="form-input" autocomplete="address-level2" />
       </div>
+
+      <div class="sm:col-span-2">
+        <label for="empresa-zona" class="form-label">Zona horaria</label>
+        <select id="empresa-zona" formControlName="zonaHoraria" class="form-input" aria-describedby="empresa-zona-ayuda">
+          @for (z of zonas(); track z.valor) {
+            <option [value]="z.valor">{{ z.etiqueta }}</option>
+          }
+        </select>
+        <p id="empresa-zona-ayuda" class="mt-1 text-xs" style="color:var(--text-muted)">
+          Define cuándo empieza y termina cada mes en los cupos de tu plan (acciones, mensajes de IA). Solo el administrador puede cambiarla.
+        </p>
+      </div>
     </div>
 
     <div class="flex sm:justify-end pt-1">

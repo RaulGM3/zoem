@@ -78,4 +78,10 @@ describe('translateFirebaseError (lógica pura de traducción)', () => {
     const r = translateFirebaseError(fbError('permission-denied', 'Missing or insufficient permissions.'));
     expect(r.technicalDetail).toContain('permission-denied');
   });
+
+  it('cupo-almacenamiento: muestra el mensaje propio (ya está en español) y no ofrece reintentar', () => {
+    const r = translateFirebaseError(fbError('cupo-almacenamiento', 'No queda espacio: te quedan 3 MB.'));
+    expect(r.message).toBe('No queda espacio: te quedan 3 MB.');
+    expect(r.retriable).toBe(false);
+  });
 });

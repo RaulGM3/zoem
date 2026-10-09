@@ -1,10 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
-import { claveMes, deltaUso, sumarUso, type UsoDb } from './uso';
+import { deltaUso, docUsoDe, sumarUso, type UsoDb } from './uso';
 
-describe('claveMes', () => {
-  it('yyyy-mm en UTC con cero a la izquierda', () => {
-    expect(claveMes(new Date('2026-03-05T10:00:00Z'))).toBe('2026-03');
-    expect(claveMes(new Date('2026-12-31T23:59:59Z'))).toBe('2026-12');
+describe('docUsoDe', () => {
+  it('los contadores no mensuales viven en `total`', () => {
+    for (const t of ['caso', 'contacto', 'plantilla', 'miembro', 'archivo'] as const) {
+      expect(docUsoDe(t, new Date('2026-03-05T10:00:00Z'), 'Europe/Madrid')).toBe('total');
+    }
+  });
+  it('las acciones usan el mes de la zona de la empresa, no el UTC', () => {
+    const t = new Date('2026-03-31T23:30:00Z'); // 01:30 del 1 de abril en Madrid (UTC+2)
+    expect(docUsoDe('accion', t, 'Europe/Madrid')).toBe('2026-04');
+    expect(docUsoDe('accion', t, 'America/Bogota')).toBe('2026-03');
+    expect(docUsoDe('accion', t, 'UTC')).toBe('2026-03');
   });
 });
 

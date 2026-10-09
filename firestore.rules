@@ -93,9 +93,14 @@ service cloud.firestore {
     function escribible(cid) {
       return sinDerechos(cid) || derechosVigentes(cid).soloLectura != true;
     }
-    // Clave del contador mensual: uso/yyyy-mm (UTC, igual que la Function).
-    function mesUso() {
-      return string(request.time.year()) + '-' + (request.time.month() < 10 ? '0' : '') + string(request.time.month());
+    // Cupos MENSUALES. Las rules no pueden hacer aritmética de zonas horarias, así que el mes lo calcula la
+    // Function (functions/src/uso/periodo.ts) y lo deja en `derechos.periodoUso = { clave, inicio, fin }`
+    // (mes natural en la zona de la empresa). Mientras request.time < fin, el contador es uso/{clave};
+    // pasado `fin` (el scheduler avanzarPeriodosUso aún no ha corrido, <= 1 h) es un mes nuevo => cupo a 0.
+    // Sin `periodoUso` (doc de antes de esta versión) no se limita lo mensual.
+    function usoMes(cid, campo) {
+      let p = empresaDoc(cid).derechos.get('periodoUso', null);
+      return (p == null || request.time >= p.fin) ? 0 : usoDe(cid, p.clave, campo);
     }
     function usoPath(cid, docId) {
       return /databases/$(database)/documents/companies/$(cid)/uso/$(docId);
@@ -108,6 +113,11 @@ service cloud.firestore {
       return sinDerechos(cid)
         || derechosVigentes(cid).limites[limite] == null
         || usoDe(cid, docId, campo) + extra <= derechosVigentes(cid).limites[limite];
+    }
+    function hayCupoMes(cid, limite) {
+      return sinDerechos(cid)
+        || derechosVigentes(cid).limites[limite] == null
+        || usoMes(cid, limite) + 1 <= derechosVigentes(cid).limites[limite];
     }
     function hayCupoBytes(cid, bytes) {
       return sinDerechos(cid)
@@ -180,7 +190,13 @@ service cloud.firestore {
                              .hasAny(['plan', 'suscripcion', 'derechos', 'isActive', 'slug', 'createdAt',
                                      'esDemo', 'autoservicio', 'createdBy'])
                         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['logo'])
-                            || isCompanyAdmin(cid)));
+                            || isCompanyAdmin(cid))
+                        // zona horaria IANA (la valida la UI/Functions; aquí solo tipo y tamaño): cambia el mes de los cupos => Admin.
+                        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['zonaHoraria'])
+                            || (isCompanyAdmin(cid)
+                                && request.resource.data.zonaHoraria is string
+                                && request.resource.data.zonaHoraria.size() > 0
+                                && request.resource.data.zonaHoraria.size() <= 64)));
       allow delete: if isSuper();
 
       // ---- members: doc id == userId ---------------------------------
@@ -588,10 +604,10 @@ service cloud.firestore {
       // (miembro activo no-Viewer) a su nombre; nadie lo edita ni borra.
       match /accion_registros/{registroId} {
         allow read:   if isSuper() || isMember(cid);
-        // Cada ejecución consume cupo del MES (uso/yyyy-mm.accionesMes).
+        // Cada ejecución consume cupo del MES de la empresa (ver usoMes).
         allow create: if isSuper()
                       || (canWrite(cid)
-                          && hayCupo(cid, 'accionesMes', mesUso(), 'accionesMes', 1)
+                          && hayCupoMes(cid, 'accionesMes')
                           && request.resource.data.keys().hasOnly(['companyId', 'accionId', 'accionNombre',
                                'contactoIds', 'casoId', 'hitoId', 'canal', 'docPath', 'createdBy', 'createdAt'])
                           && request.resource.data.keys().hasAll(['companyId', 'accionId', 'accionNombre',

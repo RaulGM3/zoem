@@ -1,6 +1,8 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { inject, Injectable, Injector, signal } from '@angular/core';
 import { translateFirebaseError } from '../firebase/firebase-error';
 import type { ErrorContext } from '../../interfaces/app-error.interface';
+import type { ContextoBloqueo } from '../planes/bloqueo';
+import { BloqueoPlanService } from '../planes/bloqueo-plan.service';
 import { ErrorService } from './error.service';
 
 export type ToastType = 'error' | 'success' | 'info';
@@ -35,6 +37,11 @@ interface RunOptions {
   onSuccess?: () => void;
   /** Contexto opcional para el log de errores (servicio, método, parámetros). */
   context?: ErrorContext;
+  /**
+   * Qué cupo consume / qué función exige la escritura. Si falla por el plan (cupo agotado, función de pago,
+   * demo terminada) se abre el modal de mejora en vez de un toast de error genérico.
+   */
+  plan?: ContextoBloqueo;
 }
 
 const AUTO_DISMISS_MS = 5000;
@@ -69,6 +76,7 @@ export class ToastService {
   readonly toasts = signal<Toast[]>([]);
   private nextId = 0;
   private readonly errorService = inject(ErrorService);
+  private readonly injector = inject(Injector);
 
   success(message: string, title = 'Hecho'): void {
     this.push({ type: 'success', title, message });
@@ -122,12 +130,22 @@ export class ToastService {
       opts.onSuccess?.();
       return result;
     } catch (err) {
+      if (this.esBloqueoDelPlan(err, opts.plan)) return undefined;
       void this.errorService.log(err, opts.context);
       this.fromError(err, {
         title: opts.errorTitle,
         retry: () => void this.run(action, opts),
       });
       return undefined;
+    }
+  }
+
+  /** ¿El fallo se debe al plan? Entonces `BloqueoPlanService` ya abrió el modal de mejora: no hay toast de error. */
+  private esBloqueoDelPlan(err: unknown, plan: ContextoBloqueo | undefined): boolean {
+    try {
+      return this.injector.get(BloqueoPlanService).manejar(err, plan);
+    } catch {
+      return false; // sin plan/empresa cargados nunca debe romper el manejo de errores
     }
   }
 

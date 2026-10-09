@@ -123,7 +123,11 @@ export function translateFirebaseError(err: unknown): FirebaseErrorInfo {
     code = 'invalid-argument';
   }
 
-  const spec = (code && CODE_MAP[code]) || GENERIC;
+  // Errores propios con mensaje ya redactado para el usuario (p. ej. sin espacio de almacenamiento: dice cuánto queda).
+  const spec: CodeSpec =
+    code === 'cupo-almacenamiento' && rawMessage
+      ? { message: rawMessage, retriable: false }
+      : (code && CODE_MAP[code]) || GENERIC;
 
   return {
     code: code ?? 'unknown',

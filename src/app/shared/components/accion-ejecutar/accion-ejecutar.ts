@@ -22,7 +22,7 @@ import type { FormatoRedaccion, TextoRedactado } from '../../../core/acciones/re
 import { RedactorIaComponent } from '../redactor-ia/redactor-ia';
 import { CupoComponent } from '../cupo/cupo';
 import { estadoCupo } from '../../../core/planes/derechos';
-import { MejoraPlanService } from '../../../core/planes/mejora-plan.service';
+import { BloqueoPlanService } from '../../../core/planes/bloqueo-plan.service';
 import { PlanService } from '../../../core/planes/plan.service';
 import { UsoService } from '../../../core/planes/uso.service';
 
@@ -52,7 +52,7 @@ export class AccionEjecutarComponent implements OnInit {
   private readonly company = inject(CompanyService);
   private readonly plan = inject(PlanService);
   private readonly uso = inject(UsoService);
-  private readonly mejora = inject(MejoraPlanService);
+  private readonly bloqueo = inject(BloqueoPlanService);
 
   readonly accion = input.required<Accion>();
   /** Contactos candidatos: el propio contacto, o los del caso. */
@@ -265,7 +265,7 @@ export class AccionEjecutarComponent implements OnInit {
     const canal = this.canal();
     if (!this.puedePreparar() || !canal) return;
     if (this.cupoAgotado()) {
-      this.mejora.abrir();
+      this.bloqueo.abrirCupo('accionesMes', this.usadas());
       return;
     }
     this.fase.set('preparando');
@@ -289,7 +289,8 @@ export class AccionEjecutarComponent implements OnInit {
       this.fase.set('listo');
     } catch (e) {
       console.error('[acciones] preparar', e);
-      this.fase.set('error');
+      // Cupo mensual agotado o demo terminada (las rules lo rechazan como permission-denied): modal con la causa.
+      this.fase.set(this.bloqueo.manejar(e, { limite: 'accionesMes' }) ? 'editando' : 'error');
     }
   }
 

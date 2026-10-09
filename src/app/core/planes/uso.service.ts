@@ -3,11 +3,12 @@ import { doc, Firestore, onSnapshot } from '@angular/fire/firestore';
 import { CompanyService } from '../services/company.service';
 import type { Limite } from './catalogo';
 import { PlanService } from './plan.service';
-import { claveMes, usadoDe, type UsoDoc } from './uso';
+import { periodoMensual, zonaDeEmpresa } from './periodo';
+import { usadoDe, type UsoDoc } from './uso';
 
 /**
  * Cuánto lleva gastado la empresa activa de cada cupo. Lee en vivo los contadores
- * `companies/{cid}/uso/total` y `uso/{yyyy-mm}`, que SOLO escriben las Functions.
+ * `companies/{cid}/uso/total` y `uso/{yyyy-mm}` (mes de la zona de la empresa), que SOLO escriben las Functions.
  * Son eventualmente consistentes: sirven para pintar el medidor, no para decidir en exclusiva
  * (la decisión real la toman las security rules y `reservarIA`).
  */
@@ -22,8 +23,11 @@ export class UsoService {
 
   constructor() {
     effect((onCleanup) => {
-      const cid = this.company.activeCompany()?.id;
+      const empresa = this.company.activeCompany();
+      const cid = empresa?.id;
       if (!cid) return;
+      // Mismo mes que cuentan las Functions y leen las rules (`derechos.periodoUso.clave`): el de la zona de la empresa.
+      const clave = periodoMensual(this.plan.ahora(), zonaDeEmpresa(empresa)).clave;
       const escuchar = (docId: string, destino: typeof this.total) =>
         onSnapshot(
           doc(this.firestore, 'companies', cid, 'uso', docId),
@@ -33,7 +37,7 @@ export class UsoService {
         );
       const bajas = [
         escuchar('total', this.total),
-        escuchar(claveMes(this.plan.ahora()), this.mes),
+        escuchar(clave, this.mes),
       ];
       onCleanup(() => {
         bajas.forEach((b) => b());
@@ -41,6 +45,11 @@ export class UsoService {
         this.mes.set({});
       });
     });
+  }
+
+  /** Bytes exactos del contador de documentos (el medidor usa `usado('documentosMB')`, redondeado hacia arriba). */
+  usadoBytes(): number {
+    return this.total().documentosBytes ?? 0;
   }
 
   usado(limite: Limite): number {

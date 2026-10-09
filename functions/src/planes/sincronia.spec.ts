@@ -16,6 +16,12 @@ describe('sincronía con src/app/core/planes', () => {
     expect(f).toBe(c);
   });
 
+  it('periodo.ts (mes de uso por zona horaria) es idéntico byte a byte', () => {
+    const f = readFileSync(resolve(__dirname, '../uso/periodo.ts'), 'utf8');
+    const c = readFileSync(resolve(__dirname, '../../../src/app/core/planes/periodo.ts'), 'utf8');
+    expect(f).toBe(c);
+  });
+
   it('derechosEfectivos coincide en una matriz de suscripciones', () => {
     const ahora = new Date('2026-10-09T12:00:00Z');
     const fechas = [undefined, new Date('2026-10-01T00:00:00Z'), new Date('2026-11-01T00:00:00Z')];

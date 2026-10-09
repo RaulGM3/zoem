@@ -9,6 +9,8 @@
  * simultáneas pueden pasarse del cupo en unas pocas unidades. Se acepta (soft limit).
  */
 
+import { periodoMensual } from './periodo';
+
 export type TipoUso = 'caso' | 'contacto' | 'plantilla' | 'miembro' | 'archivo' | 'accion';
 export type CampoUso = 'casosActivos' | 'contactos' | 'plantillas' | 'usuarios' | 'documentosBytes' | 'accionesMes' | 'iaMensajesMes';
 type Datos = Record<string, unknown> | undefined;
@@ -19,8 +21,12 @@ export const CAMPO_DE: Record<TipoUso, CampoUso> = {
 
 const ESTADOS_CASO_ACTIVO = new Set(['pendiente', 'en_proceso', 'urgente']);
 
-export function claveMes(fecha: Date): string {
-  return `${fecha.getUTCFullYear()}-${String(fecha.getUTCMonth() + 1).padStart(2, '0')}`;
+/**
+ * Doc de `uso/` donde cuenta un tipo: `total` o, para los mensuales, `yyyy-mm` del mes en la zona
+ * de la empresa (mismo valor que `derechos.periodoUso.clave`, que es lo que leen las rules).
+ */
+export function docUsoDe(tipo: TipoUso, cuando: Date, zona: string): string {
+  return tipo === 'accion' ? periodoMensual(cuando, zona).clave : 'total';
 }
 
 /** Cuánto "pesa" un doc en su contador (0 si no cuenta). */

@@ -80,26 +80,26 @@ describe('AutoservicioService', () => {
   it('crearEmpresa refresca el token (email_verified) y llama a la callable', async () => {
     llamar.mockResolvedValue({ data: { companyId: 'c9', yaExistia: false } });
     const id = await TestBed.inject(AutoservicioService).crearEmpresa({
-      nombre: 'García', tipoPersona: 'fisica', ca: 'madrid',
+      nombre: 'García', tipoPersona: 'fisica', ca: 'madrid', zonaHoraria: 'Europe/Madrid',
     });
     expect(getIdToken).toHaveBeenCalledWith(true);
     expect(m.httpsCallable).toHaveBeenCalledWith(expect.anything(), 'crearEmpresaAutoservicio');
-    expect(llamar).toHaveBeenCalledWith({ nombre: 'García', tipoPersona: 'fisica', ca: 'madrid' });
+    expect(llamar).toHaveBeenCalledWith({ nombre: 'García', tipoPersona: 'fisica', ca: 'madrid', zonaHoraria: 'Europe/Madrid' });
     expect(id).toBe('c9');
   });
 
   it('crearEmpresa traduce el error de la callable', async () => {
     llamar.mockRejectedValue({ code: 'functions/failed-precondition' });
     await expect(
-      TestBed.inject(AutoservicioService).crearEmpresa({ nombre: 'G', tipoPersona: 'fisica', ca: 'madrid' }),
+      TestBed.inject(AutoservicioService).crearEmpresa({ nombre: 'G', tipoPersona: 'fisica', ca: 'madrid', zonaHoraria: 'Europe/Madrid' }),
     ).rejects.toThrow(/verifica tu correo/i);
   });
 
   it('crearDemo llama a crearDespachoDemo con el nombre', async () => {
     llamar.mockResolvedValue({ data: { companyId: 'd1', yaExistia: false } });
-    expect(await TestBed.inject(AutoservicioService).crearDemo('García')).toBe('d1');
+    expect(await TestBed.inject(AutoservicioService).crearDemo('García', 'America/Lima')).toBe('d1');
     expect(m.httpsCallable).toHaveBeenCalledWith(expect.anything(), 'crearDespachoDemo');
-    expect(llamar).toHaveBeenCalledWith({ nombre: 'García' });
+    expect(llamar).toHaveBeenCalledWith({ nombre: 'García', zonaHoraria: 'America/Lima' });
   });
 
   it('sembrarDemo sincroniza claims ANTES de sembrar y lo hace como miembro, con documentos', async () => {

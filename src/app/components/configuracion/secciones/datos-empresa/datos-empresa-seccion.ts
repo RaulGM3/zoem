@@ -10,6 +10,9 @@ import {
   normalizarDatosEmpresa,
   type DatosEmpresaForm,
 } from '../../../../core/configuracion/datos-empresa';
+import { zonaDeEmpresa } from '../../../../core/planes/periodo';
+import { opcionesZona } from '../../../../core/planes/zonas';
+import { ZONA_POR_DEFECTO } from '../../../../core/planes/periodo';
 import { CompanyLogoUploaderComponent } from '../../../../shared/components/company-logo-uploader/company-logo-uploader';
 
 @Component({
@@ -33,9 +36,16 @@ export class DatosEmpresaSeccionComponent {
     codigoPostal: ['', codigoPostalValidator],
     ciudad: [''],
     website: [''],
+    zonaHoraria: [ZONA_POR_DEFECTO as string, Validators.required],
   });
 
   protected readonly guardando = signal(false);
+
+  private readonly zonaActual = toSignal(
+    this.form.controls.zonaHoraria.valueChanges.pipe(startWith(this.form.controls.zonaHoraria.value)),
+    { requireSync: true },
+  );
+  protected readonly zonas = computed(() => opcionesZona(this.zonaActual()));
 
   private readonly tipoPersona = toSignal(
     this.form.controls.tipoPersona.valueChanges.pipe(startWith(this.form.controls.tipoPersona.value)),
@@ -61,6 +71,7 @@ export class DatosEmpresaSeccionComponent {
         codigoPostal: c.codigoPostal ?? '',
         ciudad: c.ciudad ?? '',
         website: c.website ?? '',
+        zonaHoraria: zonaDeEmpresa(c),
       });
     });
   }

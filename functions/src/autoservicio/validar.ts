@@ -1,4 +1,5 @@
 // Validación pura del alta en autoservicio (sin Firebase): testeable y reutilizable.
+import { esZonaValida, ZONA_POR_DEFECTO } from '../uso/periodo';
 
 export const COMUNIDADES = [
   'andalucia', 'aragon', 'asturias', 'baleares', 'canarias', 'cantabria', 'castilla_la_mancha',
@@ -14,6 +15,8 @@ export interface AltaEmpresa {
   ca: Comunidad;
   rubro: 'abogados';
   especialidad?: string;
+  /** IANA; define el mes de los cupos mensuales. */
+  zonaHoraria: string;
 }
 
 export type Validacion<T> = { ok: true; valor: T } | { ok: false; campos: string[] };
@@ -32,6 +35,12 @@ function nombreValido(valor: unknown): string | null {
   return n.length >= NOMBRE_MIN && n.length <= NOMBRE_MAX ? n : null;
 }
 
+/** Opcional: vacío/ausente => Europe/Madrid; presente pero inválido => error. */
+function zonaOpcional(valor: unknown): string | null {
+  if (valor === undefined || valor === null || valor === '') return ZONA_POR_DEFECTO;
+  return esZonaValida(valor) ? valor : null;
+}
+
 export function validarAlta(data: unknown): Validacion<AltaEmpresa> {
   const d = registro(data);
   const campos: string[] = [];
@@ -40,6 +49,9 @@ export function validarAlta(data: unknown): Validacion<AltaEmpresa> {
   if (!nombre) campos.push('nombre');
   if (d['tipoPersona'] !== 'fisica' && d['tipoPersona'] !== 'juridica') campos.push('tipoPersona');
   if (!COMUNIDADES.includes(d['ca'] as Comunidad)) campos.push('ca');
+
+  const zonaHoraria = zonaOpcional(d['zonaHoraria']);
+  if (!zonaHoraria) campos.push('zonaHoraria');
 
   let especialidad: string | undefined;
   if (d['especialidad'] !== undefined && d['especialidad'] !== null && d['especialidad'] !== '') {
@@ -58,14 +70,18 @@ export function validarAlta(data: unknown): Validacion<AltaEmpresa> {
       tipoPersona: d['tipoPersona'] as AltaEmpresa['tipoPersona'],
       ca: d['ca'] as Comunidad,
       rubro: 'abogados',
+      zonaHoraria: zonaHoraria!,
       ...(especialidad ? { especialidad } : {}),
     },
   };
 }
 
-export function validarAltaDemo(data: unknown): Validacion<{ nombre: string }> {
-  const nombre = nombreValido(registro(data)['nombre']);
-  return nombre ? { ok: true, valor: { nombre } } : { ok: false, campos: ['nombre'] };
+export function validarAltaDemo(data: unknown): Validacion<{ nombre: string; zonaHoraria: string }> {
+  const d = registro(data);
+  const nombre = nombreValido(d['nombre']);
+  const zonaHoraria = zonaOpcional(d['zonaHoraria']);
+  const campos = [...(nombre ? [] : ['nombre']), ...(zonaHoraria ? [] : ['zonaHoraria'])];
+  return campos.length === 0 ? { ok: true, valor: { nombre: nombre!, zonaHoraria: zonaHoraria! } } : { ok: false, campos };
 }
 
 /** Claims mínimos del ID token que necesitamos (forma de `request.auth.token`). */

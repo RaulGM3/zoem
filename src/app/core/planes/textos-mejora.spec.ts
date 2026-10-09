@@ -14,6 +14,9 @@ describe('textosMejora', () => {
   it('una función sin texto propio cae a un texto genérico', () => {
     expect(textosMejora('contactos').titulo.length).toBeGreaterThan(0);
   });
+  it('documentos tiene texto propio de almacenamiento', () => {
+    expect(textosMejora('documentos').titulo).toMatch(/almacenamiento/i);
+  });
   it('describe los tres planes públicos', () => {
     expect(PLANES_INFO.map((p) => p.id)).toEqual(['free', 'pro', 'enterprise']);
   });

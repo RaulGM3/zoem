@@ -164,6 +164,7 @@ export class PlantillaDrawerComponent {
     };
     const newId = await this.toast.run(() => this.plantillasService.createPlantilla(data), {
       errorTitle: 'No se pudo crear la plantilla',
+      plan: { limite: 'plantillas' },
     });
     if (newId === undefined) return null;
     this.pendingPlantillaId.set(newId);

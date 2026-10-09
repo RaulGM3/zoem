@@ -52,6 +52,7 @@ describe('BienvenidaComponent', () => {
     escribir(el, 'bv-nombre', 'García & Asociados');
     (el.querySelector('input[type="radio"][value="juridica"]') as HTMLInputElement).click();
     escribir(el, 'bv-ca', 'madrid');
+    escribir(el, 'bv-zona', 'America/Bogota');
   }
 
   async function enviar(fixture: { whenStable(): Promise<unknown>; detectChanges(): void }, el: HTMLElement) {
@@ -66,6 +67,14 @@ describe('BienvenidaComponent', () => {
     expect(el.querySelectorAll('#bv-ca option').length).toBeGreaterThanOrEqual(19);
     expect((el.querySelector('#bv-ejemplo') as HTMLInputElement).checked).toBe(true);
     expect(el.querySelector('[data-testid="aviso-verificacion"]')).toBeNull();
+  });
+
+  it('la zona horaria viene precargada con la del navegador y se puede cambiar', () => {
+    const { el } = render();
+    const sel = el.querySelector('#bv-zona') as HTMLSelectElement;
+    expect(sel).not.toBeNull();
+    expect(sel.value).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);
+    expect(Array.from(sel.options).map((o) => o.value)).toContain('America/Argentina/Buenos_Aires');
   });
 
   it('no crea nada si el formulario es inválido y muestra los errores', async () => {
@@ -83,8 +92,9 @@ describe('BienvenidaComponent', () => {
 
     expect(svc.crearEmpresa).toHaveBeenCalledWith({
       nombre: 'García & Asociados', tipoPersona: 'juridica', ca: 'madrid', especialidad: 'Civil',
+      zonaHoraria: 'America/Bogota',
     });
-    expect(svc.crearDemo).toHaveBeenCalledWith('García & Asociados');
+    expect(svc.crearDemo).toHaveBeenCalledWith('García & Asociados', 'America/Bogota');
     expect(svc.sembrarDemo).toHaveBeenCalledWith('demo1', expect.any(Function));
     expect(svc.entrar).toHaveBeenCalledWith('real1');
   });

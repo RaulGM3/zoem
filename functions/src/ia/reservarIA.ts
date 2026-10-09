@@ -2,7 +2,7 @@ import * as admin from 'firebase-admin';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { assertCompanyAccess } from '../lib/assertCompanyAccess';
 import { vigentesEn, type DerechosDoc } from '../planes/derechosDoc';
-import { claveMes } from '../uso/uso';
+import { periodoMensual, zonaDeEmpresa } from '../uso/periodo';
 import { decidirReserva, validarReserva } from './reserva';
 
 export interface RespuestaReserva {
@@ -16,7 +16,7 @@ export interface RespuestaReserva {
  * yendo directo desde el navegador: el agente usa function calling y firmas de pensamiento del SDK
  * que no merece la pena reimplementar en un proxy).
  *
- * Qué garantiza: el contador mensual `uso/{yyyy-mm}.iaMensajesMes` solo sube si cabe en el límite
+ * Qué garantiza: el contador mensual `uso/{yyyy-mm en la zona de la empresa}.iaMensajesMes` solo sube si cabe en el límite
  * (transacción) y se rechaza con `resource-exhausted` al agotarlo.
  * Qué NO garantiza: quien llame a Gemini sin pasar por aquí (cliente modificado, o con el token
  * App Check del navegador) no queda bloqueado. Es un cupo "de honor reforzado" por App Check, no una
@@ -35,11 +35,13 @@ export const reservarIA = onCall<unknown, Promise<RespuestaReserva>>(
     const db = admin.firestore();
     const ahora = new Date();
     const empresaRef = db.doc(`companies/${companyId}`);
-    const usoRef = db.doc(`companies/${companyId}/uso/${claveMes(ahora)}`);
 
     return db.runTransaction(async (tx) => {
-      const [empresa, uso] = await Promise.all([tx.get(empresaRef), tx.get(usoRef)]);
+      const empresa = await tx.get(empresaRef);
       if (!empresa.exists) throw new HttpsError('not-found', 'La empresa no existe');
+      // El mes de cupo es el de la zona de la empresa (misma clave que `derechos.periodoUso` en las rules).
+      const usoRef = db.doc(`companies/${companyId}/uso/${periodoMensual(ahora, zonaDeEmpresa(empresa.data())).clave}`);
+      const uso = await tx.get(usoRef);
       // Sin `derechos` (empresa legada) no se restringe.
       const d = vigentesEn(empresa.get('derechos') as DerechosDoc | undefined, ahora);
       if (d && (d.soloLectura || d.funciones.ia === false)) {

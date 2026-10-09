@@ -5,7 +5,7 @@ import { Functions } from '@angular/fire/functions';
 import { CupoIaAgotadoError } from '../agent/errores-ia';
 import { CompanyService, type Company } from '../services/company.service';
 import { IaCupoService, clasificarErrorReserva } from './ia-cupo';
-import { MejoraPlanService } from './mejora-plan.service';
+import { BloqueoPlanService } from './bloqueo-plan.service';
 
 const m = vi.hoisted(() => ({ httpsCallable: vi.fn(), llamada: vi.fn() }));
 vi.mock('@angular/fire/functions', () => ({
@@ -48,7 +48,7 @@ describe('IaCupoService', () => {
       providers: [
         { provide: Functions, useValue: {} },
         { provide: CompanyService, useValue: { activeCompany } },
-        { provide: MejoraPlanService, useValue: { abrir } },
+        { provide: BloqueoPlanService, useValue: { abrirCupo: abrir } },
       ],
     });
     svc = TestBed.inject(IaCupoService);
@@ -64,7 +64,7 @@ describe('IaCupoService', () => {
   it('cupo agotado: abre el modal de mejora y lanza CupoIaAgotadoError', async () => {
     m.llamada.mockRejectedValue({ code: 'functions/resource-exhausted' });
     await expect(svc.reservar()).rejects.toBeInstanceOf(CupoIaAgotadoError);
-    expect(abrir).toHaveBeenCalledWith('ia');
+    expect(abrir).toHaveBeenCalledWith('iaMensajesMes');
   });
 
   it('fallo transitorio: deja pasar (fail-open) y no molesta', async () => {

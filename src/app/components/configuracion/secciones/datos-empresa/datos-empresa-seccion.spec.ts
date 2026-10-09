@@ -63,6 +63,24 @@ describe('DatosEmpresaSeccionComponent', () => {
     expect(q<HTMLInputElement>('#empresa-web').value).toBe('https://acme.es');
   });
 
+  it('zona horaria: precarga la de la empresa (Europe/Madrid si es legada) y se guarda al cambiarla', async () => {
+    await montar();
+    expect(q<HTMLSelectElement>('#empresa-zona').value).toBe('Europe/Madrid');
+    const sel = q<HTMLSelectElement>('#empresa-zona');
+    sel.value = 'America/Santiago';
+    sel.dispatchEvent(new Event('change'));
+    f.detectChanges();
+    await f.componentInstance.guardar();
+    expect(updateCompany).toHaveBeenCalledWith('co', expect.objectContaining({ zonaHoraria: 'America/Santiago' }));
+  });
+
+  it('zona horaria guardada fuera de la lista común sigue apareciendo como opción', async () => {
+    company.set({ ...(company() as object), zonaHoraria: 'America/Cancun' });
+    await montar();
+    f.detectChanges();
+    expect(q<HTMLSelectElement>('#empresa-zona').value).toBe('America/Cancun');
+  });
+
   it('etiquetas de nombre e identificación según tipo de persona', async () => {
     await montar();
     expect(q('label[for="empresa-name"]').textContent).toContain('Razón social');

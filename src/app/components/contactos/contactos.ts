@@ -14,6 +14,7 @@ import { ContactService } from '../../core/services/contact.service';
 import { UsersService } from '../../core/services/users';
 import { SearchService } from '../../core/services/search.service';
 import { PermissionService } from '../../core/services/permission.service';
+import { BloqueoPlanService } from '../../core/planes/bloqueo-plan.service';
 import { ToastService } from '../../core/services/toast.service';
 import {
   Contact, ContactStatus,
@@ -81,6 +82,7 @@ export class ContactosComponent {
   readonly perm = inject(PermissionService);
   protected readonly bp = inject(BreakpointService);
   private readonly toast = inject(ToastService);
+  private readonly bloqueo = inject(BloqueoPlanService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly searchSvc = inject(SearchService);
@@ -350,6 +352,7 @@ export class ContactosComponent {
   }
 
   openNew() {
+    if (this.bloqueo.cupoAgotado('contactos')) return;
     this.drawer.set({ contact: null, prefill: null });
   }
 

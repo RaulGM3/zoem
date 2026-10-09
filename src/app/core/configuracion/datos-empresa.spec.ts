@@ -4,7 +4,7 @@ import { cifValidator, codigoPostalValidator, normalizarDatosEmpresa } from './d
 
 const base = {
   tipoPersona: 'juridica' as const, name: '  Acme SL ', cif: ' b12345678 ', email: ' a@b.com ',
-  telefono: ' ', direccion: ' Calle 1 ', codigoPostal: '28001 ', ciudad: '', website: ' acme.com ',
+  telefono: ' ', direccion: ' Calle 1 ', codigoPostal: '28001 ', ciudad: '', website: ' acme.com ', zonaHoraria: 'America/Bogota',
 };
 
 describe('normalizarDatosEmpresa', () => {
@@ -12,7 +12,7 @@ describe('normalizarDatosEmpresa', () => {
     expect(normalizarDatosEmpresa(base)).toEqual({
       tipoPersona: 'juridica', name: 'Acme SL', cif: 'B12345678', email: 'a@b.com',
       telefono: undefined, direccion: 'Calle 1', codigoPostal: '28001', ciudad: undefined,
-      website: 'https://acme.com',
+      website: 'https://acme.com', zonaHoraria: 'America/Bogota',
     });
   });
   it('respeta website que ya trae protocolo', () => {

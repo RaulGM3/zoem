@@ -6,7 +6,16 @@ const valida = { nombre: '  García & Asociados ', tipoPersona: 'juridica', ca: 
 describe('validarAlta', () => {
   it('normaliza nombre y aplica rubro por defecto', () => {
     const r = validarAlta(valida);
-    expect(r).toEqual({ ok: true, valor: { nombre: 'García & Asociados', tipoPersona: 'juridica', ca: 'madrid', rubro: 'abogados' } });
+    expect(r).toEqual({ ok: true, valor: { nombre: 'García & Asociados', tipoPersona: 'juridica', ca: 'madrid', rubro: 'abogados', zonaHoraria: 'Europe/Madrid' } });
+  });
+
+  it('zonaHoraria: usa la indicada si es IANA válida, Europe/Madrid si falta', () => {
+    const r = validarAlta({ ...valida, zonaHoraria: 'America/Bogota' });
+    expect(r.ok && r.valor.zonaHoraria).toBe('America/Bogota');
+    const sin = validarAlta({ ...valida, zonaHoraria: '' });
+    expect(sin.ok && sin.valor.zonaHoraria).toBe('Europe/Madrid');
+    const nula = validarAlta({ ...valida, zonaHoraria: null });
+    expect(nula.ok && nula.valor.zonaHoraria).toBe('Europe/Madrid');
   });
 
   it('acepta especialidad libre y la recorta', () => {
@@ -21,6 +30,9 @@ describe('validarAlta', () => {
     [{ ...valida, tipoPersona: 'otra' }, 'tipoPersona'],
     [{ ...valida, ca: 'narnia' }, 'ca'],
     [{ ...valida, especialidad: 'x'.repeat(81) }, 'especialidad'],
+    [{ ...valida, zonaHoraria: 'Mars/Olympus' }, 'zonaHoraria'],
+    [{ ...valida, zonaHoraria: '+01:00' }, 'zonaHoraria'],
+    [{ ...valida, zonaHoraria: 42 }, 'zonaHoraria'],
     [null, 'nombre'],
     ['texto', 'nombre'],
   ])('rechaza %j por %s', (data, campo) => {
@@ -32,8 +44,13 @@ describe('validarAlta', () => {
 
 describe('validarAltaDemo', () => {
   it('solo exige un nombre de despacho', () => {
-    expect(validarAltaDemo({ nombre: ' Mi Despacho ' })).toEqual({ ok: true, valor: { nombre: 'Mi Despacho' } });
+    expect(validarAltaDemo({ nombre: ' Mi Despacho ' })).toEqual({ ok: true, valor: { nombre: 'Mi Despacho', zonaHoraria: 'Europe/Madrid' } });
     expect(validarAltaDemo({ nombre: '' }).ok).toBe(false);
+  });
+  it('acepta zonaHoraria opcional y rechaza una inválida', () => {
+    const r = validarAltaDemo({ nombre: 'Demo', zonaHoraria: 'America/Lima' });
+    expect(r.ok && r.valor.zonaHoraria).toBe('America/Lima');
+    expect(validarAltaDemo({ nombre: 'Demo', zonaHoraria: 'nope' }).ok).toBe(false);
   });
 });
 

@@ -244,6 +244,8 @@ export { expirarPruebas } from './autoservicio/expirarPruebas';
 
 // ─── Planes: derechos denormalizados, contadores de uso y cupo de IA (fase 3) ─
 export { sincronizarDerechos } from './planes/sincronizar';
+export { avanzarPeriodosUso } from './planes/avanzarPeriodos';
 export { onPlantillaUso, onMiembroUso, onArchivoCasoUso, onArchivoContactoUso, onAccionRegistroUso } from './uso/triggers';
 export { recalcularUso } from './uso/recontar';
+export { limitarCuotaArchivos } from './uso/cuotaStorage';
 export { reservarIA } from './ia/reservarIA';

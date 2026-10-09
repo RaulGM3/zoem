@@ -133,6 +133,9 @@ const FUNCION_DE_RUTA: Record<string, Funcion> = {
   '/agente-ia': 'agenteIA',
   '/llamadas': 'recepcionIA',
   '/informes': 'informes',
+  '/facturacion': 'facturacion',
+  '/tesoreria': 'tesoreria',
+  '/recepcion-ia': 'recepcionIA',
 };
 
 export function funcionDeRuta(href: string): Funcion | null {

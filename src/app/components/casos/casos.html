@@ -1,5 +1,5 @@
 <div class="space-y-4 sm:p-2">
-  <app-casos-header [canCreate]="perm.can('Casos', 'crear')" (newCasoClick)="showDrawer.set(true)" />
+  <app-casos-header [canCreate]="perm.can('Casos', 'crear')" (newCasoClick)="abrirNuevoCaso()" />
 
   <app-casos-stats
     [total]="total()"

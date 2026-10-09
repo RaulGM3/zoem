@@ -19,6 +19,7 @@ import { SearchService } from '../../core/services/search.service';
 import { ActividadService } from '../../core/services/actividad.service';
 import { PlanService } from '../../core/planes/plan.service';
 import { UsoService } from '../../core/planes/uso.service';
+import { BloqueoPlanService } from '../../core/planes/bloqueo-plan.service';
 import { MejoraPlanService } from '../../core/planes/mejora-plan.service';
 import type { Funcion, Limite } from '../../core/planes/catalogo';
 import { CAPABILITIES, MODULOS, PERMISOS } from '../../core/permissions/permissions';
@@ -86,11 +87,13 @@ describe('UsuariosComponent', () => {
     Array.from(raiz.querySelectorAll('button')).find(b => b.textContent?.replace(/\s+/g, ' ').trim() === texto);
 
   const abrirMejora = vi.fn();
+  const abrirCupo = vi.fn();
   interface PlanFalso { funciones: Partial<Record<Funcion, boolean>>; limites: Partial<Record<Limite, number>>; usado: Partial<Record<Limite, number>> }
   const PLAN_PRO: PlanFalso = { funciones: { usuariosMultiples: true, rolesPersonalizados: true }, limites: { usuarios: 10 }, usado: { usuarios: 1 } };
 
   function setup(mobile: boolean, plan: PlanFalso = PLAN_PRO): void {
     abrirMejora.mockClear();
+    abrirCupo.mockClear();
     Object.defineProperty(window, 'matchMedia', {
       configurable: true,
       writable: true,
@@ -131,6 +134,7 @@ describe('UsuariosComponent', () => {
         { provide: PlanService, useValue: { tiene: (f: Funcion) => plan.funciones[f] === true, limite: (l: Limite) => plan.limites[l] ?? Infinity } },
         { provide: UsoService, useValue: { usado: (l: Limite) => plan.usado[l] ?? 0 } },
         { provide: MejoraPlanService, useValue: { abrir: abrirMejora } },
+        { provide: BloqueoPlanService, useValue: { abrirCupo } },
       ],
     });
     TestBed.overrideComponent(UsuariosComponent, {
@@ -196,7 +200,7 @@ describe('UsuariosComponent', () => {
     it('con la función pero el cupo de usuarios agotado: aviso genérico', () => {
       setup(false, { funciones: { usuariosMultiples: true }, limites: { usuarios: 1 }, usado: { usuarios: 1 } });
       invitar().click();
-      expect(abrirMejora).toHaveBeenCalledWith();
+      expect(abrirCupo).toHaveBeenCalledWith('usuarios', 1);
       expect(fixture.componentInstance.showInviteDrawer()).toBe(false);
     });
 

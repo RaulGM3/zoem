@@ -318,6 +318,7 @@ export class ContactoDrawerComponent {
         {
           successMessage: editId ? 'Contacto actualizado' : 'Contacto creado',
           errorTitle: 'No se pudo guardar el contacto',
+          plan: editId ? undefined : { limite: 'contactos' },
           // Se avisa al padre SOLO si la escritura terminó bien. Si falla, el
           // drawer queda abierto con los datos para reintentar desde el toast.
           onSuccess: () => this.saved.emit(creado),

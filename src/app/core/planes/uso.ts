@@ -3,7 +3,7 @@ import type { Limite } from './catalogo';
 /**
  * Contadores de uso (los escriben las Functions; ver functions/src/uso/uso.ts):
  *   companies/{cid}/uso/total     → usuarios, plantillas, casosActivos, contactos, documentosBytes
- *   companies/{cid}/uso/{yyyy-mm} → accionesMes, iaMensajesMes
+ *   companies/{cid}/uso/{yyyy-mm} → accionesMes, iaMensajesMes (mes en la zona horaria de la empresa)
  */
 export type UsoDoc = Partial<Record<
   'usuarios' | 'plantillas' | 'casosActivos' | 'contactos' | 'documentosBytes' | 'accionesMes' | 'iaMensajesMes',
@@ -11,11 +11,6 @@ export type UsoDoc = Partial<Record<
 >>;
 
 const MB = 1_048_576;
-
-/** yyyy-mm en UTC: misma clave que la Function y las rules. */
-export function claveMes(fecha: Date): string {
-  return `${fecha.getUTCFullYear()}-${String(fecha.getUTCMonth() + 1).padStart(2, '0')}`;
-}
 
 export function usadoDe(limite: Limite, total: UsoDoc, mes: UsoDoc): number {
   switch (limite) {

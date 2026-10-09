@@ -6,6 +6,7 @@ import { PlantillasService } from '../../core/services/plantillas.service';
 import { ContactService } from '../../core/services/contact.service';
 import { SearchService } from '../../core/services/search.service';
 import { PermissionService } from '../../core/services/permission.service';
+import { BloqueoPlanService } from '../../core/planes/bloqueo-plan.service';
 import { ToastService } from '../../core/services/toast.service';
 import type { Caso, CasoEstado, CasoTipo, CasoPrioridad, CreateCasoData, Contact } from '../../interfaces';
 import { getContactDisplayName } from '../../interfaces';
@@ -39,6 +40,7 @@ export class CasosComponent implements OnInit {
   private readonly searchSvc = inject(SearchService);
   readonly perm = inject(PermissionService);
   private readonly toast = inject(ToastService);
+  private readonly bloqueo = inject(BloqueoPlanService);
 
   /** Búsqueda centralizada en el header — scopeada a "casos". */
   readonly search = this.searchSvc.termFor('casos');
@@ -128,6 +130,12 @@ export class CasosComponent implements OnInit {
     this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
   }
 
+  /** Botón "Nuevo caso": con el cupo agotado abre la mejora en vez de dejar rellenar un formulario que no se podrá guardar. */
+  abrirNuevoCaso(): void {
+    if (this.bloqueo.cupoAgotado('casosActivos')) return;
+    this.showDrawer.set(true);
+  }
+
   async saveNuevoCaso(data: CreateCasoData): Promise<void> {
     if (!this.perm.can('Casos', 'crear')) return;
     if (this.saving()) return;
@@ -135,6 +143,7 @@ export class CasosComponent implements OnInit {
     try {
       const id = await this.toast.run(() => this.casosService.createCaso(data), {
         errorTitle: 'No se pudo crear el caso',
+        plan: { limite: 'casosActivos' },
       });
       if (id === undefined) return; // falló: el toast ya avisó, el drawer queda abierto
       this.showDrawer.set(false);

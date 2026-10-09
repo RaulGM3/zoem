@@ -23,6 +23,18 @@ describe('MejoraPlanService', () => {
     svc.abrir();
     expect(svc.funcion()).toBeNull();
   });
+  it('abrirPorBloqueo guarda el motivo; abrir() genérico y cerrar() lo limpian', () => {
+    svc.abrirPorBloqueo({ tipo: 'cupo', recurso: 'casosActivos', usado: 50, limite: 50 });
+    expect(svc.abierto()).toBe(true);
+    expect(svc.motivo()?.recurso).toBe('casosActivos');
+    expect(svc.funcion()).toBeNull();
+    svc.abrir('informes');
+    expect(svc.motivo()).toBeNull();
+    svc.abrirPorBloqueo({ tipo: 'funcion', recurso: 'tesoreria' });
+    expect(svc.funcion()).toBe('tesoreria');
+    svc.cerrar();
+    expect(svc.motivo()).toBeNull();
+  });
   it('cierra', () => {
     svc.abrir('informes');
     svc.cerrar();
