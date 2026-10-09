@@ -15,6 +15,8 @@ import {
   deleteField,
 } from '@angular/fire/firestore';
 import { stripUndefinedDeep } from '../firebase/sanitize';
+import type { Suscripcion } from '../planes/catalogo';
+import { CLAVE_EMPRESA_ACTIVA, elegirEmpresaInicial } from './empresa-activa';
 
 export interface CompanyVerifactu {
   enabled: boolean;
@@ -51,7 +53,16 @@ export interface Company {
   /** Identificador fiscal de la empresa. Para persona jurídica es el CIF,
    *  para persona física es el NIF. Siempre se almacena en este campo. */
   cif?: string;
+  /** @deprecated Campo legado, nunca se aplicó. Los derechos salen de `suscripcion` (ver core/planes). */
   plan?: string;
+  /** Plan, complementos y estado. Solo lo escribe superuser o una Function (rules). */
+  suscripcion?: Suscripcion;
+  /** Despacho de ejemplo del autoservicio: datos ficticios y sin efectos externos. */
+  esDemo?: boolean;
+  /** Creado por el usuario en autoservicio (no por el superusuario). */
+  autoservicio?: boolean;
+  /** uid de quien creó la empresa. */
+  createdBy?: string;
   isActive: boolean;
   email?: string;
   telefono?: string;
@@ -120,8 +131,23 @@ export class CompanyService {
     }
     this.myMemberships.set(memberships);
     if (memberships.length > 0 && !this.activeCompany()) {
-      this.activeCompany.set(memberships[0].company ?? null);
+      const id = elegirEmpresaInicial(memberships, this.leerClave(CLAVE_EMPRESA_ACTIVA));
+      this.activeCompany.set(memberships.find((m) => m.companyId === id)?.company ?? null);
     }
+  }
+
+  /** Recuerda en este navegador el despacho elegido (se aplica en el próximo loadMyCompanies). */
+  seleccionarEmpresa(companyId: string): void {
+    this.guardarClave(CLAVE_EMPRESA_ACTIVA, companyId);
+  }
+
+  /**
+   * Cambia de despacho. Recarga la app entera por la misma razón que el modo superusuario:
+   * los servicios singleton conservan datos y listeners del despacho anterior.
+   */
+  cambiarEmpresa(companyId: string): void {
+    this.seleccionarEmpresa(companyId);
+    this.document.location.assign('/');
   }
 
   setActiveCompany(company: Company): void {
@@ -155,10 +181,22 @@ export class CompanyService {
   }
 
   private leerEmpresaSuperuser(): string | null {
+    return this.leerClave(CLAVE_EMPRESA_SUPERUSER);
+  }
+
+  private leerClave(clave: string): string | null {
     try {
-      return localStorage.getItem(CLAVE_EMPRESA_SUPERUSER);
+      return localStorage.getItem(clave);
     } catch {
       return null;
+    }
+  }
+
+  private guardarClave(clave: string, valor: string): void {
+    try {
+      localStorage.setItem(clave, valor);
+    } catch {
+      // Sin storage la elección dura solo hasta la próxima recarga.
     }
   }
 

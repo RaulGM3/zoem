@@ -8,6 +8,9 @@ import { AccionRedaccionService } from '../../../core/services/accion-redaccion.
 import { AccionEjecucionService } from '../../../core/services/accion-ejecucion.service';
 import { DocTemplateService } from '../../../core/services/doc-template.service';
 import { CompanyService } from '../../../core/services/company.service';
+import { MejoraPlanService } from '../../../core/planes/mejora-plan.service';
+import { PlanService } from '../../../core/planes/plan.service';
+import { UsoService } from '../../../core/planes/uso.service';
 import type { Accion } from '../../../interfaces/accion.interface';
 import type { Contact } from '../../../interfaces/contact.interface';
 import type { Caso, Hito } from '../../../interfaces/caso.interface';
@@ -33,6 +36,8 @@ describe('AccionEjecutarComponent', () => {
   let abrir: ReturnType<typeof vi.fn>;
   let getTemplate: ReturnType<typeof vi.fn>;
   let writeText: ReturnType<typeof vi.fn>;
+  let abrirMejora: ReturnType<typeof vi.fn>;
+  let cupo: { usado: number; limite: number };
   const el = () => fixture.nativeElement as HTMLElement;
   const q = <T extends HTMLElement>(sel: string) => el().querySelector<T>(sel)!;
   const flush = async () => {
@@ -42,7 +47,7 @@ describe('AccionEjecutarComponent', () => {
     fixture.detectChanges();
   };
 
-  async function montar(inputs: Record<string, unknown> = {}) {
+  async function montar(inputs: Record<string, unknown> = {}, empresa: Record<string, unknown> = {}) {
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [AccionEjecutarComponent],
@@ -50,7 +55,10 @@ describe('AccionEjecutarComponent', () => {
         { provide: AccionEjecucionService, useValue: { preparar, abrir } },
         { provide: DocTemplateService, useValue: { getTemplate } },
         { provide: AccionRedaccionService, useValue: { redactar: vi.fn() } },
-        { provide: CompanyService, useValue: { activeCompany: signal({ id: 'c1', name: 'Despacho Pérez' }) } },
+        { provide: CompanyService, useValue: { activeCompany: signal({ id: 'c1', name: 'Despacho Pérez', ...empresa }) } },
+        { provide: PlanService, useValue: { limite: () => cupo.limite } },
+        { provide: UsoService, useValue: { usado: () => cupo.usado } },
+        { provide: MejoraPlanService, useValue: { abrir: abrirMejora } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(AccionEjecutarComponent);
@@ -64,6 +72,8 @@ describe('AccionEjecutarComponent', () => {
   }
 
   beforeEach(async () => {
+    abrirMejora = vi.fn();
+    cupo = { usado: 2, limite: 15 };
     preparar = vi.fn().mockResolvedValue({
       registroId: 'r1', url: 'https://mail.google.com/x', cuerpoFinal: 'Cuerpo final', excedeLimite: false,
     });
@@ -79,6 +89,27 @@ describe('AccionEjecutarComponent', () => {
     writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
     await montar();
+  });
+
+  describe('cupo mensual de acciones', () => {
+    it('muestra el medidor del mes', () => {
+      expect(q('app-cupo').textContent).toContain('2/15 acciones este mes');
+    });
+
+    it('con el cupo agotado, "Preparar" abre el aviso de mejora y no prepara nada', async () => {
+      cupo = { usado: 15, limite: 15 };
+      await montar();
+      await component.preparar();
+      expect(abrirMejora).toHaveBeenCalledTimes(1);
+      expect(preparar).not.toHaveBeenCalled();
+      expect(component.fase()).toBe('editando');
+    });
+
+    it('con cupo disponible prepara con normalidad', async () => {
+      await component.preparar();
+      expect(abrirMejora).not.toHaveBeenCalled();
+      expect(preparar).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('es un diálogo modal accesible con región de estado aria-live', () => {
@@ -264,6 +295,22 @@ describe('AccionEjecutarComponent', () => {
       await flush();
       expect(component.form.getRawValue().cuerpo).toBe('Hola Ana, mañana es la vista.');
       expect(component.puedePreparar()).toBe(true);
+    });
+  });
+
+  describe('despacho de ejemplo', () => {
+    it('avisa que no se envía nada y no deja preparar el mensaje', async () => {
+      await montar({}, { esDemo: true });
+      expect(q('[data-testid="aviso-demo"]').textContent).toContain('En el despacho de ejemplo no se envía nada');
+      expect(component.puedePreparar()).toBe(false);
+      expect(q<HTMLButtonElement>('[data-testid="preparar"]').disabled).toBe(true);
+      await component.preparar();
+      expect(preparar).not.toHaveBeenCalled();
+    });
+
+    it('en un despacho normal no hay aviso', async () => {
+      await montar();
+      expect(el().querySelector('[data-testid="aviso-demo"]')).toBeNull();
     });
   });
 });

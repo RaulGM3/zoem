@@ -6,6 +6,8 @@ import { AgentChatService } from '../../core/agent/agent-chat.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { GRABADOR, type Grabador } from '../../core/voz/grabador.port';
 import { TranscripcionService } from '../../core/voz/transcripcion.service';
+import { PlanService } from '../../core/planes/plan.service';
+import { UsoService } from '../../core/planes/uso.service';
 import { AgenteChatComponent, SUGERENCIAS, estaPegadoAbajo } from './agente-chat';
 
 function montar() {
@@ -31,6 +33,8 @@ function montar() {
       { provide: PermissionService, useValue: { userRole: signal('admin') } },
       { provide: GRABADOR, useValue: grabador },
       { provide: TranscripcionService, useValue: { transcribir: vi.fn() } },
+      { provide: PlanService, useValue: { limite: () => 30 } },
+      { provide: UsoService, useValue: { usado: () => 12 } },
     ],
   });
 
@@ -52,6 +56,15 @@ describe('SUGERENCIAS — preguntas de ayuda', () => {
   it('las preguntas de ayuda no llevan huecos: se envían tal cual', () => {
     // Un hueco es una palabra de 2+ letras en MAYÚSCULAS (ver `huecoRegex`).
     for (const pregunta of deAyuda) expect(pregunta).not.toMatch(/[A-ZÑ]{2,}/);
+  });
+});
+
+describe('AgenteChatComponent — cupo de IA', () => {
+  beforeEach(() => TestBed.resetTestingModule());
+
+  it('muestra cuántos mensajes de IA lleva el mes', () => {
+    const { fixture } = montar();
+    expect(fixture.nativeElement.querySelector('app-cupo')?.textContent).toContain('12/30 mensajes de IA este mes');
   });
 });
 

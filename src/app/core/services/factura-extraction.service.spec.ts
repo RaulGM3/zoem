@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { FacturaExtractionService } from './factura-extraction.service';
 import { AiService } from './ai.service';
+import { IaCupoService } from '../planes/ia-cupo';
+import { CupoIaAgotadoError } from '../agent/errores-ia';
 
 interface FakeModel {
   generateContent: ReturnType<typeof vi.fn>;
@@ -14,13 +16,37 @@ describe('FacturaExtractionService (AiService falso, sin red)', () => {
   let model: FakeModel;
   let getJsonModel: ReturnType<typeof vi.fn>;
   let svc: FacturaExtractionService;
+  let reservar: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    reservar = vi.fn().mockResolvedValue(undefined);
     model = { generateContent: vi.fn() };
     getJsonModel = vi.fn().mockReturnValue(model);
     TestBed.resetTestingModule();
-    TestBed.configureTestingModule({ providers: [{ provide: AiService, useValue: { getJsonModel } }] });
+    TestBed.configureTestingModule({
+      providers: [{ provide: AiService, useValue: { getJsonModel } }, { provide: IaCupoService, useValue: { reservar } }],
+    });
     svc = TestBed.inject(FacturaExtractionService);
+  });
+
+  it('reserva cupo de IA ANTES de llamar al modelo', async () => {
+    const orden: string[] = [];
+    reservar.mockImplementation(async () => { orden.push('reservar'); });
+    model.generateContent.mockImplementation(async () => { orden.push('modelo'); return respuesta({ numero: 'F1' }); });
+    await svc.extraer(pdf());
+    expect(orden).toEqual(['reservar', 'modelo']);
+  });
+
+  it('sin cupo: no llama al modelo y explica el motivo', async () => {
+    reservar.mockRejectedValue(new CupoIaAgotadoError());
+    const r = await svc.extraer(pdf());
+    expect(model.generateContent).not.toHaveBeenCalled();
+    expect(r).toEqual({ ok: false, mensaje: expect.stringMatching(/cupo mensual de ia/i) });
+  });
+
+  it('un archivo demasiado grande no gasta cupo', async () => {
+    await svc.extraer(pdf(16 * 1024 * 1024));
+    expect(reservar).not.toHaveBeenCalled();
   });
 
   it('OK: devuelve los datos normalizados para precargar el formulario', async () => {

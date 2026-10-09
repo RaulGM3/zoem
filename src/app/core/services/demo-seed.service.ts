@@ -22,6 +22,8 @@ import {
   pathsObsoletos,
   planDeEscritura,
   ultimaFacturaPorAnio,
+  adaptarParaMiembro,
+  esSembrableComoMiembro,
   type FacturaRecibidaSeed,
 } from '../demo/seed-demo-civil';
 import { CARPETAS, carpetaId, documentosDemo, type DocumentoDemo } from '../demo/documentos-demo-civil';
@@ -52,8 +54,11 @@ const COLECCIONES_BARRIDO = [
 ] as const;
 
 /**
- * Carga la empresa demo de abogado civil (solo superusuario: las rules dejan a
- * `isSuper()` escribir en cualquier empresa). Idempotente: ids deterministas.
+ * Carga la empresa demo de abogado civil. Idempotente: ids deterministas.
+ * - Superusuario (por defecto): las rules le dejan escribir todo, incluidas llamadas y agentMappings.
+ * - `comoMiembro: true` (despacho de ejemplo del autoservicio): lo ejecuta el Admin del despacho,
+ *   así que se omiten `llamadas`/`agentMappings` (solo superusuario/backend) y las acciones se firman
+ *   a su nombre (ver `adaptarParaMiembro`). Recepción IA queda sin llamadas de ejemplo.
  */
 @Injectable({ providedIn: 'root' })
 export class DemoSeedService {
@@ -64,7 +69,7 @@ export class DemoSeedService {
 
   async cargar(
     companyId: string,
-    opts: { documentos: boolean },
+    opts: { documentos: boolean; comoMiembro?: boolean },
     onProgreso: (p: ProgresoSeed) => void = () => {},
   ): Promise<ResultadoSeed> {
     const uid = this.auth.currentUser?.uid;
@@ -102,11 +107,16 @@ export class DemoSeedService {
       ),
     });
 
+    const comoMiembro = opts.comoMiembro === true;
+    if (comoMiembro) seed.docs = adaptarParaMiembro(seed.docs.filter(esSembrableComoMiembro), uid, serverTimestamp());
+
     onProgreso({ paso: 'Buscando datos demo de cargas anteriores', hechos: 0, total: 1 });
-    const obsoletos = pathsObsoletos(await this.pathsDemoExistentes(companyId, agente.agentId), seed.docs);
+    const obsoletos = pathsObsoletos(await this.pathsDemoExistentes(companyId, agente.agentId, comoMiembro), seed.docs);
 
     const existentes = new Set<string>();
-    for (const col of COLECCIONES_SOLO_CREAR) {
+    // Como miembro, `acciones` exige conservar createdAt: un reintento no puede reescribirlas.
+    const soloCrear: readonly string[] = comoMiembro ? [...COLECCIONES_SOLO_CREAR, 'acciones'] : COLECCIONES_SOLO_CREAR;
+    for (const col of soloCrear) {
       const snap = await getDocs(collection(this.firestore, 'companies', companyId, col));
       snap.docs.forEach((d) => existentes.add(d.ref.path));
     }
@@ -163,11 +173,12 @@ export class DemoSeedService {
   }
 
   /** Paths de docs demo ya presentes en las colecciones que el seed gestiona por completo. */
-  private async pathsDemoExistentes(companyId: string, agentId: string): Promise<string[]> {
+  private async pathsDemoExistentes(companyId: string, agentId: string, comoMiembro: boolean): Promise<string[]> {
     const paths: string[] = [];
     const snaps = await Promise.all([
       ...COLECCIONES_BARRIDO.map((col) => getDocs(collection(this.firestore, 'companies', companyId, col))),
-      getDocs(query(collection(this.firestore, 'llamadas'), where('agentId', '==', agentId))),
+      // `llamadas` se lista por agentId: las rules solo lo permiten al superusuario (callMapped usa resource).
+      ...(comoMiembro ? [] : [getDocs(query(collection(this.firestore, 'llamadas'), where('agentId', '==', agentId)))]),
       getDocs(query(collection(this.firestore, 'iaContacts'), where('companyId', '==', companyId))),
     ]);
     for (const snap of snaps) snap.docs.forEach((d) => paths.push(d.ref.path));

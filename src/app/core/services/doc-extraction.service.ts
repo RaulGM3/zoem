@@ -1,5 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Schema } from 'firebase/ai';
+import { IaCupoService } from '../planes/ia-cupo';
 import { AiService } from './ai.service';
 import { TemplateVariable, TemplateVariableType } from '../../interfaces';
 
@@ -49,6 +50,7 @@ Te doy un documento. Devuelve EXCLUSIVAMENTE JSON con:
 @Injectable({ providedIn: 'root' })
 export class DocExtractionService {
   private readonly ai = inject(AiService);
+  private readonly cupo = inject(IaCupoService);
 
   async extractFromFile(file: File): Promise<ExtractionResult> {
     const name = file.name.toLowerCase();
@@ -95,6 +97,7 @@ export class DocExtractionService {
   private async runExtraction(
     parts: Array<{ text: string } | { inlineData: { data: string; mimeType: string } }>
   ): Promise<ExtractionResult> {
+    await this.cupo.reservar();
     const model = this.ai.getJsonModel(EXTRACTION_SCHEMA);
     const result = await model.generateContent(parts);
     const parsed = JSON.parse(result.response.text()) as ExtractionResult;

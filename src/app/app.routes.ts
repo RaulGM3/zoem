@@ -1,7 +1,9 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './auth/auth.guard';
 import { superUserGuard } from './auth/superuser.guard';
+import { requiereDespachoGuard, sinDespachoGuard } from './auth/despacho.guard';
 import { permissionGuard } from './auth/permission.guard';
+import { rutaConPlan } from './core/planes/plan.guard';
 
 export const routes: Routes = [
   {
@@ -10,8 +12,15 @@ export const routes: Routes = [
       import('./auth/login/login').then((m) => m.LoginComponent),
   },
   {
+    // Asistente de alta en autoservicio: solo para quien aún no pertenece a ningún despacho.
+    path: 'bienvenida',
+    canActivate: [authGuard, sinDespachoGuard],
+    loadComponent: () =>
+      import('./components/bienvenida/bienvenida').then((m) => m.BienvenidaComponent),
+  },
+  {
     path: '',
-    canActivate: [authGuard],
+    canActivate: [authGuard, requiereDespachoGuard],
     loadComponent: () =>
       import('./components/demo-layout/demo-layout').then(
         (m) => m.DemoLayoutComponent
@@ -49,22 +58,28 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/contacto-detail/contacto-detail').then((m) => m.ContactoDetailComponent),
       },
-      {
-        path: 'recepcion-ia',
-        canActivate: [permissionGuard('RecepciónIA')],
-        loadComponent: () =>
-          import('./components/recepcion-ia/recepcion-ia').then(
-            (m) => m.RecepcionIAComponent
-          ),
-      },
-      {
-        path: 'facturacion',
-        canActivate: [permissionGuard('Facturación')],
-        loadComponent: () =>
-          import('./components/facturacion/facturacion').then(
-            (m) => m.FacturacionComponent
-          ),
-      },
+      ...rutaConPlan(
+        {
+          path: 'recepcion-ia',
+          canActivate: [permissionGuard('RecepciónIA')],
+          loadComponent: () =>
+            import('./components/recepcion-ia/recepcion-ia').then(
+              (m) => m.RecepcionIAComponent
+            ),
+        },
+        'recepcionIA', 'RecepciónIA',
+      ),
+      ...rutaConPlan(
+        {
+          path: 'facturacion',
+          canActivate: [permissionGuard('Facturación')],
+          loadComponent: () =>
+            import('./components/facturacion/facturacion').then(
+              (m) => m.FacturacionComponent
+            ),
+        },
+        'facturacion', 'Facturación',
+      ),
       {
         path: 'calendario',
         canActivate: [permissionGuard('Calendario')],
@@ -94,27 +109,36 @@ export const routes: Routes = [
             (m) => m.DocTemplateDetailComponent
           ),
       },
-      {
-        path: 'tesoreria',
-        canActivate: [permissionGuard('Tesorería')],
-        loadComponent: () =>
-          import('./components/tesoreria/tesoreria').then((m) => m.TesoreriaComponent),
-      },
+      ...rutaConPlan(
+        {
+          path: 'tesoreria',
+          canActivate: [permissionGuard('Tesorería')],
+          loadComponent: () =>
+            import('./components/tesoreria/tesoreria').then((m) => m.TesoreriaComponent),
+        },
+        'tesoreria', 'Tesorería',
+      ),
       {
         path: 'comunicaciones',
         loadComponent: () =>
           import('./components/comunicaciones/comunicaciones').then((m) => m.ComunicacionesComponent),
       },
-      {
-        path: 'informes',
-        loadComponent: () =>
-          import('./components/informes/informes').then((m) => m.InformesComponent),
-      },
-      {
-        path: 'agente-ia',
-        loadComponent: () =>
-          import('./components/agente-ia/agente-ia').then((m) => m.AgenteIAComponent),
-      },
+      ...rutaConPlan(
+        {
+          path: 'informes',
+          loadComponent: () =>
+            import('./components/informes/informes').then((m) => m.InformesComponent),
+        },
+        'informes',
+      ),
+      ...rutaConPlan(
+        {
+          path: 'agente-ia',
+          loadComponent: () =>
+            import('./components/agente-ia/agente-ia').then((m) => m.AgenteIAComponent),
+        },
+        'agenteIA',
+      ),
       {
         path: 'vertey-studio',
         loadComponent: () =>
@@ -173,11 +197,14 @@ export const routes: Routes = [
         path: 'ayuda/:guia',
         loadComponent: () => import('./components/ayuda/ayuda').then((m) => m.AyudaComponent),
       },
-      {
-        path: 'llamadas',
-        loadComponent: () =>
-          import('./components/llamadas/llamadas.component').then((m) => m.LlamadasComponent),
-      },
+      ...rutaConPlan(
+        {
+          path: 'llamadas',
+          loadComponent: () =>
+            import('./components/llamadas/llamadas.component').then((m) => m.LlamadasComponent),
+        },
+        'recepcionIA',
+      ),
     ],
   },
   {

@@ -6,6 +6,8 @@ import { AgentChatService } from '../../core/agent/agent-chat.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { GRABADOR, type Grabador } from '../../core/voz/grabador.port';
 import { TranscripcionService } from '../../core/voz/transcripcion.service';
+import { PlanService } from '../../core/planes/plan.service';
+import { UsoService } from '../../core/planes/uso.service';
 import { AgentePanelComponent } from './agente-panel';
 
 function montar() {
@@ -28,6 +30,8 @@ function montar() {
       { provide: PermissionService, useValue: { userRole: signal('admin') } },
       { provide: GRABADOR, useValue: grabador },
       { provide: TranscripcionService, useValue: { transcribir: vi.fn() } },
+      { provide: PlanService, useValue: { limite: () => Infinity } },
+      { provide: UsoService, useValue: { usado: () => 0 } },
     ],
   });
 

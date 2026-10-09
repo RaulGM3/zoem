@@ -20,6 +20,13 @@
   </div>
 
   <div class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+    <app-cupo etiqueta="acciones este mes" [usado]="usadas()" [limite]="limiteMes()" />
+    @if (esDemo()) {
+      <p data-testid="aviso-demo" role="status" class="rounded-xl p-3 text-sm"
+        style="border:1px solid var(--border);background:var(--surface-2);color:var(--text-strong)">
+        {{ avisoDemo }} Los mensajes y documentos solo se envían desde un despacho real.
+      </p>
+    }
     <!-- Destinatarios -->
     <div data-testid="destinatarios">
       @if (eligeDestinatarios()) {

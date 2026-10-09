@@ -50,11 +50,14 @@
                 style="color:var(--text-body)"
                 [class.justify-center]="sidebarCollapsed()"
                 [title]="sidebarCollapsed() ? item.name : ''"
+                [attr.aria-label]="item.bloqueado ? item.name + ', disponible en plan Pro' : null"
               >
                 <lucide-icon [img]="item.icon" size="18" class="shrink-0"></lucide-icon>
                 @if (!sidebarCollapsed()) {
                   <span class="whitespace-nowrap">{{ item.name }}</span>
-                  @if (item.badge) {
+                  @if (item.bloqueado) {
+                    <span class="ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-bold" [class]="getBadgeClass('Pro')" aria-hidden="true">Pro</span>
+                  } @else if (item.badge) {
                     <span class="ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-bold" [class]="getBadgeClass(item.badge)">
                       {{ item.badge }}
                     </span>
@@ -199,6 +202,8 @@
           <span class="material-symbols-outlined" aria-hidden="true">search</span>
         </button>
         <!-- Ayuda de la pantalla actual -->
+        <app-selector-empresa />
+        <app-chip-plan />
         <app-ayuda-contextual />
         <!-- Theme toggle -->
         <button
@@ -234,9 +239,15 @@
 
     <!-- Page Content -->
     <app-aviso-modo-superuser />
+    <app-aviso-demo />
+    <app-aviso-prueba />
     <app-barra-navegacion />
     <main class="flex-1 overflow-x-hidden overflow-y-auto p-4 lg:p-6">
-      <router-outlet />
+      @if (demoTerminada()) {
+        <app-demo-terminada />
+      } @else {
+        <router-outlet />
+      }
     </main>
   </div>
 
@@ -275,10 +286,14 @@
                     routerLinkActive="nav-item-active"
                     class="relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors duration-150"
                     style="color:var(--text-body)"
+                    [attr.aria-label]="item.bloqueado ? item.name + ', disponible en plan Pro' : null"
                     (click)="sidebarOpen.set(false)"
                   >
                     <lucide-icon [img]="item.icon" size="18"></lucide-icon>
                     {{ item.name }}
+                    @if (item.bloqueado) {
+                      <span class="ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-bold" [class]="getBadgeClass('Pro')" aria-hidden="true">Pro</span>
+                    }
                   </a>
                 }
               </div>
@@ -337,3 +352,4 @@
   por DEBAJO del sidebar móvil (z-50) y de este diálogo (z-[100]).
 -->
 <app-agente-lanzador />
+<app-mejorar-plan-host />

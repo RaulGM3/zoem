@@ -21,9 +21,15 @@
       >
         <lucide-icon [img]="PlusIcon" class="w-4 h-4" />
         Invitar usuario
+        @if (invitarBloqueado()) {
+          <span class="rounded-full bg-white/20 px-1.5 py-0.5 text-[10px] font-bold" aria-hidden="true">Pro</span>
+          <span class="sr-only">(disponible en plan Pro)</span>
+        }
       </button>
     }
   </div>
+
+  <app-cupo etiqueta="usuarios" [usado]="usuariosUsados()" [limite]="usuariosLimite()" />
 
   <!-- Stats -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -239,6 +245,10 @@
               >
                 <lucide-icon [img]="PlusIcon" class="w-3.5 h-3.5" />
                 Crear rol
+                @if (crearRolBloqueado()) {
+                  <span class="rounded-full bg-white/20 px-1.5 py-0.5 text-[10px] font-bold" aria-hidden="true">Pro</span>
+                  <span class="sr-only">(disponible en plan Pro)</span>
+                }
               </button>
             </div>
           }

@@ -5,6 +5,7 @@ import {
 import { FormControl, FormGroup, FormRecord, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LucideAngularModule, X, ExternalLink, Copy } from 'lucide-angular';
 import { FocusTrapDirective } from '../../directives/focus-trap.directive';
+import { AVISO_DEMO_SIN_ENVIOS, esEmpresaDemo } from '../../../core/planes/demo';
 import { AccionEjecucionService, type EjecutarAccionResultado } from '../../../core/services/accion-ejecucion.service';
 import { DocTemplateService } from '../../../core/services/doc-template.service';
 import { CompanyService } from '../../../core/services/company.service';
@@ -19,6 +20,11 @@ import { canalDisponible } from '../../../core/acciones/url-canal';
 import { hitoSugerido } from '../../../core/acciones/hito-sugerido';
 import type { FormatoRedaccion, TextoRedactado } from '../../../core/acciones/redaccion-ia';
 import { RedactorIaComponent } from '../redactor-ia/redactor-ia';
+import { CupoComponent } from '../cupo/cupo';
+import { estadoCupo } from '../../../core/planes/derechos';
+import { MejoraPlanService } from '../../../core/planes/mejora-plan.service';
+import { PlanService } from '../../../core/planes/plan.service';
+import { UsoService } from '../../../core/planes/uso.service';
 
 type Fase = 'editando' | 'preparando' | 'listo' | 'error';
 
@@ -31,7 +37,7 @@ type Fase = 'editando' | 'preparando' | 'listo' | 'error';
  */
 @Component({
   selector: 'app-accion-ejecutar',
-  imports: [LucideAngularModule, ReactiveFormsModule, FocusTrapDirective, RedactorIaComponent],
+  imports: [LucideAngularModule, ReactiveFormsModule, FocusTrapDirective, RedactorIaComponent, CupoComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './accion-ejecutar.html',
   host: {
@@ -44,6 +50,9 @@ export class AccionEjecutarComponent implements OnInit {
   private readonly svc = inject(AccionEjecucionService);
   private readonly docTemplates = inject(DocTemplateService);
   private readonly company = inject(CompanyService);
+  private readonly plan = inject(PlanService);
+  private readonly uso = inject(UsoService);
+  private readonly mejora = inject(MejoraPlanService);
 
   readonly accion = input.required<Accion>();
   /** Contactos candidatos: el propio contacto, o los del caso. */
@@ -113,9 +122,19 @@ export class AccionEjecutarComponent implements OnInit {
     return clavesFaltantes([v.asunto, v.cuerpo], {});
   });
 
+  /** Cupo mensual de ejecuciones (free: 15/mes). Cada "Preparar" crea un registro que cuenta; las rules lo hacen cumplir. */
+  protected readonly usadas = computed(() => this.uso.usado('accionesMes'));
+  protected readonly limiteMes = computed(() => this.plan.limite('accionesMes'));
+  private readonly cupoAgotado = computed(() => estadoCupo(this.usadas(), this.limiteMes()) === 'agotado');
+
+  /** Despacho de ejemplo: no se prepara ni abre ningún mensaje (sin efectos externos). */
+  readonly esDemo = computed(() => esEmpresaDemo(this.company.activeCompany()));
+  protected readonly avisoDemo = AVISO_DEMO_SIN_ENVIOS;
+
   readonly puedePreparar = computed(() => {
     const v = this.valores();
     return (
+      !this.esDemo() &&
       this.fase() !== 'preparando' &&
       this.canal() !== null &&
       this.contactosSel().length > 0 &&
@@ -245,6 +264,10 @@ export class AccionEjecutarComponent implements OnInit {
   async preparar(): Promise<void> {
     const canal = this.canal();
     if (!this.puedePreparar() || !canal) return;
+    if (this.cupoAgotado()) {
+      this.mejora.abrir();
+      return;
+    }
     this.fase.set('preparando');
     this.aperturaBloqueada.set(false);
     this.copiado.set(false);

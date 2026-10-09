@@ -64,9 +64,11 @@
             </td>
             <td class="px-4 py-3 text-slate-400">{{ company.telefono }}</td>
             <td class="px-4 py-3">
-              <span class="rounded-full px-2 py-0.5 text-xs font-medium {{ getPlanClass(company.plan) }}">
-                {{ company.plan }}
-              </span>
+              @let et = etiquetas(company);
+              <span class="rounded-full bg-slate-700 px-2 py-0.5 text-xs font-medium text-slate-200">{{ et.plan }}</span>
+              @for (marca of et.marcas; track marca) {
+                <span class="ml-1 rounded-full bg-violet-500/20 px-2 py-0.5 text-xs font-medium text-violet-300">{{ marca }}</span>
+              }
             </td>
             <td class="px-4 py-3">
               @if (company.status === 'active') {
@@ -348,6 +350,50 @@
             </select>
           </div>
         </div>
+
+        <!-- Suscripción -->
+        <fieldset class="space-y-3 rounded-lg border border-slate-700 bg-slate-800/50 px-4 py-3">
+          <legend class="px-1 text-sm font-medium text-slate-200">Suscripción</legend>
+          <p class="text-xs text-slate-500">Sin plan = empresa legada: se trata como Pro (no pierde funciones).</p>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="co-sus-plan" class="mb-1 block text-xs font-medium text-slate-400">Plan</label>
+              <select id="co-sus-plan" formControlName="susPlan"
+                class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none">
+                <option value="">Sin suscripción (legada)</option>
+                <option value="free">Free</option>
+                <option value="pro">Pro</option>
+                <option value="enterprise">Enterprise</option>
+                <option value="demo">Demo</option>
+              </select>
+            </div>
+            <div>
+              <label for="co-sus-estado" class="mb-1 block text-xs font-medium text-slate-400">Estado</label>
+              <select id="co-sus-estado" formControlName="susEstado"
+                class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none">
+                <option value="activa">Activa</option>
+                <option value="prueba">Prueba (Pro hasta la fecha)</option>
+                <option value="vencida">Vencida</option>
+                <option value="cancelada">Cancelada</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label for="co-sus-fin" class="mb-1 block text-xs font-medium text-slate-400">Fin del periodo / prueba</label>
+            <input id="co-sus-fin" type="date" formControlName="susPeriodoFin"
+              class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none" />
+          </div>
+          <div class="space-y-1">
+            <p class="text-xs font-medium text-slate-400">Complementos</p>
+            @for (c of complementoEntries; track c.id) {
+              <label class="flex items-center gap-2 text-sm text-slate-200">
+                <input type="checkbox" [checked]="complementosSel().includes(c.id)"
+                  (change)="toggleComplemento(c.id, $any($event.target).checked)" />
+                {{ c.nombre }}
+              </label>
+            }
+          </div>
+        </fieldset>
 
         <!-- Verifactu -->
         <div class="space-y-2 rounded-lg border border-slate-700 bg-slate-800/50 px-4 py-3">

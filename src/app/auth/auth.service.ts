@@ -4,6 +4,7 @@ import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
   onAuthStateChanged,
+  sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -34,6 +35,9 @@ export class AuthService {
 
   constructor() {
     onAuthStateChanged(this.auth, async (user) => {
+      // Un login posterior al arranque también recarga membresías: los guards deben esperarlas
+      // (si no, requiereDespachoGuard vería "sin despacho" y mandaría a /bienvenida a quien sí tiene).
+      if (user) this.isLoading.set(true);
       this.user.set(user);
       try {
         if (user) {
@@ -79,6 +83,12 @@ export class AuthService {
 
   async loginWithGoogle(): Promise<void> {
     await signInWithPopup(this.auth, new GoogleAuthProvider());
+  }
+
+  /** Envía el correo de verificación al usuario actual (alta en autoservicio). */
+  async sendVerificationEmail(): Promise<void> {
+    const user = this.auth.currentUser;
+    if (user) await sendEmailVerification(user);
   }
 
   async registerWithEmail(email: string, password: string, displayName?: string): Promise<string> {

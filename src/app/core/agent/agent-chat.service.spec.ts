@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Content } from 'firebase/ai';
 import { TestBed } from '@angular/core/testing';
 import { AgentChatService, MAX_VUELTAS } from './agent-chat.service';
-import { ESPERAS_REINTENTO_MS } from './errores-ia';
+import { CupoIaAgotadoError, ESPERAS_REINTENTO_MS } from './errores-ia';
+import { IaCupoService } from '../planes/ia-cupo';
 import { AgentToolRegistry } from './agent-tool-registry';
 import { AiService } from '../services/ai.service';
 
@@ -40,21 +41,40 @@ function fakeAi(turnos: Turno[]) {
 const contenidosDe = (ai: ReturnType<typeof fakeAi>, n: number) =>
   ai.generateContent.mock.calls[n]![0].contents;
 
-function setup(turnos: Turno[], run: ReturnType<typeof vi.fn<FakeRun>> = vi.fn<FakeRun>(async () => ({ ok: true, data: { total: 1 } }))) {
+function setup(
+  turnos: Turno[],
+  run: ReturnType<typeof vi.fn<FakeRun>> = vi.fn<FakeRun>(async () => ({ ok: true, data: { total: 1 } })),
+  reservar = vi.fn().mockResolvedValue(undefined),
+) {
   const ai = fakeAi(turnos);
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     providers: [
       AgentChatService,
       { provide: AiService, useValue: ai },
+      { provide: IaCupoService, useValue: { reservar } },
       { provide: AgentToolRegistry, useValue: { declarations: () => [], run } },
     ],
   });
-  return { chat: TestBed.inject(AgentChatService), ai, run };
+  return { chat: TestBed.inject(AgentChatService), ai, run, reservar };
 }
 
 describe('AgentChatService — conversación simple', () => {
   beforeEach(() => TestBed.resetTestingModule());
+
+  it('reserva UN mensaje de cupo por pregunta del usuario (no por vuelta del bucle de tools)', async () => {
+    const { chat, reservar, ai } = setup([{ calls: [{ name: 'buscar', args: {} }] }, { text: 'Listo.' }]);
+    await chat.send('busca algo');
+    expect(reservar).toHaveBeenCalledTimes(1);
+    expect(ai.generateContent).toHaveBeenCalledTimes(2);
+  });
+
+  it('sin cupo: no llama al modelo y lo explica en el banner', async () => {
+    const { chat, ai } = setup([{ text: 'x' }], undefined, vi.fn().mockRejectedValue(new CupoIaAgotadoError()));
+    await chat.send('hola');
+    expect(ai.generateContent).not.toHaveBeenCalled();
+    expect(chat.error()).toMatch(/cupo mensual de ia/i);
+  });
 
   it('añade el mensaje del usuario y la respuesta del modelo', async () => {
     const { chat } = setup([{ text: 'Tienes 3 casos abiertos.' }]);

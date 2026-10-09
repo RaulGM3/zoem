@@ -1,5 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { Schema } from 'firebase/ai';
+import { CupoIaAgotadoError, mensajeDeError } from '../agent/errores-ia';
+import { IaCupoService } from '../planes/ia-cupo';
 import { AiService } from './ai.service';
 import { normalizarNif } from '../fiscal/nif';
 import { esFechaIso } from '../facturas-recibidas/trimestre';
@@ -84,6 +86,7 @@ function fechaIso(v: unknown): string {
 @Injectable({ providedIn: 'root' })
 export class FacturaExtractionService {
   private readonly ai = inject(AiService);
+  private readonly cupo = inject(IaCupoService);
 
   /** Nunca lanza: ante cualquier fallo devuelve `ok: false` y el drawer abre el formulario vacío. */
   async extraer(file: File): Promise<ResultadoExtraccion> {
@@ -92,12 +95,13 @@ export class FacturaExtractionService {
     }
     try {
       const data = await this.aBase64(file);
+      await this.cupo.reservar();
       const model = this.ai.getJsonModel(SCHEMA);
       const result = await model.generateContent([{ text: PROMPT }, { inlineData: { data, mimeType: file.type } }]);
       const crudo = JSON.parse(result.response.text()) as Crudo;
       return { ok: true, datos: this.normalizar(crudo) };
-    } catch {
-      return { ok: false, mensaje: MENSAJE_FALLO };
+    } catch (e) {
+      return { ok: false, mensaje: e instanceof CupoIaAgotadoError ? mensajeDeError(e) : MENSAJE_FALLO };
     }
   }
 

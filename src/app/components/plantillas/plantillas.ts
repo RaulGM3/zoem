@@ -1,6 +1,10 @@
 import {
-  Component, OnInit, signal, ChangeDetectionStrategy, inject,
+  Component, OnInit, signal, computed, ChangeDetectionStrategy, inject,
 } from '@angular/core';
+import { estadoCupo } from '../../core/planes/derechos';
+import { MejoraPlanService } from '../../core/planes/mejora-plan.service';
+import { PlanService } from '../../core/planes/plan.service';
+import { CupoComponent } from '../../shared/components/cupo/cupo';
 import { PlantillasService } from '../../core/services/plantillas.service';
 import { UsersService } from '../../core/services/users';
 import { ToastService } from '../../core/services/toast.service';
@@ -11,7 +15,7 @@ import { PlantillaDrawerComponent } from './components/plantilla-drawer/plantill
 
 @Component({
   selector: 'app-plantillas',
-  imports: [PlantillasHeaderComponent, PlantillasListComponent, PlantillaDrawerComponent],
+  imports: [CupoComponent, PlantillasHeaderComponent, PlantillasListComponent, PlantillaDrawerComponent],
   templateUrl: './plantillas.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -19,6 +23,13 @@ export class PlantillasComponent implements OnInit {
   protected readonly plantillasService = inject(PlantillasService);
   protected readonly usersService = inject(UsersService);
   private readonly toast = inject(ToastService);
+  private readonly plan = inject(PlanService);
+  private readonly mejora = inject(MejoraPlanService);
+
+  readonly usadas = computed(() => this.plantillasService.plantillas().length);
+  readonly limite = computed(() => this.plan.limite('plantillas'));
+  /** Solo cliente: la fase 3 lo hace cumplir en servidor (reglas + contadores). */
+  readonly cupoAgotado = computed(() => estadoCupo(this.usadas(), this.limite()) === 'agotado');
 
   showForm = signal(false);
 
@@ -42,6 +53,10 @@ export class PlantillasComponent implements OnInit {
   }
 
   openNew(): void {
+    if (this.cupoAgotado()) {
+      this.mejora.abrir();
+      return;
+    }
     this.showForm.set(true);
   }
 

@@ -1,8 +1,9 @@
 import { inject, Injectable } from '@angular/core';
-import { conReintento, esSaturacion } from '../agent/errores-ia';
 import { AiService } from '../services/ai.service';
 import { normalizarMimeAudio } from './audio-mime';
 import { validarAudio } from './audio-validacion';
+import { CupoIaAgotadoError, conReintento, esSaturacion } from '../agent/errores-ia';
+import { IaCupoService } from '../planes/ia-cupo';
 import { ErrorDictado } from './error-dictado';
 import type { AudioCapturado } from './grabador.port';
 import { limpiarTranscripcion } from './transcripcion-texto';
@@ -43,6 +44,7 @@ Reglas:
 @Injectable({ providedIn: 'root' })
 export class TranscripcionService {
   private readonly ai = inject(AiService);
+  private readonly cupo = inject(IaCupoService);
 
   async transcribir(audio: AudioCapturado): Promise<string> {
     const validacion = validarAudio({ bytes: audio.blob.size, duracionMs: audio.duracionMs });
@@ -52,6 +54,14 @@ export class TranscripcionService {
     if (!mimeType) throw new ErrorDictado('no_soportado');
 
     const data = await this.blobToBase64(audio.blob);
+
+    // Solo se gasta cupo con un audio válido. Un dictado = un mensaje de IA.
+    try {
+      await this.cupo.reservar();
+    } catch (e) {
+      if (e instanceof CupoIaAgotadoError) throw new ErrorDictado('cupo_ia', e);
+      throw new ErrorDictado('red', e);
+    }
 
     // `temperature: 0` porque transcribir no es una tarea creativa: queremos la
     // misma salida ante el mismo audio, no una variación bonita.

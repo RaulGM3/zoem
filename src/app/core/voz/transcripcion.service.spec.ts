@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { AiService } from '../services/ai.service';
+import { IaCupoService } from '../planes/ia-cupo';
+import { CupoIaAgotadoError } from '../agent/errores-ia';
 import { ErrorDictado } from './error-dictado';
 import { MAX_DURACION_MS } from './audio-validacion';
 import { MENSAJE_FALLO } from './dictado-estado';
@@ -20,7 +22,7 @@ interface ParteInline {
   inlineData?: { data: string; mimeType: string };
 }
 
-function montar(responder: () => unknown) {
+function montar(responder: () => unknown, reservar = vi.fn().mockResolvedValue(undefined)) {
   const generateContent = vi.fn<(partes: ParteInline[]) => unknown>(() => responder());
   const getTextModel = vi.fn(() => ({ generateContent }));
   const getToolModel = vi.fn();
@@ -31,9 +33,11 @@ function montar(responder: () => unknown) {
     providers: [
       TranscripcionService,
       { provide: AiService, useValue: { getTextModel, getToolModel, getJsonModel } },
+      { provide: IaCupoService, useValue: { reservar } },
     ],
   });
   return {
+    reservar,
     svc: TestBed.inject(TranscripcionService),
     generateContent,
     getTextModel,
@@ -67,6 +71,29 @@ describe('TranscripcionService', () => {
 
     const inline = generateContent.mock.calls[0]![0].find((p) => p.inlineData)!.inlineData!;
     expect(inline.mimeType).toBe('audio/m4a');
+  });
+
+  it('reserva UN mensaje de cupo de IA antes de llamar al modelo', async () => {
+    const orden: string[] = [];
+    const reservar = vi.fn(async () => { orden.push('reservar'); });
+    const { svc, generateContent } = montar(() => { orden.push('modelo'); return respuesta('Hola')(); }, reservar);
+    await svc.transcribir(audio());
+    expect(orden).toEqual(['reservar', 'modelo']);
+    expect(reservar).toHaveBeenCalledTimes(1);
+    expect(generateContent).toHaveBeenCalledTimes(1);
+  });
+
+  it('sin cupo: no llama al modelo y falla como cupo_ia', async () => {
+    const { svc, generateContent } = montar(respuesta('Hola'), vi.fn().mockRejectedValue(new CupoIaAgotadoError()));
+    await expect(svc.transcribir(audio())).rejects.toMatchObject({ motivo: 'cupo_ia' });
+    expect(MENSAJE_FALLO.cupo_ia).toMatch(/cupo mensual de ia/i);
+    expect(generateContent).not.toHaveBeenCalled();
+  });
+
+  it('un audio inválido NO gasta cupo', async () => {
+    const { svc, reservar } = montar(respuesta('Hola'));
+    await expect(svc.transcribir(audio({ mimeType: 'audio/amr' }))).rejects.toBeInstanceOf(ErrorDictado);
+    expect(reservar).not.toHaveBeenCalled();
   });
 
   it('hace exactamente UNA llamada al modelo por dictado', async () => {

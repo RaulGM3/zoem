@@ -1,5 +1,6 @@
 import { inject, Injectable, signal } from '@angular/core';
 import type { Content, EnhancedGenerateContentResponse, FunctionCall, GenerativeModel } from 'firebase/ai';
+import { IaCupoService } from '../planes/ia-cupo';
 import { AiService } from '../services/ai.service';
 import { conReintento, mensajeDeError } from './errores-ia';
 import { AgentToolRegistry } from './agent-tool-registry';
@@ -58,6 +59,7 @@ Reglas que NO puedes romper:
 @Injectable({ providedIn: 'root' })
 export class AgentChatService {
   private readonly ai = inject(AiService);
+  private readonly cupo = inject(IaCupoService);
   private readonly registry = inject(AgentToolRegistry);
 
   readonly mensajes = signal<ChatMensaje[]>([]);
@@ -155,6 +157,8 @@ export class AgentChatService {
     opts: SendOptions,
     acciones: string[],
   ): Promise<void> {
+    // Un mensaje del usuario = un mensaje de cupo, por muchas vueltas de tools que dé el bucle.
+    await this.cupo.reservar();
     const declaraciones = this.registry.declarations({ soloLectura: opts.soloLectura });
     const model = this.ai.getToolModel(declaraciones, this.systemInstruction(opts.contexto));
     const contents: Content[] = [...historial, { role: 'user', parts: [{ text: mensaje }] }];

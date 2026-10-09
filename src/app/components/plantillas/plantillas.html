@@ -1,5 +1,6 @@
 <div class="p-6 space-y-6">
   <app-plantillas-header (newPlantilla)="openNew()" />
+  <app-cupo etiqueta="plantillas" [usado]="usadas()" [limite]="limite()" />
   <app-plantillas-list
     [plantillas]="plantillasService.plantillas()"
     [loading]="plantillasService.loading()"

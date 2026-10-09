@@ -665,3 +665,26 @@ export function contarPorColeccion(docs: readonly DocSeed[]): Record<string, num
   }
   return out;
 }
+
+/**
+ * Un miembro (Admin del despacho) no puede crear `llamadas` ni `agentMappings`: las rules lo reservan
+ * al superusuario/backend. El despacho de ejemplo creado en autoservicio se siembra sin ellos.
+ */
+export function esSembrableComoMiembro(d: Pick<DocSeed, 'path'>): boolean {
+  return !d.path.startsWith('llamadas/') && !d.path.startsWith('agentMappings/');
+}
+
+/**
+ * Las rules exigen a un miembro (no superusuario) que `acciones` y `accion_registros` se creen
+ * a su nombre y con `createdAt == request.time`. El seed los trae con fechas pasadas y otros
+ * autores: aquí se reescriben (`marcaTiempo` = serverTimestamp() del cliente). El resto no cambia.
+ */
+export function adaptarParaMiembro(docs: readonly DocSeed[], uid: string, marcaTiempo: unknown): DocSeed[] {
+  return docs.map((d) => {
+    const partes = d.path.split('/');
+    const col = partes[partes.length - 2];
+    if (col === 'acciones') return { ...d, data: { ...d.data, createdBy: uid, createdAt: marcaTiempo, updatedAt: marcaTiempo } };
+    if (col === 'accion_registros') return { ...d, data: { ...d.data, createdBy: uid, createdAt: marcaTiempo } };
+    return d;
+  });
+}

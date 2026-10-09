@@ -30,6 +30,7 @@ export const MOTIVOS_FALLO = [
   'sin_voz',
   'red',
   'saturado',
+  'cupo_ia',
   'desconocido',
   'muy_corto',
   'vacio',
@@ -92,6 +93,7 @@ export const MENSAJE_FALLO: Record<MotivoFallo, string> = {
   sin_voz: 'No se ha detectado voz. Acércate al micrófono e inténtalo otra vez.',
   red: 'No se ha podido transcribir el dictado. Comprueba la conexión e inténtalo de nuevo.',
   saturado: 'El servicio de transcripción está saturado ahora mismo. Espera unos segundos y vuelve a dictar.',
+  cupo_ia: 'Has agotado el cupo mensual de IA de tu plan. Se renueva el mes que viene, o puedes mejorar el plan.',
   desconocido: 'No se ha podido completar el dictado. Inténtalo de nuevo.',
 };
 

@@ -32,6 +32,10 @@
     </div>
   </div>
 
+  <div class="shrink-0 px-4 sm:px-6 py-2 border-b border-border bg-surface">
+    <app-cupo etiqueta="mensajes de IA este mes" [usado]="iaUsados()" [limite]="iaLimite()" />
+  </div>
+
   <!-- Mode tabs -->
   <div class="shrink-0 bg-surface border-b border-border flex px-2 sm:px-4">
     @for (m of modos; track m.value) {

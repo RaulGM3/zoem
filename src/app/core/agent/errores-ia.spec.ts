@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { ESPERAS_REINTENTO_MS, conReintento, esSaturacion, mensajeDeError } from './errores-ia';
+import { CupoIaAgotadoError, ESPERAS_REINTENTO_MS, conReintento, esSaturacion, mensajeDeError } from './errores-ia';
 
 /** Forma real de un AIError del SDK de Firebase AI ante una cuota agotada. */
 const errorSdk429 = Object.assign(
@@ -27,6 +27,17 @@ describe('esSaturacion', () => {
     expect(esSaturacion({ customErrorData: { status: 403 } })).toBe(false);
     expect(esSaturacion(new Error('[400 ] Invalid argument'))).toBe(false);
     expect(esSaturacion('boom')).toBe(false);
+  });
+});
+
+describe('mensajeDeError · cupo mensual de IA', () => {
+  it('explica que el cupo del plan se agotó (no que el asistente esté saturado)', () => {
+    const texto = mensajeDeError(new CupoIaAgotadoError());
+    expect(texto).toMatch(/cupo mensual de ia/i);
+    expect(texto).not.toMatch(/saturado/i);
+  });
+  it('el cupo agotado NO es saturación: no se reintenta', () => {
+    expect(esSaturacion(new CupoIaAgotadoError())).toBe(false);
   });
 });
 

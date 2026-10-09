@@ -8,6 +8,9 @@ import { PermissionService } from '../../../core/services/permission.service';
 import { AccionEjecucionService } from '../../../core/services/accion-ejecucion.service';
 import { DocTemplateService } from '../../../core/services/doc-template.service';
 import { CompanyService } from '../../../core/services/company.service';
+import { MejoraPlanService } from '../../../core/planes/mejora-plan.service';
+import { PlanService } from '../../../core/planes/plan.service';
+import { UsoService } from '../../../core/planes/uso.service';
 import { AccionRedaccionService } from '../../../core/services/accion-redaccion.service';
 import type { Accion } from '../../../interfaces/accion.interface';
 import type { Contact } from '../../../interfaces/contact.interface';
@@ -33,6 +36,9 @@ describe('AccionLanzadorComponent', () => {
         { provide: AccionEjecucionService, useValue: { preparar: vi.fn(), abrir: vi.fn() } },
         { provide: DocTemplateService, useValue: { getTemplate: vi.fn() } },
         { provide: CompanyService, useValue: { activeCompany: signal({ id: 'c', name: 'D' }) } },
+        { provide: PlanService, useValue: { limite: () => Infinity } },
+        { provide: UsoService, useValue: { usado: () => 0 } },
+        { provide: MejoraPlanService, useValue: { abrir: vi.fn() } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(AccionLanzadorComponent);

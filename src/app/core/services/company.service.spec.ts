@@ -3,12 +3,14 @@ import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Firestore } from '@angular/fire/firestore';
 import { CLAVE_EMPRESA_SUPERUSER, CompanyService, type Company } from './company.service';
+import { CLAVE_EMPRESA_ACTIVA } from './empresa-activa';
 
 const m = vi.hoisted(() => ({
   updateDoc: vi.fn(),
   doc: vi.fn((...a: unknown[]) => ({ path: a.slice(1).join('/') })),
   deleteField: vi.fn(() => '__DELETE__'),
   getDoc: vi.fn(),
+  getDocs: vi.fn(),
 }));
 
 vi.mock('@angular/fire/firestore', () => ({
@@ -17,7 +19,7 @@ vi.mock('@angular/fire/firestore', () => ({
   collectionGroup: vi.fn(),
   doc: (...a: unknown[]) => m.doc(...a),
   getDoc: (...a: unknown[]) => m.getDoc(...a),
-  getDocs: vi.fn(),
+  getDocs: (...a: unknown[]) => m.getDocs(...a),
   addDoc: vi.fn(),
   updateDoc: (...a: unknown[]) => m.updateDoc(...a),
   query: vi.fn(),
@@ -120,5 +122,52 @@ describe('CompanyService · modo superusuario', () => {
     TestBed.inject(CompanyService).salirModoSuperuser();
     expect(localStorage.getItem(CLAVE_EMPRESA_SUPERUSER)).toBeNull();
     expect(assign).toHaveBeenCalledWith('/superuser/companies');
+  });
+});
+
+describe('CompanyService · selector de despacho', () => {
+  const assign = vi.fn();
+  const miembro = (cid: string) => ({ id: 'u1', data: () => ({ companyId: cid, userId: 'u1', role: 'Admin' }) });
+
+  beforeEach(() => {
+    localStorage.clear();
+    assign.mockReset();
+    m.getDocs.mockReset().mockResolvedValue({ docs: [miembro('a'), miembro('b')] });
+    m.getDoc.mockReset().mockImplementation(async (ref: { path: string }) => ({
+      exists: () => true,
+      id: ref.path.split('/')[1],
+      data: () => ({ name: ref.path, slug: 's', isActive: true }),
+    }));
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: Firestore, useValue: {} },
+        { provide: DOCUMENT, useValue: { location: { assign } } },
+      ],
+    });
+  });
+
+  it('loadMyCompanies activa la empresa elegida por el usuario', async () => {
+    localStorage.setItem(CLAVE_EMPRESA_ACTIVA, 'b');
+    const svc = TestBed.inject(CompanyService);
+    await svc.loadMyCompanies('u1');
+    expect(svc.activeCompany()?.id).toBe('b');
+  });
+
+  it('sin elección previa activa la primera', async () => {
+    const svc = TestBed.inject(CompanyService);
+    await svc.loadMyCompanies('u1');
+    expect(svc.activeCompany()?.id).toBe('a');
+  });
+
+  it('cambiarEmpresa guarda la elección y recarga la app para no mezclar datos', () => {
+    TestBed.inject(CompanyService).cambiarEmpresa('b');
+    expect(localStorage.getItem(CLAVE_EMPRESA_ACTIVA)).toBe('b');
+    expect(assign).toHaveBeenCalledWith('/');
+  });
+
+  it('seleccionarEmpresa guarda la elección sin recargar (alta recién hecha)', () => {
+    TestBed.inject(CompanyService).seleccionarEmpresa('b');
+    expect(localStorage.getItem(CLAVE_EMPRESA_ACTIVA)).toBe('b');
+    expect(assign).not.toHaveBeenCalled();
   });
 });

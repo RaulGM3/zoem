@@ -36,6 +36,11 @@ import {
   ResponsiveListComponent, ListCardDirective, ListTableDirective,
 } from '../../shared/components/responsive-list/responsive-list';
 import { BreakpointService } from '../../core/services/breakpoint.service';
+import { estadoCupo } from '../../core/planes/derechos';
+import { MejoraPlanService } from '../../core/planes/mejora-plan.service';
+import { PlanService } from '../../core/planes/plan.service';
+import { UsoService } from '../../core/planes/uso.service';
+import { CupoComponent } from '../../shared/components/cupo/cupo';
 
 type UsuariosTab = 'usuarios' | 'roles' | 'permisos' | 'solicitudes';
 type EditableMatrix = Record<Modulo, Record<FirmRole, RoleCaps>>;
@@ -44,7 +49,7 @@ type EditableMatrix = Record<Modulo, Record<FirmRole, RoleCaps>>;
   selector: 'app-usuarios',
   imports: [
     LucideAngularModule, InviteDrawerComponent, UserEditDrawerComponent, RoleEditorDrawerComponent,
-    ActividadFeedComponent, ResponsiveListComponent, ListCardDirective, ListTableDirective,
+    ActividadFeedComponent, ResponsiveListComponent, ListCardDirective, ListTableDirective, CupoComponent,
   ],
   templateUrl: './usuarios.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -74,6 +79,9 @@ export class UsuariosComponent implements OnInit, OnDestroy {
   private readonly searchSvc = inject(SearchService);
   private readonly actividadService = inject(ActividadService);
   protected readonly bp = inject(BreakpointService);
+  private readonly plan = inject(PlanService);
+  private readonly uso = inject(UsoService);
+  private readonly mejora = inject(MejoraPlanService);
 
   private invitationsSub?: Subscription;
   private actividadSub?: Subscription;
@@ -191,7 +199,22 @@ export class UsuariosComponent implements OnInit, OnDestroy {
       });
   }
 
+  /** Más de un usuario es función de pago (candado de PLAN, distinto del de rol). */
+  readonly invitarBloqueado = computed(() => !this.plan.tiene('usuariosMultiples'));
+  readonly crearRolBloqueado = computed(() => !this.plan.tiene('rolesPersonalizados'));
+  readonly usuariosLimite = computed(() => this.plan.limite('usuarios'));
+  /** El contador del servidor llega con retraso: la lista real de miembros activos manda si es mayor. */
+  readonly usuariosUsados = computed(() => Math.max(this.uso.usado('usuarios'), this.activos()));
+
   openInviteDrawer(): void {
+    if (this.invitarBloqueado()) {
+      this.mejora.abrir('usuariosMultiples');
+      return;
+    }
+    if (estadoCupo(this.usuariosUsados(), this.usuariosLimite()) === 'agotado') {
+      this.mejora.abrir();
+      return;
+    }
     this.inviteLink.set(null);
     this.showInviteDrawer.set(true);
   }
@@ -416,6 +439,10 @@ export class UsuariosComponent implements OnInit, OnDestroy {
   }
 
   openCreateRole(): void {
+    if (this.crearRolBloqueado()) {
+      this.mejora.abrir('rolesPersonalizados');
+      return;
+    }
     this.editingRole.set(null);
     this.showRoleEditor.set(true);
   }

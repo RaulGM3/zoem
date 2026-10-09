@@ -18,10 +18,13 @@ import {
   Trash2,
   X,
 } from 'lucide-angular';
-import { CA_LABELS, Company, CompanyPlan, RUBRO_LABELS, TipoPersona } from '../../../interfaces/company';
+import { CA_LABELS, Company, RUBRO_LABELS, TipoPersona } from '../../../interfaces/company';
 import { SuperuserService } from '../../../services/superuser';
 import { ToastService } from '../../../core/services/toast.service';
 import { CompanyService } from '../../../core/services/company.service';
+import { COMPLEMENTOS, type ComplementoId } from '../../../core/planes/catalogo';
+import { etiquetasEmpresa } from '../../../core/planes/etiquetas-empresa';
+import { formDesdeSuscripcion, suscripcionDesdeForm } from '../../../core/planes/suscripcion-form';
 
 @Component({
   selector: 'app-companies',
@@ -87,7 +90,18 @@ export class CompaniesComponent {
     status: ['active' as Company['status'], Validators.required],
     verifactuEnabled: [false],
     verifactuSandbox: [true],
+    // Suscripción (plan comercial real). Vacío = sin suscripción → empresa legada, equivale a Pro.
+    susPlan: ['' as 'free' | 'pro' | 'enterprise' | 'demo' | ''],
+    susEstado: ['activa' as 'prueba' | 'activa' | 'vencida' | 'cancelada'],
+    susPeriodoFin: [''],
   });
+
+  readonly complementoEntries = Object.entries(COMPLEMENTOS).map(([id, c]) => ({ id: id as ComplementoId, nombre: c.nombre }));
+  readonly complementosSel = signal<ComplementoId[]>([]);
+
+  toggleComplemento(id: ComplementoId, marcado: boolean): void {
+    this.complementosSel.update(l => marcado ? [...new Set([...l, id])] : l.filter(x => x !== id));
+  }
 
   constructor() {
     this.form.get('tipoPersona')!.valueChanges.subscribe(v => {
@@ -98,6 +112,7 @@ export class CompaniesComponent {
   openCreate(): void {
     this.editingId.set(null);
     this.form.reset({ ca: 'madrid', rubro: 'abogados', tipoPersona: 'juridica', plan: 'free', status: 'active', verifactuEnabled: false, verifactuSandbox: true });
+    this.complementosSel.set([]);
     this.tipoPersona.set('juridica');
     this.showForm.set(true);
   }
@@ -105,6 +120,7 @@ export class CompaniesComponent {
   openEdit(company: Company): void {
     this.editingId.set(company.id!);
     const tipo = company.tipoPersona ?? 'juridica';
+    const sus = formDesdeSuscripcion(company.suscripcion);
     this.tipoPersona.set(tipo);
     this.form.patchValue({
       name: company.name,
@@ -123,7 +139,11 @@ export class CompaniesComponent {
       status: company.status,
       verifactuEnabled: company.verifactu?.enabled ?? false,
       verifactuSandbox: company.verifactu?.sandbox ?? true,
+      susPlan: sus.plan,
+      susEstado: sus.estado,
+      susPeriodoFin: sus.periodoFin,
     });
+    this.complementosSel.set(sus.complementos);
     this.showForm.set(true);
   }
 
@@ -148,6 +168,15 @@ export class CompaniesComponent {
       plan: raw.plan!,
       status: raw.status!,
       verifactu: { enabled: !!raw.verifactuEnabled, sandbox: !!raw.verifactuSandbox },
+      suscripcion: suscripcionDesdeForm(
+        {
+          plan: raw.susPlan ?? '',
+          estado: raw.susEstado ?? 'activa',
+          periodoFin: raw.susPeriodoFin ?? '',
+          complementos: this.complementosSel(),
+        },
+        this.companies().find(c => c.id === this.editingId())?.suscripcion,
+      ),
     };
 
     const id = this.editingId();
@@ -180,13 +209,8 @@ export class CompaniesComponent {
     });
   }
 
-  getPlanClass(plan: CompanyPlan): string {
-    const map: Record<CompanyPlan, string> = {
-      free: 'bg-slate-700 text-slate-300',
-      pro: 'bg-violet-500/20 text-violet-300',
-      enterprise: 'bg-amber-500/20 text-amber-300',
-    };
-    return map[plan];
+  etiquetas(company: Company): { plan: string; marcas: string[] } {
+    return etiquetasEmpresa(company, new Date());
   }
 
   formatDate(value: Company['createdAt']): string {

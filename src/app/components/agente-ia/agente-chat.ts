@@ -11,6 +11,9 @@ import { PermissionService } from '../../core/services/permission.service';
 import { fusionarDictado } from '../../core/voz/transcripcion-texto';
 import { BotonDictadoComponent } from './boton-dictado';
 import { contextoAgente } from './contexto-agente';
+import { PlanService } from '../../core/planes/plan.service';
+import { UsoService } from '../../core/planes/uso.service';
+import { CupoComponent } from '../../shared/components/cupo/cupo';
 
 /**
  * Modo de conversación.
@@ -136,13 +139,15 @@ const MODO_COLOR: Record<AgenteMode, { tab: string; punto: string }> = {
  */
 @Component({
   selector: 'app-agente-chat',
-  imports: [LucideAngularModule, BotonDictadoComponent],
+  imports: [LucideAngularModule, BotonDictadoComponent, CupoComponent],
   templateUrl: './agente-chat.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'flex flex-col min-h-0' },
 })
 export class AgenteChatComponent {
   private readonly chat = inject(AgentChatService);
+  private readonly plan = inject(PlanService);
+  private readonly uso = inject(UsoService);
   private readonly router = inject(Router);
   private readonly perm = inject(PermissionService);
 
@@ -191,6 +196,10 @@ export class AgenteChatComponent {
   readonly RotateCcwIcon = RotateCcw;
   readonly ZapIcon = Zap;
   readonly AlertIcon = TriangleAlert;
+
+  /** Cupo mensual de IA del plan (cada pregunta reserva 1 en el servidor). */
+  readonly iaUsados = computed(() => this.uso.usado('iaMensajesMes'));
+  readonly iaLimite = computed(() => this.plan.limite('iaMensajesMes'));
 
   readonly modo = signal<AgenteMode>('acciones');
   readonly inputText = signal('');

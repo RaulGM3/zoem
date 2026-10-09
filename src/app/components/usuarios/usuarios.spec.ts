@@ -17,6 +17,10 @@ import { ToastService } from '../../core/services/toast.service';
 import { CompanyService } from '../../core/services/company.service';
 import { SearchService } from '../../core/services/search.service';
 import { ActividadService } from '../../core/services/actividad.service';
+import { PlanService } from '../../core/planes/plan.service';
+import { UsoService } from '../../core/planes/uso.service';
+import { MejoraPlanService } from '../../core/planes/mejora-plan.service';
+import type { Funcion, Limite } from '../../core/planes/catalogo';
 import { CAPABILITIES, MODULOS, PERMISOS } from '../../core/permissions/permissions';
 import type { CompanyMember } from '../../interfaces/member';
 import type { PermissionRequest } from '../../interfaces/permission-request.interface';
@@ -81,7 +85,12 @@ describe('UsuariosComponent', () => {
   const boton = (texto: string, raiz: HTMLElement = el()): HTMLButtonElement | undefined =>
     Array.from(raiz.querySelectorAll('button')).find(b => b.textContent?.replace(/\s+/g, ' ').trim() === texto);
 
-  function setup(mobile: boolean): void {
+  const abrirMejora = vi.fn();
+  interface PlanFalso { funciones: Partial<Record<Funcion, boolean>>; limites: Partial<Record<Limite, number>>; usado: Partial<Record<Limite, number>> }
+  const PLAN_PRO: PlanFalso = { funciones: { usuariosMultiples: true, rolesPersonalizados: true }, limites: { usuarios: 10 }, usado: { usuarios: 1 } };
+
+  function setup(mobile: boolean, plan: PlanFalso = PLAN_PRO): void {
+    abrirMejora.mockClear();
     Object.defineProperty(window, 'matchMedia', {
       configurable: true,
       writable: true,
@@ -119,6 +128,9 @@ describe('UsuariosComponent', () => {
         { provide: CompanyService, useValue: { activeCompany: signal({ id: 'co1', name: 'Despacho' }) } },
         { provide: SearchService, useValue: { termFor: () => signal('') } },
         { provide: ActividadService, useValue: { recentStream: () => of([]), log: vi.fn() } },
+        { provide: PlanService, useValue: { tiene: (f: Funcion) => plan.funciones[f] === true, limite: (l: Limite) => plan.limites[l] ?? Infinity } },
+        { provide: UsoService, useValue: { usado: (l: Limite) => plan.usado[l] ?? 0 } },
+        { provide: MejoraPlanService, useValue: { abrir: abrirMejora } },
       ],
     });
     TestBed.overrideComponent(UsuariosComponent, {
@@ -166,6 +178,47 @@ describe('UsuariosComponent', () => {
     fixture.detectChanges();
     expect(fixture.componentInstance.showEditDrawer()).toBe(true);
     expect(fixture.componentInstance.editingMember()?.id).toBe('m2');
+  });
+
+  describe('límites del plan', () => {
+    const FREE: PlanFalso = { funciones: {}, limites: { usuarios: 1 }, usado: { usuarios: 1 } };
+    const empieza = (t: string): HTMLButtonElement =>
+      qa<HTMLButtonElement>('button').find(b => b.textContent?.replace(/\s+/g, ' ').trim().startsWith(t))!;
+    const invitar = (): HTMLButtonElement => empieza('Invitar usuario');
+
+    it('free: invitar abre el aviso de mejora (usuariosMultiples), no el drawer', () => {
+      setup(false, FREE);
+      invitar().click();
+      expect(abrirMejora).toHaveBeenCalledWith('usuariosMultiples');
+      expect(fixture.componentInstance.showInviteDrawer()).toBe(false);
+    });
+
+    it('con la función pero el cupo de usuarios agotado: aviso genérico', () => {
+      setup(false, { funciones: { usuariosMultiples: true }, limites: { usuarios: 1 }, usado: { usuarios: 1 } });
+      invitar().click();
+      expect(abrirMejora).toHaveBeenCalledWith();
+      expect(fixture.componentInstance.showInviteDrawer()).toBe(false);
+    });
+
+    it('con hueco: abre el drawer sin aviso', () => {
+      setup(false);
+      invitar().click();
+      expect(abrirMejora).not.toHaveBeenCalled();
+      expect(fixture.componentInstance.showInviteDrawer()).toBe(true);
+    });
+
+    it('sin rolesPersonalizados: "Crear rol" abre el aviso de mejora y no el editor', () => {
+      setup(false, { ...FREE, funciones: { usuariosMultiples: true } });
+      irATab('Roles');
+      empieza('Crear rol').click();
+      expect(abrirMejora).toHaveBeenCalledWith('rolesPersonalizados');
+      expect(fixture.componentInstance.showRoleEditor()).toBe(false);
+    });
+
+    it('pinta el medidor de usuarios del plan', () => {
+      setup(false, FREE);
+      expect(el().querySelector('app-cupo')?.textContent).toContain('1/1 usuarios');
+    });
   });
 
   describe('permissions on mobile', () => {

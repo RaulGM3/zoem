@@ -1,5 +1,8 @@
 import { Timestamp } from '@angular/fire/firestore';
-import type { CompanyLogo } from '../core/services/company.service';
+import type { CompanyLogo, CompanyVerifactu } from '../core/services/company.service';
+import type { PlanId, Suscripcion } from '../core/planes/catalogo';
+
+export type { CompanyVerifactu };
 
 export type ComunidadAutonoma =
   | 'andalucia'
@@ -24,21 +27,12 @@ export type ComunidadAutonoma =
 
 export type Rubro = 'abogados';
 
-export type CompanyPlan = 'free' | 'pro' | 'enterprise';
+/** Plan comercial visible para el superuser. `demo` solo se crea desde el onboarding. */
+export type CompanyPlan = Exclude<PlanId, 'demo'>;
 
 export type CompanyStatus = 'active' | 'inactive' | 'trial';
 
 export type TipoPersona = 'fisica' | 'juridica';
-
-export interface CompanyVerifactu {
-  enabled: boolean;
-  /** true → prewww1.aeat.es (sandbox AEAT), false → producción real */
-  sandbox: boolean;
-  certNif?: string;
-  certTitular?: string;
-  certExpiry?: string;
-  certStoredAt?: string;
-}
 
 export interface Company {
   id?: string;
@@ -55,7 +49,13 @@ export interface Company {
   website?: string;
   logo?: CompanyLogo;
   descripcion?: string;
+  /** @deprecated Legado. Fuente de verdad: `suscripcion`. */
   plan: CompanyPlan;
+  suscripcion?: Suscripcion;
+  /** Despacho de ejemplo del autoservicio. */
+  esDemo?: boolean;
+  /** Creado por el propio usuario (no por el superusuario). */
+  autoservicio?: boolean;
   status: CompanyStatus;
   verifactu?: CompanyVerifactu;
   createdAt: Timestamp | Date;

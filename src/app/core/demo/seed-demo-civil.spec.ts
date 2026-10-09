@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  construirSeedDemo, pathsObsoletos, planDeEscritura, ultimaFacturaPorAnio, type ContextoSeed, type DocSeed,
+  adaptarParaMiembro, construirSeedDemo, esSembrableComoMiembro, pathsObsoletos, planDeEscritura, ultimaFacturaPorAnio, type ContextoSeed, type DocSeed,
 } from './seed-demo-civil';
 import { claveFactura } from '../facturas-recibidas/clave-factura';
 
@@ -302,5 +302,35 @@ describe('ultimaFacturaPorAnio', () => {
         CID,
       ),
     ).toEqual({ '2026': 12, '2025': 99 });
+  });
+});
+
+describe('despacho demo sembrado por un miembro (no superusuario)', () => {
+  const { docs } = construirSeedDemo(ctx());
+
+  it('esSembrableComoMiembro excluye llamadas y agentMappings (solo superusuario/backend)', () => {
+    const sembrables = docs.filter(esSembrableComoMiembro);
+    expect(sembrables.some((d) => d.path.startsWith('llamadas/'))).toBe(false);
+    expect(sembrables.some((d) => d.path.startsWith('agentMappings/'))).toBe(false);
+    expect(sembrables.length).toBeLessThan(docs.length);
+    expect(sembrables.some((d) => d.path.startsWith('invoices/'))).toBe(true);
+  });
+
+  it('adaptarParaMiembro firma acciones y registros como el usuario con la marca de tiempo del servidor', () => {
+    const MARCA = { __marca: true };
+    const out = adaptarParaMiembro(docs, 'yo', MARCA);
+    const acc = out.find((d) => d.path.includes('/acciones/'))!;
+    expect(acc.data).toMatchObject({ createdBy: 'yo', createdAt: MARCA, updatedAt: MARCA });
+    const reg = out.find((d) => d.path.includes('/accion_registros/'))!;
+    expect(reg.data).toMatchObject({ createdBy: 'yo', createdAt: MARCA });
+    expect(reg.data).not.toHaveProperty('updatedAt');
+  });
+
+  it('no toca el resto de documentos ni muta la entrada', () => {
+    const caso = docs.find((d) => d.path.includes('/casos/') && d.path.split('/').length === 4)!;
+    const antes = JSON.stringify(docs.find((d) => d.path.includes('/acciones/'))!.data);
+    const out = adaptarParaMiembro(docs, 'yo', 'T');
+    expect(out.find((d) => d.path === caso.path)).toBe(caso);
+    expect(JSON.stringify(docs.find((d) => d.path.includes('/acciones/'))!.data)).toBe(antes);
   });
 });

@@ -9,11 +9,19 @@ import { PermissionService } from '../../core/services/permission.service';
 import { FocusTrapDirective } from '../../shared/directives/focus-trap.directive';
 import { ThemeService } from '../../core/services/theme.service';
 import type { Modulo } from '../../core/permissions/permissions';
+import type { Funcion } from '../../core/planes/catalogo';
+import { PlanService } from '../../core/planes/plan.service';
+import { ChipPlanComponent } from '../../shared/components/chip-plan/chip-plan';
+import { MejorarPlanHostComponent } from '../../shared/components/mejorar-plan/mejorar-plan-host';
 import type { FirmRole } from '../../interfaces/member';
 import { AgenteLanzadorComponent } from '../agente-ia/agente-lanzador';
 import { NotificacionesPanelComponent } from '../../shared/components/notificaciones-panel/notificaciones-panel';
 import { AyudaContextualComponent } from '../../shared/components/ayuda-contextual/ayuda-contextual';
 import { AvisoModoSuperuserComponent } from '../../shared/components/aviso-modo-superuser/aviso-modo-superuser';
+import { AvisoPruebaComponent } from '../../shared/components/aviso-prueba/aviso-prueba';
+import { AvisoDemoComponent } from '../../shared/components/aviso-demo/aviso-demo';
+import { SelectorEmpresaComponent } from '../../shared/components/selector-empresa/selector-empresa';
+import { DemoTerminadaComponent } from '../../shared/components/demo-terminada/demo-terminada';
 import {
   LucideAngularModule,
   LucideIconData,
@@ -54,6 +62,17 @@ export interface NavItem {
   badge?: string;
   /** Módulo que gatea el item. Sin módulo = visible siempre (Dashboard, Mi Perfil). */
   modulo?: Modulo;
+  /** Función de plan que requiere. Si el plan no la incluye se muestra con insignia Pro (sigue clicable). */
+  funcion?: Funcion;
+}
+
+/** NavItem ya resuelto contra el plan actual. */
+export interface NavItemVista extends NavItem {
+  bloqueado: boolean;
+}
+
+export interface NavCategoryVista extends Omit<NavCategory, 'items'> {
+  items: NavItemVista[];
 }
 
 export interface NavCategory {
@@ -66,7 +85,8 @@ export interface NavCategory {
   selector: 'app-demo-layout',
   imports: [BarraNavegacionComponent, 
     RouterOutlet, RouterLink, RouterLinkActive, LucideAngularModule, AgenteLanzadorComponent, FocusTrapDirective, NotificacionesPanelComponent,
-    AyudaContextualComponent, AvisoModoSuperuserComponent,
+    AyudaContextualComponent, AvisoModoSuperuserComponent, ChipPlanComponent, MejorarPlanHostComponent,
+    AvisoPruebaComponent, AvisoDemoComponent, SelectorEmpresaComponent, DemoTerminadaComponent,
   ],
   templateUrl: './demo-layout.html',
 })
@@ -87,6 +107,9 @@ export class DemoLayoutComponent {
   readonly themeSvc = inject(ThemeService);
   private readonly authSvc = inject(AuthService);
   private readonly perm = inject(PermissionService);
+  private readonly plan = inject(PlanService);
+  /** Despacho de ejemplo con los 14 días agotados: se enseña la pantalla de fin en lugar del contenido. */
+  readonly demoTerminada = this.plan.demoVencida;
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   readonly searchMenuOpen = signal(false);
@@ -186,8 +209,8 @@ export class DemoLayoutComponent {
     {
       category: 'Inteligencia Artificial',
       items: [
-        { name: 'Recepción IA', href: '/recepcion-ia', icon: MessagesSquare, modulo: 'RecepciónIA' },
-        { name: 'Agente IA', href: '/agente-ia', icon: Bot, badge: 'Beta' },
+        { name: 'Recepción IA', href: '/recepcion-ia', icon: MessagesSquare, modulo: 'RecepciónIA', funcion: 'recepcionIA' },
+        { name: 'Agente IA', href: '/agente-ia', icon: Bot, badge: 'Beta', funcion: 'agenteIA' },
         // { name: 'Vertey Studio', href: '/vertey-studio', icon: Sparkles, badge: 'Pro' },
       ],
     },
@@ -203,8 +226,8 @@ export class DemoLayoutComponent {
     {
       category: 'Finanzas',
       items: [
-        { name: 'Facturación', href: '/facturacion', icon: Receipt, modulo: 'Facturación' },
-        { name: 'Tesorería', href: '/tesoreria', icon: Wallet, modulo: 'Tesorería' },
+        { name: 'Facturación', href: '/facturacion', icon: Receipt, modulo: 'Facturación', funcion: 'facturacion' },
+        { name: 'Tesorería', href: '/tesoreria', icon: Wallet, modulo: 'Tesorería', funcion: 'tesoreria' },
       ],
     },
     {
@@ -228,7 +251,7 @@ export class DemoLayoutComponent {
    * Menú filtrado por rol: oculta items cuyo módulo el usuario no puede ver,
    * y descarta categorías que quedan sin items. Items sin `modulo` siempre se muestran.
    */
-  readonly visibleCategories = computed<NavCategory[]>(() => {
+  readonly visibleCategories = computed<NavCategoryVista[]>(() => {
     // Leer la lista de miembros mantiene este computed reactivo cuando el rol llega tras el login.
     this.perm.userRole();
     const isSuperUser = this.perm.isSuperUser();
@@ -236,7 +259,10 @@ export class DemoLayoutComponent {
       .filter(cat => !cat.superuserOnly || isSuperUser)
       .map(cat => ({
         ...cat,
-        items: cat.items.filter(item => !item.modulo || this.perm.can(item.modulo, 'ver')),
+        items: cat.items
+          .filter(item => !item.modulo || this.perm.can(item.modulo, 'ver'))
+          // Candado de plan (distinto al de rol): se ve, con insignia, y la ruta pinta la vista previa.
+          .map(item => ({ ...item, bloqueado: !!item.funcion && !this.plan.tiene(item.funcion) })),
       }))
       .filter(cat => cat.items.length > 0);
   });

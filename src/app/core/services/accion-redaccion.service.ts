@@ -1,5 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { Schema } from 'firebase/ai';
+import { CupoIaAgotadoError, mensajeDeError } from '../agent/errores-ia';
+import { IaCupoService } from '../planes/ia-cupo';
 import { AiService } from './ai.service';
 import {
   construirPromptRedaccion, normalizarRedaccion, type SolicitudRedaccion, type TextoRedactado,
@@ -17,17 +19,19 @@ const MENSAJE_FALLO = 'No se pudo redactar el mensaje. Inténtalo de nuevo o esc
 @Injectable({ providedIn: 'root' })
 export class AccionRedaccionService {
   private readonly ai = inject(AiService);
+  private readonly cupo = inject(IaCupoService);
 
   /** Nunca lanza: el usuario siempre puede seguir escribiendo a mano. */
   async redactar(s: SolicitudRedaccion): Promise<ResultadoRedaccion> {
     if (!s.instrucciones.trim()) return { ok: false, mensaje: 'Explica qué quieres que diga el mensaje.' };
     try {
+      await this.cupo.reservar();
       const model = this.ai.getJsonModel(SCHEMA);
       const result = await model.generateContent(construirPromptRedaccion(s));
       const texto = normalizarRedaccion(JSON.parse(result.response.text()));
       return texto ? { ok: true, texto } : { ok: false, mensaje: MENSAJE_FALLO };
-    } catch {
-      return { ok: false, mensaje: MENSAJE_FALLO };
+    } catch (e) {
+      return { ok: false, mensaje: e instanceof CupoIaAgotadoError ? mensajeDeError(e) : MENSAJE_FALLO };
     }
   }
 }
