@@ -104,6 +104,25 @@ describe('procesarEnvio: precondiciones y desactivado (4.2)', () => {
     expect(e.sender.llamadas).toHaveLength(0);
   });
 
+  it('despacho demo: nunca se envía a la AEAT aunque tenga Verifactu activo', async () => {
+    const e = montar({ empresa: { ...empresa(), esDemo: true } });
+    expect(await procesarEnvio(e.deps, alta('inv1'))).toEqual({ sent: false, motivo: 'verifactu_desactivado' });
+    expect(e.sender.llamadas).toHaveLength(0);
+    expect(e.store.head(CO)).toBeNull();
+  });
+
+  it('plan demo tampoco envía', async () => {
+    const e = montar({ empresa: { ...empresa(), suscripcion: { plan: 'demo' } } });
+    expect(await procesarEnvio(e.deps, alta('inv1'))).toEqual({ sent: false, motivo: 'verifactu_desactivado' });
+    expect(e.sender.llamadas).toHaveLength(0);
+  });
+
+  it('drenarEmpresa no hace nada en un despacho demo', async () => {
+    const e = montar({ empresa: { ...empresa(), esDemo: true } });
+    await drenarEmpresa(e.deps, CO, { forzar: true });
+    expect(e.sender.llamadas).toHaveLength(0);
+  });
+
   it('S3.4 cliente sin NIF: error de precondición con mensaje de NIF; sender y cabecera intactos', async () => {
     const e = montar({ facturas: [factura('inv1', { clienteNif: '' })] });
     const r = await procesarEnvio(e.deps, alta('inv1'));

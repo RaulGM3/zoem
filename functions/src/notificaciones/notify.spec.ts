@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { notifyUsers, type NotifyDb, type NotifyMessaging } from './notify';
 
 interface FakeState {
+  companies?: Record<string, { esDemo?: boolean; suscripcion?: { plan?: string } } | undefined>;
   users: Record<string, { notificationPrefs?: Record<string, boolean> } | undefined>;
   tokens: Record<string, string[]>;
 }
@@ -13,6 +14,10 @@ function setup(state: FakeState, sendResponses?: Array<{ success: boolean; code?
   const db: NotifyDb = {
     doc: (path: string) => ({
       get: async () => {
+        if (path.startsWith('companies/')) {
+          const c = state.companies?.[path.replace('companies/', '')];
+          return { exists: c !== undefined, data: () => c };
+        }
         const uid = path.replace('users/', '');
         const data = state.users[uid];
         return { exists: data !== undefined, data: () => data };
@@ -53,6 +58,25 @@ const BASE = {
 };
 
 describe('notifyUsers', () => {
+  it('en un despacho demo guarda la notificación in-app pero NO envía push', async () => {
+    const s = setup({ companies: { c1: { esDemo: true } }, users: { a: {} }, tokens: { a: ['ta'] } });
+    await notifyUsers(s.db, s.messaging, { ...BASE, userIds: ['a'] });
+    expect(s.added).toHaveLength(1);
+    expect(s.send).not.toHaveBeenCalled();
+  });
+
+  it('plan demo también bloquea el push', async () => {
+    const s = setup({ companies: { c1: { suscripcion: { plan: 'demo' } } }, users: { a: {} }, tokens: { a: ['ta'] } });
+    await notifyUsers(s.db, s.messaging, { ...BASE, userIds: ['a'] });
+    expect(s.send).not.toHaveBeenCalled();
+  });
+
+  it('empresa normal sigue enviando push', async () => {
+    const s = setup({ companies: { c1: {} }, users: { a: {} }, tokens: { a: ['ta'] } });
+    await notifyUsers(s.db, s.messaging, { ...BASE, userIds: ['a'] });
+    expect(s.send).toHaveBeenCalledOnce();
+  });
+
   it('deduplica userIds y crea un doc in-app por usuario', async () => {
     const s = setup({ users: { a: {}, b: {} }, tokens: {} });
     await notifyUsers(s.db, s.messaging, { ...BASE, userIds: ['a', 'b', 'a'] });

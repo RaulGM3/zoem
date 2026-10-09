@@ -31,6 +31,8 @@ const ctx = (uid: string, role: string, companyId = CID) => env.authenticatedCon
 async function sembrarMiembros() {
   await env.withSecurityRulesDisabled(async (c) => {
     const db = c.firestore();
+    // Las rules de plan leen companies/{cid}.derechos: la empresa debe existir (sin `derechos` = legada).
+    await setDoc(doc(db, `companies/${CID}`), { name: 'Empresa' });
     for (const [uid, role] of [['admin', 'Admin'], ['gestor', 'Gestor'], ['usuario', 'Usuario'], ['viewer', 'Viewer']]) {
       await setDoc(doc(db, `companies/${CID}/members/${uid}`), { role, estado: 'activo' });
     }

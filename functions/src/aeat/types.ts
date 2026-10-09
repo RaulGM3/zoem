@@ -70,6 +70,9 @@ export interface InvoiceDoc {
 }
 
 export interface CompanyDoc {
+  /** Despacho de ejemplo: sin efectos externos (ver autoservicio/suscripcion.ts). */
+  esDemo?: boolean;
+  suscripcion?: { plan?: string };
   name: string;
   cif?: string;
   ca: string;

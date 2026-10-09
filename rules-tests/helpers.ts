@@ -34,6 +34,10 @@ export async function crearEntorno(proyecto: string): Promise<RulesTestEnvironme
       });
     }
     await setDoc(doc(db, 'users/super'), { isSuperUser: true });
+    // Las rules de plan leen companies/{cid}.derechos: la empresa debe existir (sin `derechos` = legada, sin restricciones).
+    for (const cid of new Set(Object.values(USUARIOS).map((u) => u.cid))) {
+      await setDoc(doc(db, `companies/${cid}`), { name: `Empresa ${cid}` });
+    }
   });
   return env;
 }

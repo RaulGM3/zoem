@@ -57,8 +57,69 @@ service cloud.firestore {
       return hasRole(cid, ['Admin', 'Gestor']);
     }
     function canWrite(cid) {
-      // Cualquier miembro activo que NO sea Viewer
-      return isActiveMember(cid) && memberData(cid).role != 'Viewer';
+      // Cualquier miembro activo que NO sea Viewer (y la empresa no esté en solo lectura)
+      return isActiveMember(cid) && memberData(cid).role != 'Viewer' && escribible(cid);
+    }
+    // Variantes de escritura: igual que isManager/isCompanyAdmin pero bloqueadas si la empresa está
+    // en solo lectura (demo terminada). Las LECTURAS siguen usando isManager/isCompanyAdmin.
+    function managerWrite(cid) {
+      return isManager(cid) && escribible(cid);
+    }
+    function adminWrite(cid) {
+      return isCompanyAdmin(cid) && escribible(cid);
+    }
+
+    // ---- Plan / derechos (fase 3) --------------------------------------
+    // `companies/{cid}.derechos` es una copia DENORMALIZADA de los derechos efectivos que mantiene la
+    // Function sincronizarDerechos (lógica en functions/src/planes/derechosDoc.ts, testeada). Ningún
+    // cliente puede escribirla. Sin `derechos` (empresa legada) NO se restringe nada.
+    //   derechos = { funciones:{...}, limites:{...|null}, soloLectura, hasta: ts|null, despues:{...}|null }
+    // `hasta` es el instante en que rigen los derechos de `despues` (fin de prueba/demo): así la
+    // caducidad no depende de un cron. Coste: +1 acceso (companies/{cid}), compartido por todas las
+    // funciones de abajo, y +1 (uso/...) en los cupos. Los gets repetidos del mismo doc se cachean.
+    function empresaDoc(cid) {
+      return get(/databases/$(database)/documents/companies/$(cid)).data;
+    }
+    function sinDerechos(cid) {
+      return !('derechos' in empresaDoc(cid));
+    }
+    function derechosVigentes(cid) {
+      let d = empresaDoc(cid).derechos;
+      return (d.hasta != null && request.time >= d.hasta) ? d.despues : d;
+    }
+    function tieneFuncion(cid, f) {
+      return sinDerechos(cid) || derechosVigentes(cid).funciones[f] == true;
+    }
+    function escribible(cid) {
+      return sinDerechos(cid) || derechosVigentes(cid).soloLectura != true;
+    }
+    // Clave del contador mensual: uso/yyyy-mm (UTC, igual que la Function).
+    function mesUso() {
+      return string(request.time.year()) + '-' + (request.time.month() < 10 ? '0' : '') + string(request.time.month());
+    }
+    function usoPath(cid, docId) {
+      return /databases/$(database)/documents/companies/$(cid)/uso/$(docId);
+    }
+    function usoDe(cid, docId, campo) {
+      return exists(usoPath(cid, docId)) ? get(usoPath(cid, docId)).data.get(campo, 0) : 0;
+    }
+    // Quedan `extra` unidades de cupo? limite null = ilimitado. Eventualmente consistente (soft limit).
+    function hayCupo(cid, limite, docId, campo, extra) {
+      return sinDerechos(cid)
+        || derechosVigentes(cid).limites[limite] == null
+        || usoDe(cid, docId, campo) + extra <= derechosVigentes(cid).limites[limite];
+    }
+    function hayCupoBytes(cid, bytes) {
+      return sinDerechos(cid)
+        || derechosVigentes(cid).limites.documentosMB == null
+        || usoDe(cid, 'total', 'documentosBytes') + bytes <= derechosVigentes(cid).limites.documentosMB * 1048576;
+    }
+    // Escritura en funciones de pago: rol Admin/Gestor + función incluida en el plan + empresa escribible.
+    function tesoreriaWrite(cid) {
+      return managerWrite(cid) && tieneFuncion(cid, 'tesoreria');
+    }
+    function casoActivo(estado) {
+      return estado in ['pendiente', 'en_proceso', 'urgente'];
     }
 
     // Valida notificationPrefs en users/{uid}: si el update NO lo toca, pasa;
@@ -111,12 +172,13 @@ service cloud.firestore {
       allow get:    if isSuper() || isMember(cid);
       allow list:   if isSuper();
       allow create: if isSuper();                       // alta de empresa = superusuario
-      // settings + saldo bancario (tesorería). Campos de plataforma solo super;
+      // settings + saldo bancario (tesorería). Campos de plataforma (plan, suscripcion, derechos, esDemo, autoservicio, createdBy) solo super;
       // `logo` (branding) solo Admin.
       allow update: if isSuper()
-                    || (isManager(cid)
+                    || (managerWrite(cid)
                         && !request.resource.data.diff(resource.data).affectedKeys()
-                             .hasAny(['plan', 'isActive', 'slug', 'createdAt'])
+                             .hasAny(['plan', 'suscripcion', 'derechos', 'isActive', 'slug', 'createdAt',
+                                     'esDemo', 'autoservicio', 'createdBy'])
                         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['logo'])
                             || isCompanyAdmin(cid)));
       allow delete: if isSuper();
@@ -144,18 +206,23 @@ service cloud.firestore {
 
       match /members/{memberUid} {
         allow read:   if isSuper() || isMember(cid) || memberUid == request.auth.uid;
-        allow create: if isSuper() || isCompanyAdmin(cid) || selfJoin(cid, memberUid);
-        allow update: if isSuper() || isCompanyAdmin(cid)
+        // Alta (Admin o auto-alta por invitación) sujeta al cupo de usuarios del plan.
+        allow create: if isSuper()
+                      || ((adminWrite(cid) || (selfJoin(cid, memberUid) && escribible(cid)))
+                          && hayCupo(cid, 'usuarios', 'total', 'usuarios', 1));
+        allow update: if isSuper() || adminWrite(cid)
                       || (memberUid == request.auth.uid && onlyLoginTouched());
-        allow delete: if isSuper() || isCompanyAdmin(cid);
+        allow delete: if isSuper() || adminWrite(cid);
       }
 
       // ---- Finanzas / tesorería: Admin + Gestor ----------------------
-      match /cuentas/{doc=**}                { allow read, write: if isSuper() || isManager(cid); }
-      match /cierres_caja/{doc=**}           { allow read, write: if isSuper() || isManager(cid); }
-      match /retiros/{doc=**}                { allow read, write: if isSuper() || isManager(cid); }
-      match /tesoreria_meta/{doc=**}         { allow read, write: if isSuper() || isManager(cid); }
-      match /movimientos_generales/{doc=**}  { allow read, write: if isSuper() || isManager(cid); }
+      // Plan: escribir exige la función `tesoreria` (free la ve pero no la escribe; nunca se borra nada:
+      // al bajar de plan queda en solo lectura). Leer sigue igual.
+      match /cuentas/{doc=**}                { allow read: if isSuper() || isManager(cid); allow write: if isSuper() || tesoreriaWrite(cid); }
+      match /cierres_caja/{doc=**}           { allow read: if isSuper() || isManager(cid); allow write: if isSuper() || tesoreriaWrite(cid); }
+      match /retiros/{doc=**}                { allow read: if isSuper() || isManager(cid); allow write: if isSuper() || tesoreriaWrite(cid); }
+      match /tesoreria_meta/{doc=**}         { allow read: if isSuper() || isManager(cid); allow write: if isSuper() || tesoreriaWrite(cid); }
+      match /movimientos_generales/{doc=**}  { allow read: if isSuper() || isManager(cid); allow write: if isSuper() || tesoreriaWrite(cid); }
 
       // ---- Facturas recibidas (libro registro + IVA soportado): Admin + Gestor ----
       // Doc id = claveFactura(nif, numero) (base64url): no se puede recomputar en rules, así
@@ -261,7 +328,7 @@ service cloud.firestore {
 
         allow read: if isSuper() || isManager(cid);
 
-        allow create: if (isSuper() || isManager(cid))
+        allow create: if (isSuper() || tesoreriaWrite(cid))
           && request.resource.data.keys().hasOnly(clavesEscribibles())
           && request.resource.data.keys().hasAll(['companyId', 'numeroRecepcion', 'tipoFactura', 'claveOperacion',
                'proveedor', 'numero', 'fechaExpedicion', 'fechaRegistro', 'periodo303', 'lineasIva', 'total',
@@ -274,7 +341,7 @@ service cloud.firestore {
           && qrValidacionCliente(request.resource.data.qrValidacion)
           && (!('id' in request.resource.data) || request.resource.data.id == facturaId);
 
-        allow update: if (isSuper() || isManager(cid))
+        allow update: if (isSuper() || tesoreriaWrite(cid))
           && resource.data.companyId == cid
           && request.resource.data.keys().hasOnly(clavesEscribibles())
           && !request.resource.data.diff(resource.data).affectedKeys().hasAny(clavesInmutables())
@@ -291,11 +358,11 @@ service cloud.firestore {
       // Solo se crea con 1 y solo sube de 1 en 1 (la transacción lo incrementa junto a la factura).
       match /facturas_recibidas_meta/{ejercicio} {
         allow read: if isSuper() || isManager(cid);
-        allow create: if (isSuper() || isManager(cid))
+        allow create: if (isSuper() || tesoreriaWrite(cid))
           && ejercicio.matches('^[0-9]{4}$')
           && request.resource.data.keys().hasOnly(['ultimo'])
           && request.resource.data.ultimo == 1;
-        allow update: if (isSuper() || isManager(cid))
+        allow update: if (isSuper() || tesoreriaWrite(cid))
           && request.resource.data.keys().hasOnly(['ultimo'])
           && request.resource.data.ultimo == resource.data.ultimo + 1;
         allow delete: if false;
@@ -304,11 +371,19 @@ service cloud.firestore {
       // ---- Casos (operativo) -----------------------------------------
       match /casos/{casoId} {
         allow read:  if isSuper() || isMember(cid);
-        allow write: if isSuper() || canWrite(cid);
+        // Crear consume cupo de casos activos; reabrir un caso cerrado también (soft limit, ver hayCupo).
+        allow create: if isSuper()
+                      || (canWrite(cid) && hayCupo(cid, 'casosActivos', 'total', 'casosActivos', 1));
+        allow update: if isSuper()
+                      || (canWrite(cid)
+                          && (casoActivo(resource.data.get('estado', ''))
+                              || !casoActivo(request.resource.data.get('estado', ''))
+                              || hayCupo(cid, 'casosActivos', 'total', 'casosActivos', 1)));
+        allow delete: if isSuper() || canWrite(cid);
 
-        // gestoría = movimientos financieros del caso → Admin/Gestor
-        match /gestoria/{doc=**}       { allow read, write: if isSuper() || isManager(cid); }
-        match /gestoria_slots/{doc=**} { allow read, write: if isSuper() || isManager(cid); }
+        // gestoría = movimientos financieros del caso → Admin/Gestor (función `tesoreria` para escribir)
+        match /gestoria/{doc=**}       { allow read: if isSuper() || isManager(cid); allow write: if isSuper() || tesoreriaWrite(cid); }
+        match /gestoria_slots/{doc=**} { allow read: if isSuper() || isManager(cid); allow write: if isSuper() || tesoreriaWrite(cid); }
 
         // documentos del caso → escritura no-Viewer, pero SIN eliminaciones
         // reales (solo soft delete vía update) y con auditoría append-only.
@@ -316,7 +391,7 @@ service cloud.firestore {
         match /doc_folders/{folderId} {
           allow read:   if isSuper() || isMember(cid);
           allow create: if isSuper() || canWrite(cid);
-          allow update: if isSuper() || isCompanyAdmin(cid)
+          allow update: if isSuper() || adminWrite(cid)
                         || (canWrite(cid) && resource.data.deleted != true);
           allow delete: if isSuper();
 
@@ -342,9 +417,9 @@ service cloud.firestore {
         }
         match /doc_slots/{slotId} {
           allow read:   if isSuper() || (isMember(cid) && canReadClassified(cid));
-          allow create: if isSuper() || isCompanyAdmin(cid)
+          allow create: if isSuper() || adminWrite(cid)
                         || (canWrite(cid) && request.resource.data.clasificado != true);
-          allow update: if isSuper() || isCompanyAdmin(cid)
+          allow update: if isSuper() || adminWrite(cid)
                         || (canWrite(cid) && resource.data.deleted != true
                             && resource.data.clasificado != true
                             && classificationUntouched());
@@ -359,9 +434,12 @@ service cloud.firestore {
         }
         match /doc_files/{fileId} {
           allow read:   if isSuper() || (isMember(cid) && canReadClassified(cid));
-          allow create: if isSuper() || isCompanyAdmin(cid)
-                        || (canWrite(cid) && request.resource.data.clasificado != true);
-          allow update: if isSuper() || isCompanyAdmin(cid)
+          // Subir un archivo consume cupo de almacenamiento (sizeBytes frente a documentosMB).
+          allow create: if isSuper()
+                        || ((adminWrite(cid)
+                             || (canWrite(cid) && request.resource.data.clasificado != true))
+                            && hayCupoBytes(cid, request.resource.data.get('sizeBytes', 0)));
+          allow update: if isSuper() || adminWrite(cid)
                         || (canWrite(cid) && resource.data.deleted != true
                             && resource.data.clasificado != true
                             && classificationUntouched());
@@ -440,7 +518,7 @@ service cloud.firestore {
                               || (memberData(cid).role in resource.data.get('visibleRoles', []))));
         allow list:   if isSuper() || isMember(cid);
         allow create: if isSuper() || canWrite(cid);
-        allow update: if isSuper() || isCompanyAdmin(cid)
+        allow update: if isSuper() || adminWrite(cid)
                       || (canWrite(cid) && resource.data.deleted != true);
         allow delete: if isSuper();
 
@@ -451,7 +529,21 @@ service cloud.firestore {
           allow update, delete: if false;
         }
       }
-      match /casoPlantillas/{doc=**} { allow read: if isSuper() || isMember(cid); allow write: if isSuper() || canWrite(cid); }
+      // Plantillas de caso: el DOC raíz consume cupo al crearse (borrar lo libera); sus subcolecciones
+      // (hitos, modeloCostos) no cuentan.
+      match /casoPlantillas/{plantillaId} {
+        allow read:   if isSuper() || isMember(cid);
+        allow create: if isSuper()
+                      || (canWrite(cid) && hayCupo(cid, 'plantillas', 'total', 'plantillas', 1));
+        allow update, delete: if isSuper() || canWrite(cid);
+
+        // OJO: `{sub}/{doc=**}` (subcolección + docs). Un `{sub=**}` suelto también casa con el propio
+        // doc de la plantilla (cero segmentos) y regalaría el create sin pasar por el cupo.
+        match /{sub}/{doc=**} {
+          allow read:  if isSuper() || isMember(cid);
+          allow write: if isSuper() || canWrite(cid);
+        }
+      }
 
       // ---- Acciones (mensajes plantilla con documento opcional) --------
       // Catálogo de la empresa: lo lee cualquier miembro (se ejecutan desde
@@ -480,24 +572,26 @@ service cloud.firestore {
       match /acciones/{accionId} {
         allow read:   if isSuper() || isMember(cid);
         allow create: if isSuper()
-                      || (isManager(cid)
+                      || (managerWrite(cid)
                           && accionValida()
                           && request.resource.data.createdBy == request.auth.uid
                           && request.resource.data.createdAt == request.time);
         allow update: if isSuper()
-                      || (isManager(cid)
+                      || (managerWrite(cid)
                           && accionValida()
                           && request.resource.data.createdBy == resource.data.createdBy
                           && request.resource.data.createdAt == resource.data.createdAt);
-        allow delete: if isSuper() || isManager(cid);
+        allow delete: if isSuper() || managerWrite(cid);
       }
 
       // Log de ejecuciones de acciones: append-only. Lo crea quien ejecuta
       // (miembro activo no-Viewer) a su nombre; nadie lo edita ni borra.
       match /accion_registros/{registroId} {
         allow read:   if isSuper() || isMember(cid);
+        // Cada ejecución consume cupo del MES (uso/yyyy-mm.accionesMes).
         allow create: if isSuper()
                       || (canWrite(cid)
+                          && hayCupo(cid, 'accionesMes', mesUso(), 'accionesMes', 1)
                           && request.resource.data.keys().hasOnly(['companyId', 'accionId', 'accionNombre',
                                'contactoIds', 'casoId', 'hitoId', 'canal', 'docPath', 'createdBy', 'createdAt'])
                           && request.resource.data.keys().hasAll(['companyId', 'accionId', 'accionNombre',
@@ -527,8 +621,8 @@ service cloud.firestore {
       // Feed de actividad: cualquier miembro activo agrega; editar/borrar = Admin/Gestor
       match /actividad/{doc=**} {
         allow read:   if isSuper() || isMember(cid);
-        allow create: if isSuper() || isActiveMember(cid);
-        allow update, delete: if isSuper() || isManager(cid);
+        allow create: if isSuper() || (isActiveMember(cid) && escribible(cid));
+        allow update, delete: if isSuper() || managerWrite(cid);
       }
 
       // ---- Configuración de la empresa (matriz de permisos, etc.) ------
@@ -537,7 +631,7 @@ service cloud.firestore {
       // depende de este doc, así que no hace falta leerlo con get() aquí.
       match /settings/{settingId} {
         allow read:  if isSuper() || isMember(cid);
-        allow write: if isSuper() || isCompanyAdmin(cid);
+        allow write: if isSuper() || adminWrite(cid);
       }
 
       // ---- Contactos (subcolección: path ya scopea el tenant) ---------
@@ -545,10 +639,17 @@ service cloud.firestore {
       // se restringe a Super para no perder el rastro deletedAt/deletedBy.
       match /contactos/{id} {
         allow read:   if isSuper() || isMember(cid);
-        allow create: if isSuper() || canWrite(cid);
-        allow update: if isSuper() || isCompanyAdmin(cid)
+        allow create: if isSuper()
+                      || (canWrite(cid) && hayCupo(cid, 'contactos', 'total', 'contactos', 1));
+        allow update: if isSuper() || adminWrite(cid)
                       || (canWrite(cid) && resource.data.get('deleted', false) != true);
         allow delete: if isSuper();
+      }
+
+      // Contadores de uso (cupos): los mantienen las Functions con Admin SDK. Los miembros solo leen.
+      match /uso/{docId} {
+        allow read:  if isSuper() || isMember(cid);
+        allow write: if false;
       }
 
       // ---- Notificaciones in-app (las crea solo el backend con Admin SDK) ---
@@ -568,11 +669,11 @@ service cloud.firestore {
         allow read:   if isSuper() || isCompanyAdmin(cid)
                       || (isActiveMember(cid) && resource.data.userId == request.auth.uid);
         allow create: if isSuper()
-                      || (isActiveMember(cid)
+                      || (isActiveMember(cid) && escribible(cid)
                           && request.resource.data.userId == request.auth.uid
                           && request.resource.data.companyId == cid
                           && request.resource.data.estado == 'pendiente');
-        allow update: if isSuper() || isCompanyAdmin(cid);
+        allow update: if isSuper() || adminWrite(cid);
         allow delete: if false;
       }
     }
@@ -586,14 +687,17 @@ service cloud.firestore {
       // No se puede enumerar: `list` queda restringido a admins/superusuario.
       allow get:    if true;
       allow list:   if isSuper() || (isSignedIn() && isCompanyAdmin(resource.data.companyId));
-      allow create: if isSuper() || isCompanyAdmin(request.resource.data.companyId);
+      // Invitar consume cupo de usuarios (el alta efectiva lo vuelve a comprobar en members).
+      allow create: if isSuper()
+                    || (adminWrite(request.resource.data.companyId)
+                        && hayCupo(request.resource.data.companyId, 'usuarios', 'total', 'usuarios', 1));
       // El invitado puede marcar accepted; el admin gestiona todo
       allow update: if isSuper()
-                    || isCompanyAdmin(resource.data.companyId)
+                    || adminWrite(resource.data.companyId)
                     || (resource.data.email == request.auth.token.email.lower()
                         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
                         && request.resource.data.status == 'accepted');
-      allow delete: if isSuper() || isCompanyAdmin(resource.data.companyId);
+      allow delete: if isSuper() || adminWrite(resource.data.companyId);
     }
 
     // ====================================================================
@@ -611,12 +715,14 @@ service cloud.firestore {
                         && (resource.data.clasificado != true
                             || isCompanyAdmin(resource.data.companyId)
                             || (request.auth.uid in resource.data.get('allowedUserIds', []))));
-      allow create: if isSuper() || isCompanyAdmin(request.resource.data.companyId)
-                    || (canWrite(request.resource.data.companyId)
-                        && request.resource.data.clasificado != true);
+      allow create: if isSuper()
+                    || ((adminWrite(request.resource.data.companyId)
+                         || (canWrite(request.resource.data.companyId)
+                             && request.resource.data.clasificado != true))
+                        && hayCupoBytes(request.resource.data.companyId, request.resource.data.get('sizeBytes', 0)));
       allow update: if isSuper()
                     || ((request.resource.data.companyId == resource.data.companyId)
-                        && (isCompanyAdmin(resource.data.companyId)
+                        && (adminWrite(resource.data.companyId)
                             || (canWrite(resource.data.companyId)
                                 && resource.data.deleted != true
                                 && resource.data.clasificado != true
@@ -642,7 +748,7 @@ service cloud.firestore {
       allow create: if isSuper() || canWrite(request.resource.data.companyId);
       allow update: if isSuper()
                     || ((request.resource.data.companyId == resource.data.companyId)
-                        && (isCompanyAdmin(resource.data.companyId)
+                        && (adminWrite(resource.data.companyId)
                             || (canWrite(resource.data.companyId) && resource.data.get('deleted', false) != true)));
       allow delete: if isSuper();
     }
@@ -653,12 +759,16 @@ service cloud.firestore {
                       && request.resource.data.companyId == resource.data.companyId);
       allow delete: if isSuper() || canWrite(resource.data.companyId);
     }
+    // Recepción IA: la función `recepcionIA` del plan es requisito para ESCRIBIR (leer sigue permitido).
     match /iaContacts/{id} {
       allow read:   if isSuper() || isMember(resource.data.companyId);
-      allow create: if isSuper() || canWrite(request.resource.data.companyId);
+      allow create: if isSuper() || (canWrite(request.resource.data.companyId)
+                      && tieneFuncion(request.resource.data.companyId, 'recepcionIA'));
       allow update: if isSuper() || (canWrite(resource.data.companyId)
+                      && tieneFuncion(resource.data.companyId, 'recepcionIA')
                       && request.resource.data.companyId == resource.data.companyId);
-      allow delete: if isSuper() || canWrite(resource.data.companyId);
+      allow delete: if isSuper() || (canWrite(resource.data.companyId)
+                      && tieneFuncion(resource.data.companyId, 'recepcionIA'));
     }
     // Plantillas: soft delete + auditoría inmutable + visibilidad configurable.
     // El CONTENIDO se protege en `get`; el `list` sigue abierto a miembros
@@ -675,7 +785,7 @@ service cloud.firestore {
       allow create: if isSuper() || canWrite(request.resource.data.companyId);
       allow update: if isSuper()
                     || ((request.resource.data.companyId == resource.data.companyId)
-                        && (isCompanyAdmin(resource.data.companyId)
+                        && (adminWrite(resource.data.companyId)
                             || (canWrite(resource.data.companyId) && resource.data.deleted != true)));
       allow delete: if isSuper();
 
@@ -696,7 +806,7 @@ service cloud.firestore {
       allow create: if isSuper() || canWrite(request.resource.data.companyId);
       allow update: if isSuper()
                     || ((request.resource.data.companyId == resource.data.companyId)
-                        && (isCompanyAdmin(resource.data.companyId)
+                        && (adminWrite(resource.data.companyId)
                             || (canWrite(resource.data.companyId) && resource.data.get('deleted', false) != true)));
       allow delete: if isSuper();
     }
@@ -728,12 +838,16 @@ service cloud.firestore {
       }
 
       allow read:   if isSuper() || isManager(resource.data.companyId);
-      allow create: if (isSuper() || isManager(request.resource.data.companyId))
+      // Plan: escribir exige la función `facturacion` (leer sigue permitido tras bajar de plan).
+      allow create: if (isSuper() || (managerWrite(request.resource.data.companyId)
+                        && tieneFuncion(request.resource.data.companyId, 'facturacion')))
                     && !('verifactu' in request.resource.data);
-      allow update: if (isSuper() || (isManager(resource.data.companyId)
+      allow update: if (isSuper() || (managerWrite(resource.data.companyId)
+                        && tieneFuncion(resource.data.companyId, 'facturacion')
                         && request.resource.data.companyId == resource.data.companyId))
                     && verifactuIntacto();
-      allow delete: if (isSuper() || isManager(resource.data.companyId))
+      allow delete: if (isSuper() || (managerWrite(resource.data.companyId)
+                        && tieneFuncion(resource.data.companyId, 'facturacion')))
                     && !verifactuVivo();
     }
 
@@ -766,6 +880,7 @@ service cloud.firestore {
       allow update: if isSuper()
         || (callMapped()
             && canWrite(callCompanyId())
+            && tieneFuncion(callCompanyId(), 'recepcionIA')
             && request.resource.data.agentId == resource.data.agentId);
       allow create, delete: if isSuper();
     }

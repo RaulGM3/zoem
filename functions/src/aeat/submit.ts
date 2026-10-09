@@ -1,6 +1,7 @@
 // Orquestador del envío Verifactu. Sin I/O propio: Firestore, red y certificados llegan
 // por puertos (ports.ts). Flujo: tx de entrada/reserva -> envío FUERA de la transacción ->
 // tx de liquidación. Ninguna llamada de red ocurre dentro de una transacción.
+import { esEmpresaDemo } from '../autoservicio/suscripcion';
 import {
   aplicarDecision,
   decidirEntrada,
@@ -206,7 +207,8 @@ async function descartarCabeza(
 export async function drenarEmpresa(deps: EnvioDeps, companyId: string, opciones: OpcionesDrenaje = {}): Promise<void> {
   const forzar = opciones.forzar ?? false;
   const company = await deps.docs.getCompany(companyId);
-  if (!company?.verifactu?.enabled) {
+  // Despacho demo: jamás se contacta con la AEAT.
+  if (!company?.verifactu?.enabled || esEmpresaDemo(company)) {
     console.log('[Verifactu:debug] drenarEmpresa -> Verifactu desactivado, no se drena', { companyId });
     return;
   }
@@ -291,7 +293,7 @@ export async function procesarEnvio(deps: EnvioDeps, solicitud: SolicitudEnvio):
     ca: company?.ca,
     verifactu: company?.verifactu,
   });
-  if (!company?.verifactu?.enabled) {
+  if (!company?.verifactu?.enabled || esEmpresaDemo(company)) {
     console.warn('[Verifactu:debug] procesarEnvio -> SALE: Verifactu desactivado en la empresa (servidor)');
     return { sent: false, motivo: 'verifactu_desactivado' };
   }

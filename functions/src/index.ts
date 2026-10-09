@@ -237,3 +237,13 @@ export { syncMemberClaims, syncSuperuserClaim, backfillMemberClaims, syncMyClaim
 export { calendarFeed } from './calendarFeed/calendarFeedHttp';
 export { createCalendarFeedToken, revokeCalendarFeedToken } from './calendarFeed/tokens';
 export { validarQrFacturaRecibida } from './aeat/validarQrCallable';
+
+// ─── Autoservicio: alta de despachos, demo y expiración de la prueba ─────────
+export { crearEmpresaAutoservicio, crearDespachoDemo, sembrarLlamadasDemo } from './autoservicio/crearEmpresa';
+export { expirarPruebas } from './autoservicio/expirarPruebas';
+
+// ─── Planes: derechos denormalizados, contadores de uso y cupo de IA (fase 3) ─
+export { sincronizarDerechos } from './planes/sincronizar';
+export { onPlantillaUso, onMiembroUso, onArchivoCasoUso, onArchivoContactoUso, onAccionRegistroUso } from './uso/triggers';
+export { recalcularUso } from './uso/recontar';
+export { reservarIA } from './ia/reservarIA';

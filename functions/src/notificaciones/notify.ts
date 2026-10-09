@@ -1,4 +1,5 @@
 import { FieldValue } from 'firebase-admin/firestore';
+import { esEmpresaDemo, type EmpresaConSuscripcion } from '../autoservicio/suscripcion';
 import * as logger from 'firebase-functions/logger';
 
 export type TipoNotificacion = 'llamadas' | 'casos' | 'contactos' | 'eventos' | 'hitos';
@@ -56,6 +57,7 @@ export async function notifyUsers(
 ): Promise<void> {
   const { companyId, tipo, titulo, cuerpo, route } = params;
   const userIds = [...new Set(params.userIds)];
+  const sinPush = await esDemo(db, companyId);
 
   for (const userId of userIds) {
     try {
@@ -74,11 +76,21 @@ export async function notifyUsers(
         createdAt: FieldValue.serverTimestamp(),
       });
 
-      if (prefs?.['push'] === false) continue;
+      if (sinPush || prefs?.['push'] === false) continue;
       await sendPush(db, messaging, userId, titulo, cuerpo, route);
     } catch (err) {
       logger.error('notifyUsers: fallo notificando al usuario', { userId, tipo, err });
     }
+  }
+}
+
+/** Despacho demo: la notificación in-app se guarda, pero no sale ningún push. */
+async function esDemo(db: NotifyDb, companyId: string): Promise<boolean> {
+  try {
+    const snap = await db.doc(`companies/${companyId}`).get();
+    return snap.exists && esEmpresaDemo(snap.data() as EmpresaConSuscripcion | undefined);
+  } catch {
+    return false;
   }
 }
 

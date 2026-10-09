@@ -14,6 +14,7 @@ import {
   type LlamadaData,
   type TriggerDeps,
 } from './handlers';
+import { contarUso } from '../uso/aplicar';
 import { notifyUsers, type NotifyDb, type NotifyMessaging } from './notify';
 
 const DB = '(default)';
@@ -60,24 +61,31 @@ export const onLlamadaCreated = onDocumentCreated(
 export const onCasoWritten = onDocumentWritten(
   { document: 'companies/{cid}/casos/{id}', database: DB },
   async (event) => {
-    await handleCasoWritten(buildDeps(), {
-      cid: event.params['cid'],
-      id: event.params['id'],
-      before: event.data?.before?.data() as CasoData | undefined,
-      after: event.data?.after?.data() as CasoData | undefined,
-    });
+    await Promise.all([
+      handleCasoWritten(buildDeps(), {
+        cid: event.params['cid'],
+        id: event.params['id'],
+        before: event.data?.before?.data() as CasoData | undefined,
+        after: event.data?.after?.data() as CasoData | undefined,
+      }),
+      // Contador de uso (cupo de casos activos): comparte trigger para no duplicar la ruta.
+      contarUso('caso', event.params['cid'], event.params['id'], event.data?.before?.data(), event.data?.after?.data()),
+    ]);
   },
 );
 
 export const onContactoWritten = onDocumentWritten(
   { document: 'companies/{cid}/contactos/{id}', database: DB },
   async (event) => {
-    await handleContactoWritten(buildDeps(), {
-      cid: event.params['cid'],
-      id: event.params['id'],
-      before: event.data?.before?.data() as ContactoData | undefined,
-      after: event.data?.after?.data() as ContactoData | undefined,
-    });
+    await Promise.all([
+      handleContactoWritten(buildDeps(), {
+        cid: event.params['cid'],
+        id: event.params['id'],
+        before: event.data?.before?.data() as ContactoData | undefined,
+        after: event.data?.after?.data() as ContactoData | undefined,
+      }),
+      contarUso('contacto', event.params['cid'], event.params['id'], event.data?.before?.data(), event.data?.after?.data()),
+    ]);
   },
 );
 

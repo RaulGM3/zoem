@@ -1,6 +1,14 @@
 {
   "indexes": [
     {
+      "collectionGroup": "companies",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "suscripcion.estado", "order": "ASCENDING" },
+        { "fieldPath": "suscripcion.periodoFin", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "notificaciones",
       "queryScope": "COLLECTION",
       "fields": [

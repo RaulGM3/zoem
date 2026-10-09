@@ -52,6 +52,21 @@ describe('companies/{cid} update', () => {
     await assertFails(upd('admin', { slug: 'otro' }));
   });
 
+  it('Gestor y Admin no se auto-asignan suscripcion (ni la editan)', async () => {
+    const SUS = { plan: 'enterprise', complementos: [], estado: 'activa', origen: 'manual' };
+    await assertFails(upd('gestor', { suscripcion: SUS }));
+    await assertFails(upd('admin', { suscripcion: SUS }));
+    await assertFails(upd('admin', { suscripcion: null }));
+    await assertFails(upd('admin', { saldoBancario: 5, 'suscripcion.plan': 'pro' }));
+  });
+
+  it('Admin no se marca ni se desmarca como demo/autoservicio ni cambia createdBy', async () => {
+    await assertFails(upd('admin', { esDemo: true }));
+    await assertFails(upd('admin', { esDemo: false }));
+    await assertFails(upd('admin', { autoservicio: true }));
+    await assertFails(upd('admin', { createdBy: 'otro' }));
+  });
+
   it('Usuario y Viewer no actualizan', async () => {
     await assertFails(upd('usuario', { saldoBancario: 1 }));
     await assertFails(upd('viewer', { saldoBancario: 1 }));
@@ -63,5 +78,6 @@ describe('companies/{cid} update', () => {
 
   it('superusuario actualiza todo', async () => {
     await assertSucceeds(updateDoc(superDb(), { plan: 'pro', isActive: false, logo: LOGO }));
+    await assertSucceeds(updateDoc(superDb(), { suscripcion: { plan: 'pro', complementos: [], estado: 'activa', origen: 'manual' } }));
   });
 });
