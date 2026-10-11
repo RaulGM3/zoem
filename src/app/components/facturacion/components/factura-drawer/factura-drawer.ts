@@ -24,13 +24,7 @@ import { normalizeLinea } from '../../../../core/services/invoice.service';
 import { Caso } from '../../../../interfaces';
 import { BreakpointService } from '../../../../core/services/breakpoint.service';
 import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
-import {
-  CAUSAS_EXENCION,
-  CAUSA_EXENCION_LABELS,
-  esLineaExenta,
-  IVA_LINEA_NUEVA,
-  opcionesIva,
-} from '../../../../interfaces/iva';
+import { CAUSAS_EXENCION, CAUSA_EXENCION_LABELS, esLineaExenta } from '../../../../interfaces/iva';
 import type { CausaExencion } from '../../../../interfaces/verifactu.interface';
 import { motivoBloqueoVerifactu } from '../../../../core/verifactu/verifactu-ui';
 import {
@@ -45,6 +39,7 @@ import { nifValidator } from '../../../../core/fiscal/nif.validator';
 import { getContactDisplayName, type Contact } from '../../../../interfaces/contact.interface';
 import { ImportePipe } from '../../../../core/moneda/importe.pipe';
 import { MonedaEmpresaService } from '../../../../core/moneda/moneda-empresa.service';
+import { FiscalEmpresaService } from '../../../../core/fiscal/fiscal-empresa.service';
 
 export interface InvoiceFormPayload {
   lineas: InvoiceLinea[];
@@ -70,9 +65,9 @@ interface IvaGroup {
  * Ya no existe el IVA "global" por línea: cada línea lleva su tipo. Las líneas guardadas sin tipo
  * propio toman el de su factura si llevan IVA (mismo importe) o el de línea nueva si no lo llevan.
  */
-function conTipoPropio(l: InvoiceLinea, tipoFacturaPct: number): InvoiceLinea {
+function conTipoPropio(l: InvoiceLinea, tipoFacturaPct: number, ivaLineaNueva: number): InvoiceLinea {
   if (l.ivaRate != null) return l;
-  return { ...l, ivaRate: l.aplicaIva ? tipoFacturaPct / 100 : IVA_LINEA_NUEVA };
+  return { ...l, ivaRate: l.aplicaIva ? tipoFacturaPct / 100 : ivaLineaNueva };
 }
 
 @Component({
@@ -83,11 +78,12 @@ function conTipoPropio(l: InvoiceLinea, tipoFacturaPct: number): InvoiceLinea {
 })
 export class FacturaDrawerComponent {
   protected readonly moneda = inject(MonedaEmpresaService);
+  protected readonly fiscal = inject(FiscalEmpresaService);
   private readonly fb = inject(FormBuilder);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly bp = inject(BreakpointService);
 
-  /** Opciones del selector de causa de exención (E1..E6, N1, N2). */
+  /** Opciones del selector de causa de exención (E1..E6, N1, N2). Solo se muestran en España (LIVA). */
   readonly causasExencion = CAUSAS_EXENCION.map((valor) => ({ valor, etiqueta: CAUSA_EXENCION_LABELS[valor] }));
 
   /** Se pone a `true` al intentar confirmar con el formulario inválido: entonces se muestran los errores. */
@@ -153,7 +149,7 @@ export class FacturaDrawerComponent {
 
   /** Tipos de IVA seleccionables; incluye los tipos libres que ya traiga la factura. */
   readonly tiposIva = computed(() =>
-    opcionesIva([
+    this.fiscal.opcionesIva([
       this.defaultIvaRate(),
       ...this.initialLineas().map((l) => (l.ivaRate != null ? l.ivaRate * 100 : null)),
     ]),
@@ -180,7 +176,7 @@ export class FacturaDrawerComponent {
 
   // --- Form ---
   readonly form = this.fb.group({
-    ivaRate: [21],
+    ivaRate: [this.fiscal.ivaPorDefecto()],
     issueDate: [''],
     dueDate: [''],
     notes: [''],
@@ -208,7 +204,7 @@ export class FacturaDrawerComponent {
   /** Por línea: ¿su tipo efectivo es exento/no sujeto (y por tanto exige causa)? */
   readonly lineaExenta = computed(() => {
     const val = this.formValue();
-    const globalRate = (val.ivaRate ?? 21) / 100;
+    const globalRate = (val.ivaRate ?? this.fiscal.ivaPorDefecto()) / 100;
     return val.lineas.map((l) =>
       esLineaExenta(
         { aplicaIva: !!l['aplicaIva'], ivaRate: l['ivaRate'] != null ? l['ivaRate'] / 100 : null },
@@ -219,7 +215,7 @@ export class FacturaDrawerComponent {
 
   readonly preview = computed(() => {
     const val = this.formValue();
-    const globalRate = (val.ivaRate ?? 21) / 100;
+    const globalRate = (val.ivaRate ?? this.fiscal.ivaPorDefecto()) / 100;
     let base = 0;
     let iva = 0;
     for (const l of val.lineas) {
@@ -235,7 +231,7 @@ export class FacturaDrawerComponent {
 
   readonly ivaBreakdown = computed((): IvaGroup[] => {
     const val = this.formValue();
-    const globalRate = (val.ivaRate ?? 21) / 100;
+    const globalRate = (val.ivaRate ?? this.fiscal.ivaPorDefecto()) / 100;
     const groups = new Map<number, { base: number; cuota: number }>();
 
     for (const l of val.lineas) {
@@ -313,10 +309,10 @@ export class FacturaDrawerComponent {
       this.form.patchValue({ ivaRate: rate, issueDate: issue, dueDate: due, notes }, { emitEvent: false });
       this.lineasArray.clear({ emitEvent: false });
       for (const l of lineas) {
-        this.lineasArray.push(this.createLineaGroup(conTipoPropio(normalizeLinea(l), rate)), { emitEvent: false });
+        this.lineasArray.push(this.createLineaGroup(conTipoPropio(normalizeLinea(l), rate, this.fiscal.ivaLineaNueva())), { emitEvent: false });
       }
       if (this.lineasArray.length === 0) {
-        this.lineasArray.push(this.createLineaGroup(normalizeLinea({ ivaRate: IVA_LINEA_NUEVA })), { emitEvent: false });
+        this.lineasArray.push(this.createLineaGroup(normalizeLinea({ ivaRate: this.fiscal.ivaLineaNueva() })), { emitEvent: false });
       }
       this.syncCausasExencion();
       this.formValue.set(this.form.getRawValue());
@@ -333,7 +329,7 @@ export class FacturaDrawerComponent {
         precioUnitario: 0,
         base: 0,
         aplicaIva: true,
-        ivaRate: IVA_LINEA_NUEVA,
+        ivaRate: this.fiscal.ivaLineaNueva(),
       }),
     );
   }
@@ -374,7 +370,9 @@ export class FacturaDrawerComponent {
   readonly mensajeErrorNif = (): string =>
     this.form.controls.cliente.controls.nif.hasError('required')
       ? 'Con Verifactu activado, el NIF del cliente es obligatorio.'
-      : 'El NIF no es válido: revisa los números y la letra.';
+      : this.fiscal.esEspana()
+        ? 'El NIF no es válido: revisa los números y la letra.'
+        : `El ${this.fiscal.etiquetaIdFiscal()} no es válido: revisa el formato.`;
 
   /** Desvincula el contacto conservando los datos escritos: pasa a ser un cliente puntual. */
   quitarContacto(): void {
@@ -485,13 +483,13 @@ export class FacturaDrawerComponent {
       return;
     }
     const val = this.form.getRawValue();
-    const globalRate = (val.ivaRate ?? 21) / 100;
+    const globalRate = (val.ivaRate ?? this.fiscal.ivaPorDefecto()) / 100;
     const exentas = this.lineaExenta();
 
     const lineas: InvoiceLinea[] = val.lineas.map((l, i) => {
       const cantidad = l['cantidad'] ?? 1;
       const precioUnitario = l['precioUnitario'] ?? 0;
-      const causa = exentas[i] ? (l['causaExencion'] as CausaExencion | '') : '';
+      const causa = exentas[i] && this.fiscal.esEspana() ? (l['causaExencion'] as CausaExencion | '') : '';
       return {
         concepto: l['concepto'] ?? '',
         descripcion: l['descripcion'] || undefined,
@@ -552,7 +550,7 @@ export class FacturaDrawerComponent {
     const { tipoId, nif } = this.form.controls.cliente.controls;
     const validadores: ValidatorFn[] = [];
     if (tipoId.value === 'nif') {
-      validadores.push(nifValidator(() => tipoId.value ?? 'nif'));
+      validadores.push(nifValidator(() => tipoId.value ?? 'nif', () => this.fiscal.pais()));
       if (this.verifactuEnabled()) validadores.push(Validators.required);
     }
     nif.setValidators(validadores);
@@ -565,7 +563,7 @@ export class FacturaDrawerComponent {
    * Solo actualiza validez/valor del control de la causa, sin emitir eventos (evita bucles).
    */
   private syncCausasExencion(): void {
-    const globalRate = (this.form.controls.ivaRate.value ?? 21) / 100;
+    const globalRate = (this.form.controls.ivaRate.value ?? this.fiscal.ivaPorDefecto()) / 100;
     for (const group of this.lineasArray.controls) {
       const causa = group.controls['causaExencion'];
       if (!causa) continue;
@@ -574,10 +572,12 @@ export class FacturaDrawerComponent {
         { aplicaIva: !!group.controls['aplicaIva'].value, ivaRate: rate != null ? rate / 100 : null },
         globalRate,
       );
-      if (exenta && !causa.hasValidator(Validators.required)) {
+      // La causa de exención es de la LIVA española: fuera de España una línea exenta no la necesita.
+      const exigeCausa = exenta && this.fiscal.esEspana();
+      if (exigeCausa && !causa.hasValidator(Validators.required)) {
         causa.addValidators(Validators.required);
         causa.updateValueAndValidity({ emitEvent: false });
-      } else if (!exenta && (causa.hasValidator(Validators.required) || causa.value)) {
+      } else if (!exigeCausa && (causa.hasValidator(Validators.required) || causa.value)) {
         causa.removeValidators(Validators.required);
         causa.reset('', { emitEvent: false });
       }

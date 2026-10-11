@@ -156,4 +156,41 @@ describe('validarFacturaRecibida', () => {
       expect(campos(validarFacturaRecibida({ ...base(), fechaExpedicion: '02/04/2026' }))).toContain('fechaExpedicion');
     });
   });
+
+  describe('causa de exención solo en España', () => {
+    const exenta = { base: 80, tipo: 0, cuota: 0, exento: true } as const;
+    const datos = (): DatosFacturaRecibida => ({ ...base(), lineasIva: [exenta], total: 80 });
+
+    it('en España una línea exenta sin causa es un error', () => {
+      expect(campos(validarFacturaRecibida(datos()))).toContain('lineasIva.0.causaExencion');
+    });
+
+    it('fuera de España no hace falta causa', () => {
+      for (const p of ['MX', 'CO', 'CL'] as const) {
+        expect(campos(validarFacturaRecibida(datos(), p)), p).not.toContain('lineasIva.0.causaExencion');
+      }
+    });
+  });
+
+  describe('identificador fiscal del emisor según el país', () => {
+    it('en México no aplica el dígito de control español: un RFC con forma válida se acepta', () => {
+      const r = validarFacturaRecibida({ ...base(), proveedor: { nombre: 'X', nif: 'XAXX010101000' } }, 'MX');
+      expect(campos(r)).not.toContain('proveedor.nif');
+    });
+
+    it('en México se rechaza un RFC con forma inválida y el mensaje usa la etiqueta del país', () => {
+      const r = validarFacturaRecibida({ ...base(), proveedor: { nombre: 'X', nif: '123' } }, 'MX');
+      expect(r.errores.find((e) => e.campo === 'proveedor.nif')?.mensaje).toBe('El RFC del emisor no es válido.');
+    });
+
+    it('en España el mensaje no cambia', () => {
+      const r = validarFacturaRecibida({ ...base(), proveedor: { nombre: 'X', nif: 'B12345670' } });
+      expect(r.errores.find((e) => e.campo === 'proveedor.nif')?.mensaje).toBe('El NIF del emisor no es válido.');
+    });
+
+    it('fuera de España el periodo inválido no habla del modelo 303', () => {
+      const r = validarFacturaRecibida({ ...base(), periodo303: { ejercicio: 2026, trimestre: 9 as never } }, 'CO');
+      expect(r.errores.find((e) => e.campo === 'periodo303')?.mensaje).toBe('El periodo de IVA no es válido.');
+    });
+  });
 });

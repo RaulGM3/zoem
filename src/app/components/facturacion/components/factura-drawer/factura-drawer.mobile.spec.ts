@@ -6,6 +6,7 @@ import type { Caso } from '../../../../interfaces';
 import type { Contact } from '../../../../interfaces/contact.interface';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
 import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
+import { provideFiscalTest } from '../../../../core/fiscal/fiscal-empresa.testing';
 
 function mockViewport(mobile: boolean): void {
   Object.defineProperty(window, 'matchMedia', {
@@ -30,7 +31,7 @@ describe('FacturaDrawerComponent — overlay-shell y móvil', () => {
   async function montar(mobile: boolean): Promise<void> {
     TestBed.resetTestingModule();
     mockViewport(mobile);
-    await TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [FacturaDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideMonedaTest(), provideFiscalTest()], imports: [FacturaDrawerComponent] }).compileComponents();
     fixture = TestBed.createComponent(FacturaDrawerComponent);
     fixture.componentRef.setInput('caso', { id: 'k', titulo: 'Caso Uno' } as unknown as Caso);
     fixture.componentRef.setInput('initialLineas', [LINEA]);

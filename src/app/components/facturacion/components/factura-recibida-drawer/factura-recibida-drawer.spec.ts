@@ -7,6 +7,7 @@ import { ACCEPT_FACTURA, ACCEPT_FOTO, CapturaArchivoService, type ResultadoCaptu
 import { QrDecodeService } from '../../../../core/services/qr-decode.service';
 import { parseQrVerifactu, type ResultadoParseQr } from '../../../../core/facturas-recibidas/qr-verifactu';
 import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
+import { provideFiscalTest } from '../../../../core/fiscal/fiscal-empresa.testing';
 
 describe('FacturaRecibidaDrawerComponent', () => {
   let fixture: ComponentFixture<FacturaRecibidaDrawerComponent>;
@@ -18,7 +19,7 @@ describe('FacturaRecibidaDrawerComponent', () => {
   const el = (): HTMLElement => fixture.nativeElement;
   const q = <T extends HTMLElement>(sel: string): T => el().querySelector<T>(sel)!;
 
-  async function montar(): Promise<void> {
+  async function montar(pais = 'ES'): Promise<void> {
     TestBed.resetTestingModule();
     const prueba = cupoDePruebas();
     cupo = prueba.cupo;
@@ -26,7 +27,7 @@ describe('FacturaRecibidaDrawerComponent', () => {
     leerQr = vi.fn().mockResolvedValue(null);
     await TestBed.configureTestingModule({
       imports: [FacturaRecibidaDrawerComponent],
-      providers: [provideMonedaTest(), ...prueba.providers, 
+      providers: [provideMonedaTest({ pais }), provideFiscalTest({ pais }), ...prueba.providers, 
         { provide: FacturaExtractionService, useValue: { extraer } },
         { provide: QrDecodeService, useValue: { leer: leerQr } },
       ],
@@ -331,6 +332,71 @@ describe('FacturaRecibidaDrawerComponent', () => {
     });
   });
 
+  describe('fuera de España (México): sin funciones españolas', () => {
+    beforeEach(async () => {
+      await montar('MX');
+    });
+
+    const tiposDeLinea = (): string[] =>
+      Array.from(el().querySelectorAll<HTMLOptionElement>('#fr-tipo-0 option')).map((o) => o.value);
+
+    it('ofrece los tipos de IVA de México y la línea nueva nace al 16 %', () => {
+      expect(tiposDeLinea()).toEqual(['16', '8', '0']);
+      expect(q<HTMLSelectElement>('#fr-tipo-0').value).toBe('16');
+    });
+
+    it('no habla de AEAT, Verifactu ni modelo 303; el id del emisor es RFC', () => {
+      const texto = q('[role="dialog"]').textContent!;
+      expect(texto).not.toMatch(/AEAT|Verifactu|303/);
+      expect(texto).toMatch(/Periodo de IVA/);
+      expect(el().querySelector('label[for="fr-proveedor-nif"]')?.textContent).toContain('RFC del emisor');
+    });
+
+    it('una línea exenta no pide causa de exención (LIVA) y se puede registrar', async () => {
+      await escribir('fr-proveedor-nombre', 'Proveedor SA');
+      await escribir('fr-proveedor-nif', 'XAXX010101000');
+      await escribir('fr-numero', 'F-001');
+      await escribir('fr-fecha-expedicion', '2026-04-02');
+      await escribir('fr-base-0', '100');
+      const c = q<HTMLInputElement>('#fr-exenta-0');
+      c.checked = true;
+      c.dispatchEvent(new Event('change', { bubbles: true }));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(el().querySelector('#fr-causa-0')).toBeNull();
+      q<HTMLButtonElement>('[data-confirmar]').click();
+      fixture.detectChanges();
+      expect(emitidos).toHaveLength(1);
+      expect(emitidos[0].datos.lineasIva[0]).toMatchObject({ exento: true, tipo: 0, cuota: 0 });
+      expect(emitidos[0].datos.lineasIva[0].causaExencion).toBeUndefined();
+    });
+
+    it('no intenta leer el QR de Verifactu del archivo', async () => {
+      const input = q<HTMLInputElement>('#fr-archivo');
+      Object.defineProperty(input, 'files', { configurable: true, value: [new File([new Uint8Array(10)], 'f.pdf', { type: 'application/pdf' })] });
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(leerQr).not.toHaveBeenCalled();
+    });
+
+    it('un tipo extraído que el país no tiene (21 %) se conserva seleccionable', async () => {
+      const input = q<HTMLInputElement>('#fr-archivo');
+      extraer.mockResolvedValue({
+        ok: true,
+        datos: { proveedorNombre: 'P', proveedorNif: 'XAXX010101000', numero: '1', tipoFactura: 'F1', fechaExpedicion: '2026-04-02', lineasIva: [{ base: 100, tipo: 21, cuota: 21 }], total: 121, concepto: 'x' },
+      });
+      Object.defineProperty(input, 'files', { configurable: true, value: [new File([new Uint8Array(10)], 'f.pdf', { type: 'application/pdf' })] });
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(tiposDeLinea()).toContain('21');
+      expect(q<HTMLSelectElement>('#fr-tipo-0').value).toBe('21');
+    });
+  });
+
   describe('líneas exentas / no sujetas', () => {
     async function marcarExenta(i = 0): Promise<void> {
       const c = q<HTMLInputElement>(`#fr-exenta-${i}`);
@@ -624,7 +690,7 @@ describe('FacturaRecibidaDrawerComponent — captura nativa (@capacitor/camera)'
     extraer = vi.fn().mockResolvedValue({ ok: false, mensaje: 'sin IA' } satisfies ResultadoExtraccion);
     await TestBed.configureTestingModule({
       imports: [FacturaRecibidaDrawerComponent],
-      providers: [provideMonedaTest(), ...cupoDePruebas().providers, 
+      providers: [provideMonedaTest(), provideFiscalTest(), ...cupoDePruebas().providers, 
         { provide: FacturaExtractionService, useValue: { extraer } },
         { provide: QrDecodeService, useValue: { leer: vi.fn().mockResolvedValue(null) } },
         { provide: CapturaArchivoService, useValue: { esNativo: () => nativo, capturar, validar: (a: File) => ({ ok: true, archivo: a }) } },

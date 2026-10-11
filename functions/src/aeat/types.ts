@@ -74,6 +74,8 @@ export interface CompanyDoc {
   esDemo?: boolean;
   suscripcion?: { plan?: string };
   name: string;
+  /** Código de país (`ES`, `MX`...). Ausente en empresas antiguas: cuenta como `ES`. */
+  pais?: string;
   cif?: string;
   ca: string;
   verifactu?: {

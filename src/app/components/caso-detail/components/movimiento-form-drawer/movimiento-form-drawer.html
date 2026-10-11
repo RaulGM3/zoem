@@ -30,7 +30,7 @@
     <div class="space-y-1">
       <label class="form-label" for="mov-iva">IVA</label>
       <select id="mov-iva" (change)="formIva.set($any($event.target).value)" class="form-select">
-        @for (o of ivaOpciones; track o) {
+        @for (o of ivaOpciones(); track o) {
           <option [value]="o" [selected]="formIva() === o">{{ o === 'exento' ? 'Exento / No sujeto' : o + '%' }}</option>
         }
       </select>

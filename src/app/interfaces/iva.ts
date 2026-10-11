@@ -1,27 +1,41 @@
 /**
- * Módulo puro de IVA (España). Sin dependencias de framework.
+ * Módulo puro de IVA. Los tipos vigentes salen del catálogo de países; las causas de exención (LIVA) son solo de España. Sin dependencias de framework.
  *
  * Regla del modelo: el `importe` de un movimiento es SIEMPRE el total de caja
  * movido (base + cuota). Aquí lo desglosamos hacia atrás para obtener base
  * imponible y cuota, de forma que `baseImponible + cuotaIva === importe`.
  */
 
+import { paisPorCodigo, type CodigoPais } from '../core/paises/catalogo-paises';
 import type { CausaExencion } from './verifactu.interface';
 
-/** Tipos de IVA vigentes en España (general, reducido, superreducido, exento/no sujeto). */
-export const TIPOS_IVA = [21, 10, 4, 0] as const;
+/** Tipo de IVA en porcentaje (21, 16, 0...). Cada país tiene los suyos (ver `tiposIva`). */
+export type TipoIva = number;
 
-/** Tipo de IVA (fracción) con el que nacen las líneas nuevas de una factura. */
-export const IVA_LINEA_NUEVA = 0.1;
+/** Tipos de IVA vigentes en el país (general, reducidos y exento/no sujeto), de mayor a menor. */
+export function tiposIva(pais: CodigoPais): readonly number[] {
+  return paisPorCodigo(pais).tiposIva;
+}
 
-export type TipoIva = (typeof TIPOS_IVA)[number];
+/** Tipo general del país, en porcentaje (ES 21, MX 16, CO/CL 19). */
+export function ivaPorDefecto(pais: CodigoPais): number {
+  return paisPorCodigo(pais).ivaPorDefecto;
+}
 
 /**
- * Opciones para un selector de tipo de IVA: los tipos vigentes más los `extra`
- * que no estén en la lista (facturas antiguas con un tipo libre), de mayor a menor.
+ * Tipo de IVA (fracción) con el que nacen las líneas nuevas de una factura. España conserva el 10 %
+ * histórico de Zoem; el resto de países arranca en su tipo general.
  */
-export function opcionesIva(extra: readonly (number | null | undefined)[]): number[] {
-  const tipos = new Set<number>(TIPOS_IVA);
+export function ivaLineaNueva(pais: CodigoPais): number {
+  return pais === 'ES' ? 0.1 : ivaPorDefecto(pais) / 100;
+}
+
+/**
+ * Opciones para un selector de tipo de IVA: los tipos vigentes del país más los `extra`
+ * que no estén en la lista (documentos antiguos o de otro país con un tipo distinto), de mayor a menor.
+ */
+export function opcionesIva(pais: CodigoPais, extra: readonly (number | null | undefined)[]): number[] {
+  const tipos = new Set<number>(tiposIva(pais));
   for (const t of extra) {
     if (t != null) tipos.add(Math.round(t));
   }
@@ -39,7 +53,7 @@ const round2 = (n: number): number => Math.round((n + Number.EPSILON) * 100) / 1
  * Desglosa un importe TOTAL en base imponible y cuota de IVA.
  *
  * @param total   Importe total de caja (base + IVA).
- * @param tipoIva Porcentaje de IVA (21 | 10 | 4 | 0).
+ * @param tipoIva Porcentaje de IVA (21, 16, 0...).
  * @param exento  `true` para operaciones exentas/no sujetas (p. ej. suplidos): toda la base, cuota 0.
  *
  * La cuota se calcula como `total - base` para garantizar que el desglose

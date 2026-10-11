@@ -49,7 +49,7 @@
             <label for="cliente-buscar" class="form-label">Buscar contacto</label>
             <input id="cliente-buscar" type="text" autocomplete="off" class="form-input w-full"
               role="combobox" aria-autocomplete="list" aria-controls="cliente-buscar-lista"
-              placeholder="Nombre, NIF, email o teléfono"
+              [attr.placeholder]="'Nombre, ' + (fiscal.esEspana() ? 'NIF' : fiscal.etiquetaIdFiscal()) + ', email o teléfono'"
               [attr.aria-expanded]="listaAbierta() ? 'true' : 'false'"
               [attr.aria-activedescendant]="opcionActiva() >= 0 ? idOpcion(opcionActiva()) : null"
               [value]="query()"
@@ -97,7 +97,7 @@
           <div>
             <label for="cliente-tipoId" class="form-label">Tipo de documento</label>
             <select id="cliente-tipoId" formControlName="tipoId" class="form-select">
-              <option value="nif">NIF (España)</option>
+              <option value="nif">{{ fiscal.esEspana() ? 'NIF (España)' : fiscal.etiquetaIdFiscal() }}</option>
               <option value="extranjero">Documento extranjero</option>
             </select>
           </div>
@@ -246,7 +246,7 @@
             </div>
 
             <!-- Row 5: Causa de exención (solo líneas exentas / no sujetas) -->
-            @if (lineaExenta()[i]) {
+            @if (lineaExenta()[i] && fiscal.esEspana()) {
               <div>
                 <label [for]="'causa-exencion-' + i" class="form-label">Causa de exención</label>
                 <select [id]="'causa-exencion-' + i" formControlName="causaExencion"

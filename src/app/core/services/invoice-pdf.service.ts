@@ -9,6 +9,7 @@ import { totalesRegistro } from '../verifactu/totales-registro';
 import { formatearImporteTexto } from '../moneda/formatear-importe';
 import { formatoDeEmpresa } from '../moneda/formato-empresa';
 import { CompanyService, getLabelIdentificacion } from './company.service';
+import { paisDeEmpresa, paisPorCodigo } from '../paises/catalogo-paises';
 import { CompanyLogoService } from './company-logo.service';
 import { encajarLogo } from '../configuracion/logo';
 import type { Company } from './company.service';
@@ -83,6 +84,8 @@ export class InvoicePdfService {
     doc.setTextColor(90, 90, 90);
 
     const cifLabel = getLabelIdentificacion(company);
+    // España: 'NIF' (histórico). Resto: NIT / RUT / RFC del catálogo.
+    const etiquetaIdCliente = paisDeEmpresa(company) === 'ES' ? 'NIF' : paisPorCodigo(paisDeEmpresa(company)).etiquetaIdFiscal;
     if (company.cif) { doc.text(`${cifLabel}: ${company.cif}`, margin, y); y += 5; }
     if (company.direccion) { doc.text(company.direccion, margin, y); y += 5; }
     if (company.codigoPostal || company.ciudad) { doc.text(`${company.codigoPostal ?? ''} ${company.ciudad ?? ''}`.trim(), margin, y); y += 5; }
@@ -128,7 +131,7 @@ export class InvoicePdfService {
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(90, 90, 90);
       if (invoice.clienteNif) {
-        const etiqueta = invoice.clienteTipoId === 'extranjero' ? 'Doc. identificación' : 'NIF';
+        const etiqueta = invoice.clienteTipoId === 'extranjero' ? 'Doc. identificación' : etiquetaIdCliente;
         doc.text(`${etiqueta}: ${invoice.clienteNif}`, margin, cy);
         cy += 5;
       }

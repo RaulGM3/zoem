@@ -26,11 +26,12 @@ describe('FacturacionKpiCardsComponent', () => {
     return card!.textContent!.replace(/\s+/g, ' ').trim();
   }
 
-  async function montar(resumen: ResumenFacturacion, verifactuActivo = true): Promise<void> {
+  async function montar(resumen: ResumenFacturacion, verifactuActivo = true, esEspana = true): Promise<void> {
     TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [FacturacionKpiCardsComponent] });
     fixture = TestBed.createComponent(FacturacionKpiCardsComponent);
     fixture.componentRef.setInput('resumen', resumen);
     fixture.componentRef.setInput('verifactuActivo', verifactuActivo);
+    fixture.componentRef.setInput('esEspana', esEspana);
     await fixture.whenStable();
   }
 
@@ -59,6 +60,16 @@ describe('FacturacionKpiCardsComponent', () => {
     await montar(RESUMEN, false);
     expect(tarjeta('Aprobado por Verifactu')).toContain('Verifactu no está activado');
     expect(tarjeta('Aprobado por Verifactu')).not.toContain('1.210,00');
+  });
+
+  it('fuera de España no hay tarjeta de Verifactu ni mención al modelo 303; quedan tres tarjetas', async () => {
+    await montar(RESUMEN, false, false);
+    expect(texto()).not.toMatch(/Verifactu|303/);
+    const root = (fixture.nativeElement as HTMLElement).firstElementChild!;
+    expect(root.querySelectorAll('.kpi-card')).toHaveLength(3);
+    expect(root.classList.contains('lg:grid-cols-3')).toBe(true);
+    expect(tarjeta('IVA del mes')).toContain('Trimestre: 630,00');
+    expect(root.querySelector('[title*="303"]')).toBeNull();
   });
 
   it('pasa axe', async () => {

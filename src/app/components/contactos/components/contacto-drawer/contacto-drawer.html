@@ -76,8 +76,10 @@
             <div>
               <label for="nifType" class="form-label">Tipo de documento</label>
               <select id="nifType" formControlName="nifType" class="form-select">
-                <option value="dni">DNI</option>
-                <option value="nie">NIE</option>
+                <option value="dni">{{ fiscal.esEspana() ? 'DNI' : fiscal.etiquetaIdFiscal() }}</option>
+                @if (fiscal.esEspana() || form.controls.nifType.value === 'nie') {
+                  <option value="nie">NIE</option>
+                }
                 <option value="pasaporte">Pasaporte</option>
                 <option value="otro">Otro</option>
               </select>
@@ -128,7 +130,7 @@
             <div>
               <label for="cifType" class="form-label">Tipo de documento</label>
               <select id="cifType" formControlName="cifType" class="form-select">
-                <option value="cif">NIF (España)</option>
+                <option value="cif">{{ fiscal.esEspana() ? 'NIF (España)' : fiscal.etiquetaIdFiscal() }}</option>
                 <option value="vat">VAT (UE)</option>
                 <option value="otro">Otro</option>
               </select>

@@ -1,4 +1,4 @@
-import { paisPorCodigo, type CodigoPais } from './catalogo-paises';
+import { paisDeEmpresa, paisPorCodigo, type CodigoPais } from './catalogo-paises';
 
 /**
  * Campos de región a escribir en la empresa: España guarda `ca` (Verifactu y plazos la leen);
@@ -17,4 +17,11 @@ export function nombreRegion(pais: CodigoPais, region: string | undefined): stri
 /** Verifactu es una obligación española: solo se ofrece en España. */
 export function verifactuDisponible(pais: CodigoPais): boolean {
   return pais === 'ES';
+}
+
+/** Empresa en España con Verifactu activado (mismo criterio que `verifactuDisponible(company)` del servidor). */
+export function verifactuActivoEnEmpresa(
+  c: { pais?: unknown; verifactu?: { enabled?: boolean } | null } | null | undefined,
+): boolean {
+  return verifactuDisponible(paisDeEmpresa(c)) && c?.verifactu?.enabled === true;
 }

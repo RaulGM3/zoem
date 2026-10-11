@@ -4,7 +4,11 @@
     <p class="flex items-start gap-2 rounded-lg px-3 py-2 text-xs" data-aviso-registro
       style="background:var(--surface-2);color:var(--text-body)">
       <lucide-icon [img]="InfoIcon" size="14" class="mt-px shrink-0" aria-hidden="true"></lucide-icon>
-      <span>Es un registro para tu IVA soportado (libro de facturas recibidas y modelo 303). No se envía nada a la AEAT ni a Verifactu.</span>
+      @if (fiscal.esEspana()) {
+        <span>Es un registro para tu IVA soportado (libro de facturas recibidas y modelo 303). No se envía nada a la AEAT ni a Verifactu.</span>
+      } @else {
+        <span>Es un registro para tu IVA soportado (libro de facturas recibidas). No se envía nada a la administración tributaria.</span>
+      }
     </p>
 
     <!-- Archivo de la factura -->
@@ -97,7 +101,7 @@
       </div>
 
       <div>
-        <label for="fr-proveedor-nif" class="form-label">NIF del emisor</label>
+        <label for="fr-proveedor-nif" class="form-label">{{ idFiscal() }} del emisor</label>
         <input id="fr-proveedor-nif" type="text" formControlName="proveedorNif" autocomplete="off"
           class="form-input w-full" [class.error]="errorDe('proveedor.nif')" aria-required="true"
           [attr.aria-invalid]="errorDe('proveedor.nif') ? 'true' : 'false'"
@@ -166,7 +170,7 @@
     <!-- Periodo 303 -->
     <fieldset class="space-y-2">
       <legend class="mb-1 text-xs font-semibold uppercase tracking-wider"
-        style="color:var(--text-faint);font-family:var(--font-mono)">Periodo del modelo 303</legend>
+        style="color:var(--text-faint);font-family:var(--font-mono)">{{ fiscal.esEspana() ? 'Periodo del modelo 303' : 'Periodo de IVA' }}</legend>
       <div class="grid grid-cols-2 gap-3">
         <div>
           <label for="fr-ejercicio" class="form-label">Ejercicio</label>
@@ -252,7 +256,7 @@
                   class="h-4 w-4 shrink-0 accent-[var(--brand)]" />
                 <label [for]="'fr-exenta-' + i" class="text-xs" style="color:var(--text-body)">Línea exenta o no sujeta (sin cuota)</label>
               </div>
-              @if (linea.controls.exenta.value) {
+              @if (linea.controls.exenta.value && fiscal.esEspana()) {
                 <div>
                   <label [for]="'fr-causa-' + i" class="form-label">Causa de exención</label>
                   <select [id]="'fr-causa-' + i" formControlName="causa" class="form-select w-full" aria-required="true"

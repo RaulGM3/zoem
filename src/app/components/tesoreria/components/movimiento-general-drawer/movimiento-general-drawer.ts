@@ -12,8 +12,10 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 import { ImportePipe } from '../../../../core/moneda/importe.pipe';
 import { MonedaEmpresaService } from '../../../../core/moneda/moneda-empresa.service';
+import { FiscalEmpresaService } from '../../../../core/fiscal/fiscal-empresa.service';
 
-type IvaSel = '21' | '10' | '4' | '0' | 'exento';
+/** Porcentaje del país (`'21'`, `'16'`...) o `'exento'`. */
+type IvaSel = string;
 
 /** Fecha local (no UTC) en formato YYYY-MM-DD — evita el desfase de `toISOString().slice(0, 10)`. */
 function localDateStr(d: Date): string {
@@ -35,9 +37,10 @@ const DIRECCION_POR_TIPO: Record<MovimientoTipo, boolean> = {
   gasto: false, otro: true, ajuste: true,
 };
 
-const IVA_POR_TIPO: Record<MovimientoTipo, IvaSel> = {
-  ingreso: '21', suplido: 'exento', honorario: '21',
-  gasto: '21', otro: '21', ajuste: 'exento',
+/** Los suplidos y ajustes van exentos; el resto, al tipo general del país. */
+const EXENTO_POR_TIPO: Record<MovimientoTipo, boolean> = {
+  ingreso: false, suplido: true, honorario: false,
+  gasto: false, otro: false, ajuste: true,
 };
 
 const IVA_INCLUIDO_POR_TIPO: Record<MovimientoTipo, boolean> = {
@@ -53,6 +56,7 @@ const IVA_INCLUIDO_POR_TIPO: Record<MovimientoTipo, boolean> = {
 })
 export class MovimientoGeneralDrawerComponent {
   protected readonly moneda = inject(MonedaEmpresaService);
+  private readonly fiscal = inject(FiscalEmpresaService);
   private readonly gestoriaService = inject(GestoriaService);
   private readonly cuentasService = inject(CuentasService);
   private readonly toast = inject(ToastService);
@@ -66,7 +70,11 @@ export class MovimientoGeneralDrawerComponent {
 
   readonly cuentas = this.cuentasService.cuentas;
   readonly tipos = TIPOS;
-  readonly ivaOpciones: IvaSel[] = ['21', '10', '4', '0', 'exento'];
+  /** Tipos del país + el del movimiento en edición (puede ser de otro país: no se cambia en silencio) + exento. */
+  readonly ivaOpciones = computed<readonly IvaSel[]>(() => [
+    ...this.fiscal.opcionesIva([this.pctEditado()]).map(String),
+    'exento',
+  ]);
 
   readonly saving = signal(false);
   readonly deleting = signal(false);
@@ -78,8 +86,17 @@ export class MovimientoGeneralDrawerComponent {
   readonly formFecha = signal('');
   readonly formCuentaId = signal('');
   readonly formNotas = signal('');
-  readonly formIva = signal<IvaSel>('21');
+  readonly formIva = signal<IvaSel>(String(this.fiscal.ivaPorDefecto()));
   readonly formIvaIncluido = signal(true);
+
+  /** Tipo (%) del movimiento en edición, deducido de cuota/base; `null` si es exento, sin IVA o es un alta. */
+  private readonly pctEditado = computed<number | null>(() => {
+    const mov = this.editando();
+    if (!mov || mov.ivaExento) return null;
+    const cuota = mov.cuotaIva ?? 0;
+    const base = mov.baseImponible ?? mov.importe;
+    return cuota > 0 && base > 0 ? Math.round((cuota / base) * 100) : null;
+  });
 
   private readonly ivaResuelto = computed<{ tipoIva: TipoIva; exento: boolean }>(() => {
     const sel = this.formIva();
@@ -121,13 +138,13 @@ export class MovimientoGeneralDrawerComponent {
       this.formFecha.set(mov.fecha);
       this.formCuentaId.set(mov.cuentaId ?? '');
       this.formNotas.set(mov.notas ?? '');
-      const cuota = mov.cuotaIva ?? 0;
       const base = mov.baseImponible ?? mov.importe;
+      const pct = this.pctEditado();
       if (mov.ivaExento) {
         this.formIva.set('exento');
-      } else if (cuota > 0 && base > 0) {
-        const pct = Math.round((cuota / base) * 100);
-        this.formIva.set((['21', '10', '4', '0'] as IvaSel[]).find(v => Number(v) === pct) ?? '21');
+      } else if (pct !== null) {
+        // El tipo guardado se conserva aunque el país actual no lo tenga (`ivaOpciones` lo incluye).
+        this.formIva.set(String(pct));
       } else {
         this.formIva.set('0');
       }
@@ -151,7 +168,7 @@ export class MovimientoGeneralDrawerComponent {
   private applyTipo(tipo: MovimientoTipo): void {
     this.formTipo.set(tipo);
     this.formEsEntrada.set(DIRECCION_POR_TIPO[tipo]);
-    this.formIva.set(IVA_POR_TIPO[tipo]);
+    this.formIva.set(EXENTO_POR_TIPO[tipo] ? 'exento' : String(this.fiscal.ivaPorDefecto()));
     this.formIvaIncluido.set(IVA_INCLUIDO_POR_TIPO[tipo]);
   }
 

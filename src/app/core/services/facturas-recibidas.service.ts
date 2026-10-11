@@ -16,6 +16,7 @@ import { Storage, ref, uploadBytes } from '@angular/fire/storage';
 import { Functions, httpsCallable } from '@angular/fire/functions';
 import { AlmacenamientoCupoService } from '../planes/almacenamiento-cupo.service';
 import { CompanyService } from './company.service';
+import { paisDeEmpresa } from '../paises/catalogo-paises';
 import { stripUndefinedDeep } from '../firebase/sanitize';
 import { claveFactura } from '../facturas-recibidas/clave-factura';
 import { normalizarNif } from '../fiscal/nif';
@@ -244,7 +245,7 @@ export class FacturasRecibidasService {
         tx.set(
           movNuevoRef,
           stripUndefinedDeep({
-            ...movimientoDesdeFactura({ ...datos, numero }, id),
+            ...movimientoDesdeFactura({ ...datos, numero }, id, paisDeEmpresa(this.companyService.activeCompany())),
             companyId: this.companyId,
             createdBy: uid,
             createdAt: serverTimestamp(),

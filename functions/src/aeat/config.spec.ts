@@ -10,6 +10,7 @@ import {
   SISTEMA_INFORMATICO,
   impuestoDeEmpresa,
   numeroInstalacion,
+  verifactuDisponible,
 } from './config';
 import { validarNif } from './nif';
 
@@ -103,5 +104,25 @@ describe('impuestoDeEmpresa', () => {
     for (const ca of CAS_IVA) {
       expect(impuestoDeEmpresa(ca)).toEqual({ ok: true, impuesto: '01' });
     }
+  });
+});
+
+describe('verifactuDisponible', () => {
+  const base = { name: 'X', ca: 'madrid' };
+  it('España con Verifactu activo -> true', () => {
+    expect(verifactuDisponible({ ...base, pais: 'ES', verifactu: { enabled: true } })).toBe(true);
+  });
+  it('sin país cuenta como España (empresas anteriores al backfill)', () => {
+    expect(verifactuDisponible({ ...base, verifactu: { enabled: true } })).toBe(true);
+  });
+  it.each(['MX', 'CO', 'CL'])('%s con Verifactu activo -> false', (pais) => {
+    expect(verifactuDisponible({ ...base, pais, verifactu: { enabled: true } })).toBe(false);
+  });
+  it('España con Verifactu desactivado o ausente -> false', () => {
+    expect(verifactuDisponible({ ...base, pais: 'ES', verifactu: { enabled: false } })).toBe(false);
+    expect(verifactuDisponible({ ...base, pais: 'ES' })).toBe(false);
+  });
+  it('empresa nula -> false', () => {
+    expect(verifactuDisponible(null)).toBe(false);
   });
 });

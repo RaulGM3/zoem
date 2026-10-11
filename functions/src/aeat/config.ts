@@ -1,3 +1,4 @@
+import { paisDeEmpresa } from '../paises/catalogo-paises';
 import type { CodigoImpuesto, SistemaInformaticoRegistro } from './types';
 
 /** Versión del esquema de registro (IDVersion). */
@@ -35,6 +36,16 @@ export const SISTEMA_INFORMATICO: Omit<SistemaInformaticoRegistro, 'numeroInstal
 /** Identificador de instalación determinista por empresa (máx. 100 caracteres). */
 export function numeroInstalacion(companyId: string): string {
   return `ZOEM-${companyId}`.slice(0, 100);
+}
+
+/**
+ * Verifactu es una obligación española: solo aplica a empresas de España (sin `pais` cuenta como
+ * España, tolerancia previa al backfill) con el envío activado. Único punto de decisión del servidor.
+ */
+export function verifactuDisponible<T extends { pais?: unknown; verifactu?: { enabled?: boolean } }>(
+  company: T | null | undefined,
+): company is T {
+  return !!company && paisDeEmpresa(company) === 'ES' && company.verifactu?.enabled === true;
 }
 
 export type ResultadoImpuesto = { ok: true; impuesto: CodigoImpuesto } | { ok: false; motivo: string };

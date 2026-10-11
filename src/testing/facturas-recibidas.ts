@@ -81,7 +81,7 @@ export const extraccionFalsa = () => ({
   useValue: { extraer: vi.fn().mockResolvedValue({ ok: false, mensaje: 'sin IA en tests' }) },
 });
 
-export async function montarTab(fake: FakeSvc, mobile = false, empresa: { name: string; cif?: string } = { name: 'Mi Empresa SL', cif: 'B12345674' }) {
+export async function montarTab(fake: FakeSvc, mobile = false, empresa: { name: string; cif?: string; pais?: string } = { name: 'Mi Empresa SL', cif: 'B12345674' }) {
   TestBed.resetTestingModule();
   mockViewport(mobile);
   const toast = { success: vi.fn(), info: vi.fn(), fromError: vi.fn() };

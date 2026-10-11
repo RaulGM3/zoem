@@ -35,6 +35,7 @@ import {
   type FacturaRecibidaPayload,
 } from '../factura-recibida-drawer/factura-recibida-drawer';
 import { ImportePipe } from '../../../../core/moneda/importe.pipe';
+import { FiscalEmpresaService } from '../../../../core/fiscal/fiscal-empresa.service';
 
 @Component({
   selector: 'app-facturacion-gastos-tab',
@@ -49,6 +50,8 @@ export class FacturacionGastosTabComponent implements OnInit, OnDestroy {
   private readonly service = inject(FacturasRecibidasService);
   private readonly toast = inject(ToastService);
   private readonly company = inject(CompanyService);
+  /** La validación del QR y el libro registro en formato AEAT (Pre303) solo existen en España. */
+  protected readonly fiscal = inject(FiscalEmpresaService);
   private readonly gestoria = inject(GestoriaService);
   private readonly libro = inject(LibroRecibidasExportService);
 
@@ -125,7 +128,7 @@ export class FacturacionGastosTabComponent implements OnInit, OnDestroy {
   }
 
   protected puedeValidar(f: FacturaRecibida): boolean {
-    return puedeValidarQr(f);
+    return this.fiscal.esEspana() && puedeValidarQr(f);
   }
 
   protected validando(f: FacturaRecibida): boolean {
@@ -134,6 +137,7 @@ export class FacturacionGastosTabComponent implements OnInit, OnDestroy {
 
   /** Estado del QR para la lista: un error local (HttpsError) pisa al persistido; `null` si no hay QR. */
   protected vistaQr(f: FacturaRecibida): VistaQrValidacion | null {
+    if (!this.fiscal.esEspana()) return null;
     const local = this.erroresQr()[f.id];
     if (local) return vistaQrValidacion({ estado: 'error', mensaje: local, urlConsulta: f.qrValidacion.urlConsulta });
     return vistaQrValidacion(f.qrValidacion);
@@ -151,7 +155,7 @@ export class FacturacionGastosTabComponent implements OnInit, OnDestroy {
 
   protected acciones(f: FacturaRecibida): MenuAction[] {
     const menu: MenuAction[] = [];
-    if (puedeValidarQr(f)) {
+    if (this.puedeValidar(f)) {
       menu.push({ id: 'validar-qr', label: 'Validar en AEAT', icon: ShieldCheck, disabled: this.validando(f) });
     }
     if (this.puedeAnular(f)) menu.push({ id: 'anular', label: 'Anular factura', icon: Ban, danger: true });
@@ -168,7 +172,7 @@ export class FacturacionGastosTabComponent implements OnInit, OnDestroy {
    * la fila y en la región `aria-live`; jamás bloquea ni estropea un registro.
    */
   protected async validarQr(f: FacturaRecibida): Promise<void> {
-    if (this.validando(f)) return;
+    if (!this.fiscal.esEspana() || this.validando(f)) return;
     this.validandoIds.update((s) => new Set(s).add(f.id));
     this.erroresQr.update(({ [f.id]: _, ...resto }) => resto);
     let recargar = false;
@@ -251,7 +255,7 @@ export class FacturacionGastosTabComponent implements OnInit, OnDestroy {
       await this.service.cargar(this.ejercicio());
       // Fire-and-forget: la validación del QR nunca retrasa ni hace fallar el registro.
       const nueva = this.service.facturas().find((x) => x.id === r.id);
-      if (nueva && nueva.qrValidacion.estado === 'pendiente' && puedeValidarQr(nueva)) void this.validarQr(nueva);
+      if (nueva && nueva.qrValidacion.estado === 'pendiente' && this.puedeValidar(nueva)) void this.validarQr(nueva);
     } catch (err) {
       if (err instanceof FacturaDuplicadaError || err instanceof MovimientoYaVinculadoError || err instanceof MovimientoNoEncontradoError) {
         this.errorServidor.set(err.message);

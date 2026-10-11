@@ -16,7 +16,7 @@ import {
 } from '@angular/fire/firestore';
 import { stripUndefinedDeep } from '../firebase/sanitize';
 import type { ComunidadAutonoma } from '../../interfaces/company';
-import type { CodigoPais } from '../paises/catalogo-paises';
+import { paisDeEmpresa, paisPorCodigo, type CodigoPais } from '../paises/catalogo-paises';
 import type { Suscripcion } from '../planes/catalogo';
 import { CLAVE_EMPRESA_ACTIVA, elegirEmpresaInicial } from './empresa-activa';
 
@@ -105,8 +105,13 @@ export function getIdentificacionFiscal(company: Company): string | undefined {
   return company.cif;
 }
 
-/** Label para mostrar en la UI: "CIF" para juridica, "NIF" para física. */
+/**
+ * Label del identificador fiscal para la UI. España: "CIF" para jurídica, "NIF" para física.
+ * Resto de países: el del catálogo (NIT, RUT, RFC).
+ */
 export function getLabelIdentificacion(company: Company): string {
+  const pais = paisDeEmpresa(company);
+  if (pais !== 'ES') return paisPorCodigo(pais).etiquetaIdFiscal;
   return company.tipoPersona === 'fisica' ? 'NIF' : 'CIF';
 }
 

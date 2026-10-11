@@ -10,6 +10,10 @@ const facturaRef = (companyId: string, facturaId: string) =>
   admin.firestore().doc(`companies/${companyId}/facturas_recibidas/${facturaId}`);
 
 const deps: ValidarQrDeps = {
+  async leerEmpresa(companyId) {
+    const snap = await admin.firestore().doc(`companies/${companyId}`).get();
+    return snap.exists ? { pais: snap.get('pais') } : null;
+  },
   async leerFactura(companyId, facturaId) {
     const snap = await facturaRef(companyId, facturaId).get();
     if (!snap.exists) return null;

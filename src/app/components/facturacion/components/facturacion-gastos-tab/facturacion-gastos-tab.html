@@ -7,7 +7,11 @@
   <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
     <p class="flex max-w-xl items-start gap-2 text-xs" style="color:var(--text-muted)" data-aviso-registro>
       <lucide-icon [img]="InfoIcon" size="14" class="mt-px shrink-0" aria-hidden="true"></lucide-icon>
-      <span>Registro de facturas recibidas para tu IVA soportado (libro registro y modelo 303). No se envía nada a la AEAT ni a Verifactu.</span>
+      @if (fiscal.esEspana()) {
+        <span>Registro de facturas recibidas para tu IVA soportado (libro registro y modelo 303). No se envía nada a la AEAT ni a Verifactu.</span>
+      } @else {
+        <span>Registro de facturas recibidas para tu IVA soportado. No se envía nada a la administración tributaria.</span>
+      }
     </p>
     <button type="button" data-registrar (click)="abrirDrawer()"
       class="tap-target inline-flex items-center justify-center gap-2 self-start rounded-lg bg-[var(--brand)] px-3 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-[var(--brand-hover)]">
@@ -30,15 +34,17 @@
         }
       </select>
     </div>
-    <button type="button" data-exportar (click)="exportarLibro()"
-      [disabled]="exportando() || resumen().numFacturas === 0"
-      [attr.aria-describedby]="resumen().numFacturas === 0 ? 'gastos-exportar-ayuda' : null"
-      class="tap-target inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 hover:bg-[var(--surface-2)] disabled:opacity-50"
-      style="border:1px solid var(--border);color:var(--text-body)">
-      <lucide-icon [img]="DownloadIcon" size="15" aria-hidden="true"></lucide-icon>
-      Exportar libro (xlsx)
-    </button>
-    @if (resumen().numFacturas === 0) {
+    @if (fiscal.esEspana()) {
+      <button type="button" data-exportar (click)="exportarLibro()"
+        [disabled]="exportando() || resumen().numFacturas === 0"
+        [attr.aria-describedby]="resumen().numFacturas === 0 ? 'gastos-exportar-ayuda' : null"
+        class="tap-target inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 hover:bg-[var(--surface-2)] disabled:opacity-50"
+        style="border:1px solid var(--border);color:var(--text-body)">
+        <lucide-icon [img]="DownloadIcon" size="15" aria-hidden="true"></lucide-icon>
+        Exportar libro (xlsx)
+      </button>
+    }
+    @if (fiscal.esEspana() && resumen().numFacturas === 0) {
       <p id="gastos-exportar-ayuda" class="text-xs" style="color:var(--text-muted)">No hay facturas registradas en este trimestre.</p>
     }
   </div>

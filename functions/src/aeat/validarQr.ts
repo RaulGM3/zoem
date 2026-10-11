@@ -2,6 +2,7 @@
 // El cliente SOLO aporta {companyId, facturaId}: la URL a consultar sale del `qr.url` almacenado, se vuelve a
 // parsear con la lista blanca de hosts/rutas de la AEAT y se RECONSTRUYE antes de la petición (anti-SSRF).
 import { HttpsError } from 'firebase-functions/v2/https';
+import { paisDeEmpresa } from '../paises/catalogo-paises';
 import type { EstadoQr } from './estadoQr';
 import { parseValidarQr } from './parseValidarQr';
 import { parseQrVerifactu } from './qrVerifactu';
@@ -24,6 +25,8 @@ export interface QrValidacionServidor {
 }
 
 export interface ValidarQrDeps {
+  /** `null` si la empresa no existe. Solo hace falta el país. */
+  leerEmpresa(companyId: string): Promise<{ pais?: unknown } | null>;
   /** `null` si no existe en esa empresa. `qrUrl` null si la factura no tiene QR. */
   leerFactura(companyId: string, facturaId: string): Promise<{ qrUrl: string | null; estado?: string } | null>;
   consultar: Consultar;
@@ -54,6 +57,13 @@ export async function manejarValidarQr(
   const { companyId, facturaId } = validarEntrada(data);
   // Las Cloud Functions BYPASSEAN las rules: la autorización de tenant se hace aquí.
   await autorizar(uid, companyId);
+
+  // La validación de QR es de la AEAT (Verifactu): fuera de España no aplica.
+  const empresa = await deps.leerEmpresa(companyId);
+  if (!empresa) throw new HttpsError('not-found', 'Empresa no encontrada');
+  if (paisDeEmpresa(empresa) !== 'ES') {
+    throw new HttpsError('failed-precondition', 'La validación con la AEAT solo está disponible para empresas de España.');
+  }
 
   const factura = await deps.leerFactura(companyId, facturaId);
   if (!factura) throw new HttpsError('not-found', 'Factura no encontrada para esta empresa');

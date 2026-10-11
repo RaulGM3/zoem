@@ -1,10 +1,11 @@
-import { Component, ChangeDetectionStrategy, computed, input, output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, inject, input, output } from '@angular/core';
 import { TitleCasePipe } from '@angular/common';
 import { LucideAngularModule, Download, BarChart3 } from 'lucide-angular';
 import {
   ResponsiveListComponent, ListCardDirective, ListTableDirective,
 } from '../../../../shared/components/responsive-list/responsive-list';
 import { ImportePipe } from '../../../../core/moneda/importe.pipe';
+import { FiscalEmpresaService } from '../../../../core/fiscal/fiscal-empresa.service';
 
 export interface ReporteTipo {
   tipo: string;
@@ -33,6 +34,9 @@ export interface Reporte {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReportesTabComponent {
+  /** El modelo 303 es la liquidación de IVA española: fuera de España el rótulo es genérico. */
+  protected readonly fiscal = inject(FiscalEmpresaService);
+
   readonly reporte = input.required<Reporte>();
   readonly desde = input<string>('');
   readonly hasta = input<string>('');

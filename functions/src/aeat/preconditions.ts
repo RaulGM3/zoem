@@ -1,9 +1,11 @@
 import { calcularDesglose, esLineaExenta, MAX_DESGLOSE } from './desglose';
 import { impuestoDeEmpresa } from './config';
+import { paisDeEmpresa } from '../paises/catalogo-paises';
 import { normalizarNif, validarNif } from './nif';
 import type { CompanyDoc, InvoiceDoc } from './types';
 
 export type CodigoPrecondicion =
+  | 'PAIS_NO_SOPORTADO'
   | 'NIF_CLIENTE'
   | 'NIF_CLIENTE_INVALIDO'
   | 'CLIENTE_EXTRANJERO'
@@ -47,6 +49,10 @@ export function validarPrecondiciones(
   tipo: 'alta' | 'anulacion',
   original?: InvoiceDoc,
 ): ResultadoPrecondicion {
+  if (paisDeEmpresa(company) !== 'ES') {
+    return falla('PAIS_NO_SOPORTADO', 'Verifactu solo está disponible para empresas de España.');
+  }
+
   if (vacio(company.cif)) {
     return falla('NIF_EMISOR', 'La empresa no tiene CIF/NIF configurado; es obligatorio para Verifactu.');
   }

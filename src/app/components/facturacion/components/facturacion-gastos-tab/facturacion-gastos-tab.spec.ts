@@ -370,3 +370,39 @@ describe('FacturacionGastosTabComponent', () => {
     });
   });
 });
+
+describe('FacturacionGastosTabComponent — fuera de España (México)', () => {
+  const QR = { url: 'https://aeat.example/qr', nif: 'B12345674', numserie: 'F-Q', fecha: '02-04-2026', importe: 121 };
+  let fake: FakeSvc;
+  let fixture: Awaited<ReturnType<typeof montarTab>>['fixture'];
+  const el = (): HTMLElement => fixture.nativeElement as HTMLElement;
+
+  beforeEach(async () => {
+    fake = crearFake([...FACTURAS, factura({ id: 'P', qr: QR, numeroRecepcion: 10, qrValidacion: { estado: 'pendiente' } })]);
+    ({ fixture } = await montarTab(fake, false, { name: 'Despacho SA', cif: 'XAXX010101000', pais: 'MX' }));
+  });
+
+  it('el copy no menciona AEAT, Verifactu ni modelo 303', () => {
+    const aviso = el().querySelector('[data-aviso-registro]')!.textContent!;
+    expect(aviso).toMatch(/IVA soportado/);
+    expect(aviso).not.toMatch(/AEAT|Verifactu|303/);
+  });
+
+  it('no hay validación de QR en la AEAT: ni insignia, ni botón, ni enlace de consulta', () => {
+    expect(el().querySelector('[data-qr-estado]')).toBeNull();
+    expect(el().querySelector('[data-validar-qr]')).toBeNull();
+    expect(el().querySelector('[data-qr-enlace]')).toBeNull();
+    expect(el().textContent).not.toMatch(/AEAT/);
+  });
+
+  it('el libro registro en formato AEAT (Pre303) tampoco se ofrece', () => {
+    expect(el().querySelector('[data-exportar]')).toBeNull();
+  });
+
+  it('registrar no dispara la validación automática del QR', async () => {
+    fake.validarQr.mockClear();
+    fixture.componentInstance['validarQr'](fake.facturas()[0]);
+    await fixture.whenStable();
+    expect(fake.validarQr).not.toHaveBeenCalled();
+  });
+});

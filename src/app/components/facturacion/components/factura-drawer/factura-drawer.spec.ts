@@ -5,6 +5,7 @@ import type { Invoice, InvoiceLinea } from '../../../../core/services/invoice.se
 import { clienteDesdeFactura, type ClienteFactura } from '../../../../core/facturacion/cliente-factura';
 import type { Contact } from '../../../../interfaces/contact.interface';
 import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
+import { provideFiscalTest } from '../../../../core/fiscal/fiscal-empresa.testing';
 
 const CLIENTE_BASE: ClienteFactura = { nombre: 'Cliente Test', tipoId: 'nif' };
 
@@ -36,7 +37,7 @@ describe('FacturaDrawerComponent — causa de exención por línea (D10)', () =>
 
   async function montar(lineas: InvoiceLinea[], defaultIvaRate = 21): Promise<void> {
     TestBed.resetTestingModule();
-    await TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [FacturaDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideMonedaTest(), provideFiscalTest()], imports: [FacturaDrawerComponent] }).compileComponents();
     fixture = TestBed.createComponent(FacturaDrawerComponent);
     fixture.componentRef.setInput('initialLineas', lineas);
     fixture.componentRef.setInput('defaultIvaRate', defaultIvaRate);
@@ -217,7 +218,7 @@ describe('FacturaDrawerComponent — sección Cliente (cliente-factura-nif, R4)'
     } = {},
   ): Promise<void> {
     TestBed.resetTestingModule();
-    await TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [FacturaDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideMonedaTest(), provideFiscalTest()], imports: [FacturaDrawerComponent] }).compileComponents();
     fixture = TestBed.createComponent(FacturaDrawerComponent);
     fixture.componentRef.setInput('initialLineas', opciones.lineas ?? [linea()]);
     fixture.componentRef.setInput('verifactuEnabled', opciones.verifactu ?? false);
@@ -458,7 +459,7 @@ describe('FacturaDrawerComponent — buscador de contactos y guardado en el cont
     } = {},
   ): Promise<void> {
     TestBed.resetTestingModule();
-    await TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [FacturaDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideMonedaTest(), provideFiscalTest()], imports: [FacturaDrawerComponent] }).compileComponents();
     fixture = TestBed.createComponent(FacturaDrawerComponent);
     fixture.componentRef.setInput('initialLineas', [linea()]);
     fixture.componentRef.setInput('contactos', o.contactos ?? CONTACTOS);
@@ -724,7 +725,7 @@ describe('FacturaDrawerComponent — selector de clientes del caso', () => {
 
   async function montar(o: { contactosCaso?: Contact[]; contacto?: Contact | null; rectificativa?: boolean } = {}): Promise<void> {
     TestBed.resetTestingModule();
-    await TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [FacturaDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideMonedaTest(), provideFiscalTest()], imports: [FacturaDrawerComponent] }).compileComponents();
     fixture = TestBed.createComponent(FacturaDrawerComponent);
     fixture.componentRef.setInput('initialLineas', [linea()]);
     fixture.componentRef.setInput('rectificativa', o.rectificativa ?? false);
@@ -780,7 +781,7 @@ describe('FacturaDrawerComponent — IVA 10% por defecto en líneas nuevas', () 
 
   async function montar(lineas: InvoiceLinea[]): Promise<void> {
     TestBed.resetTestingModule();
-    await TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [FacturaDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideMonedaTest(), provideFiscalTest()], imports: [FacturaDrawerComponent] }).compileComponents();
     fixture = TestBed.createComponent(FacturaDrawerComponent);
     fixture.componentRef.setInput('initialLineas', lineas);
     fixture.componentRef.setInput('defaultIvaRate', 21);

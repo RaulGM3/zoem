@@ -4,6 +4,7 @@ import type { CuentaBancaria, GestoriaSlot, MovimientoGestoria, MovimientoTipo, 
 import { desglosarIva, calcularIvaDesdeBase } from '../../../../interfaces';
 import { ImportePipe } from '../../../../core/moneda/importe.pipe';
 import { MonedaEmpresaService } from '../../../../core/moneda/moneda-empresa.service';
+import { FiscalEmpresaService } from '../../../../core/fiscal/fiscal-empresa.service';
 
 export interface MovimientoFormData {
   tipo: MovimientoTipo;
@@ -19,8 +20,8 @@ export interface MovimientoFormData {
   cuotaIva: number;
 }
 
-/** Valor del selector de IVA: porcentajes o 'exento' (operación exenta/no sujeta). */
-type IvaSel = '21' | '10' | '4' | '0' | 'exento';
+/** Valor del selector de IVA: un porcentaje del país (`'21'`, `'16'`...) o `'exento'` (operación exenta/no sujeta). */
+type IvaSel = string;
 
 @Component({
   selector: 'app-movimiento-form-drawer',
@@ -30,6 +31,7 @@ type IvaSel = '21' | '10' | '4' | '0' | 'exento';
 })
 export class MovimientoFormDrawerComponent {
   protected readonly moneda = inject(MonedaEmpresaService);
+  private readonly fiscal = inject(FiscalEmpresaService);
   readonly visible = input.required<boolean>();
   readonly saving = input.required<boolean>();
   readonly prefillSlot = input.required<GestoriaSlot | null>();
@@ -50,11 +52,15 @@ export class MovimientoFormDrawerComponent {
   readonly formFecha = signal('');
   readonly formNotas = signal('');
   readonly formCuentaId = signal('');
-  readonly formIva = signal<IvaSel>('21');
+  readonly formIva = signal<IvaSel>(String(this.fiscal.ivaPorDefecto()));
   readonly formIvaIncluido = signal(false);
 
   readonly tipos: readonly MovimientoTipo[] = ['ingreso', 'suplido', 'honorario', 'gasto', 'otro'];
-  readonly ivaOpciones: readonly IvaSel[] = ['21', '10', '4', '0', 'exento'];
+  /** Tipos del país + el que traiga el movimiento en edición (puede ser de otro país: no se cambia en silencio) + exento. */
+  readonly ivaOpciones = computed<readonly IvaSel[]>(() => [
+    ...this.fiscal.opcionesIva([this.movimientoEdit()?.tipoIva]).map(String),
+    'exento',
+  ]);
 
   /** Tipo de IVA y exención derivados del selector. */
   private readonly ivaResuelto = computed<{ tipoIva: TipoIva; exento: boolean }>(() => {
@@ -86,14 +92,14 @@ export class MovimientoFormDrawerComponent {
     ajuste: true,
   };
 
-  /** IVA por defecto según tipo: los suplidos van exentos, el resto al general. */
-  private static readonly IVA_POR_TIPO: Record<MovimientoTipo, IvaSel> = {
-    ingreso: '21',
-    suplido: 'exento',
-    honorario: '21',
-    gasto: '21',
-    otro: '21',
-    ajuste: 'exento',
+  /** Los suplidos y ajustes van exentos; el resto, al tipo general del país. */
+  private static readonly EXENTO_POR_TIPO: Record<MovimientoTipo, boolean> = {
+    ingreso: false,
+    suplido: true,
+    honorario: false,
+    gasto: false,
+    otro: false,
+    ajuste: true,
   };
 
   private static readonly IVA_INCLUIDO_POR_TIPO: Record<MovimientoTipo, boolean> = {
@@ -108,7 +114,7 @@ export class MovimientoFormDrawerComponent {
   private applyTipo(tipo: MovimientoTipo, fallback: boolean): void {
     this.formTipo.set(tipo);
     this.formEsEntrada.set(MovimientoFormDrawerComponent.DIRECCION_POR_TIPO[tipo] ?? fallback);
-    this.formIva.set(MovimientoFormDrawerComponent.IVA_POR_TIPO[tipo]);
+    this.formIva.set(MovimientoFormDrawerComponent.EXENTO_POR_TIPO[tipo] ? 'exento' : String(this.fiscal.ivaPorDefecto()));
     this.formIvaIncluido.set(MovimientoFormDrawerComponent.IVA_INCLUIDO_POR_TIPO[tipo]);
   }
 
@@ -156,7 +162,7 @@ export class MovimientoFormDrawerComponent {
     this.formFecha.set(mov.fecha);
     this.formNotas.set(mov.notas ?? '');
     this.formCuentaId.set(mov.cuentaId ?? '');
-    this.formIva.set(mov.ivaExento ? 'exento' : (String(mov.tipoIva ?? 21) as IvaSel));
+    this.formIva.set(mov.ivaExento ? 'exento' : String(mov.tipoIva ?? this.fiscal.ivaPorDefecto()));
     this.formIvaIncluido.set(true);
   }
 

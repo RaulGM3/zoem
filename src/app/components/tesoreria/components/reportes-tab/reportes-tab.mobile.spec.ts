@@ -3,6 +3,7 @@ import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { ReportesTabComponent, type Reporte } from './reportes-tab';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
 import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
+import { provideFiscalTest } from '../../../../core/fiscal/fiscal-empresa.testing';
 
 function mockViewport(mobile: boolean): void {
   Object.defineProperty(window, 'matchMedia', {
@@ -32,10 +33,10 @@ describe('ReportesTabComponent — móvil', () => {
   let fixture: ComponentFixture<ReportesTabComponent>;
   const el = (): HTMLElement => fixture.nativeElement;
 
-  async function montar(mobile: boolean, reporte: Reporte = REPORTE): Promise<void> {
+  async function montar(mobile: boolean, reporte: Reporte = REPORTE, pais = 'ES'): Promise<void> {
     TestBed.resetTestingModule();
     mockViewport(mobile);
-    await TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [ReportesTabComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideMonedaTest(), provideFiscalTest({ pais })], imports: [ReportesTabComponent] }).compileComponents();
     fixture = TestBed.createComponent(ReportesTabComponent);
     fixture.componentRef.setInput('reporte', reporte);
     fixture.detectChanges();
@@ -53,6 +54,14 @@ describe('ReportesTabComponent — móvil', () => {
     expect(items[0].textContent).toContain('1.000,00');
     expect(items[0].textContent).toContain('210,00');
     expect(items[0].textContent).toContain('1.210,00');
+  });
+
+  it('la liquidación de IVA lleva «(303)» solo en España', async () => {
+    await montar(true);
+    expect(el().textContent).toContain('Liquidación IVA (303)');
+    await montar(true, REPORTE, 'MX');
+    expect(el().textContent).toContain('Liquidación IVA');
+    expect(el().textContent).not.toContain('303');
   });
 
   it('móvil: sin movimientos muestra el texto vacío', async () => {

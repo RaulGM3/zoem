@@ -31,6 +31,17 @@ describe('validarPrecondiciones', () => {
     expect(validarPrecondiciones(factura(), empresa(), 'alta')).toEqual({ ok: true });
   });
 
+  it('PAIS_NO_SOPORTADO: empresa fuera de España, se comprueba la primera (alta y anulación)', () => {
+    for (const tipo of ['alta', 'anulacion'] as const) {
+      const r = validarPrecondiciones(factura({ clienteNif: undefined }), empresa({ pais: 'MX', cif: '' }), tipo);
+      expect(r).toMatchObject({ ok: false, codigo: 'PAIS_NO_SOPORTADO' });
+    }
+  });
+
+  it('empresa con pais ES o sin pais sigue pasando', () => {
+    expect(validarPrecondiciones(factura(), empresa({ pais: 'ES' }), 'alta')).toEqual({ ok: true });
+  });
+
   it('S3.4 sin NIF de cliente -> NIF_CLIENTE y el mensaje menciona NIF', () => {
     const r = validarPrecondiciones(factura({ clienteNif: undefined }), empresa(), 'alta');
     expect(r.ok).toBe(false);

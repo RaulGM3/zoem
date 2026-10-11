@@ -5,7 +5,8 @@
 
 import type { LineaIvaRecibida } from '../../interfaces/factura-recibida.interface';
 import type { MovimientoTipo } from '../../interfaces/gestoria.interface';
-import { TIPOS_IVA, type TipoIva } from '../../interfaces/iva';
+import { tiposIva, type TipoIva } from '../../interfaces/iva';
+import type { CodigoPais } from '../paises/catalogo-paises';
 import { esFechaIso } from './trimestre';
 
 const TOLERANCIA_IMPORTE = 0.011;
@@ -72,8 +73,8 @@ export interface MovimientoDesdeFactura {
   facturaRecibidaId: string;
 }
 
-/** Gasto nuevo con el total de la factura. `baseImponible + cuotaIva === importe` (invariante de tesorería). */
-export function movimientoDesdeFactura(f: FacturaParaMovimiento, facturaId: string): MovimientoDesdeFactura {
+/** Gasto nuevo con el total de la factura. `tipoIva` solo se informa si es un tipo vigente en `pais` (el de la empresa). `baseImponible + cuotaIva === importe` (invariante de tesorería). */
+export function movimientoDesdeFactura(f: FacturaParaMovimiento, facturaId: string, pais: CodigoPais): MovimientoDesdeFactura {
   const importe = round2(f.total);
   const cuotaIva = round2(f.lineasIva.reduce((s, l) => s + (l.exento ? 0 : l.cuota), 0));
   const tipos = new Set(f.lineasIva.map((l) => (l.exento ? 0 : l.tipo)));
@@ -88,7 +89,7 @@ export function movimientoDesdeFactura(f: FacturaParaMovimiento, facturaId: stri
     cuotaIva,
     facturaRecibidaId: facturaId,
   };
-  if (unico !== undefined && (TIPOS_IVA as readonly number[]).includes(unico)) m.tipoIva = unico as TipoIva;
+  if (unico !== undefined && tiposIva(pais).includes(unico)) m.tipoIva = unico;
   if (f.lineasIva.length > 0 && f.lineasIva.every((l) => l.exento)) m.ivaExento = true;
   return m;
 }

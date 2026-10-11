@@ -4,6 +4,7 @@ import { FacturaDrawerComponent } from './factura-drawer';
 import type { Invoice } from '../../../../core/services/invoice.service';
 import type { VerifactuEstado } from '../../../../interfaces/verifactu.interface';
 import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
+import { provideFiscalTest } from '../../../../core/fiscal/fiscal-empresa.testing';
 
 function factura(verifactu?: VerifactuEstado): Invoice {
   return {
@@ -35,7 +36,7 @@ describe('FacturaDrawerComponent — bloqueo por Verifactu (R9.4, S9.6)', () => 
 
   async function montar(editing: Invoice | null): Promise<void> {
     TestBed.resetTestingModule();
-    await TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [FacturaDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideMonedaTest(), provideFiscalTest()], imports: [FacturaDrawerComponent] }).compileComponents();
     fixture = TestBed.createComponent(FacturaDrawerComponent);
     fixture.componentRef.setInput('editMode', true);
     fixture.componentRef.setInput('editingInvoice', editing);

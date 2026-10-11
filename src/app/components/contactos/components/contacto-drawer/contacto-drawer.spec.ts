@@ -6,6 +6,7 @@ import { ContactService } from '../../../../core/services/contact.service';
 import { UsersService } from '../../../../core/services/users';
 import { ToastService } from '../../../../core/services/toast.service';
 import type { CompanyMember, Contact } from '../../../../interfaces';
+import { provideFiscalTest } from '../../../../core/fiscal/fiscal-empresa.testing';
 
 interface RunOptions { successMessage?: string; errorTitle?: string; onSuccess?: () => void }
 
@@ -115,6 +116,7 @@ describe('ContactoDrawerComponent', () => {
     await TestBed.configureTestingModule({
       imports: [ContactoDrawerComponent],
       providers: [
+        provideFiscalTest(),
         { provide: ContactService, useValue: contactService },
         { provide: UsersService, useValue: { members: signal(MEMBERS) } },
         { provide: ToastService, useValue: { run } },
@@ -514,6 +516,42 @@ describe('ContactoDrawerComponent', () => {
       await click(boton('Continuar', drawer()!));
       await click(boton('Guardar contacto', drawer()!));
       expect(payloadCreado()).toMatchObject({ cifType: 'vat', cif: 'fr 12 345678901' });
+    });
+  });
+
+  describe('fuera de España (México)', () => {
+    beforeEach(() => {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [ContactoDrawerComponent],
+        providers: [
+          provideFiscalTest({ pais: 'MX' }),
+          { provide: ContactService, useValue: contactService },
+          { provide: UsersService, useValue: { members: signal(MEMBERS) } },
+          { provide: ToastService, useValue: { run } },
+        ],
+      });
+    });
+
+    it('el documento nacional se llama RFC (no DNI/NIE) y no hay NIE', async () => {
+      await abrirNuevo();
+      expect(qa<HTMLOptionElement>('#nifType option').map(o => o.textContent!.trim())).toEqual(['RFC', 'Pasaporte', 'Otro']);
+    });
+
+    it('no aplica el dígito de control español: un documento con cualquier forma no bloquea', async () => {
+      await abrirNuevo();
+      escribir('nombre', 'Eva');
+      escribir('apellidos', 'Ruiz');
+      escribir('email', 'eva@test.dev');
+      escribir('nif', '12345678A');
+      await click(boton('Continuar', drawer()!));
+      expect(existe('nacionalidad')).toBe(true);
+      expect(el().querySelector('#nif-error')).toBeNull();
+    });
+
+    it('persona jurídica: la opción nacional es RFC', async () => {
+      await abrirEdicion('Acme');
+      expect(qa<HTMLOptionElement>('#cifType option')[0].textContent!.trim()).toBe('RFC');
     });
   });
 });

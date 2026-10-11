@@ -27,7 +27,7 @@ function caso(contactoIds: string[]): Caso {
 describe('FacturacionComponent — clientes del caso al generar factura', () => {
   let fixture: ComponentFixture<FacturacionComponent>;
 
-  async function montar(contactos: Contact[]): Promise<void> {
+  async function montar(contactos: Contact[], empresa: Record<string, unknown> = {}): Promise<void> {
     TestBed.resetTestingModule();
     const porId = new Map(contactos.map((c) => [c.id, c]));
     TestBed.configureTestingModule({
@@ -37,7 +37,7 @@ describe('FacturacionComponent — clientes del caso al generar factura', () => 
         { provide: UsersService, useValue: { loadMembers: async () => {}, members: signal([]) } },
         { provide: InvoiceService, useValue: { invoices: signal([]), loadInvoices: async () => {} } },
         { provide: InvoicePdfService, useValue: {} },
-        { provide: CompanyService, useValue: { activeCompany: signal({ id: 'co', name: 'X' }) } },
+        { provide: CompanyService, useValue: { activeCompany: signal({ id: 'co', name: 'X', ...empresa }) } },
         {
           provide: ContactService,
           useValue: {
@@ -88,6 +88,23 @@ describe('FacturacionComponent — clientes del caso al generar factura', () => 
     await abrir([]);
     const honorarios = fixture.componentInstance.drawerLineas().find((l) => l.concepto === 'Honorarios');
     expect(honorarios?.ivaRate).toBe(0.1);
+  });
+
+  it('en México la línea de honorarios del caso nace al 16 % y el drawer se abre sin Verifactu', async () => {
+    await montar([], { pais: 'MX', verifactu: { enabled: true } });
+    await abrir([]);
+    const honorarios = fixture.componentInstance.drawerLineas().find((l) => l.concepto === 'Honorarios');
+    expect(honorarios?.ivaRate).toBe(0.16);
+    expect(fixture.componentInstance.verifactuActivo()).toBe(false);
+    expect(fixture.componentInstance.esEspana()).toBe(false);
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toMatch(/Verifactu/);
+  });
+
+  it('en España con Verifactu activado el computed compartido es true y el drawer lo recibe', async () => {
+    await montar([], { verifactu: { enabled: true } });
+    expect(fixture.componentInstance.verifactuActivo()).toBe(true);
+    await abrir([]);
+    expect((fixture.nativeElement as HTMLElement).textContent).toMatch(/Verifactu/);
   });
 
   it('avisa por consola de los contactos del caso que no se pudieron cargar', async () => {

@@ -138,6 +138,46 @@ describe('InvoicePdfService — QR Verifactu (D11)', () => {
   });
 });
 
+describe('InvoicePdfService — id fiscal por país', () => {
+  let service: InvoicePdfService;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: Storage, useValue: {} },
+        { provide: CompanyService, useValue: { activeCompany: () => null } },
+        { provide: CompanyLogoService, useValue: { cargarDataUrl: vi.fn(async () => null) } },
+      ],
+    });
+    service = TestBed.inject(InvoicePdfService);
+  });
+
+  const generar = async (inv: Invoice, c: Company): Promise<string> => leer(await service['buildPdf'](inv, c));
+
+  it('empresa de México: emisor con "RFC:" y cliente con "RFC:", nunca CIF ni NIF', async () => {
+    const mx = { id: 'c-1', name: 'Despacho SA', cif: 'XAXX010101000', pais: 'MX' } as Company;
+    const pdf = await generar(factura(undefined, { clienteNombre: 'Ana', clienteNif: 'XEXX010101000' }), mx);
+    expect(pdf).toContain('(RFC: XAXX010101000)');
+    expect(pdf).toContain('(RFC: XEXX010101000)');
+    expect(pdf).not.toMatch(/\((NIF|CIF)[: ]/);
+    expect(pdf).not.toContain('VERI*FACTU');
+  });
+
+  it('empresa de Colombia: NIT; Chile: RUT', async () => {
+    const co = await generar(factura(undefined, { clienteNombre: 'Ana', clienteNif: '900123456-7' }), { id: 'c', name: 'X', cif: '900111222-3', pais: 'CO' } as Company);
+    expect(co).toContain('(NIT: 900111222-3)');
+    expect(co).toContain('(NIT: 900123456-7)');
+    const cl = await generar(factura(undefined, { clienteNombre: 'Ana', clienteNif: '12.345.678-5' }), { id: 'c', name: 'X', cif: '76.123.456-0', pais: 'CL' } as Company);
+    expect(cl).toContain('(RUT: 76.123.456-0)');
+  });
+
+  it('empresa sin país (antigua): sigue en CIF/NIF', async () => {
+    const es = await generar(factura(undefined, { clienteNombre: 'Ana', clienteNif: '12345678Z' }), { id: 'c', name: 'X', cif: 'B12345678' } as Company);
+    expect(es).toContain('(CIF: B12345678)');
+    expect(es).toContain('(NIF: 12345678Z)');
+  });
+});
+
 describe('InvoicePdfService — logo de empresa', () => {
   const api = jsPDF.API as unknown as Record<string, (...a: unknown[]) => unknown>;
   const LOGO = { path: 'companies/c-1/branding/logo', url: 'https://x/l', contentType: 'image/png' as const, updatedAt: '2026-01-01T00:00:00.000Z' };

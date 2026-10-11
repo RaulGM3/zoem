@@ -6,6 +6,7 @@ import type { CompanyMember, CuentaBancaria } from '../../../interfaces';
 import { mockViewport } from '../mock-viewport';
 import { analizarA11y, formatearViolaciones } from '../../../../testing/axe';
 import { provideMonedaTest } from '../../../core/moneda/moneda-empresa.testing';
+import { provideFiscalTest } from '../../../core/fiscal/fiscal-empresa.testing';
 
 const MEMBERS = [
   { id: 'a', userId: 'u1', nombre: 'Ana', apellido: 'Ruiz' },
@@ -25,7 +26,7 @@ describe('HitoFormDrawerComponent — overlay-shell', () => {
   async function montar(mobile: boolean, visible = true): Promise<void> {
     TestBed.resetTestingModule();
     mockViewport(mobile);
-    TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [HitoFormDrawerComponent] });
+    TestBed.configureTestingModule({ providers: [provideMonedaTest(), provideFiscalTest()], imports: [HitoFormDrawerComponent] });
     fixture = TestBed.createComponent(HitoFormDrawerComponent);
     fixture.componentRef.setInput('visible', visible);
     fixture.componentRef.setInput('saving', false);
@@ -107,7 +108,7 @@ describe('MovimientoFormDrawerComponent — overlay-shell', () => {
   async function montar(mobile: boolean, visible = true): Promise<void> {
     TestBed.resetTestingModule();
     mockViewport(mobile);
-    TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [MovimientoFormDrawerComponent] });
+    TestBed.configureTestingModule({ providers: [provideMonedaTest(), provideFiscalTest()], imports: [MovimientoFormDrawerComponent] });
     fixture = TestBed.createComponent(MovimientoFormDrawerComponent);
     fixture.componentRef.setInput('visible', visible);
     fixture.componentRef.setInput('saving', false);

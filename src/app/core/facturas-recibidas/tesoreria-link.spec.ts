@@ -70,7 +70,7 @@ describe('movimientoDesdeFactura', () => {
   };
 
   it('crea un gasto con el total, salida, fecha de expedición y desglose fiscal', () => {
-    expect(movimientoDesdeFactura(base, 'ID1')).toEqual({
+    expect(movimientoDesdeFactura(base, 'ID1', 'ES')).toEqual({
       tipo: 'gasto',
       concepto: 'Proveedor SL · F-001',
       importe: 121,
@@ -84,7 +84,7 @@ describe('movimientoDesdeFactura', () => {
   });
 
   it('base + cuota == importe aunque el total difiera 1 céntimo de la suma', () => {
-    const m = movimientoDesdeFactura({ ...base, total: 121.01 }, 'ID1');
+    const m = movimientoDesdeFactura({ ...base, total: 121.01 }, 'ID1', 'ES');
     expect(m.baseImponible + m.cuotaIva).toBeCloseTo(121.01, 10);
   });
 
@@ -92,6 +92,7 @@ describe('movimientoDesdeFactura', () => {
     const m = movimientoDesdeFactura(
       { ...base, total: 176, lineasIva: [{ base: 100, tipo: 21, cuota: 21 }, { base: 50, tipo: 10, cuota: 5 }] },
       'ID1',
+      'ES',
     );
     expect(m.tipoIva).toBeUndefined();
     expect(m.cuotaIva).toBe(26);
@@ -99,7 +100,7 @@ describe('movimientoDesdeFactura', () => {
   });
 
   it('un tipo fuera de 21/10/4/0 no se informa como tipoIva', () => {
-    const m = movimientoDesdeFactura({ ...base, total: 105, lineasIva: [{ base: 100, tipo: 5, cuota: 5 }] }, 'ID1');
+    const m = movimientoDesdeFactura({ ...base, total: 105, lineasIva: [{ base: 100, tipo: 5, cuota: 5 }] }, 'ID1', 'ES');
     expect(m.tipoIva).toBeUndefined();
   });
 
@@ -107,7 +108,24 @@ describe('movimientoDesdeFactura', () => {
     const m = movimientoDesdeFactura(
       { ...base, total: 80, lineasIva: [{ base: 80, tipo: 0, cuota: 0, exento: true, causaExencion: 'E1' }] },
       'ID1',
+      'ES',
     );
     expect(m).toMatchObject({ ivaExento: true, tipoIva: 0, cuotaIva: 0, baseImponible: 80, importe: 80 });
+  });
+
+  it('valida el tipo contra los del país de la empresa: 16 % es tipoIva en México', () => {
+    const m = movimientoDesdeFactura({ ...base, total: 116, lineasIva: [{ base: 100, tipo: 16, cuota: 16 }] }, 'ID1', 'MX');
+    expect(m.tipoIva).toBe(16);
+  });
+
+  it('un 21 % (factura heredada de España) no se informa como tipoIva en una empresa de México', () => {
+    const m = movimientoDesdeFactura(base, 'ID1', 'MX');
+    expect(m.tipoIva).toBeUndefined();
+    expect(m.cuotaIva).toBe(21);
+  });
+
+  it('un 16 % no es tipoIva en España', () => {
+    const m = movimientoDesdeFactura({ ...base, total: 116, lineasIva: [{ base: 100, tipo: 16, cuota: 16 }] }, 'ID1', 'ES');
+    expect(m.tipoIva).toBeUndefined();
   });
 });

@@ -11,6 +11,7 @@ import {
   siguienteEnCola,
 } from './chain';
 import type { EntradaCadena, TipoRegistro } from './chain';
+import { verifactuDisponible } from './config';
 import { esSandbox, soapEndpoint } from './endpoints';
 import { parseRespuesta } from './parseResponse';
 import type { Resultado } from './parseResponse';
@@ -208,7 +209,7 @@ export async function drenarEmpresa(deps: EnvioDeps, companyId: string, opciones
   const forzar = opciones.forzar ?? false;
   const company = await deps.docs.getCompany(companyId);
   // Despacho demo: jamás se contacta con la AEAT.
-  if (!company?.verifactu?.enabled || esEmpresaDemo(company)) {
+  if (!verifactuDisponible(company) || esEmpresaDemo(company)) {
     console.log('[Verifactu:debug] drenarEmpresa -> Verifactu desactivado, no se drena', { companyId });
     return;
   }
@@ -293,7 +294,7 @@ export async function procesarEnvio(deps: EnvioDeps, solicitud: SolicitudEnvio):
     ca: company?.ca,
     verifactu: company?.verifactu,
   });
-  if (!company?.verifactu?.enabled || esEmpresaDemo(company)) {
+  if (!verifactuDisponible(company) || esEmpresaDemo(company)) {
     console.warn('[Verifactu:debug] procesarEnvio -> SALE: Verifactu desactivado en la empresa (servidor)');
     return { sent: false, motivo: 'verifactu_desactivado' };
   }

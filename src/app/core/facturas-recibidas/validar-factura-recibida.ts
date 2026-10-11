@@ -4,7 +4,8 @@
  */
 
 import type { LineaIvaRecibida, PeriodoIva } from '../../interfaces/factura-recibida.interface';
-import { validarNif } from '../fiscal/nif';
+import { validarIdFiscal } from '../fiscal/id-fiscal';
+import { paisPorCodigo, type CodigoPais } from '../paises/catalogo-paises';
 import { comparaPeriodos, esFechaIso, trimestre } from './trimestre';
 
 export interface DatosFacturaRecibida {
@@ -40,7 +41,11 @@ const TOLERANCIA = 0.011;
 
 const round2 = (n: number): number => Math.round((n + Number.EPSILON) * 100) / 100;
 
-export function validarFacturaRecibida(d: DatosFacturaRecibida): ResultadoValidacionFactura {
+/**
+ * `pais` es el de la empresa: decide qué identificador fiscal se comprueba (NIF con dígito de control en
+ * España; forma del NIT/RUT/RFC en el resto) y el texto del periodo. España por defecto.
+ */
+export function validarFacturaRecibida(d: DatosFacturaRecibida, pais: CodigoPais = 'ES'): ResultadoValidacionFactura {
   const errores: IncidenciaFactura[] = [];
   const advertencias: IncidenciaFactura[] = [];
   const error = (campo: string, mensaje: string) => errores.push({ campo, mensaje });
@@ -49,8 +54,9 @@ export function validarFacturaRecibida(d: DatosFacturaRecibida): ResultadoValida
   if (d.claveOperacion !== '01') error('claveOperacion', 'Solo se admite la clave de operación 01.');
 
   if (!d.proveedor.nombre.trim()) error('proveedor.nombre', 'El nombre del emisor es obligatorio.');
-  if (!d.proveedor.nif.trim()) error('proveedor.nif', 'El NIF del emisor es obligatorio.');
-  else if (!validarNif(d.proveedor.nif).ok) error('proveedor.nif', 'El NIF del emisor no es válido.');
+  const idFiscal = pais === 'ES' ? 'NIF' : paisPorCodigo(pais).etiquetaIdFiscal;
+  if (!d.proveedor.nif.trim()) error('proveedor.nif', `El ${idFiscal} del emisor es obligatorio.`);
+  else if (!validarIdFiscal(pais, d.proveedor.nif).ok) error('proveedor.nif', `El ${idFiscal} del emisor no es válido.`);
   if (!d.numero.trim()) error('numero', 'El número de factura es obligatorio.');
 
   const expedicionOk = esFechaIso(d.fechaExpedicion);
@@ -65,7 +71,7 @@ export function validarFacturaRecibida(d: DatosFacturaRecibida): ResultadoValida
   const periodoOk =
     Number.isInteger(p.ejercicio) && p.ejercicio >= 2000 && p.ejercicio <= 2100 && [1, 2, 3, 4].includes(p.trimestre);
   if (!periodoOk) {
-    error('periodo303', 'El periodo del modelo 303 no es válido.');
+    error('periodo303', pais === 'ES' ? 'El periodo del modelo 303 no es válido.' : 'El periodo de IVA no es válido.');
   } else {
     if (expedicionOk && comparaPeriodos(p, trimestre(d.fechaExpedicion)) < 0) {
       error('periodo303', 'El periodo no puede ser anterior al trimestre de la fecha de expedición.');
@@ -85,7 +91,8 @@ export function validarFacturaRecibida(d: DatosFacturaRecibida): ResultadoValida
       error(`${ruta}.cuota`, 'La cuota debe ser un importe igual o mayor que 0.');
     } else if (l.exento) {
       if (l.cuota !== 0) error(`${ruta}.cuota`, 'Una línea exenta no lleva cuota.');
-      if (!l.causaExencion) error(`${ruta}.causaExencion`, 'Indica la causa de exención.');
+      // La causa (E1..E6, N1, N2) es de la LIVA española: fuera de España una línea exenta no la lleva.
+      if (pais === 'ES' && !l.causaExencion) error(`${ruta}.causaExencion`, 'Indica la causa de exención.');
     } else if (Number.isFinite(l.base) && Number.isFinite(l.tipo) && Math.abs(l.cuota - round2((l.base * l.tipo) / 100)) > TOLERANCIA) {
       error(`${ruta}.cuota`, 'La cuota no coincide con base × tipo.');
     }

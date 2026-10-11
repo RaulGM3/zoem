@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { CompanyService, getLabelIdentificacion } from '../../../../core/services/company.service';
+import { FiscalEmpresaService } from '../../../../core/fiscal/fiscal-empresa.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import {
   FacturacionConfiguracionTabComponent,
@@ -21,12 +22,14 @@ import {
       [form]="configForm"
       [saving]="savingConfig()"
       [cifLabel]="cifLabel()"
+      [esEspana]="fiscal.esEspana()"
       (save)="saveConfig()"
     />
   `,
 })
 export class FacturacionAjustesComponent {
   private readonly companyService = inject(CompanyService);
+  protected readonly fiscal = inject(FiscalEmpresaService);
   private readonly toast = inject(ToastService);
   private readonly fb = inject(FormBuilder);
 
@@ -71,7 +74,10 @@ export class FacturacionAjustesComponent {
           name: name.trim(),
           cif: cif.trim() || undefined,
           tipoPersona,
-          verifactu: { ...company.verifactu, enabled: verifactuEnabled, sandbox: verifactuSandbox },
+          // Verifactu y el certificado AEAT solo existen en España: fuera de ella no se toca el campo.
+          ...(this.fiscal.esEspana()
+            ? { verifactu: { ...company.verifactu, enabled: verifactuEnabled, sandbox: verifactuSandbox } }
+            : {}),
         }),
         { successMessage: 'Configuración guardada', errorTitle: 'No se pudo guardar la configuración' }
       );

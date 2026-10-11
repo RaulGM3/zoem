@@ -47,14 +47,15 @@ vi.mock('@angular/fire/functions', () => ({
   httpsCallable: (...args: unknown[]) => mockHttpsCallable(...args),
 }));
 
-function makeCompany(override: { id?: string; nif?: string; verifactuEnabled?: boolean } = {}): Company {
-  const { id = 'company-abc', nif, verifactuEnabled = false } = override;
+function makeCompany(override: { id?: string; nif?: string; verifactuEnabled?: boolean; pais?: Company['pais'] } = {}): Company {
+  const { id = 'company-abc', nif, verifactuEnabled = false, pais } = override;
   return {
     id,
     name: 'Test SL',
     slug: 'test-sl',
     isActive: true,
     cif: nif,
+    ...(pais ? { pais } : {}),
     verifactu: verifactuEnabled ? { enabled: true, sandbox: true } : undefined,
   };
 }
@@ -270,6 +271,13 @@ describe('InvoiceService.createInvoiceForCaso() — cálculos', () => {
   it('NO llama al callable si la empresa no tiene Verifactu habilitado', async () => {
     const { svc, generateAndUpload } = setupService({ verifactuEnabled: false });
     await svc.createInvoiceForCaso('caso-1', [linea({ concepto: 'H', base: 100, precioUnitario: 100, aplicaIva: true })], 0.21, today, due30);
+    await vi.waitFor(() => expect(generateAndUpload).toHaveBeenCalled());
+    expect(mockCallable).not.toHaveBeenCalled();
+  });
+
+  it('NO llama al callable fuera de España aunque el flag de Verifactu esté activo', async () => {
+    const { svc, generateAndUpload } = setupService({ verifactuEnabled: true, nif: 'XAXX010101000', pais: 'MX' });
+    await svc.createInvoiceForCaso('caso-1', [linea({ concepto: 'H', base: 100, precioUnitario: 100, aplicaIva: true })], 0.16, today, due30);
     await vi.waitFor(() => expect(generateAndUpload).toHaveBeenCalled());
     expect(mockCallable).not.toHaveBeenCalled();
   });

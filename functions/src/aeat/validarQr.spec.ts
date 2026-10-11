@@ -17,10 +17,13 @@ interface Escritura {
   mensaje?: string;
 }
 
-function entorno(over: { qrUrl?: string | null; estado?: string; existe?: boolean; html?: string; status?: number; falla?: boolean } = {}) {
+function entorno(over: { pais?: string; qrUrl?: string | null; estado?: string; existe?: boolean; html?: string; status?: number; falla?: boolean } = {}) {
   const escrituras: Escritura[] = [];
   const consultas: string[] = [];
   const deps: ValidarQrDeps = {
+    async leerEmpresa() {
+      return over.pais === undefined ? { pais: 'ES' } : { pais: over.pais };
+    },
     async leerFactura() {
       if (over.existe === false) return null;
       return { qrUrl: over.qrUrl === undefined ? URL_OK : over.qrUrl, estado: over.estado ?? 'registrada' };
@@ -49,6 +52,22 @@ describe('validarEntrada', () => {
   );
   it('acepta {companyId, facturaId}', () => {
     expect(validarEntrada({ ...DATA, extra: 'x' })).toEqual(DATA);
+  });
+});
+
+describe('manejarValidarQr: solo España', () => {
+  it('empresa fuera de España -> failed-precondition y no consulta a la AEAT', async () => {
+    const e = entorno({ pais: 'MX' });
+    await expect(manejarValidarQr(e.deps, e.autorizar, 'u1', DATA)).rejects.toMatchObject({ code: 'failed-precondition' });
+    expect(e.consultas).toHaveLength(0);
+    expect(e.escrituras).toHaveLength(0);
+  });
+
+  it('empresa sin país se trata como España', async () => {
+    const e = entorno();
+    e.deps.leerEmpresa = async () => ({});
+    await manejarValidarQr(e.deps, e.autorizar, 'u1', DATA);
+    expect(e.consultas).toHaveLength(1);
   });
 });
 

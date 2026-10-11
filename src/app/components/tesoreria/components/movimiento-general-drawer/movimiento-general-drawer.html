@@ -69,11 +69,9 @@
           <select id="mg-iva" class="form-input mt-1"
             [value]="formIva()"
             (change)="formIva.set($any($event.target).value)">
-            <option value="21">21 %</option>
-            <option value="10">10 %</option>
-            <option value="4">4 %</option>
-            <option value="0">0 %</option>
-            <option value="exento">Exento</option>
+            @for (o of ivaOpciones(); track o) {
+              <option [value]="o">{{ o === 'exento' ? 'Exento' : o + ' %' }}</option>
+            }
           </select>
         </div>
       </div>

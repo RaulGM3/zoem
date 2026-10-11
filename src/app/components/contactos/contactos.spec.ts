@@ -21,6 +21,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { SeguimientoContactoService } from '../../core/services/seguimiento-contacto.service';
 import type { CompanyMember, Contact } from '../../interfaces';
 import { provideMonedaTest } from '../../core/moneda/moneda-empresa.testing';
+import { provideFiscalTest } from '../../core/fiscal/fiscal-empresa.testing';
 
 interface RunOptions { successMessage?: string; errorTitle?: string; onSuccess?: () => void }
 
@@ -166,7 +167,7 @@ describe('ContactosComponent', () => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [ContactosComponent],
-      providers: [provideMonedaTest(), 
+      providers: [provideMonedaTest(), provideFiscalTest(), 
         provideRouter([]),
         {
           provide: ActivatedRoute,

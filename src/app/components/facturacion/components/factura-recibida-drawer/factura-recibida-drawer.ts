@@ -16,7 +16,7 @@ import { AlmacenamientoCupoService } from '../../../../core/planes/almacenamient
 import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { LucideAngularModule, Plus, Trash2, Info, Paperclip, X, Camera, Image } from 'lucide-angular';
 import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
-import { CAUSAS_EXENCION, CAUSA_EXENCION_LABELS, opcionesIva } from '../../../../interfaces/iva';
+import { CAUSAS_EXENCION, CAUSA_EXENCION_LABELS } from '../../../../interfaces/iva';
 import type { CausaExencion } from '../../../../interfaces/verifactu.interface';
 import type { PeriodoIva, TrimestreIva } from '../../../../interfaces/factura-recibida.interface';
 import { esFechaIso, trimestre } from '../../../../core/facturas-recibidas/trimestre';
@@ -35,6 +35,7 @@ import { QrDecodeService } from '../../../../core/services/qr-decode.service';
 import { contrastarQr, type ResultadoParseQr } from '../../../../core/facturas-recibidas/qr-verifactu';
 import { ImportePipe } from '../../../../core/moneda/importe.pipe';
 import { MonedaEmpresaService } from '../../../../core/moneda/moneda-empresa.service';
+import { FiscalEmpresaService } from '../../../../core/fiscal/fiscal-empresa.service';
 
 export interface FacturaRecibidaPayload {
   datos: DatosNuevaFactura;
@@ -68,6 +69,7 @@ const round2 = (n: number): number => Math.round((n + Number.EPSILON) * 100) / 1
 })
 export class FacturaRecibidaDrawerComponent {
   protected readonly moneda = inject(MonedaEmpresaService);
+  protected readonly fiscal = inject(FiscalEmpresaService);
   private readonly fb = inject(FormBuilder);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
@@ -182,9 +184,13 @@ export class FacturaRecibidaDrawerComponent {
     return esFechaIso(fecha) ? trimestre(fecha) : { ejercicio: 0, trimestre: 1 };
   });
 
+  /** Tipos del país + los que ya traigan las líneas (p. ej. leídos de una factura de otro país): no se cambian en silencio. */
   protected readonly tiposIva = computed(() =>
-    opcionesIva(this.formValue().lineas.map((l) => (l.tipo === '' ? null : Number(l.tipo)))),
+    this.fiscal.opcionesIva(this.formValue().lineas.map((l) => (l.tipo === '' ? null : Number(l.tipo)))),
   );
+
+  /** 'NIF' en España (histórico); NIT / RUT / RFC en el resto. */
+  protected readonly idFiscal = computed(() => (this.fiscal.esEspana() ? 'NIF' : this.fiscal.etiquetaIdFiscal()));
 
   private readonly datos = computed<DatosNuevaFactura>(() => {
     const v = this.formValue();
@@ -223,7 +229,7 @@ export class FacturaRecibidaDrawerComponent {
     return q ? { qr: { url: q.url, nif: q.nif, numserie: q.numserie, fecha: q.fecha, importe: q.importe } } : {};
   }
 
-  protected readonly validacion = computed<ResultadoValidacionFactura>(() => validarFacturaRecibida({ ...this.datos(), claveOperacion: '01' }));
+  protected readonly validacion = computed<ResultadoValidacionFactura>(() => validarFacturaRecibida({ ...this.datos(), claveOperacion: '01' }, this.fiscal.pais()));
 
   protected readonly modoVinculo = signal<ModoVinculo>('ninguno');
   private readonly movElegido = signal<string | null>(null);
@@ -292,7 +298,7 @@ export class FacturaRecibidaDrawerComponent {
   private crearLinea(): LineaGroup {
     const grupo: LineaGroup = this.fb.group({
       base: this.fb.control<number | null>(null),
-      tipo: this.fb.nonNullable.control('21'),
+      tipo: this.fb.nonNullable.control(String(this.fiscal.ivaPorDefecto())),
       cuota: this.fb.control<number | null>(null),
       exenta: this.fb.nonNullable.control(false),
       causa: this.fb.nonNullable.control(''),
@@ -409,6 +415,8 @@ export class FacturaRecibidaDrawerComponent {
 
   /** En paralelo a la IA y sin bloquear nada: si hay QR de Verifactu, se guarda para contrastarlo. */
   private async leerQr(archivo: File, token: number): Promise<void> {
+    // El QR de Verifactu es de la AEAT: fuera de España no se busca.
+    if (!this.fiscal.esEspana()) return;
     const r = await this.qrDecode.leer(archivo);
     if (token === this.extraccionActual) this.qrResultado.set(r);
   }

@@ -4,26 +4,61 @@ import {
   CAUSA_EXENCION_LABELS,
   desglosarIva,
   esLineaExenta,
+  ivaLineaNueva,
+  ivaPorDefecto,
   opcionesIva,
-  TIPOS_IVA,
+  tiposIva,
 } from './iva';
 
+describe('tiposIva / ivaPorDefecto / ivaLineaNueva (por país)', () => {
+  it.each([
+    ['ES', [21, 10, 4, 0], 21],
+    ['MX', [16, 8, 0], 16],
+    ['CO', [19, 5, 0], 19],
+    ['CL', [19, 0], 19],
+  ] as const)('%s', (pais, tipos, general) => {
+    expect([...tiposIva(pais)]).toEqual(tipos);
+    expect(ivaPorDefecto(pais)).toBe(general);
+  });
+
+  it('la línea nueva en España sigue naciendo al 10 % (comportamiento histórico)', () => {
+    expect(ivaLineaNueva('ES')).toBe(0.1);
+  });
+
+  it('fuera de España la línea nueva nace al tipo general del país (fracción)', () => {
+    expect(ivaLineaNueva('MX')).toBe(0.16);
+    expect(ivaLineaNueva('CO')).toBe(0.19);
+    expect(ivaLineaNueva('CL')).toBe(0.19);
+  });
+
+  it('el tipo de línea nueva siempre es seleccionable en su país', () => {
+    for (const p of ['ES', 'MX', 'CO', 'CL'] as const) {
+      expect(tiposIva(p)).toContain(Math.round(ivaLineaNueva(p) * 100));
+    }
+  });
+});
+
 describe('opcionesIva', () => {
-  it('sin tipos extra devuelve los tipos vigentes', () => {
-    expect(opcionesIva([])).toEqual([21, 10, 4, 0]);
+  it('sin tipos extra devuelve los tipos vigentes del país', () => {
+    expect(opcionesIva('ES', [])).toEqual([21, 10, 4, 0]);
+    expect(opcionesIva('MX', [])).toEqual([16, 8, 0]);
   });
 
   it('ignora los extra que ya son tipos vigentes o vienen vacíos', () => {
-    expect(opcionesIva([21, 0, null, undefined])).toEqual([21, 10, 4, 0]);
+    expect(opcionesIva('ES', [21, 0, null, undefined])).toEqual([21, 10, 4, 0]);
   });
 
   it('conserva un tipo heredado fuera de lista, ordenado de mayor a menor', () => {
-    expect(opcionesIva([7])).toEqual([21, 10, 7, 4, 0]);
+    expect(opcionesIva('ES', [7])).toEqual([21, 10, 7, 4, 0]);
   });
 
   it('redondea el ruido de coma flotante y no duplica', () => {
     // 0.07 * 100 === 7.000000000000001
-    expect(opcionesIva([0.07 * 100, 7])).toEqual([21, 10, 7, 4, 0]);
+    expect(opcionesIva('ES', [0.07 * 100, 7])).toEqual([21, 10, 7, 4, 0]);
+  });
+
+  it('un documento con tipo español (21 %) sigue siendo seleccionable en una empresa de México', () => {
+    expect(opcionesIva('MX', [21])).toEqual([21, 16, 8, 0]);
   });
 });
 
@@ -59,8 +94,10 @@ describe('desglosarIva', () => {
     expect(baseImponible + cuotaIva).toBe(100);
   });
 
-  it('expone los tipos de IVA vigentes en España', () => {
-    expect(TIPOS_IVA).toEqual([21, 10, 4, 0]);
+  it('desglosa con tipos de otros países (México 16 %)', () => {
+    const { baseImponible, cuotaIva } = desglosarIva(116, 16, false);
+    expect(baseImponible).toBe(100);
+    expect(cuotaIva).toBe(16);
   });
 });
 

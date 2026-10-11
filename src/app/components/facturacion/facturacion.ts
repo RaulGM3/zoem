@@ -33,7 +33,7 @@ import { CierreModalComponent } from './components/cierre-modal/cierre-modal';
 import { FacturacionFacturasTabComponent } from './components/facturacion-facturas-tab/facturacion-facturas-tab';
 import { EditarNumeroModalComponent } from './components/editar-numero-modal/editar-numero-modal';
 import { normalizeLinea } from '../../core/services/invoice.service';
-import { IVA_LINEA_NUEVA } from '../../interfaces/iva';
+import { FiscalEmpresaService } from '../../core/fiscal/fiscal-empresa.service';
 import { resumenFacturacion } from '../../core/facturacion/resumen-facturacion';
 
 /** YYYY-MM-DD en hora local: a medianoche `toISOString()` (UTC) daría el día anterior. */
@@ -68,6 +68,7 @@ export class FacturacionComponent implements OnInit {
   private readonly invoiceService = inject(InvoiceService);
   private readonly invoicePdfService = inject(InvoicePdfService);
   protected readonly companyService = inject(CompanyService);
+  protected readonly fiscal = inject(FiscalEmpresaService);
   private readonly contactService = inject(ContactService);
   private readonly perm = inject(PermissionService);
   private readonly toast = inject(ToastService);
@@ -115,7 +116,14 @@ export class FacturacionComponent implements OnInit {
 
   /** Panel: Verifactu, IVA y cobros del mes en curso (saldo, honorarios y suplidos viven en Tesorería). */
   readonly resumen = computed(() => resumenFacturacion(this.invoiceService.invoices(), fechaLocalHoy()));
-  readonly verifactuActivo = computed(() => this.companyService.activeCompany()?.verifactu?.enabled ?? false);
+  /** España con Verifactu activado: único criterio de la UI (panel, drawer, banner). */
+  readonly verifactuActivo = this.fiscal.verifactuDisponible;
+  readonly esEspana = this.fiscal.esEspana;
+  /** Tipo (%) con el que se abre el drawer: el de la factura en edición o el general del país. */
+  readonly drawerIvaPorDefecto = computed(() => {
+    const r = this.drawerEditingInvoice()?.ivaRate;
+    return r != null ? r * 100 : this.fiscal.ivaPorDefecto();
+  });
 
   readonly canCreateFactura = computed(() => this.perm.can('Facturación', 'crear'));
   readonly canEditCasos = computed(() => this.perm.can('Casos', 'editar'));
@@ -169,7 +177,7 @@ export class FacturacionComponent implements OnInit {
     const r = caso.resumenFinanciero;
     this.drawerLineas.set(
       [
-        { concepto: 'Honorarios', descripcion: '', cantidad: 1, precioUnitario: r.totalHonorarios, base: r.totalHonorarios, aplicaIva: true, ivaRate: IVA_LINEA_NUEVA },
+        { concepto: 'Honorarios', descripcion: '', cantidad: 1, precioUnitario: r.totalHonorarios, base: r.totalHonorarios, aplicaIva: true, ivaRate: this.fiscal.ivaLineaNueva() },
         { concepto: 'Suplidos', descripcion: '', cantidad: 1, precioUnitario: r.totalSuplidos, base: r.totalSuplidos, aplicaIva: false },
         { concepto: 'Ingresos', descripcion: '', cantidad: 1, precioUnitario: r.totalIngresos, base: r.totalIngresos, aplicaIva: false },
       ].filter(l => l.precioUnitario > 0),

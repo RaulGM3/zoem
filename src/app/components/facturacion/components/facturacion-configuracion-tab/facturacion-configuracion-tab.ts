@@ -21,6 +21,8 @@ export class FacturacionConfiguracionTabComponent {
   readonly form = input.required<ConfigFormGroup>();
   readonly saving = input.required<boolean>();
   readonly cifLabel = input.required<string>();
+  /** Verifactu y el certificado de la AEAT (y los ejemplos de NIF/CIF) solo se muestran en España. */
+  readonly esEspana = input(true);
 
   readonly save = output<void>();
 

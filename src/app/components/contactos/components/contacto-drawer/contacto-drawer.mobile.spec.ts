@@ -5,6 +5,7 @@ import { ContactoDrawerComponent } from './contacto-drawer';
 import { ContactService } from '../../../../core/services/contact.service';
 import { UsersService } from '../../../../core/services/users';
 import { ToastService } from '../../../../core/services/toast.service';
+import { provideFiscalTest } from '../../../../core/fiscal/fiscal-empresa.testing';
 
 function mockViewport(mobile: boolean): void {
   Object.defineProperty(window, 'matchMedia', {
@@ -29,6 +30,7 @@ describe('ContactoDrawerComponent — móvil', () => {
     await TestBed.configureTestingModule({
       imports: [ContactoDrawerComponent],
       providers: [
+        provideFiscalTest(),
         { provide: ContactService, useValue: { createContact: vi.fn(), updateContact: vi.fn() } },
         { provide: UsersService, useValue: { members: signal([]) } },
         { provide: ToastService, useValue: { run: vi.fn() } },

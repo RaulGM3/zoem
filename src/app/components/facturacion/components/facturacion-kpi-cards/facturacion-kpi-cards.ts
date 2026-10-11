@@ -12,6 +12,8 @@ import { ImportePipe } from '../../../../core/moneda/importe.pipe';
 export class FacturacionKpiCardsComponent {
   readonly resumen = input.required<ResumenFacturacion>();
   readonly verifactuActivo = input.required<boolean>();
+  /** Verifactu y el modelo 303 son de España: fuera de ella no se muestran. */
+  readonly esEspana = input(true);
 
   readonly ShieldCheckIcon = ShieldCheck;
   readonly LandmarkIcon = Landmark;

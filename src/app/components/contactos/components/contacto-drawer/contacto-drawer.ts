@@ -11,6 +11,7 @@ import {
   CONTACT_STATUS_OPTIONS, CANAL_ENTRADA_LABELS,
 } from '../../../../interfaces';
 import { normalizarNif, validarNif } from '../../../../core/fiscal/nif';
+import { FiscalEmpresaService } from '../../../../core/fiscal/fiscal-empresa.service';
 import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 
 type ContactPayload =
@@ -48,6 +49,8 @@ export class ContactoDrawerComponent {
   readonly Loader2Icon = LoaderCircle;
 
   private readonly contactService = inject(ContactService);
+  /** El dígito de control del NIF y los tipos DNI/NIE son españoles: fuera de España no se validan. */
+  protected readonly fiscal = inject(FiscalEmpresaService);
   readonly usersService = inject(UsersService);
   private readonly toast = inject(ToastService);
   private readonly fb = inject(FormBuilder);
@@ -190,7 +193,8 @@ export class ContactoDrawerComponent {
    */
   /**
    * Número de documento español (DNI/NIE o NIF de empresa) con formato o letra de control
-   * erróneos. Los documentos extranjeros (pasaporte, VAT, otro) y el vacío no se validan.
+   * erróneos. Los documentos extranjeros (pasaporte, VAT, otro), el vacío y cualquier documento
+   * de una empresa de fuera de España no se validan.
    */
   documentoInvalido(): boolean {
     const v = this.form.getRawValue();
@@ -207,6 +211,7 @@ export class ContactoDrawerComponent {
   }
 
   private esDocumentoEspanol(): boolean {
+    if (!this.fiscal.esEspana()) return false;
     const v = this.form.getRawValue();
     return this.formType() === 'persona_fisica' ? v.nifType === 'dni' || v.nifType === 'nie' : v.cifType === 'cif';
   }

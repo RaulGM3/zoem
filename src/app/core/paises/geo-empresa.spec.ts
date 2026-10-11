@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { geoParaGuardar, nombreRegion, verifactuDisponible } from './geo-empresa';
+import { geoParaGuardar, nombreRegion, verifactuActivoEnEmpresa, verifactuDisponible } from './geo-empresa';
 
 describe('geoParaGuardar', () => {
   it('España guarda `ca`', () => {
@@ -31,5 +31,20 @@ describe('verifactuDisponible', () => {
     expect(verifactuDisponible('ES')).toBe(true);
     expect(verifactuDisponible('CO')).toBe(false);
     expect(verifactuDisponible('MX')).toBe(false);
+  });
+});
+
+describe('verifactuActivoEnEmpresa', () => {
+  it('España (o sin país) con Verifactu activado', () => {
+    expect(verifactuActivoEnEmpresa({ pais: 'ES', verifactu: { enabled: true } })).toBe(true);
+    expect(verifactuActivoEnEmpresa({ verifactu: { enabled: true } })).toBe(true);
+  });
+  it('desactivado, ausente o sin empresa', () => {
+    expect(verifactuActivoEnEmpresa({ pais: 'ES', verifactu: { enabled: false } })).toBe(false);
+    expect(verifactuActivoEnEmpresa({ pais: 'ES' })).toBe(false);
+    expect(verifactuActivoEnEmpresa(null)).toBe(false);
+  });
+  it('fuera de España nunca, aunque el flag esté activo', () => {
+    expect(verifactuActivoEnEmpresa({ pais: 'MX', verifactu: { enabled: true } })).toBe(false);
   });
 });

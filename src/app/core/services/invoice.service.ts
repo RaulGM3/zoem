@@ -25,6 +25,7 @@ import type {
   VerifactuSubmitResponse,
 } from '../../interfaces/verifactu.interface';
 import { camposClienteFactura, type ClienteFactura, type TipoIdCliente } from '../facturacion/cliente-factura';
+import { verifactuActivoEnEmpresa } from '../paises/geo-empresa';
 import { motivoBloqueoVerifactu, tipoReintento, verifactuBloqueada } from '../verifactu/verifactu-ui';
 
 export type InvoiceStatus = 'borrador' | 'pendiente' | 'pagada' | 'vencida' | 'anulada';
@@ -237,9 +238,9 @@ export class InvoiceService {
     return invoiceId;
   }
 
-  /** `true` si la empresa activa tiene Verifactu activado (el servidor valida el resto). */
+  /** `true` si la empresa activa está en España y tiene Verifactu activado (el servidor valida el resto). */
   private get verifactuActivo(): boolean {
-    return this.companyService.activeCompany()?.verifactu?.enabled === true;
+    return verifactuActivoEnEmpresa(this.companyService.activeCompany());
   }
 
   /**

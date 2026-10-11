@@ -21,7 +21,7 @@
 </div>
 
 <!-- KPI Cards -->
-<app-facturacion-kpi-cards [resumen]="resumen()" [verifactuActivo]="verifactuActivo()" />
+<app-facturacion-kpi-cards [resumen]="resumen()" [verifactuActivo]="verifactuActivo()" [esEspana]="esEspana()" />
 
 <!-- Tabs -->
 <div class="rounded-xl overflow-hidden" style="border:1px solid var(--border);background:var(--surface)">
@@ -111,12 +111,12 @@
   <app-factura-drawer
     [caso]="caso"
     [initialLineas]="drawerLineas()"
-    [defaultIvaRate]="(drawerEditingInvoice()?.ivaRate ?? 0.21) * 100"
+    [defaultIvaRate]="drawerIvaPorDefecto()"
     [issueDate]="drawerEditingInvoice()?.issueDate ?? drawerIssueDate()"
     [dueDate]="drawerEditingInvoice()?.dueDate ?? drawerDueDate()"
     [initialNotes]="drawerNotes()"
     [saving]="saving()"
-    [verifactuEnabled]="companyService.activeCompany()?.verifactu?.enabled ?? false"
+    [verifactuEnabled]="verifactuActivo()"
     [editMode]="drawerEditMode()"
     [editingInvoice]="drawerEditingInvoice()"
     [initialCliente]="drawerCliente()"
