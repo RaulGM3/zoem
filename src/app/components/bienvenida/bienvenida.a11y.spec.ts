@@ -1,8 +1,10 @@
 import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { describe, expect, it, vi } from 'vitest';
 import { analizarA11y, formatearViolaciones } from '../../../testing/axe';
 import { AuthService } from '../../auth/auth.service';
 import { AutoservicioService } from '../../core/autoservicio/autoservicio.service';
+import { PlacesService } from '../../core/ubicacion/places.service';
 import { BienvenidaComponent } from './bienvenida';
 
 describe('BienvenidaComponent — accesibilidad (axe)', () => {
@@ -12,8 +14,9 @@ describe('BienvenidaComponent — accesibilidad (axe)', () => {
       TestBed.configureTestingModule({
         imports: [BienvenidaComponent],
         providers: [
-          { provide: AutoservicioService, useValue: { verificada: () => verificada } },
-          { provide: AuthService, useValue: { logout: vi.fn() } },
+          { provide: AutoservicioService, useValue: { verificada: () => verificada, sugerirPais: () => Promise.resolve(null) } },
+          { provide: PlacesService, useValue: { disponible: signal(true), buscar: vi.fn(), elegir: vi.fn() } },
+          { provide: AuthService, useValue: { logout: vi.fn(), user: () => ({ email: 'ana@despacho.es' }) } },
         ],
       });
       const f = TestBed.createComponent(BienvenidaComponent);

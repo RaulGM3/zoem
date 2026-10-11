@@ -2,7 +2,8 @@ import { DOCUMENT } from '@angular/common';
 import { inject, Injectable } from '@angular/core';
 import { Auth, sendEmailVerification } from '@angular/fire/auth';
 import { Functions, httpsCallable } from '@angular/fire/functions';
-import type { ComunidadAutonoma, TipoPersona } from '../../interfaces/company';
+import type { TipoPersona, UbicacionEmpresa } from '../../interfaces/company';
+import { esCodigoPais, type CodigoPais } from '../paises/catalogo-paises';
 import { ClaimsSyncService } from '../services/claims-sync.service';
 import { CompanyService } from '../services/company.service';
 import { DemoSeedService, type ProgresoSeed } from '../services/demo-seed.service';
@@ -10,10 +11,22 @@ import { DemoSeedService, type ProgresoSeed } from '../services/demo-seed.servic
 export interface DatosAlta {
   nombre: string;
   tipoPersona: TipoPersona;
-  ca: ComunidadAutonoma;
+  pais: CodigoPais;
+  /** España: slug de la comunidad autónoma (el servidor la guarda como `ca`). Resto: ISO 3166-2. */
+  region: string;
+  /** Fija desde el alta. */
+  moneda: string;
+  ciudad?: string;
+  ubicacion?: UbicacionEmpresa;
   /** Libre y opcional (rubro/especialidad principal). */
   especialidad?: string;
   /** IANA; define el mes de los cupos mensuales. */
+  zonaHoraria: string;
+}
+
+export interface DatosDemo {
+  pais: CodigoPais;
+  moneda: string;
   zonaHoraria: string;
 }
 
@@ -82,8 +95,21 @@ export class AutoservicioService {
     return this.llamar('crearEmpresaAutoservicio', datos);
   }
 
-  async crearDemo(nombre: string, zonaHoraria: string): Promise<string> {
-    return this.llamar('crearDespachoDemo', { nombre, zonaHoraria });
+  async crearDemo(nombre: string, datos: DatosDemo): Promise<string> {
+    return this.llamar('crearDespachoDemo', { nombre, ...datos });
+  }
+
+  /**
+   * País sugerido por la IP (cabecera de geolocalización en el servidor). Es solo una pista:
+   * nunca lanza; `null` si no se sabe o falla, y el llamador usa otro plan B.
+   */
+  async sugerirPais(): Promise<CodigoPais | null> {
+    try {
+      const { data } = await httpsCallable<unknown, { pais: string | null }>(this.functions, 'sugerirPais')({});
+      return esCodigoPais(data?.pais) ? data.pais : null;
+    } catch {
+      return null;
+    }
   }
 
   /** Las Storage rules usan claims: se alinean con el despacho demo antes de subir sus documentos. */

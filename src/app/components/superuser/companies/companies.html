@@ -60,7 +60,7 @@
             <td class="px-4 py-3 text-slate-400">{{ rubroLabels[company.rubro] }}</td>
             <td class="px-4 py-3 text-slate-400">
               <div>{{ company.ciudad }}</div>
-              <div class="text-xs text-slate-600">{{ caLabels[company.ca] }}</div>
+              <div class="text-xs text-slate-600">{{ nombreRegion(paisDeEmpresa(company), company.ca ?? company.region) }}</div>
             </td>
             <td class="px-4 py-3 text-slate-400">{{ company.telefono }}</td>
             <td class="px-4 py-3">
@@ -199,31 +199,61 @@
           />
         </div>
 
-        <!-- Rubro + CA -->
-        <div class="grid grid-cols-2 gap-4">
+        <!-- Rubro -->
+        <div>
+          <label for="co-rubro" class="mb-1 block text-xs font-medium text-slate-400">
+            Rubro <span class="text-red-400">*</span>
+          </label>
+          <select
+            id="co-rubro"
+            formControlName="rubro"
+            class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
+          >
+            <option value="abogados">Despacho de Abogados</option>
+          </select>
+        </div>
+
+        <!-- País + Región + Moneda -->
+        <div class="grid grid-cols-3 gap-4">
           <div>
-            <label for="co-rubro" class="mb-1 block text-xs font-medium text-slate-400">
-              Rubro <span class="text-red-400">*</span>
+            <label for="co-pais" class="mb-1 block text-xs font-medium text-slate-400">
+              País <span class="text-red-400">*</span>
             </label>
             <select
-              id="co-rubro"
-              formControlName="rubro"
+              id="co-pais"
+              formControlName="pais"
               class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
             >
-              <option value="abogados">Despacho de Abogados</option>
+              @for (p of paises; track p.codigo) {
+                <option [value]="p.codigo">{{ p.nombre }}</option>
+              }
             </select>
           </div>
           <div>
-            <label for="co-ca" class="mb-1 block text-xs font-medium text-slate-400">
-              Comunidad Autónoma <span class="text-red-400">*</span>
+            <label for="co-region" class="mb-1 block text-xs font-medium text-slate-400">
+              {{ paisActual().etiquetaRegion }} <span class="text-red-400">*</span>
             </label>
             <select
-              id="co-ca"
-              formControlName="ca"
+              id="co-region"
+              formControlName="region"
               class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
             >
-              @for (entry of caEntries; track entry[0]) {
-                <option [value]="entry[0]">{{ entry[1] }}</option>
+              @for (r of regionesDisponibles(); track r.codigo) {
+                <option [value]="r.codigo">{{ r.nombre }}</option>
+              }
+            </select>
+          </div>
+          <div>
+            <label for="co-moneda" class="mb-1 block text-xs font-medium text-slate-400">
+              Moneda <span class="text-red-400">*</span>
+            </label>
+            <select
+              id="co-moneda"
+              formControlName="moneda"
+              class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
+            >
+              @for (m of monedasDisponibles(); track m) {
+                <option [value]="m">{{ m }}</option>
               }
             </select>
           </div>
@@ -282,7 +312,7 @@
               type="text"
               formControlName="codigoPostal"
               class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-violet-500 focus:outline-none"
-              placeholder="28013"
+              [placeholder]="paisActual().digitosCodigoPostal === 6 ? '050001' : paisActual().digitosCodigoPostal === 7 ? '8320000' : '28013'"
             />
           </div>
           <div>
@@ -400,9 +430,11 @@
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm font-medium text-slate-200">Verifactu</p>
-              <p class="text-xs text-slate-500">Envío automático de facturas a la AEAT</p>
+              <p class="text-xs text-slate-500">
+                {{ verifactuPermitido() ? 'Envío automático de facturas a la AEAT' : 'Solo disponible para despachos en España' }}
+              </p>
             </div>
-            <label class="relative inline-flex cursor-pointer items-center">
+            <label class="relative inline-flex items-center" [class.cursor-pointer]="verifactuPermitido()" [class.opacity-50]="!verifactuPermitido()">
               <input
                 id="co-verifactu"
                 type="checkbox"

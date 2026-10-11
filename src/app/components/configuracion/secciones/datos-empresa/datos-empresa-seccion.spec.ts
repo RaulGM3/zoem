@@ -3,6 +3,7 @@ import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { DatosEmpresaSeccionComponent } from './datos-empresa-seccion';
 import { CompanyService } from '../../../../core/services/company.service';
+import { PlacesService } from '../../../../core/ubicacion/places.service';
 import { CompanyLogoService } from '../../../../core/services/company-logo.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
@@ -21,6 +22,7 @@ describe('DatosEmpresaSeccionComponent', () => {
       imports: [DatosEmpresaSeccionComponent],
       providers: [
         { provide: CompanyService, useValue: { activeCompany: company, updateCompany } },
+        { provide: PlacesService, useValue: { disponible: signal(false), buscar: vi.fn(), elegir: vi.fn() } },
         { provide: CompanyLogoService, useValue: { subir: vi.fn(), quitar: vi.fn() } },
         { provide: ToastService, useValue: toast },
       ],
@@ -141,6 +143,102 @@ describe('DatosEmpresaSeccionComponent', () => {
     f.detectChanges();
     await f.whenStable();
     expect(q<HTMLInputElement>('#empresa-name').value).toBe('Editado');
+  });
+
+  describe('país y moneda', () => {
+    const colombia = { id: 'co', name: 'Pérez SAS', tipoPersona: 'juridica', pais: 'CO', moneda: 'COP', region: 'CO-ANT', cif: '900123456-7', codigoPostal: '050001', ciudad: 'Medellín' };
+
+    it('se ven pero no se pueden editar', async () => {
+      company.set(colombia);
+      await montar();
+      f.detectChanges();
+      const pais = q<HTMLInputElement>('#empresa-pais');
+      const moneda = q<HTMLInputElement>('#empresa-moneda');
+      expect(pais.value).toBe('Colombia');
+      expect(moneda.value).toBe('COP');
+      expect(pais.readOnly).toBe(true);
+      expect(moneda.readOnly).toBe(true);
+      expect(q('label[for="empresa-pais"]').textContent).toContain('País');
+      expect(q('label[for="empresa-moneda"]').textContent).toContain('Moneda');
+    });
+
+    it('una empresa sin pais ni moneda (previa al backfill) se ve como España/EUR', async () => {
+      await montar();
+      f.detectChanges();
+      expect(q<HTMLInputElement>('#empresa-pais').value).toBe('España');
+      expect(q<HTMLInputElement>('#empresa-moneda').value).toBe('EUR');
+    });
+
+    it('el guardado nunca envía pais ni moneda', async () => {
+      company.set(colombia);
+      await montar();
+      escribir('empresa-name', 'Otro nombre');
+      await f.componentInstance.guardar();
+      const payload = (updateCompany.mock.calls[0] as unknown[])[1] as Record<string, unknown>;
+      expect(payload).not.toHaveProperty('pais');
+      expect(payload).not.toHaveProperty('moneda');
+      expect(payload).not.toHaveProperty('region');
+      expect(payload).not.toHaveProperty('ca');
+    });
+
+    it('etiqueta del id fiscal y validación del código postal según el país', async () => {
+      company.set(colombia);
+      await montar();
+      f.detectChanges();
+      expect(q('label[for="empresa-cif"]').textContent).toContain('NIT');
+      escribir('empresa-cp', '05000');
+      expect(guardar().disabled).toBe(true);
+      expect(el().querySelector('#empresa-cp-error')?.textContent).toContain('6 dígitos');
+      escribir('empresa-cp', '050001');
+      expect(guardar().disabled).toBe(false);
+    });
+
+    it('México: RFC y 5 dígitos; Chile: RUT y 7 dígitos', async () => {
+      company.set({ id: 'co', name: 'X', tipoPersona: 'juridica', pais: 'MX', moneda: 'MXN' });
+      await montar();
+      f.detectChanges();
+      expect(q('label[for="empresa-cif"]').textContent).toContain('RFC');
+      escribir('empresa-cif', 'XAXX010101000');
+      expect(guardar().disabled).toBe(false);
+      escribir('empresa-cif', 'corto');
+      expect(guardar().disabled).toBe(true);
+      expect(el().querySelector('#empresa-cif-error')?.textContent).toContain('RFC');
+
+      company.set({ id: 'co2', name: 'Y', tipoPersona: 'juridica', pais: 'CL', moneda: 'CLP' });
+      await montar();
+      f.detectChanges();
+      expect(q('label[for="empresa-cif"]').textContent).toContain('RUT');
+      escribir('empresa-cp', '8320000');
+      expect(guardar().disabled).toBe(false);
+    });
+
+    it('la ciudad usa el combobox (texto libre si Places no está disponible) y guarda lo escrito', async () => {
+      await montar();
+      f.detectChanges();
+      expect(el().querySelector('app-ciudad-combobox #empresa-ciudad')).not.toBeNull();
+      escribir('empresa-ciudad', 'Sevilla');
+      await f.componentInstance.guardar();
+      expect(updateCompany).toHaveBeenCalledWith('co', expect.objectContaining({ ciudad: 'Sevilla' }));
+    });
+
+    it('si la empresa tenía ubicación y el texto de la ciudad cambia, se limpia (null)', async () => {
+      company.set({ ...colombia, ubicacion: { placeId: 'p', lat: 1, lng: 2 } });
+      await montar();
+      f.detectChanges();
+      escribir('empresa-ciudad', 'Bello');
+      await f.componentInstance.guardar();
+      expect(updateCompany).toHaveBeenCalledWith('co', expect.objectContaining({ ciudad: 'Bello', ubicacion: null }));
+    });
+
+    it('si no se toca la ciudad conserva la ubicación guardada', async () => {
+      const ubicacion = { placeId: 'p', lat: 1, lng: 2 };
+      company.set({ ...colombia, ubicacion });
+      await montar();
+      f.detectChanges();
+      escribir('empresa-name', 'Nuevo');
+      await f.componentInstance.guardar();
+      expect(updateCompany).toHaveBeenCalledWith('co', expect.objectContaining({ ubicacion }));
+    });
   });
 
   it('incluye el uploader de logo y pasa AXE', async () => {

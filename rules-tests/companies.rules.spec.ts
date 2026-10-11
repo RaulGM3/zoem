@@ -67,6 +67,29 @@ describe('companies/{cid} update', () => {
     await assertFails(upd('admin', { createdBy: 'otro' }));
   });
 
+  it('Gestor y Admin no cambian país, moneda, comunidad ni región (fijos desde el alta)', async () => {
+    for (const uid of ['gestor', 'admin']) {
+      await assertFails(upd(uid, { pais: 'CO' }));
+      await assertFails(upd(uid, { moneda: 'USD' }));
+      await assertFails(upd(uid, { ca: 'madrid' }));
+      await assertFails(upd(uid, { region: 'CO-ANT' }));
+      await assertFails(upd(uid, { saldoBancario: 5, moneda: 'USD' }));
+    }
+  });
+
+  it('Admin y Gestor sí editan ciudad y ubicación', async () => {
+    const ubicacion = { placeId: 'ChIJabc', lat: 6.24, lng: -75.58 };
+    await assertSucceeds(upd('admin', { ciudad: 'Medellín', ubicacion }));
+    await assertSucceeds(upd('gestor', { ciudad: 'Bogotá' }));
+  });
+
+  it('un valor de país/moneda ya guardado no estorba si no cambia', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), ruta), { pais: 'ES', moneda: 'EUR', ca: 'madrid' });
+    });
+    await assertSucceeds(upd('admin', { saldoBancario: 7, pais: 'ES', moneda: 'EUR', ca: 'madrid' }));
+  });
+
   it('Usuario y Viewer no actualizan', async () => {
     await assertFails(upd('usuario', { saldoBancario: 1 }));
     await assertFails(upd('viewer', { saldoBancario: 1 }));
@@ -78,6 +101,7 @@ describe('companies/{cid} update', () => {
 
   it('superusuario actualiza todo', async () => {
     await assertSucceeds(updateDoc(superDb(), { plan: 'pro', isActive: false, logo: LOGO }));
+    await assertSucceeds(updateDoc(superDb(), { pais: 'CO', moneda: 'USD', region: 'CO-ANT', ca: 'madrid' }));
     await assertSucceeds(updateDoc(superDb(), { suscripcion: { plan: 'pro', complementos: [], estado: 'activa', origen: 'manual' } }));
   });
 });

@@ -15,6 +15,8 @@ import {
   deleteField,
 } from '@angular/fire/firestore';
 import { stripUndefinedDeep } from '../firebase/sanitize';
+import type { ComunidadAutonoma } from '../../interfaces/company';
+import type { CodigoPais } from '../paises/catalogo-paises';
 import type { Suscripcion } from '../planes/catalogo';
 import { CLAVE_EMPRESA_ACTIVA, elegirEmpresaInicial } from './empresa-activa';
 
@@ -38,6 +40,12 @@ export interface CompanyLogo {
   contentType: LogoContentType;
   /** ISO; versiona la caché del logo en el PDF. */
   updatedAt: string;
+}
+
+export interface UbicacionEmpresa {
+  placeId: string;
+  lat: number;
+  lng: number;
 }
 
 export interface Company {
@@ -64,6 +72,14 @@ export interface Company {
   /** uid de quien creó la empresa. */
   createdBy?: string;
   isActive: boolean;
+  /** País del despacho. Empresas anteriores al backfill: sin valor (se lee como ES, ver `paisDeEmpresa`). */
+  pais?: CodigoPais;
+  /** Moneda ISO 4217. Fija desde el alta; solo el superusuario la cambia. */
+  moneda?: string;
+  /** Comunidad autónoma: SOLO en España. */
+  ca?: ComunidadAutonoma;
+  /** División del país (ISO 3166-2): SOLO fuera de España. */
+  region?: string;
   /** Zona horaria IANA de la empresa: define cuándo empieza el mes de los cupos mensuales. Legadas: Europe/Madrid. */
   zonaHoraria?: string;
   email?: string;
@@ -71,6 +87,8 @@ export interface Company {
   direccion?: string;
   codigoPostal?: string;
   ciudad?: string;
+  /** Place ID y coordenadas de la ciudad elegida con Google Places. */
+  ubicacion?: UbicacionEmpresa | null;
   website?: string;
   /** Saldo bancario real cargado manualmente, para cotejar con el sistema. */
   saldoBancario?: number;

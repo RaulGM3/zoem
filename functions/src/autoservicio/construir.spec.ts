@@ -6,7 +6,7 @@ const ahora = new Date('2026-10-09T12:00:00Z');
 describe('empresaAutoservicioDoc', () => {
   it('crea el despacho free en prueba de 14 días, creado por el usuario', () => {
     const d = empresaAutoservicioDoc(
-      { nombre: 'García', tipoPersona: 'fisica', ca: 'madrid', rubro: 'abogados', especialidad: 'Civil' },
+      { nombre: 'García', tipoPersona: 'fisica', pais: 'ES', region: 'madrid', moneda: 'EUR', rubro: 'abogados', especialidad: 'Civil', zonaHoraria: 'Europe/Madrid' },
       { uid: 'u1', email: 'a@b.es', slug: 'garcia-x1', ahora },
     );
     expect(d).toMatchObject({
@@ -19,7 +19,7 @@ describe('empresaAutoservicioDoc', () => {
 
   it('nace con `derechos` denormalizados para que las rules ya apliquen: pro en la prueba, free después', () => {
     const d = empresaAutoservicioDoc(
-      { nombre: 'García', tipoPersona: 'fisica', ca: 'madrid', rubro: 'abogados' },
+      { nombre: 'García', tipoPersona: 'fisica', pais: 'ES', region: 'madrid', moneda: 'EUR', rubro: 'abogados', zonaHoraria: 'Europe/Madrid' },
       { uid: 'u1', email: 'a@b.es', slug: 'g', ahora },
     );
     expect(d.derechos).toBeTruthy();
@@ -29,10 +29,55 @@ describe('empresaAutoservicioDoc', () => {
   });
 });
 
+describe('país, región y moneda en el alta', () => {
+  const base = { nombre: 'Pérez', tipoPersona: 'fisica' as const, rubro: 'abogados' as const };
+  const ctx = { uid: 'u1', email: 'a@b.es', slug: 'g', ahora };
+
+  it('España: guarda pais, moneda y `ca` (sin `region`)', () => {
+    const d = empresaAutoservicioDoc({ ...base, pais: 'ES', region: 'cataluna', moneda: 'EUR', zonaHoraria: 'Europe/Madrid' }, ctx);
+    expect(d).toMatchObject({ pais: 'ES', moneda: 'EUR', ca: 'cataluna' });
+    expect(d).not.toHaveProperty('region');
+  });
+
+  it('Colombia: guarda pais, moneda, `region`, ciudad y ubicación (sin `ca`)', () => {
+    const ubicacion = { placeId: 'ChIJabc', lat: 6.24, lng: -75.58 };
+    const d = empresaAutoservicioDoc(
+      { ...base, pais: 'CO', region: 'CO-ANT', moneda: 'COP', ciudad: 'Medellín', ubicacion, zonaHoraria: 'America/Bogota' },
+      ctx,
+    );
+    expect(d).toMatchObject({ pais: 'CO', moneda: 'COP', region: 'CO-ANT', ciudad: 'Medellín', ubicacion });
+    expect(d).not.toHaveProperty('ca');
+  });
+
+  it('sin ciudad ni ubicación no escribe esos campos', () => {
+    const d = empresaAutoservicioDoc({ ...base, pais: 'CL', region: 'CL-RM', moneda: 'CLP', zonaHoraria: 'America/Santiago' }, ctx);
+    expect(d).not.toHaveProperty('ciudad');
+    expect(d).not.toHaveProperty('ubicacion');
+  });
+
+  it('la demo hereda país y moneda y toma la capital como región', () => {
+    const casos = [
+      ['ES', 'EUR', { ca: 'madrid' }],
+      ['CO', 'COP', { region: 'CO-DC' }],
+      ['CL', 'USD', { region: 'CL-RM' }],
+      ['MX', 'MXN', { region: 'MX-CMX' }],
+    ] as const;
+    for (const [pais, moneda, geo] of casos) {
+      const d = empresaDemoDoc('X', { ...ctx, pais, moneda });
+      expect(d).toMatchObject({ pais, moneda, ...geo });
+      expect(d).not.toHaveProperty(pais === 'ES' ? 'region' : 'ca');
+    }
+  });
+
+  it('la demo sin país es España/EUR', () => {
+    expect(empresaDemoDoc('X', ctx)).toMatchObject({ pais: 'ES', moneda: 'EUR', ca: 'madrid' });
+  });
+});
+
 describe('zonaHoraria en el alta', () => {
   it('se guarda en la empresa y el periodoUso de `derechos` se calcula en esa zona', () => {
     const d = empresaAutoservicioDoc(
-      { nombre: 'Pérez', tipoPersona: 'fisica', ca: 'madrid', rubro: 'abogados', zonaHoraria: 'America/Bogota' },
+      { nombre: 'Pérez', tipoPersona: 'fisica', pais: 'ES', region: 'madrid', moneda: 'EUR', rubro: 'abogados', zonaHoraria: 'America/Bogota' },
       { uid: 'u1', email: 'a@b.es', slug: 'g', ahora: new Date('2026-11-01T03:00:00Z') },
     );
     expect(d.zonaHoraria).toBe('America/Bogota');

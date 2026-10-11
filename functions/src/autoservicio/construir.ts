@@ -1,6 +1,7 @@
 // Constructores PUROS de los documentos que crean los callables de autoservicio.
 // Los valores de servidor (serverTimestamp) los añade el callable, no se mezclan acá.
 import { derechosParaDoc } from '../planes/derechosDoc';
+import { paisPorCodigo, type CodigoPais } from '../paises/catalogo-paises';
 import { ZONA_POR_DEFECTO } from '../uso/periodo';
 import { suscripcionDemo, suscripcionInicial } from './suscripcion';
 import type { AltaEmpresa } from './validar';
@@ -12,6 +13,14 @@ export interface ContextoAlta {
   ahora: Date;
   /** Solo para la demo; en el alta real la zona viaja en `AltaEmpresa`. */
   zonaHoraria?: string;
+  /** Solo para la demo (por defecto España/EUR). */
+  pais?: CodigoPais;
+  moneda?: string;
+}
+
+/** España guarda la comunidad en `ca` (Verifactu y plazos la leen); el resto en `region` (ISO 3166-2). */
+function geoDoc(pais: CodigoPais, region: string) {
+  return pais === 'ES' ? { ca: region } : { region };
 }
 
 export function empresaAutoservicioDoc(alta: AltaEmpresa, ctx: ContextoAlta) {
@@ -20,7 +29,11 @@ export function empresaAutoservicioDoc(alta: AltaEmpresa, ctx: ContextoAlta) {
     name: alta.nombre,
     slug: ctx.slug,
     tipoPersona: alta.tipoPersona,
-    ca: alta.ca,
+    pais: alta.pais,
+    moneda: alta.moneda,
+    ...geoDoc(alta.pais, alta.region),
+    ...(alta.ciudad ? { ciudad: alta.ciudad } : {}),
+    ...(alta.ubicacion ? { ubicacion: alta.ubicacion } : {}),
     rubro: alta.rubro,
     ...(alta.especialidad ? { especialidad: alta.especialidad } : {}),
     zonaHoraria: alta.zonaHoraria,
@@ -37,12 +50,17 @@ export function empresaAutoservicioDoc(alta: AltaEmpresa, ctx: ContextoAlta) {
 
 export function empresaDemoDoc(nombre: string, ctx: ContextoAlta) {
   const suscripcion = suscripcionDemo(ctx.ahora);
-  const zonaHoraria = ctx.zonaHoraria ?? ZONA_POR_DEFECTO;
+  const pais = ctx.pais ?? 'ES';
+  const p = paisPorCodigo(pais);
+  const zonaHoraria = ctx.zonaHoraria ?? (ctx.pais ? p.zonaPorDefecto : ZONA_POR_DEFECTO);
   return {
     name: `Despacho Demo – ${nombre}`,
     slug: ctx.slug,
     tipoPersona: 'juridica' as const,
-    ca: 'madrid' as const,
+    pais,
+    moneda: ctx.moneda ?? p.moneda,
+    // La capital del país.
+    ...geoDoc(pais, p.regionCapital),
     rubro: 'abogados' as const,
     zonaHoraria,
     email: ctx.email,

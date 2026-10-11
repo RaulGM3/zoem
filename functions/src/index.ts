@@ -240,6 +240,7 @@ export { validarQrFacturaRecibida } from './aeat/validarQrCallable';
 
 // ─── Autoservicio: alta de despachos, demo y expiración de la prueba ─────────
 export { crearEmpresaAutoservicio, crearDespachoDemo, sembrarLlamadasDemo } from './autoservicio/crearEmpresa';
+export { sugerirPais } from './autoservicio/sugerirPais';
 export { expirarPruebas } from './autoservicio/expirarPruebas';
 
 // ─── Planes: derechos denormalizados, contadores de uso y cupo de IA (fase 3) ─

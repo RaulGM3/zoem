@@ -1,8 +1,10 @@
 import { Timestamp } from '@angular/fire/firestore';
 import type { CompanyLogo, CompanyVerifactu } from '../core/services/company.service';
 import type { PlanId, Suscripcion } from '../core/planes/catalogo';
+import type { CodigoPais } from '../core/paises/catalogo-paises';
+import type { UbicacionEmpresa } from '../core/services/company.service';
 
-export type { CompanyVerifactu };
+export type { CompanyVerifactu, UbicacionEmpresa };
 
 export type ComunidadAutonoma =
   | 'andalucia'
@@ -38,13 +40,22 @@ export interface Company {
   id?: string;
   name: string;
   tipoPersona: TipoPersona;
-  ca: ComunidadAutonoma;
+  /** País del despacho. Empresas anteriores al backfill: sin valor (se lee como ES, ver `paisDeEmpresa`). */
+  pais: CodigoPais;
+  /** Moneda ISO 4217 del despacho. Fija desde el alta; solo el superusuario la cambia. */
+  moneda: string;
+  /** Comunidad autónoma: SOLO en España. */
+  ca?: ComunidadAutonoma;
+  /** División del país (ISO 3166-2, p. ej. `CO-ANT`): SOLO fuera de España. */
+  region?: string;
   rubro: Rubro;
   email: string;
   telefono: string;
   direccion: string;
   codigoPostal: string;
-  ciudad: string;
+  ciudad?: string;
+  /** Place ID y coordenadas de la ciudad elegida con Google Places. */
+  ubicacion?: UbicacionEmpresa | null;
   cif?: string;
   website?: string;
   logo?: CompanyLogo;

@@ -94,7 +94,7 @@ export const crearDespachoDemo = onCall<unknown, Promise<Respuesta>>(
   async (request) => {
     const { uid, email, token } = exigirSesion(request);
     const v = validarAltaDemo(request.data);
-    if (!v.ok) throw new HttpsError('invalid-argument', 'Falta el nombre del despacho');
+    if (!v.ok) throw new HttpsError('invalid-argument', `Datos no válidos: ${v.campos.join(', ')}`);
 
     const db = admin.firestore();
     const ownerRef = db.doc(`empresasAutoservicio/${uid}`);
@@ -108,7 +108,7 @@ export const crearDespachoDemo = onCall<unknown, Promise<Respuesta>>(
       if (previa && (await tx.get(db.doc(`companies/${previa}`))).exists) return previa;
 
       tx.set(companyRef, {
-        ...empresaDemoDoc(v.valor.nombre, { uid, email, slug: generarSlug(`demo ${v.valor.nombre}`, sufijo(companyRef.id)), ahora, zonaHoraria: v.valor.zonaHoraria }),
+        ...empresaDemoDoc(v.valor.nombre, { uid, email, slug: generarSlug(`demo ${v.valor.nombre}`, sufijo(companyRef.id)), ahora, zonaHoraria: v.valor.zonaHoraria, pais: v.valor.pais, moneda: v.valor.moneda }),
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       });

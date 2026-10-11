@@ -182,13 +182,15 @@ service cloud.firestore {
       allow get:    if isSuper() || isMember(cid);
       allow list:   if isSuper();
       allow create: if isSuper();                       // alta de empresa = superusuario
-      // settings + saldo bancario (tesorería). Campos de plataforma (plan, suscripcion, derechos, esDemo, autoservicio, createdBy) solo super;
+      // settings + saldo bancario (tesorería). Campos de plataforma (plan, suscripcion, derechos, esDemo, autoservicio, createdBy, pais, moneda, ca, region) solo super;
       // `logo` (branding) solo Admin.
       allow update: if isSuper()
                     || (managerWrite(cid)
                         && !request.resource.data.diff(resource.data).affectedKeys()
                              .hasAny(['plan', 'suscripcion', 'derechos', 'isActive', 'slug', 'createdAt',
-                                     'esDemo', 'autoservicio', 'createdBy'])
+                                     'esDemo', 'autoservicio', 'createdBy',
+                                     // país, moneda y región quedan fijos desde el alta: solo servidor o superusuario
+                                     'pais', 'moneda', 'ca', 'region'])
                         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['logo'])
                             || isCompanyAdmin(cid))
                         // zona horaria IANA (la valida la UI/Functions; aquí solo tipo y tamaño): cambia el mes de los cupos => Admin.
@@ -527,7 +529,7 @@ service cloud.firestore {
         // JSDoc/INCLUDE_DELETED en un fix de seguimiento).
         allow get:    if isSuper()
                       || (isMember(cid)
-                          && resource.data.deleted != true
+                          && resource.data.get('deleted', false) != true
                           && (resource.data.get('visibleTo', 'all') != 'restricted'
                               || isCompanyAdmin(cid)
                               || (request.auth.uid in resource.data.get('visibleUserIds', []))
@@ -535,7 +537,7 @@ service cloud.firestore {
         allow list:   if isSuper() || isMember(cid);
         allow create: if isSuper() || canWrite(cid);
         allow update: if isSuper() || adminWrite(cid)
-                      || (canWrite(cid) && resource.data.deleted != true);
+                      || (canWrite(cid) && resource.data.get('deleted', false) != true);
         allow delete: if isSuper();
 
         match /doc_audit/{eventId} {
