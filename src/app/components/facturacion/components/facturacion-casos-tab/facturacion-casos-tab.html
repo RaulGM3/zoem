@@ -8,7 +8,7 @@
               <span class="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium"
                 [style.background]="estadoEstilo(inv.status).background"
                 [style.color]="estadoEstilo(inv.status).color">{{ estadoEtiqueta(inv.status) }}</span>
-              <span class="text-xs tabular-nums" style="color:var(--text-muted);font-family:var(--font-mono)">{{ inv.total | number:'1.2-2' }} €</span>
+              <span class="text-xs tabular-nums" style="color:var(--text-muted);font-family:var(--font-mono)">{{ inv.total | importe }}</span>
             }
             <span class="ml-auto">
               @if (inv?.pdfUrl) {
@@ -53,13 +53,13 @@
               style="color:var(--text-strong)">{{ caso.titulo }}</a>
             <p class="text-xs" style="color:var(--text-faint)">{{ caso.tipo }}</p>
           </td>
-          <td class="px-4 py-4 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.totalIngresos | number:'1.0-0' }}€</td>
-          <td class="px-4 py-4 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.totalSuplidos | number:'1.0-0' }}€</td>
-          <td class="px-4 py-4 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.totalHonorarios | number:'1.0-0' }}€</td>
+          <td class="px-4 py-4 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.totalIngresos | importe:'entero' }}</td>
+          <td class="px-4 py-4 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.totalSuplidos | importe:'entero' }}</td>
+          <td class="px-4 py-4 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.totalHonorarios | importe:'entero' }}</td>
           <td class="px-4 py-4 text-right font-semibold tabular-nums"
             [style.color]="caso.resumenFinanciero.saldo >= 0 ? 'var(--success)' : 'var(--danger)'"
             style="font-family:var(--font-mono)">
-            {{ caso.resumenFinanciero.saldo | number:'1.0-0' }}€
+            {{ caso.resumenFinanciero.saldo | importe:'entero' }}
           </td>
           <td class="px-4 py-4">
             <div class="flex items-center gap-2">
@@ -126,12 +126,12 @@
       </div>
       <p class="shrink-0 text-lg font-semibold tabular-nums"
         [style.color]="caso.resumenFinanciero.saldo >= 0 ? 'var(--success)' : 'var(--danger)'"
-        style="font-family:var(--font-mono)"><span class="sr-only">Saldo </span>{{ caso.resumenFinanciero.saldo | number:'1.0-0' }}€</p>
+        style="font-family:var(--font-mono)"><span class="sr-only">Saldo </span>{{ caso.resumenFinanciero.saldo | importe:'entero' }}</p>
     </div>
     <dl class="mt-2 grid grid-cols-3 gap-2 text-xs" style="color:var(--text-muted)">
-      <div><dt>Ingresos</dt><dd class="tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.totalIngresos | number:'1.0-0' }}€</dd></div>
-      <div><dt>Suplidos</dt><dd class="tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.totalSuplidos | number:'1.0-0' }}€</dd></div>
-      <div><dt>Honorarios</dt><dd class="tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.totalHonorarios | number:'1.0-0' }}€</dd></div>
+      <div><dt>Ingresos</dt><dd class="tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.totalIngresos | importe:'entero' }}</dd></div>
+      <div><dt>Suplidos</dt><dd class="tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.totalSuplidos | importe:'entero' }}</dd></div>
+      <div><dt>Honorarios</dt><dd class="tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.totalHonorarios | importe:'entero' }}</dd></div>
     </dl>
     <div class="mt-2 flex items-center gap-2">
       <span class="h-2.5 w-2.5 shrink-0 rounded-full" [style.background]="esEjecutado(caso) ? 'var(--success)' : 'var(--warning)'"></span>

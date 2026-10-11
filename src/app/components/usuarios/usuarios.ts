@@ -42,13 +42,14 @@ import { MejoraPlanService } from '../../core/planes/mejora-plan.service';
 import { PlanService } from '../../core/planes/plan.service';
 import { UsoService } from '../../core/planes/uso.service';
 import { CupoComponent } from '../../shared/components/cupo/cupo';
+import { ImportePipe } from '../../core/moneda/importe.pipe';
 
 type UsuariosTab = 'usuarios' | 'roles' | 'permisos' | 'solicitudes';
 type EditableMatrix = Record<Modulo, Record<FirmRole, RoleCaps>>;
 
 @Component({
   selector: 'app-usuarios',
-  imports: [
+  imports: [ImportePipe, 
     LucideAngularModule, InviteDrawerComponent, UserEditDrawerComponent, RoleEditorDrawerComponent,
     ActividadFeedComponent, ResponsiveListComponent, ListCardDirective, ListTableDirective, CupoComponent,
   ],

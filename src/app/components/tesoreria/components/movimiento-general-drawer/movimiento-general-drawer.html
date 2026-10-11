@@ -53,15 +53,15 @@
       <div class="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2">
         <div>
           <label class="form-label" for="mg-importe">
-            {{ formIvaIncluido() ? 'Importe total (€)' : 'Base imponible (€)' }}
+            {{ formIvaIncluido() ? 'Importe total (' + moneda.simbolo() + ')' : 'Base imponible (' + moneda.simbolo() + ')' }}
           </label>
           <div class="relative mt-1">
-            <input id="mg-importe" type="number" inputmode="decimal" step="0.01" min="0.01"
+            <input id="mg-importe" type="number" inputmode="decimal" [step]="moneda.step()" [min]="moneda.step()"
               class="form-input text-right pr-7" style="font-family:var(--font-mono)"
               placeholder="0.00"
               [value]="formImporte()"
               (input)="formImporte.set($any($event.target).value)" />
-            <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs" style="color:var(--text-faint)" aria-hidden="true">€</span>
+            <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs" style="color:var(--text-faint)" aria-hidden="true">{{ moneda.simbolo() }}</span>
           </div>
         </div>
         <div>
@@ -103,17 +103,17 @@
         <div class="rounded-xl px-4 py-3 text-xs grid grid-cols-3 gap-2" style="background:var(--surface-2)">
           <div>
             <p style="color:var(--text-muted)">Base imponible</p>
-            <p class="font-semibold tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ desglose().baseImponible | number:'1.2-2' }} €</p>
+            <p class="font-semibold tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ desglose().baseImponible | importe }}</p>
           </div>
           <div>
             <p style="color:var(--text-muted)">Cuota IVA</p>
-            <p class="font-semibold tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ desglose().cuotaIva | number:'1.2-2' }} €</p>
+            <p class="font-semibold tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ desglose().cuotaIva | importe }}</p>
           </div>
           <div>
             <p style="color:var(--text-muted)">Total</p>
             <p class="font-semibold tabular-nums" style="font-family:var(--font-mono)"
               [style.color]="formEsEntrada() ? 'var(--success)' : 'var(--danger)'">
-              {{ desglose().total | number:'1.2-2' }} €
+              {{ desglose().total | importe }}
             </p>
           </div>
         </div>

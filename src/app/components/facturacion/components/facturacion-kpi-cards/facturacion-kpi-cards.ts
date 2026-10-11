@@ -1,12 +1,12 @@
 import { Component, ChangeDetectionStrategy, input } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import { LucideAngularModule, ShieldCheck, Landmark, Hourglass, AlertTriangle } from 'lucide-angular';
 import type { ResumenFacturacion } from '../../../../core/facturacion/resumen-facturacion';
+import { ImportePipe } from '../../../../core/moneda/importe.pipe';
 
 @Component({
   selector: 'app-facturacion-kpi-cards',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LucideAngularModule, DecimalPipe],
+  imports: [ImportePipe, LucideAngularModule],
   templateUrl: './facturacion-kpi-cards.html',
 })
 export class FacturacionKpiCardsComponent {

@@ -197,11 +197,11 @@
             <div class="shrink-0 text-right">
               <p class="text-sm font-semibold tabular-nums"
                 [style.color]="mov.esEntrada ? 'var(--success)' : 'var(--danger)'">
-                {{ mov.esEntrada ? '+' : '−' }}{{ mov.importe | number:'1.2-2' }} €
+                {{ mov.esEntrada ? '+' : '−' }}{{ mov.importe | importe }}
               </p>
               @if (mov.cuotaIva) {
                 <p class="text-xs" style="color:var(--text-faint)">
-                  base {{ mov.baseImponible | number:'1.2-2' }} · IVA {{ mov.cuotaIva | number:'1.2-2' }}
+                  base {{ mov.baseImponible | importe }} · IVA {{ mov.cuotaIva | importe }}
                   @if (mov.tipoIva) { ({{ mov.tipoIva }}%) }
                 </p>
               } @else if (mov.ivaExento) {
@@ -296,10 +296,10 @@
               <td class="px-4 py-3" style="color:var(--text-muted)">{{ mov.fecha }}</td>
               <td class="px-4 py-3 text-right font-medium"
                 [style.color]="mov.esEntrada ? 'var(--success)' : 'var(--danger)'">
-                {{ mov.esEntrada ? '+' : '−' }}{{ mov.importe | number:'1.2-2' }} €
+                {{ mov.esEntrada ? '+' : '−' }}{{ mov.importe | importe }}
                 @if (mov.cuotaIva) {
                   <p class="text-xs font-normal" style="color:var(--text-faint)">
-                    base {{ mov.baseImponible | number:'1.2-2' }} · IVA {{ mov.cuotaIva | number:'1.2-2' }}
+                    base {{ mov.baseImponible | importe }} · IVA {{ mov.cuotaIva | importe }}
                     @if (mov.tipoIva) { ({{ mov.tipoIva }}%) }
                   </p>
                 } @else if (mov.ivaExento) {

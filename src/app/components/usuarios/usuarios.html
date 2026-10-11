@@ -127,7 +127,7 @@
                           <td class="py-3 text-slate-600 text-xs">{{ formatLogin(usr.ultimoLogin) }}</td>
                           @if (isAdmin()) {
                             <td class="py-3 text-slate-600">
-                              {{ usr.tarifaHoraria != null ? (usr.tarifaHoraria + ' €') : '—' }}
+                              {{ usr.tarifaHoraria != null ? (usr.tarifaHoraria | importe) : '—' }}
                             </td>
                           }
                         </tr>
@@ -171,7 +171,7 @@
                     @if (isAdmin()) {
                       <span>
                         <span class="block text-slate-500">Tarifa/h</span>
-                        <span class="block font-medium text-slate-700">{{ usr.tarifaHoraria != null ? (usr.tarifaHoraria + ' €') : '—' }}</span>
+                        <span class="block font-medium text-slate-700">{{ usr.tarifaHoraria != null ? (usr.tarifaHoraria | importe) : '—' }}</span>
                       </span>
                     }
                   </span>

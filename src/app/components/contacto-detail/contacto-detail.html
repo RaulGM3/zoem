@@ -156,7 +156,7 @@
       <div class="rounded-xl p-4 grid grid-cols-2 gap-4" style="background:var(--surface);border:1px solid var(--border)">
         <div class="text-center p-3 rounded-lg" style="background:color-mix(in srgb,var(--brand) 8%,transparent)">
           <p class="text-xs mb-1" style="color:var(--text-muted)">Total facturado</p>
-          <p class="text-lg font-bold" style="color:var(--brand)">{{ (c.totalBilled ?? 0) | number:'1.0-0' }} €</p>
+          <p class="text-lg font-bold" style="color:var(--brand)">{{ (c.totalBilled ?? 0) | importe:'entero' }}</p>
         </div>
         <div class="text-center p-3 rounded-lg" style="background:var(--surface-2)">
           <p class="text-xs mb-1" style="color:var(--text-muted)">Casos</p>
@@ -178,7 +178,7 @@
                 <p class="text-xs" style="color:var(--text-faint)">{{ f.issueDate }}</p>
               </div>
               <div class="flex items-center gap-3">
-                <span class="font-semibold" style="color:var(--text-strong)">{{ f.total | number:'1.0-0' }} €</span>
+                <span class="font-semibold" style="color:var(--text-strong)">{{ f.total | importe:'entero' }}</span>
                 <span class="px-2 py-0.5 text-xs rounded-full font-medium" [style.background]="getInvoiceStatusStyle(f.status).background" [style.color]="getInvoiceStatusStyle(f.status).color">{{ f.status }}</span>
               </div>
             </div>

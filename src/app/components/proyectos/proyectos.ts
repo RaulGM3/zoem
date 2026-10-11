@@ -1,5 +1,4 @@
 import { Component, signal, computed } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import {
   LucideAngularModule,
@@ -19,10 +18,11 @@ import {
 } from 'lucide-angular';
 import { PROJECTS } from '../../data/dummy-data';
 import type { Project } from '../../interfaces';
+import { ImportePipe } from '../../core/moneda/importe.pipe';
 
 @Component({
   selector: 'app-proyectos',
-  imports: [RouterLink, LucideAngularModule, DecimalPipe],
+  imports: [ImportePipe, RouterLink, LucideAngularModule],
   templateUrl: './proyectos.html',
 })
 export class ProyectosComponent {

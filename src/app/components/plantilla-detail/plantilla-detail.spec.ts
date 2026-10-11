@@ -14,6 +14,7 @@ import { UsersService } from '../../core/services/users';
 import type {
   CasoPlantilla, CompanyMember, DocTemplate, PlantillaFile, PlantillaFolder,
 } from '../../interfaces';
+import { provideMonedaTest } from '../../core/moneda/moneda-empresa.testing';
 
 interface RunOptions { successMessage?: string; errorTitle?: string; onSuccess?: () => void }
 
@@ -156,7 +157,7 @@ describe('PlantillaDetailComponent', () => {
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [PlantillaDetailComponent],
-      providers: [
+      providers: [provideMonedaTest(), 
         provideRouter([]),
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => routeId } } } },
         { provide: PlantillasService, useValue: { getPlantilla, updatePlantilla } },

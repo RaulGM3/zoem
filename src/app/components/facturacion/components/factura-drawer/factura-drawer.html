@@ -212,14 +212,14 @@
               <div>
                 <label class="text-[10px] uppercase tracking-wider block mb-0.5"
                   style="color:var(--text-faint)">Precio Ud.</label>
-                <input type="number" formControlName="precioUnitario" step="0.01"
+                <input type="number" formControlName="precioUnitario" [step]="moneda.step()"
                   class="form-input w-full text-right text-sm"
                   [attr.aria-label]="'Precio unitario línea ' + (i + 1)" />
               </div>
               <div class="col-span-2 text-right sm:col-span-1 sm:pt-3.5">
                 <span class="text-sm tabular-nums font-medium"
                   style="color:var(--text-strong);font-family:var(--font-mono)">
-                  {{ lineSubtotal(i) | number:'1.2-2' }}&nbsp;€
+                  {{ lineSubtotal(i) | importe }}
                 </span>
               </div>
             </div>
@@ -291,7 +291,7 @@
         <div class="flex justify-between" style="color:var(--text-body)">
           <span>Base imponible</span>
           <span class="tabular-nums" style="font-family:var(--font-mono)">
-            {{ preview().base | number:'1.2-2' }}&nbsp;€
+            {{ preview().base | importe }}
           </span>
         </div>
 
@@ -299,7 +299,7 @@
           <div class="flex justify-between text-xs" style="color:var(--text-muted)">
             <span>IVA {{ group.rate }}%</span>
             <span class="tabular-nums" style="font-family:var(--font-mono)">
-              {{ group.cuota | number:'1.2-2' }}&nbsp;€
+              {{ group.cuota | importe }}
             </span>
           </div>
         }
@@ -307,7 +307,7 @@
         <div class="flex justify-between" style="color:var(--text-body)">
           <span>IVA total</span>
           <span class="tabular-nums" style="font-family:var(--font-mono)">
-            {{ preview().iva | number:'1.2-2' }}&nbsp;€
+            {{ preview().iva | importe }}
           </span>
         </div>
 
@@ -315,7 +315,7 @@
           style="color:var(--text-strong);border-top:1px solid var(--border)">
           <span>Total</span>
           <span class="tabular-nums" style="font-family:var(--font-mono)">
-            {{ preview().total | number:'1.2-2' }}&nbsp;€
+            {{ preview().total | importe }}
           </span>
         </div>
       </div>

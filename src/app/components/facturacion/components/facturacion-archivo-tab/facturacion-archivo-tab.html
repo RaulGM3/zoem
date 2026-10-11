@@ -22,9 +22,9 @@
             <p class="font-semibold" style="color:var(--text-strong)">{{ caso.titulo }}</p>
             <p class="text-xs" style="color:var(--text-faint)">{{ caso.tipo }}</p>
           </td>
-          <td class="px-4 py-4 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.saldo | number:'1.0-0' }}€</td>
+          <td class="px-4 py-4 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.saldo | importe:'entero' }}</td>
           <td class="px-4 py-4 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">
-            {{ caso.cierreSaldoBancario != null ? (caso.cierreSaldoBancario | number:'1.0-0') + '€' : '—' }}
+            {{ caso.cierreSaldoBancario != null ? (caso.cierreSaldoBancario | importe:'entero') : '—' }}
           </td>
           <td class="px-4 py-4 text-xs" style="color:var(--text-muted)">{{ caso.cierreConfirmadoAt ? (caso.cierreConfirmadoAt | slice:0:10) : '—' }}</td>
           <td class="px-4 py-4">
@@ -109,8 +109,8 @@
       }
     </div>
     <dl class="mt-2 grid grid-cols-3 gap-2 text-xs" style="color:var(--text-muted)">
-      <div><dt>Saldo final</dt><dd class="tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.saldo | number:'1.0-0' }}€</dd></div>
-      <div><dt>Saldo bancario</dt><dd class="tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.cierreSaldoBancario != null ? (caso.cierreSaldoBancario | number:'1.0-0') + '€' : '—' }}</dd></div>
+      <div><dt>Saldo final</dt><dd class="tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.resumenFinanciero.saldo | importe:'entero' }}</dd></div>
+      <div><dt>Saldo bancario</dt><dd class="tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ caso.cierreSaldoBancario != null ? (caso.cierreSaldoBancario | importe:'entero') : '—' }}</dd></div>
       <div><dt>Cerrado</dt><dd>{{ caso.cierreConfirmadoAt ? (caso.cierreConfirmadoAt | slice:0:10) : '—' }}</dd></div>
     </dl>
     <div class="mt-2">

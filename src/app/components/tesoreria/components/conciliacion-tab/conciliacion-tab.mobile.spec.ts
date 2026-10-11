@@ -4,6 +4,7 @@ import { Timestamp } from '@angular/fire/firestore';
 import { ConciliacionTabComponent, type MovimientoConciliable } from './conciliacion-tab';
 import type { CuentaBancaria, LineaExtracto } from '../../../../interfaces';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 function mockViewport(mobile: boolean): void {
   Object.defineProperty(window, 'matchMedia', {
@@ -40,7 +41,7 @@ describe('ConciliacionTabComponent — móvil', () => {
   async function montar(mobile: boolean): Promise<void> {
     TestBed.resetTestingModule();
     mockViewport(mobile);
-    await TestBed.configureTestingModule({ imports: [ConciliacionTabComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [ConciliacionTabComponent] }).compileComponents();
     fixture = TestBed.createComponent(ConciliacionTabComponent);
     fixture.componentRef.setInput('cuentas', [CUENTA]);
     fixture.componentRef.setInput('lineas', [linea('l1'), linea('l2', { estado: 'casado', movimientoId: 'mX', fecha: '2026-01-05', importe: 100 })]);
@@ -58,7 +59,7 @@ describe('ConciliacionTabComponent — móvil', () => {
     const cards = el().querySelectorAll('[data-linea-card]');
     expect(cards).toHaveLength(2);
     expect(cards[0].textContent).toContain('Linea l1');
-    expect(cards[0].textContent).toContain('-40.00');
+    expect(cards[0].textContent).toContain('-40,00');
     expect(cards[0].textContent).toContain('Pendiente');
     expect(cards[1].textContent).toContain('Casado');
   });

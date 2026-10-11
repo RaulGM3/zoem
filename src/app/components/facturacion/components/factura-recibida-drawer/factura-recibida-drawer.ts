@@ -13,7 +13,6 @@ import {
   untracked,
 } from '@angular/core';
 import { AlmacenamientoCupoService } from '../../../../core/planes/almacenamiento-cupo.service';
-import { DecimalPipe } from '@angular/common';
 import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { LucideAngularModule, Plus, Trash2, Info, Paperclip, X, Camera, Image } from 'lucide-angular';
 import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
@@ -34,6 +33,8 @@ import {
 import { FacturaExtractionService, type DatosExtraidos } from '../../../../core/services/factura-extraction.service';
 import { QrDecodeService } from '../../../../core/services/qr-decode.service';
 import { contrastarQr, type ResultadoParseQr } from '../../../../core/facturas-recibidas/qr-verifactu';
+import { ImportePipe } from '../../../../core/moneda/importe.pipe';
+import { MonedaEmpresaService } from '../../../../core/moneda/moneda-empresa.service';
 
 export interface FacturaRecibidaPayload {
   datos: DatosNuevaFactura;
@@ -62,10 +63,11 @@ const round2 = (n: number): number => Math.round((n + Number.EPSILON) * 100) / 1
 @Component({
   selector: 'app-factura-recibida-drawer',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LucideAngularModule, DecimalPipe, ReactiveFormsModule, OverlayShellComponent],
+  imports: [ImportePipe, LucideAngularModule, ReactiveFormsModule, OverlayShellComponent],
   templateUrl: './factura-recibida-drawer.html',
 })
 export class FacturaRecibidaDrawerComponent {
+  protected readonly moneda = inject(MonedaEmpresaService);
   private readonly fb = inject(FormBuilder);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);

@@ -5,6 +5,7 @@ import type { InvoiceLinea } from '../../../../core/services/invoice.service';
 import type { Caso } from '../../../../interfaces';
 import type { Contact } from '../../../../interfaces/contact.interface';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 function mockViewport(mobile: boolean): void {
   Object.defineProperty(window, 'matchMedia', {
@@ -29,7 +30,7 @@ describe('FacturaDrawerComponent — overlay-shell y móvil', () => {
   async function montar(mobile: boolean): Promise<void> {
     TestBed.resetTestingModule();
     mockViewport(mobile);
-    await TestBed.configureTestingModule({ imports: [FacturaDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [FacturaDrawerComponent] }).compileComponents();
     fixture = TestBed.createComponent(FacturaDrawerComponent);
     fixture.componentRef.setInput('caso', { id: 'k', titulo: 'Caso Uno' } as unknown as Caso);
     fixture.componentRef.setInput('initialLineas', [LINEA]);
@@ -114,7 +115,7 @@ describe('FacturaDrawerComponent — overlay-shell y móvil', () => {
     const subtotal = fila.lastElementChild!;
     expect(subtotal.classList.contains('col-span-2')).toBe(true);
     expect(subtotal.classList.contains('sm:col-span-1')).toBe(true);
-    expect(subtotal.textContent).toContain('100.00');
+    expect(subtotal.textContent).toContain('100,00');
   });
 
   describe('autocompletado de cliente en móvil', () => {

@@ -4,6 +4,7 @@ import { Timestamp } from '@angular/fire/firestore';
 import { TesoreriaResumenTabComponent, type CotejoCuenta, type MovimientoEnriquecido } from './resumen-tab';
 import type { CierreCaja, CuentaBancaria } from '../../../../interfaces';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 function mockViewport(mobile: boolean): void {
   Object.defineProperty(window, 'matchMedia', {
@@ -54,7 +55,7 @@ describe('TesoreriaResumenTabComponent — móvil', () => {
   async function montar(mobile: boolean, cotejos: CotejoCuenta[] = [cotejo('a'), cotejo('b', { banco: 700, diferencia: -50, conciliado: false })]): Promise<void> {
     TestBed.resetTestingModule();
     mockViewport(mobile);
-    await TestBed.configureTestingModule({ imports: [TesoreriaResumenTabComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [TesoreriaResumenTabComponent] }).compileComponents();
     fixture = TestBed.createComponent(TesoreriaResumenTabComponent);
     fixture.componentRef.setInput('cotejos', cotejos);
     fixture.componentRef.setInput('movimientosPorCuenta', new Map([['a', [mov('m1'), mov('m2', { aprobado: true })]]]));
@@ -73,7 +74,7 @@ describe('TesoreriaResumenTabComponent — móvil', () => {
     const cards = el().querySelectorAll('[data-cuenta-card]');
     expect(cards).toHaveLength(2);
     expect(cards[0].textContent).toContain('Cuenta a');
-    expect(cards[0].textContent).toContain('750.00');
+    expect(cards[0].textContent).toContain('750,00');
     expect(cards[0].textContent).toContain('Conciliado');
     expect(cards[1].textContent).toContain('Discrepancia');
   });
@@ -105,7 +106,7 @@ describe('TesoreriaResumenTabComponent — móvil', () => {
     expect(movs).toHaveLength(1); // filtro por defecto: pendientes
     expect(movs[0].textContent).toContain('Concepto m1');
     expect(movs[0].textContent).toContain('Pendiente');
-    expect(movs[0].textContent).toContain('50.00');
+    expect(movs[0].textContent).toContain('50,00');
   });
 
   it('móvil: el desglose de discrepancia se abre como bottom sheet', async () => {
@@ -121,8 +122,8 @@ describe('TesoreriaResumenTabComponent — móvil', () => {
   it('móvil: el cierre de caja muestra sus totales también en móvil', async () => {
     await montar(true);
     const fila = el().querySelector('[data-cierre]')!;
-    expect(fila.textContent).toContain('1,000.00');
-    expect(fila.textContent).toContain('750.00');
+    expect(fila.textContent).toContain('1.000,00');
+    expect(fila.textContent).toContain('750,00');
   });
 
   it('escritorio: tablas y sin tarjetas', async () => {

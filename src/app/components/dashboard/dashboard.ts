@@ -27,6 +27,7 @@ import { StatCardComponent } from './components/stat-card/stat-card';
 import { BarChartComponent, type BarGroup } from './components/bar-chart/bar-chart';
 import { DonutChartComponent, type DonutItem } from './components/donut-chart/donut-chart';
 import { ActividadFeedComponent } from '../../shared/components/actividad-feed/actividad-feed';
+import { ImportePipe } from '../../core/moneda/importe.pipe';
 
 /** Estados que cuentan como "caso activo" en el dashboard. */
 const ESTADOS_ACTIVOS: ReadonlySet<Caso['estado']> = new Set(['pendiente', 'en_proceso', 'urgente']);
@@ -76,7 +77,7 @@ export interface MovimientoVista {
 
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink, DecimalPipe, LucideAngularModule, StatCardComponent, BarChartComponent, DonutChartComponent, ActividadFeedComponent],
+  imports: [ImportePipe, RouterLink, DecimalPipe, LucideAngularModule, StatCardComponent, BarChartComponent, DonutChartComponent, ActividadFeedComponent],
   templateUrl: './dashboard.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

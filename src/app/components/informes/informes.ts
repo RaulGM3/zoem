@@ -6,6 +6,7 @@ import {
 } from 'lucide-angular';
 import { PROJECTS, INVOICES, CONTACTS } from '../../data/dummy-data';
 import { getContactDisplayName, getContactInitials } from '../../interfaces';
+import { ImportePipe } from '../../core/moneda/importe.pipe';
 
 type InformesTab = 'general' | 'financiero' | 'clientes' | 'equipo';
 type Periodo = 'semana' | 'mes' | 'trimestre' | 'año';
@@ -26,7 +27,7 @@ const EQUIPO = [
 
 @Component({
   selector: 'app-informes',
-  imports: [LucideAngularModule, DecimalPipe],
+  imports: [ImportePipe, LucideAngularModule, DecimalPipe],
   templateUrl: './informes.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

@@ -10,7 +10,7 @@
     </div>
     <div class="p-3 rounded-lg text-center" style="background:color-mix(in srgb,var(--accent) 10%,transparent)">
       <p class="text-xs" style="color:var(--text-muted)">Valor pendiente</p>
-      <p class="text-xl font-semibold tabular-nums" style="color:var(--accent);font-family:var(--font-display)">{{ valorPendiente() | number:'1.0-0' }} €</p>
+      <p class="text-xl font-semibold tabular-nums" style="color:var(--accent);font-family:var(--font-display)">{{ valorPendiente() | importe:'entero' }}</p>
     </div>
   </div>
 
@@ -39,7 +39,7 @@
             <td class="py-3 text-xs" style="color:var(--text-muted)">{{ hora.memberName }}</td>
             <td class="py-3 text-right font-semibold tabular-nums" style="color:var(--text-strong);font-family:var(--font-mono)">{{ hora.horas | number:'1.0-1' }}h</td>
             <td class="py-3 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">
-              {{ hora.importe != null ? (hora.importe | number:'1.0-0') + ' €' : '—' }}
+              {{ hora.importe != null ? (hora.importe | importe:'entero') : '—' }}
             </td>
             <td class="py-3 text-center">
               <span class="px-2 py-0.5 text-xs rounded-full font-medium"
@@ -72,7 +72,7 @@
         <p class="text-xs" style="color:var(--text-muted)">{{ hora.fecha }} · {{ hora.memberName }}</p>
         <p class="text-right tabular-nums" style="font-family:var(--font-mono)">
           <span class="font-semibold" style="color:var(--text-strong)">{{ hora.horas | number:'1.0-1' }}h</span>
-          <span class="ml-2 text-sm" style="color:var(--text-body)">{{ hora.importe != null ? (hora.importe | number:'1.0-0') + ' €' : '—' }}</span>
+          <span class="ml-2 text-sm" style="color:var(--text-body)">{{ hora.importe != null ? (hora.importe | importe:'entero') : '—' }}</span>
         </p>
       </div>
     </article>

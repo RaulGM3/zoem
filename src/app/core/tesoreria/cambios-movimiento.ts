@@ -1,4 +1,5 @@
 import type { MovimientoGestoria } from '../../interfaces/gestoria.interface';
+import { formatearImporteTexto, type FormatoImporte } from '../moneda/formatear-importe';
 
 /**
  * Descripción PURA de los cambios de un movimiento — sin Angular, sin DI.
@@ -15,9 +16,7 @@ export type MovimientoAuditable = Pick<
 
 const VACIO = '—';
 
-function euros(n: number): string {
-  return `${n.toFixed(2).replace('.', ',')} €`;
-}
+const EUR_ES: FormatoImporte = { moneda: 'EUR', locale: 'es-ES', decimales: 2 };
 
 function entrecomillar(v: string | undefined): string {
   return `"${v?.trim() || VACIO}"`;
@@ -30,11 +29,15 @@ function entrecomillar(v: string | undefined): string {
 const CAMPOS: readonly {
   clave: keyof MovimientoAuditable;
   etiqueta: string;
-  formato: (valor: MovimientoAuditable[keyof MovimientoAuditable], nombres: ReadonlyMap<string, string>) => string;
+  formato: (
+    valor: MovimientoAuditable[keyof MovimientoAuditable],
+    nombres: ReadonlyMap<string, string>,
+    moneda: FormatoImporte,
+  ) => string;
 }[] = [
   { clave: 'concepto', etiqueta: 'concepto', formato: v => entrecomillar(v as string | undefined) },
   { clave: 'tipo', etiqueta: 'tipo', formato: v => String(v) },
-  { clave: 'importe', etiqueta: 'importe', formato: v => euros(v as number) },
+  { clave: 'importe', etiqueta: 'importe', formato: (v, _nombres, moneda) => formatearImporteTexto(v as number, moneda) },
   { clave: 'esEntrada', etiqueta: 'dirección', formato: v => (v ? 'entrada' : 'salida') },
   { clave: 'fecha', etiqueta: 'fecha', formato: v => String(v) },
   {
@@ -53,11 +56,13 @@ const CAMPOS: readonly {
  * va a guardar. Solo reporta los campos presentes en el parche Y distintos.
  *
  * @param nombresCuenta id de cuenta → nombre, para que el feed diga "BBVA" y no un id opaco.
+ * @param moneda formato de importes del despacho (EUR/es-ES si se omite).
  */
 export function describirCambios(
   anterior: MovimientoAuditable,
   parche: Partial<MovimientoAuditable>,
   nombresCuenta: ReadonlyMap<string, string> = new Map(),
+  moneda: FormatoImporte = EUR_ES,
 ): string[] {
   const cambios: string[] = [];
   for (const { clave, etiqueta, formato } of CAMPOS) {
@@ -67,7 +72,7 @@ export function describirCambios(
     if (nuevo === viejo) continue;
     // Un opcional que pasa de `undefined` a `''` (o al revés) no es un cambio real.
     if ((viejo ?? '') === (nuevo ?? '')) continue;
-    cambios.push(`${etiqueta}: ${formato(viejo, nombresCuenta)} → ${formato(nuevo, nombresCuenta)}`);
+    cambios.push(`${etiqueta}: ${formato(viejo, nombresCuenta, moneda)} → ${formato(nuevo, nombresCuenta, moneda)}`);
   }
   return cambios;
 }

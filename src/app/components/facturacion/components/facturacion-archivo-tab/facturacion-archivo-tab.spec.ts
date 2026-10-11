@@ -5,6 +5,7 @@ import type { Invoice } from '../../../../core/services/invoice.service';
 import type { VerifactuEstado } from '../../../../interfaces/verifactu.interface';
 import type { Caso } from '../../../../interfaces';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 function caso(id: string, facturaId?: string): Caso {
   return {
@@ -44,7 +45,7 @@ describe('FacturacionArchivoTabComponent — Verifactu (R9.2, R9.3)', () => {
 
   async function montar(facturas: Invoice[]): Promise<void> {
     TestBed.resetTestingModule();
-    await TestBed.configureTestingModule({ imports: [FacturacionArchivoTabComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [FacturacionArchivoTabComponent] }).compileComponents();
     fixture = TestBed.createComponent(FacturacionArchivoTabComponent);
     fixture.componentRef.setInput('casos', facturas.map((f) => caso(`caso-${f.id}`, f.id)));
     fixture.componentRef.setInput('saving', false);

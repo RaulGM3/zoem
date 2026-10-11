@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, OnDestroy, OnInit, signal } from '@angular/core';
-import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
+import { NgTemplateOutlet } from '@angular/common';
 import { LucideAngularModule, Ban, Plus, Info, Download, ShieldCheck, ExternalLink } from 'lucide-angular';
 import { ActionMenuComponent, type MenuAction } from '../../../../shared/components/action-menu/action-menu';
 import {
@@ -34,12 +34,13 @@ import {
   FacturaRecibidaDrawerComponent,
   type FacturaRecibidaPayload,
 } from '../factura-recibida-drawer/factura-recibida-drawer';
+import { ImportePipe } from '../../../../core/moneda/importe.pipe';
 
 @Component({
   selector: 'app-facturacion-gastos-tab',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    LucideAngularModule, DecimalPipe, NgTemplateOutlet, ActionMenuComponent, ResponsiveListComponent, ListCardDirective,
+  imports: [ImportePipe, 
+    LucideAngularModule, NgTemplateOutlet, ActionMenuComponent, ResponsiveListComponent, ListCardDirective,
     ListTableDirective, FacturaRecibidaDrawerComponent,
   ],
   templateUrl: './facturacion-gastos-tab.html',

@@ -4,6 +4,7 @@ import { LucideAngularModule, Info } from 'lucide-angular';
 import type { MovimientoGestoria, MovimientoTipo } from '../../../../interfaces';
 import { movTipoStyle } from '../mov-tipo-style';
 import { BreakpointService } from '../../../../core/services/breakpoint.service';
+import { ImportePipe } from '../../../../core/moneda/importe.pipe';
 
 /**
  * Tarjetas de resumen de la gestoría de un caso (ingresos, egresos con su
@@ -15,7 +16,7 @@ import { BreakpointService } from '../../../../core/services/breakpoint.service'
     class: 'block space-y-4',
     '(document:keydown.escape)': 'onEscape()',
   },
-  imports: [LucideAngularModule, DecimalPipe],
+  imports: [ImportePipe, LucideAngularModule, DecimalPipe],
   templateUrl: './caso-resumen-financiero.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

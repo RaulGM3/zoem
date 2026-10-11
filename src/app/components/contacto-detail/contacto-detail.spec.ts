@@ -20,6 +20,7 @@ import { UsersService } from '../../core/services/users';
 import { PermissionService } from '../../core/services/permission.service';
 import { ToastService } from '../../core/services/toast.service';
 import type { Caso, CompanyMember, Contact, ContactFile, ContactFolder, Evento } from '../../interfaces';
+import { provideMonedaTest } from '../../core/moneda/moneda-empresa.testing';
 
 interface RunOptions { successMessage?: string; errorTitle?: string; onSuccess?: () => void }
 
@@ -147,7 +148,7 @@ describe('ContactoDetailComponent', () => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [ContactoDetailComponent],
-      providers: [
+      providers: [provideMonedaTest(), 
         provideRouter([]),
         ...cupoDePruebas().providers,
         { provide: ContactService, useValue: { getContact, updateContact } },

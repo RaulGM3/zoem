@@ -1,18 +1,18 @@
 import { Component, input, computed, signal, inject, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
-import { DecimalPipe } from '@angular/common';
 import {
   LucideAngularModule, ArrowLeft, Edit, Receipt, Calendar,
   Clock, Target, CheckCircle2, Circle, PlayCircle, FileText,
   User, Building2, Plus,
 } from 'lucide-angular';
 import { PROJECTS, DOCUMENTS, PROJECT_TASKS, PROJECT_HISTORY } from '../../data/dummy-data';
+import { ImportePipe } from '../../core/moneda/importe.pipe';
 
 type ProyectoTab = 'tareas' | 'documentos' | 'historial';
 
 @Component({
   selector: 'app-proyecto-detail',
-  imports: [LucideAngularModule, DecimalPipe],
+  imports: [ImportePipe, LucideAngularModule],
   templateUrl: './proyecto-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

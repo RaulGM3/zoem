@@ -2,8 +2,8 @@
 
   <!-- Honorarios base -->
   <div class="bg-white rounded-xl border border-slate-200 p-5 space-y-1">
-    <label class="text-sm font-medium text-slate-700" for="pd-honorarios">Honorarios base (€)</label>
-    <input id="pd-honorarios" type="number" min="0" step="0.01"
+    <label class="text-sm font-medium text-slate-700" for="pd-honorarios">Honorarios base ({{ moneda.simbolo() }})</label>
+    <input id="pd-honorarios" type="number" min="0" [step]="moneda.step()"
       [value]="honorarios()"
       (input)="honorarios.set($any($event.target).value)"
       placeholder="Importe de honorarios base"
@@ -42,7 +42,7 @@
             </div>
 
             @if (s.importeEstimado != null) {
-              <span class="text-sm text-slate-700 shrink-0">{{ s.importeEstimado }} €</span>
+              <span class="text-sm text-slate-700 shrink-0">{{ s.importeEstimado | importe }}</span>
             }
 
             <button (click)="openEditSuplido(i)"
@@ -83,8 +83,8 @@
       </select>
     </div>
     <div class="space-y-1">
-      <label class="text-xs text-slate-700" for="s-importe">Precio aproximado (€, opcional)</label>
-      <input id="s-importe" type="number" min="0" step="0.01" [value]="suplidoImporte()"
+      <label class="text-xs text-slate-700" for="s-importe">Precio aproximado ({{ moneda.simbolo() }}, opcional)</label>
+      <input id="s-importe" type="number" min="0" [step]="moneda.step()" [value]="suplidoImporte()"
         (input)="suplidoImporte.set($any($event.target).value)"
         placeholder="Importe estimado"
         class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
@@ -145,8 +145,8 @@
       </div>
 
       <div class="space-y-1">
-        <label class="text-sm font-medium text-slate-700" for="es-importe">Precio aproximado (€, opcional)</label>
-        <input id="es-importe" type="number" min="0" step="0.01" [value]="editSuplidoImporte()"
+        <label class="text-sm font-medium text-slate-700" for="es-importe">Precio aproximado ({{ moneda.simbolo() }}, opcional)</label>
+        <input id="es-importe" type="number" min="0" [step]="moneda.step()" [value]="editSuplidoImporte()"
           (input)="editSuplidoImporte.set($any($event.target).value)"
           placeholder="Importe estimado"
           class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />

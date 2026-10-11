@@ -19,6 +19,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { SeguimientoContactoService } from '../../core/services/seguimiento-contacto.service';
 import type { CompanyMember, Contact } from '../../interfaces';
 import { analizarA11y, formatearViolaciones } from '../../../testing/axe';
+import { provideMonedaTest } from '../../core/moneda/moneda-empresa.testing';
 
 @Component({ selector: 'app-importar-contactos', template: '', changeDetection: ChangeDetectionStrategy.OnPush })
 class ImportarStubComponent {
@@ -72,7 +73,7 @@ describe('ContactosComponent — móvil', () => {
     const queryParams = new BehaviorSubject(convertToParamMap({}));
     TestBed.configureTestingModule({
       imports: [ContactosComponent],
-      providers: [
+      providers: [provideMonedaTest(), 
         provideRouter([]),
         {
           provide: ActivatedRoute,

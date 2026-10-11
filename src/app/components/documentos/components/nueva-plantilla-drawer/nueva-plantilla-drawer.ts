@@ -45,7 +45,7 @@ export class NuevaPlantillaDrawerComponent {
     { value: 'textarea', label: 'Texto largo' },
     { value: 'date', label: 'Fecha' },
     { value: 'number', label: 'Número' },
-    { value: 'currency', label: 'Importe (€)' },
+    { value: 'currency', label: 'Importe' },
     { value: 'email', label: 'Email' },
   ];
 

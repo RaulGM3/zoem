@@ -10,6 +10,7 @@ import { CuentasService } from '../../../../core/services/cuentas.service';
 import { UsersService } from '../../../../core/services/users';
 import type { MovimientoGestoria } from '../../../../interfaces';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 function mockViewport(mobile: boolean): void {
   Object.defineProperty(window, 'matchMedia', {
@@ -39,7 +40,7 @@ describe('RevisionMovimientosComponent — móvil', () => {
     mockViewport(true);
     await TestBed.configureTestingModule({
       imports: [RevisionMovimientosComponent],
-      providers: [
+      providers: [provideMonedaTest(), 
         {
           provide: GestoriaService,
           useValue: { todosMovimientos: signal(MOVS), todosLoading: signal(false), loadTodosMovimientos: vi.fn(), stopTodosMovimientos: vi.fn() },

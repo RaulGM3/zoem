@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, input, output, signal } from '@angular/core';
 import { SkeletonComponent } from '../../../../shared/components/skeleton/skeleton';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { LucideAngularModule, MoreHorizontal, Trash2, ExternalLink, CalendarClock, Flag } from 'lucide-angular';
 import { ActionMenuComponent, type MenuAction } from '../../../../shared/components/action-menu/action-menu';
 import {
@@ -9,6 +9,7 @@ import {
   ResponsiveListComponent,
 } from '../../../../shared/components/responsive-list/responsive-list';
 import { CASO_ESTADO_LABEL, type Caso } from '../../../../interfaces';
+import { ImportePipe } from '../../../../core/moneda/importe.pipe';
 
 @Component({
   selector: 'app-casos-table',
@@ -19,9 +20,8 @@ import { CASO_ESTADO_LABEL, type Caso } from '../../../../interfaces';
     // su trigger, aunque siga siendo clicable. Lo cerramos en cualquier scroll.
     '(window:scroll)': 'closeDropdownOnScroll()',
   },
-  imports: [SkeletonComponent, 
+  imports: [ImportePipe, SkeletonComponent, 
     LucideAngularModule,
-    DecimalPipe,
     DatePipe,
     ActionMenuComponent,
     ResponsiveListComponent,

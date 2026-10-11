@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy, input, output, signal, effect, computed, inject } from '@angular/core';
-import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
+import { NgTemplateOutlet } from '@angular/common';
 import {
   LucideAngularModule, Landmark, Wallet, CheckCircle2, AlertTriangle, Save, Scale, History, X,
   Lock, ChevronDown,
@@ -7,6 +7,8 @@ import {
 import type { CierreCaja, CuentaBancaria, MovimientoGestoria, TesoreriaResumen } from '../../../../interfaces';
 import { BreakpointService } from '../../../../core/services/breakpoint.service';
 import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
+import { ImportePipe } from '../../../../core/moneda/importe.pipe';
+import { MonedaEmpresaService } from '../../../../core/moneda/moneda-empresa.service';
 
 export type FiltroAprobado = 'pendientes' | 'aprobados' | 'todos';
 
@@ -33,11 +35,12 @@ export type MovimientoEnriquecido = MovimientoGestoria & { casoNombre: string };
 @Component({
   selector: 'app-tesoreria-resumen-tab',
   host: { class: 'block space-y-6' },
-  imports: [LucideAngularModule, DecimalPipe, NgTemplateOutlet, OverlayShellComponent],
+  imports: [ImportePipe, LucideAngularModule, NgTemplateOutlet, OverlayShellComponent],
   templateUrl: './resumen-tab.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TesoreriaResumenTabComponent {
+  protected readonly moneda = inject(MonedaEmpresaService);
   protected readonly bp = inject(BreakpointService);
 
   readonly cotejos = input.required<CotejoCuenta[]>();

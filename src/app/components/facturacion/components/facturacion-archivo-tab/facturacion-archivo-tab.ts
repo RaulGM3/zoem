@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy, input, output, signal, effect, untracked } from '@angular/core';
-import { DecimalPipe, NgTemplateOutlet, SlicePipe } from '@angular/common';
+import { NgTemplateOutlet, SlicePipe } from '@angular/common';
 import { LucideAngularModule, FileCheck, Download, Link, RefreshCw, CheckCircle2 } from 'lucide-angular';
 import type { Invoice } from '../../../../core/services/invoice.service';
 import { anuncioCambioVerifactu, colorTono, vistaVerifactu, type VistaVerifactu } from '../../../../core/verifactu/verifactu-ui';
@@ -10,12 +10,13 @@ import {
   ListTableDirective,
   ResponsiveListComponent,
 } from '../../../../shared/components/responsive-list/responsive-list';
+import { ImportePipe } from '../../../../core/moneda/importe.pipe';
 
 @Component({
   selector: 'app-facturacion-archivo-tab',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    LucideAngularModule, DecimalPipe, SlicePipe, NgTemplateOutlet, ActionMenuComponent,
+  imports: [ImportePipe, 
+    LucideAngularModule, SlicePipe, NgTemplateOutlet, ActionMenuComponent,
     ResponsiveListComponent, ListCardDirective, ListTableDirective,
   ],
   templateUrl: './facturacion-archivo-tab.html',

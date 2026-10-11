@@ -4,6 +4,7 @@ import { Timestamp } from '@angular/fire/firestore';
 import { CasosTableComponent } from './casos-table';
 import type { Caso } from '../../../../interfaces';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 function mockViewport(mobile: boolean): void {
   Object.defineProperty(window, 'matchMedia', {
@@ -48,7 +49,7 @@ describe('CasosTableComponent — móvil', () => {
   async function montar(mobile: boolean, casos: Caso[], canDelete = true): Promise<void> {
     TestBed.resetTestingModule();
     mockViewport(mobile);
-    await TestBed.configureTestingModule({ imports: [CasosTableComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [CasosTableComponent] }).compileComponents();
     fixture = TestBed.createComponent(CasosTableComponent);
     fixture.componentRef.setInput('casos', casos);
     fixture.componentRef.setInput('loading', false);

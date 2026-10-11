@@ -1,8 +1,9 @@
-import { Component, ChangeDetectionStrategy, input, output, signal, computed, effect } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
+import { Component, ChangeDetectionStrategy, inject, input, output, signal, computed, effect } from '@angular/core';
 import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
 import type { CuentaBancaria, GestoriaSlot, MovimientoGestoria, MovimientoTipo, TipoIva } from '../../../../interfaces';
 import { desglosarIva, calcularIvaDesdeBase } from '../../../../interfaces';
+import { ImportePipe } from '../../../../core/moneda/importe.pipe';
+import { MonedaEmpresaService } from '../../../../core/moneda/moneda-empresa.service';
 
 export interface MovimientoFormData {
   tipo: MovimientoTipo;
@@ -23,11 +24,12 @@ type IvaSel = '21' | '10' | '4' | '0' | 'exento';
 
 @Component({
   selector: 'app-movimiento-form-drawer',
-  imports: [OverlayShellComponent, DecimalPipe],
+  imports: [ImportePipe, OverlayShellComponent],
   templateUrl: './movimiento-form-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MovimientoFormDrawerComponent {
+  protected readonly moneda = inject(MonedaEmpresaService);
   readonly visible = input.required<boolean>();
   readonly saving = input.required<boolean>();
   readonly prefillSlot = input.required<GestoriaSlot | null>();

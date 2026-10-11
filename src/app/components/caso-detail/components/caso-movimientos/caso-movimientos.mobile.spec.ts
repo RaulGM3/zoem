@@ -4,6 +4,7 @@ import { CasoMovimientosComponent } from './caso-movimientos';
 import type { CuentaBancaria, MovimientoGestoria } from '../../../../interfaces';
 import { mockViewport } from '../../mock-viewport';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 const MOVS = [
   { id: 'm1', concepto: 'Provisión de fondos', tipo: 'ingreso', fecha: '2026-03-01', importe: 1000, esEntrada: true, cuentaId: 'cu1', createdBy: 'u1', baseImponible: 826.45, cuotaIva: 173.55, tipoIva: 21 },
@@ -22,7 +23,7 @@ describe('CasoMovimientosComponent — móvil', () => {
   async function montar(mobile: boolean, inputs: Record<string, unknown> = {}): Promise<void> {
     TestBed.resetTestingModule();
     mockViewport(mobile);
-    TestBed.configureTestingModule({ imports: [CasoMovimientosComponent] });
+    TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [CasoMovimientosComponent] });
     fixture = TestBed.createComponent(CasoMovimientosComponent);
     fixture.componentRef.setInput('movimientos', MOVS);
     fixture.componentRef.setInput('miembros', MIEMBROS);
@@ -51,7 +52,7 @@ describe('CasoMovimientosComponent — móvil', () => {
     expect(t).toContain('Provisión de fondos');
     expect(t).toContain('ingreso');
     expect(t).toContain('2026-03-01');
-    expect(t).toContain('+1,000.00 €');
+    expect(t).toContain('+1.000,00 €');
     expect(t).toContain('Operativa');
     expect(t).toContain('Ana');
     expect(cards()[0].textContent).toContain('Juzgado nº 3');

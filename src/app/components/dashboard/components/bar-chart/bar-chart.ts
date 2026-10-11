@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy, input, computed } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
+import { ImportePipe } from '../../../../core/moneda/importe.pipe';
 
 export interface BarItem {
   value: number;
@@ -20,7 +20,7 @@ export interface BarGroup {
  */
 @Component({
   selector: 'app-bar-chart',
-  imports: [DecimalPipe],
+  imports: [ImportePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (max() === 0) {
@@ -35,7 +35,7 @@ export interface BarGroup {
                   class="w-full max-w-7 rounded-t transition-all"
                   [style.height.%]="heightPct(bar.value)"
                   [style.background]="bar.color"
-                  [title]="(bar.name ? bar.name + ': ' : '') + (bar.value | number: '1.0-0') + ' €'"
+                  [title]="(bar.name ? bar.name + ': ' : '') + (bar.value | importe:'entero')"
                 ></div>
               }
             </div>

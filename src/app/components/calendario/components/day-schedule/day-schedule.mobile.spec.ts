@@ -5,6 +5,7 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { MEMBERS, evento, grupos, hito, registro } from '../../testing/calendario-fixtures';
 import type { CalendarItem } from '../../calendario.types';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 function mockViewport(mobile: boolean): void {
   Object.defineProperty(window, 'matchMedia', {
@@ -23,7 +24,7 @@ function setup(mobile: boolean, ...items: CalendarItem[]): ComponentFixture<DayS
   mockViewport(mobile);
   TestBed.configureTestingModule({
     imports: [DayScheduleComponent],
-    providers: [{ provide: ToastService, useValue: { info: vi.fn() } }],
+    providers: [provideMonedaTest(), { provide: ToastService, useValue: { info: vi.fn() } }],
   });
   const fixture = TestBed.createComponent(DayScheduleComponent);
   fixture.componentRef.setInput('hasSelectedDates', true);

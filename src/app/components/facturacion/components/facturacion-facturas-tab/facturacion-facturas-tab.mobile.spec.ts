@@ -3,6 +3,7 @@ import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { FacturacionFacturasTabComponent } from './facturacion-facturas-tab';
 import type { Invoice } from '../../../../core/services/invoice.service';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 function mockViewport(mobile: boolean): void {
   Object.defineProperty(window, 'matchMedia', {
@@ -45,7 +46,7 @@ describe('FacturacionFacturasTabComponent — móvil', () => {
   async function montar(mobile: boolean, invoices: Invoice[]): Promise<void> {
     TestBed.resetTestingModule();
     mockViewport(mobile);
-    await TestBed.configureTestingModule({ imports: [FacturacionFacturasTabComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [FacturacionFacturasTabComponent] }).compileComponents();
     fixture = TestBed.createComponent(FacturacionFacturasTabComponent);
     fixture.componentRef.setInput('invoices', invoices);
     fixture.componentRef.setInput('loading', false);
@@ -94,7 +95,7 @@ describe('FacturacionFacturasTabComponent — móvil', () => {
       await montar(true, [EMITIDA]);
       const card = el().querySelector('[data-factura-card]')!;
       expect(card.querySelector('[data-cliente]')!.textContent!.trim()).toBe('Cliente SL');
-      expect(card.querySelector('[data-total]')!.textContent).toContain('121.00');
+      expect(card.querySelector('[data-total]')!.textContent).toContain('121,00');
     });
 
     it('móvil: fechas legibles en español', async () => {

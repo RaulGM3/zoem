@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CasoCostosPrevistosComponent } from './caso-costos-previstos';
 import type { GestoriaSlot } from '../../../../interfaces';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 const SLOTS = [
   { id: 's1', nombre: 'Tasa judicial', tipoCosto: 'suplido', importeEstimado: 50, status: 'pendiente' },
@@ -38,7 +39,7 @@ describe('CasoCostosPrevistosComponent', () => {
 
   beforeEach(async () => {
     TestBed.resetTestingModule();
-    await TestBed.configureTestingModule({ imports: [CasoCostosPrevistosComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [CasoCostosPrevistosComponent] }).compileComponents();
     fixture = TestBed.createComponent(CasoCostosPrevistosComponent);
     component = fixture.componentInstance;
     set({ slots: SLOTS });
@@ -70,7 +71,7 @@ describe('CasoCostosPrevistosComponent', () => {
     const emitidos: GestoriaSlot[] = [];
     component.registerSlot.subscribe(s => emitidos.push(s));
     expect(texto(fila('Tasa judicial'))).toContain('Suplido');
-    expect(texto(fila('Tasa judicial'))).toContain('est. 50.00 €');
+    expect(texto(fila('Tasa judicial'))).toContain('est. 50,00 €');
     expect(texto(fila('Procurador'))).not.toContain('€');
     click(boton('Registrar', fila('Tasa judicial')));
     expect(emitidos).toEqual([SLOTS[0]]);
@@ -80,9 +81,9 @@ describe('CasoCostosPrevistosComponent', () => {
     const emitidos: GestoriaSlot[] = [];
     component.unregisterSlot.subscribe(s => emitidos.push(s));
     click(boton('Ver 1 registrado', tarjeta()!));
-    expect(texto(fila('Notaría'))).toContain('100.00 €');
+    expect(texto(fila('Notaría'))).toContain('100,00 €');
     expect(texto(fila('Notaría'))).not.toContain('est.');
-    expect(texto(fila('Notaría'))).toContain('120.50 €');
+    expect(texto(fila('Notaría'))).toContain('120,50 €');
     click(q('[aria-label="Eliminar movimiento registrado"]', fila('Notaría')));
     expect(texto(fila('Notaría'))).toContain('¿Eliminar el movimiento?');
     click(q('[aria-label="Cancelar"]', fila('Notaría')));

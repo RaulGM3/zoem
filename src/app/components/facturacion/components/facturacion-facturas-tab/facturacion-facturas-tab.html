@@ -87,9 +87,9 @@
   <!-- Summary -->
   <div data-resumen class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:flex sm:flex-wrap sm:items-center sm:gap-4" style="color:var(--text-muted)">
     <span>{{ totals().count }} facturas</span>
-    <span>Base: <strong class="tabular-nums" style="font-family:var(--font-mono)">{{ totals().base | number:'1.2-2' }} €</strong></span>
-    <span>IVA: <strong class="tabular-nums" style="font-family:var(--font-mono)">{{ totals().iva | number:'1.2-2' }} €</strong></span>
-    <span>Total: <strong class="tabular-nums" style="font-family:var(--font-mono);color:var(--text-strong)">{{ totals().total | number:'1.2-2' }} €</strong></span>
+    <span>Base: <strong class="tabular-nums" style="font-family:var(--font-mono)">{{ totals().base | importe }}</strong></span>
+    <span>IVA: <strong class="tabular-nums" style="font-family:var(--font-mono)">{{ totals().iva | importe }}</strong></span>
+    <span>Total: <strong class="tabular-nums" style="font-family:var(--font-mono);color:var(--text-strong)">{{ totals().total | importe }}</strong></span>
   </div>
 
   <!-- Estado de la factura (compartido por tabla y tarjetas) -->
@@ -183,7 +183,7 @@
                 <!-- Total -->
                 <td class="px-3 py-2.5 text-right tabular-nums font-medium"
                   style="color:var(--text-strong);font-family:var(--font-mono)">
-                  {{ inv.total | number:'1.2-2' }} €
+                  {{ inv.total | importe }}
                 </td>
 
                 <!-- Estado -->
@@ -296,7 +296,7 @@
           </div>
           <div class="flex shrink-0 flex-col items-end gap-1">
             <p data-total class="text-lg font-semibold leading-tight tabular-nums" [class.line-through]="anulada"
-              style="color:var(--text-strong);font-family:var(--font-mono)">{{ inv.total | number:'1.2-2' }} €</p>
+              style="color:var(--text-strong);font-family:var(--font-mono)">{{ inv.total | importe }}</p>
             <ng-container [ngTemplateOutlet]="estadoTpl" [ngTemplateOutletContext]="{ $implicit: inv }" />
           </div>
         </div>

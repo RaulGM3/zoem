@@ -2,7 +2,6 @@ import {
   Component, ChangeDetectionStrategy, input, output, signal, computed, effect,
   inject,
 } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import { LucideAngularModule, X, Trash2 } from 'lucide-angular';
 import type { CuentaBancaria, MovimientoGestoria, MovimientoTipo } from '../../../../interfaces';
 import { desglosarIva, calcularIvaDesdeBase } from '../../../../interfaces';
@@ -11,6 +10,8 @@ import { GestoriaService } from '../../../../core/services/gestoria.service';
 import { CuentasService } from '../../../../core/services/cuentas.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
+import { ImportePipe } from '../../../../core/moneda/importe.pipe';
+import { MonedaEmpresaService } from '../../../../core/moneda/moneda-empresa.service';
 
 type IvaSel = '21' | '10' | '4' | '0' | 'exento';
 
@@ -46,11 +47,12 @@ const IVA_INCLUIDO_POR_TIPO: Record<MovimientoTipo, boolean> = {
 
 @Component({
   selector: 'app-movimiento-general-drawer',
-  imports: [LucideAngularModule, DecimalPipe, OverlayShellComponent],
+  imports: [ImportePipe, LucideAngularModule, OverlayShellComponent],
   templateUrl: './movimiento-general-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MovimientoGeneralDrawerComponent {
+  protected readonly moneda = inject(MonedaEmpresaService);
   private readonly gestoriaService = inject(GestoriaService);
   private readonly cuentasService = inject(CuentasService);
   private readonly toast = inject(ToastService);

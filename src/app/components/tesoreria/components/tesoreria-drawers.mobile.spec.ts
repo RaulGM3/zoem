@@ -12,6 +12,7 @@ import { CasosService } from '../../../core/services/casos.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { RESUMEN_FINANCIERO_VACIO, type Caso, type CierreCuenta } from '../../../interfaces';
 import { analizarA11y, formatearViolaciones } from '../../../../testing/axe';
+import { provideMonedaTest } from '../../../core/moneda/moneda-empresa.testing';
 
 function mockViewport(mobile: boolean): void {
   Object.defineProperty(window, 'matchMedia', {
@@ -43,7 +44,7 @@ async function montar<T>(cmp: Type<T>, mobile: boolean, inputs: Record<string, u
   mockViewport(mobile);
   await TestBed.configureTestingModule({
     imports: [cmp],
-    providers: [
+    providers: [provideMonedaTest(), 
       {
         provide: GestoriaService,
         useValue: {

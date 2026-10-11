@@ -21,10 +21,10 @@
       </div>
       <div class="space-y-1">
         <label class="form-label" for="mov-importe">
-          {{ formIvaIncluido() ? 'Importe total (€)' : 'Base imponible (€)' }}
+          {{ formIvaIncluido() ? 'Importe total (' + moneda.simbolo() + ')' : 'Base imponible (' + moneda.simbolo() + ')' }}
           <span style="color:var(--danger)" aria-hidden="true">*</span>
         </label>
-        <input id="mov-importe" type="number" min="0" step="0.01" required [value]="formImporte()" (input)="formImporte.set($any($event.target).value)" class="form-input" />
+        <input id="mov-importe" type="number" min="0" [step]="moneda.step()" required [value]="formImporte()" (input)="formImporte.set($any($event.target).value)" class="form-input" />
       </div>
     </div>
     <div class="space-y-1">
@@ -36,10 +36,10 @@
       </select>
       @if (formImporte() && desglose().baseImponible > 0) {
         <div class="flex flex-wrap justify-between gap-x-3 gap-y-1 text-xs pt-1" style="color:var(--text-muted)">
-          <span>Base: <span class="font-medium" style="color:var(--text-body)">{{ desglose().baseImponible | number:'1.2-2' }} €</span></span>
-          <span>Cuota: <span class="font-medium" style="color:var(--text-body)">{{ desglose().cuotaIva | number:'1.2-2' }} €</span></span>
+          <span>Base: <span class="font-medium" style="color:var(--text-body)">{{ desglose().baseImponible | importe }}</span></span>
+          <span>Cuota: <span class="font-medium" style="color:var(--text-body)">{{ desglose().cuotaIva | importe }}</span></span>
           @if (!formIvaIncluido()) {
-            <span>Total: <span class="font-semibold" style="color:var(--text-body)">{{ desglose().total | number:'1.2-2' }} €</span></span>
+            <span>Total: <span class="font-semibold" style="color:var(--text-body)">{{ desglose().total | importe }}</span></span>
           }
         </div>
       }

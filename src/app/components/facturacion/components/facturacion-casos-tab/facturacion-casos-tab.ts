@@ -1,6 +1,5 @@
 import { Component, ChangeDetectionStrategy, input, output, signal } from '@angular/core';
 import { SkeletonComponent } from '../../../../shared/components/skeleton/skeleton';
-import { DecimalPipe } from '@angular/common';
 import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule, Receipt, CheckCircle2, FileCheck, ChevronDown, ExternalLink } from 'lucide-angular';
@@ -13,12 +12,13 @@ import {
   ListTableDirective,
   ResponsiveListComponent,
 } from '../../../../shared/components/responsive-list/responsive-list';
+import { ImportePipe } from '../../../../core/moneda/importe.pipe';
 
 @Component({
   selector: 'app-facturacion-casos-tab',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SkeletonComponent, 
-    LucideAngularModule, DecimalPipe, RouterLink, NgTemplateOutlet, ActionMenuComponent,
+  imports: [ImportePipe, SkeletonComponent, 
+    LucideAngularModule, RouterLink, NgTemplateOutlet, ActionMenuComponent,
     ResponsiveListComponent, ListCardDirective, ListTableDirective,
   ],
   templateUrl: './facturacion-casos-tab.html',

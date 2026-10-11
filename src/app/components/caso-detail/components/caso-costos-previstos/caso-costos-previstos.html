@@ -74,13 +74,13 @@
               @if (slot.status !== 'registrado') {
                 <span class="text-xs" style="color:var(--text-faint)">est.</span>
               }
-              {{ slot.importeEstimado | number:'1.2-2' }} €
+              {{ slot.importeEstimado | importe }}
             </span>
           }
           @if (slot.status === 'registrado') {
             @if (slot.importeReal != null) {
               <span class="text-sm font-semibold" style="color:var(--success)">
-                {{ slot.importeReal | number:'1.2-2' }} €
+                {{ slot.importeReal | importe }}
               </span>
             }
             <span class="px-2 py-0.5 text-xs rounded-full font-medium" style="background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)">Registrado</span>

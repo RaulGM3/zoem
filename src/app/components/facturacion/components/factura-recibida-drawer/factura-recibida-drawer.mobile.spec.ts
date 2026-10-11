@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { FacturaRecibidaDrawerComponent } from './factura-recibida-drawer';
 import { extraccionFalsa } from '../../../../../testing/facturas-recibidas';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 function mockViewport(mobile: boolean): void {
   Object.defineProperty(window, 'matchMedia', {
@@ -24,7 +25,7 @@ describe('FacturaRecibidaDrawerComponent — móvil', () => {
       async function montar() {
         TestBed.resetTestingModule();
         mockViewport(mobile);
-        await TestBed.configureTestingModule({ imports: [FacturaRecibidaDrawerComponent], providers: [...cupoDePruebas().providers, extraccionFalsa()] }).compileComponents();
+        await TestBed.configureTestingModule({ imports: [FacturaRecibidaDrawerComponent], providers: [provideMonedaTest(), ...cupoDePruebas().providers, extraccionFalsa()] }).compileComponents();
         const fixture = TestBed.createComponent(FacturaRecibidaDrawerComponent);
         fixture.componentRef.setInput('fechaHoy', '2026-04-05');
         fixture.detectChanges();

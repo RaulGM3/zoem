@@ -5,6 +5,7 @@ import { FacturacionCasosTabComponent } from './facturacion-casos-tab';
 import type { Invoice } from '../../../../core/services/invoice.service';
 import type { Caso } from '../../../../interfaces';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 function mockViewport(mobile: boolean): void {
   Object.defineProperty(window, 'matchMedia', {
@@ -39,7 +40,7 @@ describe('FacturacionCasosTabComponent — móvil', () => {
   async function montar(mobile: boolean, casos: Caso[], canCreate = true): Promise<void> {
     TestBed.resetTestingModule();
     mockViewport(mobile);
-    TestBed.configureTestingModule({ imports: [FacturacionCasosTabComponent], providers: [provideRouter([])] });
+    TestBed.configureTestingModule({ imports: [FacturacionCasosTabComponent], providers: [provideMonedaTest(), provideRouter([])] });
     fixture = TestBed.createComponent(FacturacionCasosTabComponent);
     fixture.componentRef.setInput('casos', casos);
     fixture.componentRef.setInput('loading', false);
@@ -56,7 +57,7 @@ describe('FacturacionCasosTabComponent — móvil', () => {
     expect(el().querySelector('table')).toBeNull();
     expect(el().querySelectorAll('ul > li')).toHaveLength(2);
     expect(el().querySelector('a[href="/casos/k-1"]')?.textContent?.trim()).toBe('Caso 1');
-    expect(el().textContent).toContain('350€');
+    expect(el().textContent).toContain('350\u00A0€');
   });
 
   it('escritorio: tabla y sin tarjetas', async () => {

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CasoMovimientosComponent } from './caso-movimientos';
 import type { CuentaBancaria, MovimientoGestoria } from '../../../../interfaces';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 const MOVS = [
   { id: 'm1', concepto: 'Provisión de fondos', tipo: 'ingreso', fecha: '2026-03-01', importe: 1000, esEntrada: true, cuentaId: 'cu1', createdBy: 'u1', baseImponible: 826.45, cuotaIva: 173.55, tipoIva: 21 },
@@ -48,7 +49,7 @@ describe('CasoMovimientosComponent', () => {
 
   beforeEach(async () => {
     TestBed.resetTestingModule();
-    await TestBed.configureTestingModule({ imports: [CasoMovimientosComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [CasoMovimientosComponent] }).compileComponents();
     fixture = TestBed.createComponent(CasoMovimientosComponent);
     component = fixture.componentInstance;
     set({ movimientos: MOVS, miembros: MIEMBROS, cuentas: CUENTAS });
@@ -88,13 +89,13 @@ describe('CasoMovimientosComponent', () => {
   it('lista los movimientos del más reciente al más antiguo con todos sus datos', () => {
     expect(conceptos()).toEqual(['Tasa 696', 'Mensajería', 'Provisión de fondos', 'Minuta']);
     expect(celdas('Provisión de fondos').slice(0, 6)).toEqual([
-      'Provisión de fondos', 'ingreso', '2026-03-01', '+1,000.00 € base 826.45 · IVA 173.55 (21%)', 'Operativa', 'Ana',
+      'Provisión de fondos', 'ingreso', '2026-03-01', '+1.000,00 € base 826,45 € · IVA 173,55 € (21%)', 'Operativa', 'Ana',
     ].map(compacto));
     expect(celdas('Tasa 696').slice(0, 6)).toEqual([
-      'Tasa 696 Juzgado nº 3', 'suplido', '2026-03-05', '−150.00 € exento', '—', 'Luis editado · Ana',
+      'Tasa 696 Juzgado nº 3', 'suplido', '2026-03-05', '−150,00 € exento', '—', 'Luis editado · Ana',
     ].map(compacto));
-    expect(celdas('Minuta')[3]).toBe(compacto('−300.00 € base 247.93 · IVA 52.07'));
-    expect(celdas('Mensajería').slice(3, 6)).toEqual(['−50.00 €', 'Operativa', '—'].map(compacto));
+    expect(celdas('Minuta')[3]).toBe(compacto('−300,00 € base 247,93 € · IVA 52,07 €'));
+    expect(celdas('Mensajería').slice(3, 6)).toEqual(['−50,00 €', 'Operativa', '—'].map(compacto));
   });
 
   it('ordena al pulsar las cabeceras y lo refleja en aria-sort', () => {

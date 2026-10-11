@@ -1,7 +1,6 @@
 import {
   Component, ChangeDetectionStrategy, input, inject, signal, computed, OnInit, OnDestroy,
 } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import {
   LucideAngularModule,
   ClipboardCheck, CheckCircle2, Circle, CheckCheck, Pencil, X,
@@ -12,12 +11,13 @@ import { CasosService } from '../../../../core/services/casos.service';
 import { CuentasService } from '../../../../core/services/cuentas.service';
 import { UsersService } from '../../../../core/services/users';
 import { MovimientoGestoria, MovimientoTipo } from '../../../../interfaces';
+import { ImportePipe } from '../../../../core/moneda/importe.pipe';
 
 type Filtro = 'todos' | 'pendientes' | 'aprobados';
 
 @Component({
   selector: 'app-revision-movimientos',
-  imports: [LucideAngularModule, DecimalPipe],
+  imports: [ImportePipe, LucideAngularModule],
   templateUrl: './revision-movimientos.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

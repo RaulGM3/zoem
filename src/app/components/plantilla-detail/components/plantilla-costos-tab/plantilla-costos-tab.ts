@@ -1,6 +1,8 @@
-import { Component, ChangeDetectionStrategy, input, model, output, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, input, model, output, signal } from '@angular/core';
 import { LucideAngularModule, Save, GripVertical, X, Trash2, Pencil, Check } from 'lucide-angular';
 import type { PartidaCosto, TipoCosto } from '../../../../interfaces';
+import { ImportePipe } from '../../../../core/moneda/importe.pipe';
+import { MonedaEmpresaService } from '../../../../core/moneda/moneda-empresa.service';
 
 const TIPOS_COSTO: { value: TipoCosto; label: string }[] = [
   { value: 'gastos_repercutibles', label: 'Gastos repercutibles' },
@@ -19,12 +21,13 @@ const TIPOS_COSTO: { value: TipoCosto; label: string }[] = [
  */
 @Component({
   selector: 'app-plantilla-costos-tab',
-  imports: [LucideAngularModule],
+  imports: [ImportePipe, LucideAngularModule],
   templateUrl: './plantilla-costos-tab.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
 })
 export class PlantillaCostosTabComponent {
+  protected readonly moneda = inject(MonedaEmpresaService);
   readonly honorarios = model.required<string>();
   readonly suplidos = model.required<PartidaCosto[]>();
   readonly saving = input(false);

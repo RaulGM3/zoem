@@ -4,6 +4,7 @@ import { CasoResumenFinancieroComponent } from './caso-resumen-financiero';
 import type { MovimientoGestoria } from '../../../../interfaces';
 import { mockViewport } from '../../mock-viewport';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 const MOVS = [
   { id: 'm1', concepto: 'Provisión', tipo: 'ingreso', fecha: '2026-03-01', importe: 1000, esEntrada: true, createdBy: 'u1', baseImponible: 826.45, cuotaIva: 173.55, tipoIva: 21 },
@@ -20,7 +21,7 @@ describe('CasoResumenFinancieroComponent — móvil', () => {
   async function montar(mobile: boolean): Promise<void> {
     TestBed.resetTestingModule();
     mockViewport(mobile);
-    TestBed.configureTestingModule({ imports: [CasoResumenFinancieroComponent] });
+    TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [CasoResumenFinancieroComponent] });
     fixture = TestBed.createComponent(CasoResumenFinancieroComponent);
     fixture.componentRef.setInput('movimientos', MOVS);
     await fixture.whenStable();

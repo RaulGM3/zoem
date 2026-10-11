@@ -3,6 +3,7 @@ import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { FacturaDrawerComponent } from './factura-drawer';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
 import type { InvoiceLinea } from '../../../../core/services/invoice.service';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 const LINEAS_EXENTAS: InvoiceLinea[] = [
   { concepto: 'Suplido', cantidad: 1, precioUnitario: 50, base: 50, aplicaIva: true, ivaRate: 0 },
@@ -11,7 +12,7 @@ const LINEAS_EXENTAS: InvoiceLinea[] = [
 
 async function montar(lineas: InvoiceLinea[]): Promise<ComponentFixture<FacturaDrawerComponent>> {
   TestBed.resetTestingModule();
-  await TestBed.configureTestingModule({ imports: [FacturaDrawerComponent] }).compileComponents();
+  await TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [FacturaDrawerComponent] }).compileComponents();
   const fixture = TestBed.createComponent(FacturaDrawerComponent);
   fixture.componentRef.setInput('initialLineas', lineas);
   fixture.componentRef.setInput('initialCliente', { nombre: 'Cliente Test', tipoId: 'nif' });

@@ -4,6 +4,7 @@ import { Timestamp } from '@angular/fire/firestore';
 import { TesoreriaCasosTabComponent, type ResumenCaso } from './casos-tab';
 import { RESUMEN_FINANCIERO_VACIO, type Caso } from '../../../../interfaces';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 function mockViewport(mobile: boolean): void {
   Object.defineProperty(window, 'matchMedia', {
@@ -39,7 +40,7 @@ describe('TesoreriaCasosTabComponent — móvil', () => {
   async function montar(mobile: boolean): Promise<void> {
     TestBed.resetTestingModule();
     mockViewport(mobile);
-    await TestBed.configureTestingModule({ imports: [TesoreriaCasosTabComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [TesoreriaCasosTabComponent] }).compileComponents();
     fixture = TestBed.createComponent(TesoreriaCasosTabComponent);
     const r = fixture.componentRef;
     r.setInput('casosContables', [caso('a'), caso('b')]);
@@ -62,9 +63,9 @@ describe('TesoreriaCasosTabComponent — móvil', () => {
     const items = el().querySelectorAll('ul > li');
     expect(items).toHaveLength(2);
     expect(items[0].textContent).toContain('Caso a');
-    expect(items[0].textContent).toContain('1,200.00');
-    expect(items[0].textContent).toContain('900.00');
-    expect(items[1].textContent).toContain('-50.00');
+    expect(items[0].textContent).toContain('1.200,00');
+    expect(items[0].textContent).toContain('900,00');
+    expect(items[1].textContent).toContain('-50,00');
   });
 
   it('móvil: pulsar la tarjeta emite casoSeleccionado', async () => {
@@ -78,10 +79,10 @@ describe('TesoreriaCasosTabComponent — móvil', () => {
   it('móvil: bloque de totales con los mismos importes del pie de tabla', async () => {
     await montar(true);
     const tot = el().querySelector('[data-casos-totales]')!;
-    expect(tot.textContent).toContain('1,200.00');
-    expect(tot.textContent).toContain('450.00');
-    expect(tot.textContent).toContain('850.00');
-    expect(tot.textContent).toContain('1,050.00');
+    expect(tot.textContent).toContain('1.200,00');
+    expect(tot.textContent).toContain('450,00');
+    expect(tot.textContent).toContain('850,00');
+    expect(tot.textContent).toContain('1.050,00');
   });
 
   it('escritorio: tabla con pie de totales y sin tarjetas', async () => {

@@ -10,7 +10,6 @@ import {
   ElementRef,
   untracked,
 } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormArray, FormGroup, Validators, type ValidatorFn } from '@angular/forms';
 import {
   LucideAngularModule,
@@ -44,6 +43,8 @@ import {
 } from '../../../../core/facturacion/cliente-factura';
 import { nifValidator } from '../../../../core/fiscal/nif.validator';
 import { getContactDisplayName, type Contact } from '../../../../interfaces/contact.interface';
+import { ImportePipe } from '../../../../core/moneda/importe.pipe';
+import { MonedaEmpresaService } from '../../../../core/moneda/moneda-empresa.service';
 
 export interface InvoiceFormPayload {
   lineas: InvoiceLinea[];
@@ -77,10 +78,11 @@ function conTipoPropio(l: InvoiceLinea, tipoFacturaPct: number): InvoiceLinea {
 @Component({
   selector: 'app-factura-drawer',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LucideAngularModule, DecimalPipe, ReactiveFormsModule, OverlayShellComponent],
+  imports: [ImportePipe, LucideAngularModule, ReactiveFormsModule, OverlayShellComponent],
   templateUrl: './factura-drawer.html',
 })
 export class FacturaDrawerComponent {
+  protected readonly moneda = inject(MonedaEmpresaService);
   private readonly fb = inject(FormBuilder);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly bp = inject(BreakpointService);

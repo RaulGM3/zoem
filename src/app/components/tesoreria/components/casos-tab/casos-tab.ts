@@ -1,10 +1,10 @@
 import { Component, ChangeDetectionStrategy, inject, input, output } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import type { Caso } from '../../../../interfaces';
 import { BreakpointService } from '../../../../core/services/breakpoint.service';
 import {
   ResponsiveListComponent, ListCardDirective, ListTableDirective,
 } from '../../../../shared/components/responsive-list/responsive-list';
+import { ImportePipe } from '../../../../core/moneda/importe.pipe';
 
 export interface ResumenCaso {
   ingresos: number;
@@ -17,7 +17,7 @@ export interface ResumenCaso {
 @Component({
   selector: 'app-tesoreria-casos-tab',
   host: { class: 'block' },
-  imports: [DecimalPipe, ResponsiveListComponent, ListCardDirective, ListTableDirective],
+  imports: [ImportePipe, ResponsiveListComponent, ListCardDirective, ListTableDirective],
   templateUrl: './casos-tab.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

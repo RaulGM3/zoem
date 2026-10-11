@@ -1,14 +1,14 @@
 import { Component, ChangeDetectionStrategy, input, output, signal, computed } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import {
   LucideAngularModule, X, CheckCircle2, AlertTriangle, Landmark, Wallet, Lock,
 } from 'lucide-angular';
 import type { CierreCuenta } from '../../../../interfaces';
 import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
+import { ImportePipe } from '../../../../core/moneda/importe.pipe';
 
 @Component({
   selector: 'app-cierre-caja-modal',
-  imports: [LucideAngularModule, DecimalPipe, OverlayShellComponent],
+  imports: [ImportePipe, LucideAngularModule, OverlayShellComponent],
   templateUrl: './cierre-caja-modal.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

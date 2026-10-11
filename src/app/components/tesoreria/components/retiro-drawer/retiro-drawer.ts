@@ -6,6 +6,7 @@ import { FormsModule } from '@angular/forms';
 import { GestoriaService } from '../../../../core/services/gestoria.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { CuentaBancaria } from '../../../../interfaces';
+import { MonedaEmpresaService } from '../../../../core/moneda/moneda-empresa.service';
 
 interface RetiroForm {
   concepto: string;
@@ -30,6 +31,7 @@ function localDateStr(d: Date): string {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RetiroDrawerComponent {
+  protected readonly moneda = inject(MonedaEmpresaService);
   private readonly gestoriaService = inject(GestoriaService);
   private readonly toast = inject(ToastService);
 

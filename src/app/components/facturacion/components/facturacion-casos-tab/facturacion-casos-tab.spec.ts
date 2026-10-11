@@ -5,6 +5,7 @@ import { FacturacionCasosTabComponent } from './facturacion-casos-tab';
 import type { Invoice } from '../../../../core/services/invoice.service';
 import type { Caso } from '../../../../interfaces';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 function caso(id: string, titulo: string, facturaIds: string[]): Caso {
   return {
@@ -31,7 +32,7 @@ describe('FacturacionCasosTabComponent', () => {
   async function montar(casos: Caso[], facturas: Invoice[]): Promise<void> {
     TestBed.configureTestingModule({
       imports: [FacturacionCasosTabComponent],
-      providers: [provideRouter([])],
+      providers: [provideMonedaTest(), provideRouter([])],
     });
     fixture = TestBed.createComponent(FacturacionCasosTabComponent);
     fixture.componentRef.setInput('casos', casos);

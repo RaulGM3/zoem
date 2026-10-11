@@ -15,14 +15,17 @@ import {
   CasoPlantilla, CasoTipo, HitoPlantilla, PartidaCosto, TipoCosto,
   PlantillaFolder, PlantillaFile, CompanyMember,
 } from '../../../../interfaces';
+import { ImportePipe } from '../../../../core/moneda/importe.pipe';
+import { MonedaEmpresaService } from '../../../../core/moneda/moneda-empresa.service';
 
 @Component({
   selector: 'app-plantilla-drawer',
-  imports: [LucideAngularModule, OverlayShellComponent],
+  imports: [ImportePipe, LucideAngularModule, OverlayShellComponent],
   templateUrl: './plantilla-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PlantillaDrawerComponent {
+  protected readonly moneda = inject(MonedaEmpresaService);
   private readonly plantillasService = inject(PlantillasService);
   private readonly toast = inject(ToastService);
   readonly folderService = inject(PlantillaFolderService);

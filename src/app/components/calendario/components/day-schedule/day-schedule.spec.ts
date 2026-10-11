@@ -4,6 +4,7 @@ import { DayScheduleComponent } from './day-schedule';
 import { ToastService } from '../../../../core/services/toast.service';
 import type { CalendarItem } from '../../calendario.types';
 import { MEMBERS, evento, grupos, hito, registro } from '../../testing/calendario-fixtures';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 /**
  * Integración del grid con el detalle del item. El comportamiento fino del
@@ -60,7 +61,7 @@ describe('DayScheduleComponent — detalle del item', () => {
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [DayScheduleComponent],
-      providers: [{ provide: ToastService, useValue: { info: toastInfo } }],
+      providers: [provideMonedaTest(), { provide: ToastService, useValue: { info: toastInfo } }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(DayScheduleComponent);

@@ -46,7 +46,7 @@
       @if (plantilla().modeloCostos.honorariosBase) {
         <div class="flex justify-between">
           <span>Honorarios base</span>
-          <span class="font-medium text-slate-700">{{ plantilla().modeloCostos.honorariosBase }} €</span>
+          <span class="font-medium text-slate-700">{{ plantilla().modeloCostos.honorariosBase | importe }}</span>
         </div>
       }
       @if (plantilla().modeloCostos.suplidos.length > 0) {

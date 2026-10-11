@@ -43,12 +43,25 @@ function indiceColumna(headers: string[], claves: string[]): number {
   return headers.findIndex(h => claves.includes(h.trim().toLowerCase()));
 }
 
-/** Parsea un importe respetando el formato decimal según el delimitador. */
-function parseImporte(raw: string, delimitador: string): number {
-  let s = raw.trim().replace(/[€$\s]/g, '');
-  if (delimitador === ';') {
-    // Formato español: 1.234,56 → quitar miles '.', coma decimal → '.'
-    s = s.replace(/\./g, '').replace(',', '.');
+/** Separadores numéricos del locale (es-ES: `.` miles, `,` decimal · es-MX: `,` miles, `.` decimal). */
+function separadores(locale: string): { grupo: string; decimal: string } {
+  const partes = new Intl.NumberFormat(locale).formatToParts(1234567.5);
+  return {
+    grupo: partes.find(p => p.type === 'group')?.value ?? '.',
+    decimal: partes.find(p => p.type === 'decimal')?.value ?? ',',
+  };
+}
+
+/**
+ * Parsea un importe. Con delimitador `,` el decimal solo puede ser `.`; con `;` o tabulador
+ * se usan los separadores del locale del despacho.
+ */
+function parseImporte(raw: string, delimitador: string, locale: string): number {
+  // Fuera símbolos de moneda, espacios (incluido NBSP) y letras: solo dígitos, signo y separadores.
+  let s = raw.trim().replace(/[^\d.,+-]/g, '');
+  if (delimitador !== ',') {
+    const { grupo, decimal } = separadores(locale);
+    s = s.split(grupo).join('').replace(decimal, '.');
   }
   return parseFloat(s);
 }
@@ -63,7 +76,8 @@ function parseFecha(raw: string): string | null {
   return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`;
 }
 
-export function parseExtractoCsv(text: string): ParseResult {
+/** @param locale el del despacho (separadores de miles y decimal); `es-ES` si se omite. */
+export function parseExtractoCsv(text: string, locale = 'es-ES'): ParseResult {
   const filas = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   if (filas.length < 2) return { lineas: [], errores: ['El archivo no tiene filas de datos.'] };
 
@@ -85,7 +99,7 @@ export function parseExtractoCsv(text: string): ParseResult {
     const cols = filas[i].split(delimitador);
     const fecha = cols[iFecha] != null ? parseFecha(cols[iFecha]) : null;
     const concepto = cols[iConcepto]?.trim() ?? '';
-    const importe = cols[iImporte] != null ? parseImporte(cols[iImporte], delimitador) : NaN;
+    const importe = cols[iImporte] != null ? parseImporte(cols[iImporte], delimitador, locale) : NaN;
 
     if (!fecha || !concepto || Number.isNaN(importe)) {
       errores.push(`Fila ${i + 1}: datos inválidos.`);
@@ -94,7 +108,7 @@ export function parseExtractoCsv(text: string): ParseResult {
 
     const linea: LineaExtractoParseada = { fecha, concepto, importe };
     if (iSaldo >= 0 && cols[iSaldo] != null) {
-      const saldo = parseImporte(cols[iSaldo], delimitador);
+      const saldo = parseImporte(cols[iSaldo], delimitador, locale);
       if (!Number.isNaN(saldo)) linea.saldoPosterior = saldo;
     }
     lineas.push(linea);

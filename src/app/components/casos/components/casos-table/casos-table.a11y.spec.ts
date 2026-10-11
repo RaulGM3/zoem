@@ -4,6 +4,7 @@ import { Timestamp } from '@angular/fire/firestore';
 import { CasosTableComponent } from './casos-table';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
 import type { Caso } from '../../../../interfaces';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 const AHORA = Timestamp.fromDate(new Date('2026-01-15T10:00:00Z'));
 
@@ -35,7 +36,7 @@ const CASO: Caso = {
 
 async function montar(casos: Caso[]): Promise<ComponentFixture<CasosTableComponent>> {
   TestBed.resetTestingModule();
-  await TestBed.configureTestingModule({ imports: [CasosTableComponent] }).compileComponents();
+  await TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [CasosTableComponent] }).compileComponents();
   const fixture = TestBed.createComponent(CasosTableComponent);
   fixture.componentRef.setInput('casos', casos);
   fixture.componentRef.setInput('loading', false);

@@ -3,7 +3,6 @@ import {
   ChangeDetectionStrategy, DestroyRef,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { DecimalPipe } from '@angular/common';
 import {
   LucideAngularModule, ArrowLeft, Edit, Phone, Mail, MapPin,
   Building2, Calendar, Tag, CalendarClock, CircleAlert, Send, Plus,
@@ -36,10 +35,11 @@ import { ComunicacionesEnviadasComponent } from '../../shared/components/comunic
 import { ContactoDocumentosComponent } from './components/contacto-documentos/contacto-documentos';
 import { SkeletonComponent } from '../../shared/components/skeleton/skeleton';
 import { etiquetaDocumentoContacto } from '../../core/fiscal/documento-contacto';
+import { ImportePipe } from '../../core/moneda/importe.pipe';
 
 @Component({
   selector: 'app-contacto-detail',
-  imports: [LucideAngularModule, DecimalPipe, EstadoContactoDialogComponent, ContactoDocumentosComponent, AccionLanzadorComponent, ComunicacionesEnviadasComponent, ActionMenuComponent, SkeletonComponent],
+  imports: [ImportePipe, LucideAngularModule, EstadoContactoDialogComponent, ContactoDocumentosComponent, AccionLanzadorComponent, ComunicacionesEnviadasComponent, ActionMenuComponent, SkeletonComponent],
   templateUrl: './contacto-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

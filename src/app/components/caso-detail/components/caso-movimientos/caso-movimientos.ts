@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy, input, output, computed, signal, inject } from '@angular/core';
-import { DecimalPipe, TitleCasePipe } from '@angular/common';
+import { TitleCasePipe } from '@angular/common';
 import {
   LucideAngularModule, Plus, Trash2, X, Check, Pencil, Search, SlidersHorizontal,
   ArrowUp, ArrowDown, ChevronsUpDown,
@@ -13,12 +13,13 @@ import {
 import { movTipoStyle } from '../mov-tipo-style';
 import { BreakpointService } from '../../../../core/services/breakpoint.service';
 import { ActionMenuComponent, type MenuAction } from '../../../../shared/components/action-menu/action-menu';
+import { ImportePipe } from '../../../../core/moneda/importe.pipe';
 
 /** Tabla de movimientos de gestoría de un caso, con búsqueda, filtros y ordenación. */
 @Component({
   selector: 'app-caso-movimientos',
   host: { class: 'block' },
-  imports: [LucideAngularModule, DecimalPipe, TitleCasePipe, ActionMenuComponent],
+  imports: [ImportePipe, LucideAngularModule, TitleCasePipe, ActionMenuComponent],
   templateUrl: './caso-movimientos.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

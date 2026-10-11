@@ -1,12 +1,12 @@
 import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import { Caso } from '../../../../interfaces';
 import { OverlayShellComponent } from '../../../../shared/components/overlay-shell/overlay-shell';
+import { ImportePipe } from '../../../../core/moneda/importe.pipe';
 
 @Component({
   selector: 'app-cierre-modal',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DecimalPipe, OverlayShellComponent],
+  imports: [ImportePipe, OverlayShellComponent],
   templateUrl: './cierre-modal.html',
 })
 export class CierreModalComponent {

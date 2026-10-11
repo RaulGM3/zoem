@@ -25,6 +25,7 @@ import type { Funcion, Limite } from '../../core/planes/catalogo';
 import { CAPABILITIES, MODULOS, PERMISOS } from '../../core/permissions/permissions';
 import type { CompanyMember } from '../../interfaces/member';
 import type { PermissionRequest } from '../../interfaces/permission-request.interface';
+import { provideMonedaTest } from '../../core/moneda/moneda-empresa.testing';
 
 @Component({ selector: 'app-invite-drawer', template: '', changeDetection: ChangeDetectionStrategy.OnPush })
 class InviteStub {
@@ -107,7 +108,7 @@ describe('UsuariosComponent', () => {
 
     TestBed.configureTestingModule({
       imports: [UsuariosComponent],
-      providers: [
+      providers: [provideMonedaTest(), 
         {
           provide: UsersService,
           useValue: {
@@ -176,7 +177,7 @@ describe('UsuariosComponent', () => {
     expect(cards[0].getAttribute('aria-label')).toBe('Editar a Marta Ruiz');
     expect(cards[0].textContent).toContain('marta@despacho.es');
     expect(cards[0].textContent).toContain('Civil');
-    expect(cards[0].textContent).toContain('120 €');
+    expect(cards[0].textContent).toContain('120,00\u00A0€');
 
     cards[1].click();
     fixture.detectChanges();

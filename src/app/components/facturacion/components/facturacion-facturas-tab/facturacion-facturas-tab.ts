@@ -1,7 +1,6 @@
 import { Component, ChangeDetectionStrategy, input, output, signal, computed, effect, inject, untracked } from '@angular/core';
 import { SkeletonComponent } from '../../../../shared/components/skeleton/skeleton';
 import { NgTemplateOutlet } from '@angular/common';
-import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   LucideAngularModule,
@@ -36,6 +35,7 @@ import {
 } from '../../../../core/verifactu/verifactu-ui';
 import { estiloEstadoFactura, etiquetaEstadoFactura } from '../../../../core/facturacion/estado-factura';
 import { fechaCorta } from '../../../../core/facturacion/fecha-corta';
+import { ImportePipe } from '../../../../core/moneda/importe.pipe';
 
 type StatusFilter = InvoiceStatus | 'todos';
 
@@ -49,8 +49,8 @@ interface SeguimientoReintento {
 @Component({
   selector: 'app-facturacion-facturas-tab',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SkeletonComponent, 
-    LucideAngularModule, DecimalPipe, FormsModule, NgTemplateOutlet, ActionMenuComponent, OverlayShellComponent,
+  imports: [ImportePipe, SkeletonComponent, 
+    LucideAngularModule, FormsModule, NgTemplateOutlet, ActionMenuComponent, OverlayShellComponent,
     ResponsiveListComponent, ListCardDirective, ListTableDirective,
   ],
   templateUrl: './facturacion-facturas-tab.html',

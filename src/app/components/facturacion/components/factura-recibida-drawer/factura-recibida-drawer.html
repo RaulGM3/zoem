@@ -221,7 +221,7 @@
             <div class="grid grid-cols-3 gap-2">
               <div>
                 <label [for]="'fr-base-' + i" class="form-label">Base</label>
-                <input [id]="'fr-base-' + i" type="number" step="0.01" min="0" inputmode="decimal"
+                <input [id]="'fr-base-' + i" type="number" [step]="moneda.step()" min="0" inputmode="decimal"
                   formControlName="base" class="form-input w-full" aria-required="true"
                   [class.error]="errorDe('lineasIva.' + i + '.base')"
                   [attr.aria-invalid]="errorDe('lineasIva.' + i + '.base') ? 'true' : 'false'"
@@ -239,7 +239,7 @@
               </div>
               <div>
                 <label [for]="'fr-cuota-' + i" class="form-label">Cuota</label>
-                <input [id]="'fr-cuota-' + i" type="number" step="0.01" min="0" inputmode="decimal"
+                <input [id]="'fr-cuota-' + i" type="number" [step]="moneda.step()" min="0" inputmode="decimal"
                   formControlName="cuota" class="form-input w-full" aria-required="true"
                   [class.error]="errorDe('lineasIva.' + i + '.cuota')"
                   [attr.aria-invalid]="errorDe('lineasIva.' + i + '.cuota') ? 'true' : 'false'"
@@ -285,7 +285,7 @@
       <div class="grid grid-cols-2 gap-3">
         <div>
           <label for="fr-total" class="form-label">Total de la factura</label>
-          <input id="fr-total" type="number" step="0.01" min="0" inputmode="decimal" formControlName="total"
+          <input id="fr-total" type="number" [step]="moneda.step()" min="0" inputmode="decimal" formControlName="total"
             class="form-input w-full" aria-required="true" [class.error]="errorDe('total')"
             [attr.aria-invalid]="errorDe('total') ? 'true' : 'false'"
             [attr.aria-describedby]="errorDe('total') ? idError('total') : null" />
@@ -308,11 +308,11 @@
       <div class="space-y-1 rounded-lg p-4 text-sm" style="background:var(--surface-2)" data-resumen>
         <div class="flex justify-between" style="color:var(--text-body)">
           <span>Base imponible</span>
-          <span class="tabular-nums" style="font-family:var(--font-mono)">{{ resumen().base | number:'1.2-2' }}&nbsp;€</span>
+          <span class="tabular-nums" style="font-family:var(--font-mono)">{{ resumen().base | importe }}</span>
         </div>
         <div class="flex justify-between" style="color:var(--text-body)">
           <span>IVA soportado</span>
-          <span class="tabular-nums" style="font-family:var(--font-mono)">{{ resumen().cuota | number:'1.2-2' }}&nbsp;€</span>
+          <span class="tabular-nums" style="font-family:var(--font-mono)">{{ resumen().cuota | importe }}</span>
         </div>
       </div>
     </fieldset>
@@ -355,7 +355,7 @@
                   (change)="onMovimiento(m.id)" />
                 <label [for]="'fr-mov-' + m.id" class="min-w-0 text-xs" style="color:var(--text-body)">
                   <span class="block truncate">{{ m.concepto }}</span>
-                  <span class="tabular-nums" style="color:var(--text-muted)">{{ m.fecha }} · {{ m.importe | number:'1.2-2' }}&nbsp;€</span>
+                  <span class="tabular-nums" style="color:var(--text-muted)">{{ m.fecha }} · {{ m.importe | importe }}</span>
                 </label>
               </div>
             }

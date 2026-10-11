@@ -4,6 +4,7 @@ import { CasoCostosPrevistosComponent } from './caso-costos-previstos';
 import type { GestoriaSlot } from '../../../../interfaces';
 import { mockViewport } from '../../mock-viewport';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 const SLOTS = [
   { id: 's1', nombre: 'Tasa judicial', tipoCosto: 'suplido', importeEstimado: 50, status: 'pendiente' },
@@ -18,7 +19,7 @@ describe('CasoCostosPrevistosComponent — móvil', () => {
   async function montar(mobile: boolean): Promise<void> {
     TestBed.resetTestingModule();
     mockViewport(mobile);
-    TestBed.configureTestingModule({ imports: [CasoCostosPrevistosComponent] });
+    TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [CasoCostosPrevistosComponent] });
     fixture = TestBed.createComponent(CasoCostosPrevistosComponent);
     fixture.componentRef.setInput('slots', SLOTS);
     fixture.componentInstance.showRegistrados.set(true);

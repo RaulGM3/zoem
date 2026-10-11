@@ -22,7 +22,7 @@
   @if (perm.can('Tesorería', 'ver')) {
     <app-stat-card
       [icon]="EuroIcon" tone="green" label="Ingresos del mes"
-      [value]="(ingresosMes() | number: '1.0-0') + ' €'" sublabel="Total entradas del mes en curso"
+      [value]="(ingresosMes() | importe:'entero')" sublabel="Total entradas del mes en curso"
       href="/facturacion"
     />
   }
@@ -36,7 +36,7 @@
   @if (perm.can('Tesorería', 'ver')) {
     <app-stat-card
       [icon]="WalletIcon" tone="emerald" label="Disponible total"
-      [value]="(disponibleTotal() | number: '1.0-0') + ' €'" sublabel="Saldo proyectado (sistema)"
+      [value]="(disponibleTotal() | importe:'entero')" sublabel="Saldo proyectado (sistema)"
       href="/tesoreria"
     />
   }
@@ -65,21 +65,21 @@
               <div class="min-w-0 flex-1">
                 <p class="truncate text-sm font-medium" style="color:var(--text-strong)">{{ b.cuenta.nombre }}</p>
                 <p class="text-xs" style="color:var(--text-muted)">
-                  Proyectado: {{ b.sistema | number: '1.0-0' }} €
+                  Proyectado: {{ b.sistema | importe:'entero' }}
                   @if (b.banco !== null) {
-                    · Banco: {{ b.banco | number: '1.0-0' }} €
+                    · Banco: {{ b.banco | importe:'entero' }}
                   }
                 </p>
               </div>
               <div class="text-right">
                 <p class="text-sm font-bold tabular-nums" style="color:var(--text-strong);font-family:var(--font-mono)">
-                  {{ b.proyeccion | number: '1.0-0' }} €
+                  {{ b.proyeccion | importe:'entero' }}
                 </p>
                 <p class="text-[10px] font-semibold uppercase tracking-wider"
                   [style.color]="b.conciliado ? 'var(--success)' : b.banco !== null ? 'var(--warning)' : 'var(--text-faint)'">
                   @if (b.banco === null) { disponible }
                   @else if (b.conciliado) { conciliado }
-                  @else { dif. {{ b.diferencia | number: '1.0-0' }} € }
+                  @else { dif. {{ b.diferencia | importe:'entero' }} }
                 </p>
               </div>
             </div>
@@ -112,7 +112,7 @@
               <span class="shrink-0 text-sm font-bold tabular-nums"
                 [style.color]="m.esEntrada ? 'var(--success)' : 'var(--danger)'"
                 style="font-family:var(--font-mono)">
-                {{ m.esEntrada ? '+' : '−' }}{{ m.importe | number: '1.0-0' }} €
+                {{ m.esEntrada ? '+' : '−' }}{{ m.importe | importe:'entero' }}
               </span>
             </a>
           } @empty {

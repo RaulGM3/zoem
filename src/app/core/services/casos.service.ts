@@ -21,6 +21,8 @@ import {
 import type { Observable } from 'rxjs';
 import { Auth } from '@angular/fire/auth';
 import { CompanyService } from './company.service';
+import { formatearImporteTexto, redondear } from '../moneda/formatear-importe';
+import { formatoDeEmpresa } from '../moneda/formato-empresa';
 import { PlantillasService } from './plantillas.service';
 import { ActividadService } from './actividad.service';
 import { stripUndefinedDeep } from '../firebase/sanitize';
@@ -338,6 +340,7 @@ export class CasosService {
     const createdBy = this.auth.currentUser?.uid ?? '';
     const fecha = new Date().toISOString().slice(0, 10);
 
+    const formato = formatoDeEmpresa(this.companyService.activeCompany());
     const registrosActualizados = [...registros];
     let facturados = 0;
     let omitidos = 0;
@@ -349,12 +352,12 @@ export class CasosService {
 
       const minutos = regs.reduce((s, r) => s + r.minutos, 0);
       const horas = Math.round((minutos / 60) * 100) / 100;
-      const importe = Math.round(horas * tarifa * 100) / 100;
+      const importe = redondear(horas * tarifa, formato.decimales);
       const nombre = member?.nombre ?? 'Miembro';
 
       const movRef = await addDoc(gestoriaRef, {
         tipo: 'honorario',
-        concepto: `Horas ${nombre} (${horas}h × ${tarifa}€) — ${hito.titulo}`,
+        concepto: `Horas ${nombre} (${horas}h × ${formatearImporteTexto(tarifa, formato)}/h) — ${hito.titulo}`,
         importe,
         esEntrada: false,
         fecha,

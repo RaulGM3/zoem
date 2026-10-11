@@ -6,6 +6,8 @@ import QRCode from 'qrcode';
 import type { Invoice } from './invoice.service';
 import { normalizeLinea } from './invoice.service';
 import { totalesRegistro } from '../verifactu/totales-registro';
+import { formatearImporteTexto } from '../moneda/formatear-importe';
+import { formatoDeEmpresa } from '../moneda/formato-empresa';
 import { CompanyService, getLabelIdentificacion } from './company.service';
 import { CompanyLogoService } from './company-logo.service';
 import { encajarLogo } from '../configuracion/logo';
@@ -148,6 +150,7 @@ export class InvoicePdfService {
     const globalIvaRate = invoice.ivaRate ?? 0;
     // Mismos totales (redondeados por grupo) que el registro Verifactu y su QR.
     const totales = totalesRegistro(lineas, globalIvaRate);
+    const formato = formatoDeEmpresa(company);
 
     const rows: string[][] = [];
     for (const l of lineas) {
@@ -157,11 +160,11 @@ export class InvoicePdfService {
       const concepto = l.descripcion ? `${l.concepto}\n${l.descripcion}` : l.concepto;
       rows.push([
         concepto,
-        this.formatQty(l.cantidad),
-        this.formatMoney(l.precioUnitario) + ' €',
-        this.formatMoney(l.base) + ' €',
+        this.formatQty(l.cantidad, formato.locale),
+        formatearImporteTexto(l.precioUnitario, formato),
+        formatearImporteTexto(l.base, formato),
         ivaPct,
-        this.formatMoney(l.base + lineIva) + ' €',
+        formatearImporteTexto(l.base + lineIva, formato),
       ]);
     }
 
@@ -199,18 +202,18 @@ export class InvoicePdfService {
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(90, 90, 90);
     doc.text('Base imponible', labelX, tY);
-    doc.text(this.formatMoney(totales.baseTotal) + ' €', right, tY, { align: 'right' });
+    doc.text(formatearImporteTexto(totales.baseTotal, formato), right, tY, { align: 'right' });
     tY += 6;
 
     // Per-rate IVA breakdown
     for (const { pct, cuota } of totales.grupos) {
       doc.text(`IVA (${pct}%)`, labelX, tY);
-      doc.text(this.formatMoney(cuota) + ' €', right, tY, { align: 'right' });
+      doc.text(formatearImporteTexto(cuota, formato), right, tY, { align: 'right' });
       tY += 6;
     }
     if (totales.grupos.length === 0) {
       doc.text('IVA', labelX, tY);
-      doc.text(this.formatMoney(totales.cuotaTotal) + ' €', right, tY, { align: 'right' });
+      doc.text(formatearImporteTexto(totales.cuotaTotal, formato), right, tY, { align: 'right' });
       tY += 6;
     }
 
@@ -221,7 +224,7 @@ export class InvoicePdfService {
     doc.setFontSize(11);
     doc.setTextColor(30, 30, 30);
     doc.text('TOTAL', labelX, tY + 4);
-    doc.text(this.formatMoney(totales.total) + ' €', right, tY + 4, { align: 'right' });
+    doc.text(formatearImporteTexto(totales.total, formato), right, tY + 4, { align: 'right' });
 
     // Notes
     if (invoice.notes) {
@@ -272,11 +275,7 @@ export class InvoicePdfService {
     return `${da}/${mo}/${yr}`;
   }
 
-  private formatMoney(n: number): string {
-    return n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
-
-  private formatQty(n: number): string {
-    return n % 1 === 0 ? String(n) : n.toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+  private formatQty(n: number, locale: string): string {
+    return n % 1 === 0 ? String(n) : n.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 2 });
   }
 }

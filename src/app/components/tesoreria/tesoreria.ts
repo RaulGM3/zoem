@@ -16,6 +16,7 @@ import { CierreCajaService } from '../../core/services/cierre-caja.service';
 import { ConciliacionService } from '../../core/services/conciliacion.service';
 import { ToastService } from '../../core/services/toast.service';
 import { parseExtractoCsv, autoMatch } from '../../core/conciliacion/conciliacion';
+import { MonedaEmpresaService } from '../../core/moneda/moneda-empresa.service';
 import { saldoAprobado, balancePorCuenta } from '../../core/tesoreria/saldos';
 import { Caso, CierreCuenta, TesoreriaResumen } from '../../interfaces';
 import type { MovimientoTipo } from '../../interfaces';
@@ -80,6 +81,7 @@ const TIPOS_REPORTE: readonly MovimientoTipo[] = Object.keys(TIPOS_REPORTE_EXHAU
 })
 export class TesoreriaComponent implements OnInit, OnDestroy {
   private readonly casosService = inject(CasosService);
+  private readonly moneda = inject(MonedaEmpresaService);
   private readonly companyService = inject(CompanyService);
   private readonly gestoriaService = inject(GestoriaService);
   private readonly cuentasService = inject(CuentasService);
@@ -385,6 +387,7 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
       return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
     const cabecera = ['Fecha', 'Caso', 'Tipo', 'Concepto', 'Cuenta', 'Direccion', 'Base', 'IVA', 'Importe', 'Aprobado'];
+    const decimales = this.moneda.decimales();
     const filas = this.movimientosEnRango().map(m => [
       m.fecha,
       m.casoId ? (nombresCaso.get(m.casoId) ?? m.casoId) : 'General',
@@ -392,9 +395,9 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
       m.concepto,
       m.cuentaId ? (nombresCuenta.get(m.cuentaId) ?? '') : '',
       m.esEntrada ? 'Entrada' : 'Salida',
-      (m.baseImponible ?? m.importe).toFixed(2),
-      (m.cuotaIva ?? 0).toFixed(2),
-      m.importe.toFixed(2),
+      (m.baseImponible ?? m.importe).toFixed(decimales),
+      (m.cuotaIva ?? 0).toFixed(decimales),
+      m.importe.toFixed(decimales),
       m.aprobado === true ? 'Si' : 'No',
     ].map(escapar).join(';'));
 
@@ -429,7 +432,7 @@ export class TesoreriaComponent implements OnInit, OnDestroy {
   }
 
   async onImportarCsv(payload: { cuentaId: string; texto: string }): Promise<void> {
-    const { lineas, errores } = parseExtractoCsv(payload.texto);
+    const { lineas, errores } = parseExtractoCsv(payload.texto, this.moneda.locale());
     if (lineas.length === 0) {
       alert(errores[0] ?? 'No se pudieron leer líneas del archivo.');
       return;

@@ -40,7 +40,7 @@
         <div class="sm:ml-auto sm:text-right">
           <p class="text-[10.5px] uppercase tracking-wider font-semibold" style="color:var(--text-muted);font-family:var(--font-mono)">Saldo según extracto</p>
           <p class="text-lg font-bold tabular-nums mt-0.5" style="color:var(--text-strong);font-family:var(--font-display)">
-            @if (saldoExtracto() !== null) { {{ saldoExtracto() | number:'1.2-2' }} € }
+            @if (saldoExtracto() !== null) { {{ saldoExtracto() | importe }} }
             @else { <span class="text-sm font-normal" style="color:var(--text-faint)">— sin saldo importado</span> }
           </p>
         </div>
@@ -72,7 +72,7 @@
                     </div>
                     <p class="shrink-0 text-sm font-semibold tabular-nums" style="font-family:var(--font-mono)"
                       [style.color]="l.importe >= 0 ? 'var(--success)' : 'var(--danger)'">
-                      {{ l.importe >= 0 ? '+' : '' }}{{ l.importe | number:'1.2-2' }} €
+                      {{ l.importe >= 0 ? '+' : '' }}{{ l.importe | importe }}
                     </p>
                   </div>
                   <div class="mt-2 flex items-center justify-between gap-2">
@@ -124,7 +124,7 @@
                           <td class="px-4 py-3 text-right font-medium tabular-nums"
                             [style.color]="l.importe >= 0 ? 'var(--success)' : 'var(--danger)'"
                             style="font-family:var(--font-mono)">
-                            {{ l.importe >= 0 ? '+' : '' }}{{ l.importe | number:'1.2-2' }} €
+                            {{ l.importe >= 0 ? '+' : '' }}{{ l.importe | importe }}
                           </td>
                           <td class="px-4 py-3">
                             <ng-container [ngTemplateOutlet]="estadoBadge" [ngTemplateOutletContext]="{ $implicit: l.estado }" />
@@ -188,7 +188,7 @@
     <option value="" selected>Casar con…</option>
     @for (m of movimientosDisponibles(); track m.id) {
       <option [value]="m.id">
-        {{ m.fecha }} · {{ m.esEntrada ? '+' : '−' }}{{ m.importe | number:'1.2-2' }} € · {{ m.concepto }}
+        {{ m.fecha }} · {{ m.esEntrada ? '+' : '−' }}{{ m.importe | importe }} · {{ m.concepto }}
       </option>
     }
   </select>

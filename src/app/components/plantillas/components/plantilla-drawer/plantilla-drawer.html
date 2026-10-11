@@ -20,8 +20,8 @@
             </select>
           </div>
           <div class="space-y-1">
-            <label class="text-sm font-medium text-slate-700">Honorarios base (€)</label>
-            <input type="number" min="0" step="0.01" [value]="formHonorarios()" (input)="formHonorarios.set($any($event.target).value)"
+            <label class="text-sm font-medium text-slate-700">Honorarios base ({{ moneda.simbolo() }})</label>
+            <input type="number" min="0" [step]="moneda.step()" [value]="formHonorarios()" (input)="formHonorarios.set($any($event.target).value)"
               class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
           </div>
         </div>
@@ -123,7 +123,7 @@
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
                   @if (s.importeEstimado != null) {
-                    <span class="text-slate-700 text-xs">{{ s.importeEstimado }} €</span>
+                    <span class="text-slate-700 text-xs">{{ s.importeEstimado | importe }}</span>
                   }
                   <button (click)="removeSuplido(i)" class="p-0.5 hover:bg-red-50 rounded">
                     <lucide-icon [img]="XIcon" class="w-3 h-3 text-red-400" />
@@ -172,8 +172,8 @@
             </div>
           }
           <div class="space-y-1">
-            <label class="text-xs text-slate-700">Precio aproximado (€, opcional)</label>
-            <input type="number" min="0" step="0.01" [value]="suplidoImporte()" (input)="suplidoImporte.set($any($event.target).value)"
+            <label class="text-xs text-slate-700">Precio aproximado ({{ moneda.simbolo() }}, opcional)</label>
+            <input type="number" min="0" [step]="moneda.step()" [value]="suplidoImporte()" (input)="suplidoImporte.set($any($event.target).value)"
               placeholder="Importe estimado"
               class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
           </div>

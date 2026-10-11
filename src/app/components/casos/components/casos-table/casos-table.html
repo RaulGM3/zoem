@@ -82,7 +82,7 @@
               <td class="px-4 py-3 text-right text-[13px] font-bold tabular-nums"
                 [style.color]="caso.resumenFinanciero.saldo >= 0 ? 'var(--success)' : 'var(--danger)'"
                 style="font-family:var(--font-mono)">
-                {{ caso.resumenFinanciero.saldo | number:'1.2-2' }} €
+                {{ caso.resumenFinanciero.saldo | importe }}
               </td>
 
               <!-- Más acciones -->
@@ -140,7 +140,7 @@
             }
             <span class="ml-auto font-bold tabular-nums" style="font-family:var(--font-mono)"
               [style.color]="caso.resumenFinanciero.saldo >= 0 ? 'var(--success)' : 'var(--danger)'">
-              {{ caso.resumenFinanciero.saldo | number:'1.2-2' }} €
+              {{ caso.resumenFinanciero.saldo | importe }}
             </span>
           </span>
         </button>

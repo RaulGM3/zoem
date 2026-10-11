@@ -1,7 +1,6 @@
 import { Component, signal, computed, inject, effect, ChangeDetectionStrategy } from '@angular/core';
 import { SkeletonComponent } from '../../shared/components/skeleton/skeleton';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { DecimalPipe } from '@angular/common';
 import { RouterLink, ActivatedRoute, Router, type ParamMap } from '@angular/router';
 import {
   LucideAngularModule,
@@ -34,6 +33,7 @@ import {
   ListCardDirective, ListTableDirective, ResponsiveListComponent,
 } from '../../shared/components/responsive-list/responsive-list';
 import { SeguimientoContactoService } from '../../core/services/seguimiento-contacto.service';
+import { ImportePipe } from '../../core/moneda/importe.pipe';
 
 type ContactosTab = 'contactos' | 'pipeline' | 'rgpd' | 'herramientas';
 
@@ -47,8 +47,8 @@ const KPI_ROTATIVA: readonly { status: ContactStatus; titulo: string; detalle: s
 @Component({
   selector: 'app-contactos',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SkeletonComponent, 
-    RouterLink, LucideAngularModule, DecimalPipe, ImportarContactosComponent, ContactoDrawerComponent,
+  imports: [ImportePipe, SkeletonComponent, 
+    RouterLink, LucideAngularModule, ImportarContactosComponent, ContactoDrawerComponent,
     EstadoContactoDialogComponent, AccionLanzadorComponent, ActionMenuComponent, OverlayShellComponent,
     ResponsiveListComponent, ListCardDirective, ListTableDirective,
   ],

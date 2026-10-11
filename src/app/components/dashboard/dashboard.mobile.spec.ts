@@ -13,12 +13,13 @@ import { GestoriaService } from '../../core/services/gestoria.service';
 import { CuentasService } from '../../core/services/cuentas.service';
 import { EventosService } from '../../core/services/eventos.service';
 import { ActividadService } from '../../core/services/actividad.service';
+import { provideMonedaTest } from '../../core/moneda/moneda-empresa.testing';
 
 async function montar(): Promise<HTMLElement> {
   TestBed.resetTestingModule();
   await TestBed.configureTestingModule({
     imports: [DashboardComponent],
-    providers: [
+    providers: [provideMonedaTest(), 
       provideRouter([]),
       {
         provide: PermissionService,

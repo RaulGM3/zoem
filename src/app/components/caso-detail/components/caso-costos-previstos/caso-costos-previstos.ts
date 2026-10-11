@@ -1,15 +1,16 @@
 import { Component, ChangeDetectionStrategy, input, output, computed, signal, linkedSignal } from '@angular/core';
-import { DecimalPipe, TitleCasePipe } from '@angular/common';
+import { TitleCasePipe } from '@angular/common';
 import {
   LucideAngularModule, Plus, X, CheckCircle2, CircleAlert, GripVertical, Eye, EyeOff, Check,
 } from 'lucide-angular';
 import type { GestoriaSlot } from '../../../../interfaces';
+import { ImportePipe } from '../../../../core/moneda/importe.pipe';
 
 /** Costos previstos por la plantilla del caso: lista reordenable con su registro como movimiento. */
 @Component({
   selector: 'app-caso-costos-previstos',
   host: { class: 'block' },
-  imports: [LucideAngularModule, DecimalPipe, TitleCasePipe],
+  imports: [ImportePipe, LucideAngularModule, TitleCasePipe],
   templateUrl: './caso-costos-previstos.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

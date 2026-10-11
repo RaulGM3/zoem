@@ -26,6 +26,7 @@ import {
   newRegistroId,
   timeToMinutes,
 } from '../../agenda-utils';
+import { MonedaEmpresaService } from '../../../../core/moneda/moneda-empresa.service';
 
 export interface ItemTimeChange {
   id: string;
@@ -199,6 +200,7 @@ function computeColumnLayout(items: CalendarItem[]): Map<string, ItemLayout> {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DayScheduleComponent {
+  protected readonly moneda = inject(MonedaEmpresaService);
   readonly groupedEvents = input.required<EventGroup[]>();
   readonly hasSelectedDates = input.required<boolean>();
   readonly members = input<CompanyMember[]>([]);

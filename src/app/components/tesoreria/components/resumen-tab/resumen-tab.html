@@ -52,21 +52,21 @@
             <dl class="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
               <div>
                 <dt style="color:var(--text-muted)">Ingresos</dt>
-                <dd class="font-medium tabular-nums" style="color:var(--success);font-family:var(--font-mono)">{{ c.ingresos | number:'1.2-2' }} €</dd>
+                <dd class="font-medium tabular-nums" style="color:var(--success);font-family:var(--font-mono)">{{ c.ingresos | importe }}</dd>
               </div>
               <div>
                 <dt style="color:var(--text-muted)">Egresos</dt>
-                <dd class="font-medium tabular-nums" style="color:var(--danger);font-family:var(--font-mono)">{{ c.egresos | number:'1.2-2' }} €</dd>
+                <dd class="font-medium tabular-nums" style="color:var(--danger);font-family:var(--font-mono)">{{ c.egresos | importe }}</dd>
               </div>
               <div>
                 <dt style="color:var(--text-muted)">Sistema</dt>
                 <dd class="font-semibold tabular-nums" style="font-family:var(--font-mono)"
-                  [style.color]="c.sistema >= 0 ? 'var(--text-body)' : 'var(--danger)'">{{ c.sistema | number:'1.2-2' }} €</dd>
+                  [style.color]="c.sistema >= 0 ? 'var(--text-body)' : 'var(--danger)'">{{ c.sistema | importe }}</dd>
               </div>
               <div>
                 <dt style="color:var(--text-muted)">Aprobado</dt>
                 <dd class="font-medium tabular-nums" style="font-family:var(--font-mono)"
-                  [style.color]="c.proyeccion >= 0 ? 'var(--text-muted)' : 'var(--warning)'">{{ c.proyeccion | number:'1.2-2' }} €</dd>
+                  [style.color]="c.proyeccion >= 0 ? 'var(--text-muted)' : 'var(--warning)'">{{ c.proyeccion | importe }}</dd>
               </div>
             </dl>
 
@@ -74,12 +74,12 @@
               <div class="min-w-0 flex-1">
                 <p class="text-xs" style="color:var(--text-muted)" aria-hidden="true">Saldo real</p>
                 <div class="relative mt-1">
-                  <input type="number" inputmode="decimal" step="0.01" [value]="c.banco ?? ''"
+                  <input type="number" inputmode="decimal" [step]="moneda.step()" [value]="c.banco ?? ''"
                     (change)="actualizarSaldoCuenta.emit({ cuentaId: c.cuenta.id, valor: $any($event.target).value })"
                     placeholder="0.00"
                     [attr.aria-label]="'Saldo real de ' + c.cuenta.nombre"
                     class="form-input w-full pr-7 text-right tabular-nums" style="font-family:var(--font-mono)" />
-                  <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs" style="color:var(--text-faint)" aria-hidden="true">€</span>
+                  <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs" style="color:var(--text-faint)" aria-hidden="true">{{ moneda.simbolo() }}</span>
                 </div>
               </div>
               <div class="shrink-0 pb-2">
@@ -137,31 +137,31 @@
                   </div>
                 </td>
                 <td class="px-4 py-3 text-right font-medium tabular-nums" style="color:var(--success);font-family:var(--font-mono)">
-                  {{ c.ingresos | number:'1.2-2' }} €
+                  {{ c.ingresos | importe }}
                 </td>
                 <td class="px-4 py-3 text-right font-medium tabular-nums" style="color:var(--danger);font-family:var(--font-mono)">
-                  {{ c.egresos | number:'1.2-2' }} €
+                  {{ c.egresos | importe }}
                 </td>
                 <td class="px-4 py-3 text-right font-semibold tabular-nums"
                   [style.color]="c.sistema >= 0 ? 'var(--text-body)' : 'var(--danger)'"
                   style="font-family:var(--font-mono)">
-                  {{ c.sistema | number:'1.2-2' }} €
+                  {{ c.sistema | importe }}
                 </td>
                 <td class="px-4 py-3 text-right font-medium tabular-nums"
                   [style.color]="c.proyeccion >= 0 ? 'var(--text-muted)' : 'var(--warning)'"
                   style="font-family:var(--font-mono)">
-                  {{ c.proyeccion | number:'1.2-2' }} €
+                  {{ c.proyeccion | importe }}
                 </td>
                 <td class="px-4 py-3 text-right">
                   <div class="flex items-center justify-end gap-1">
-                    <input type="number" step="0.01" [value]="c.banco ?? ''"
+                    <input type="number" [step]="moneda.step()" [value]="c.banco ?? ''"
                       (click)="$event.stopPropagation()"
                       (keydown)="$event.stopPropagation()"
                       (change)="actualizarSaldoCuenta.emit({ cuentaId: c.cuenta.id, valor: $any($event.target).value })"
                       placeholder="0.00"
                       [attr.aria-label]="'Saldo real de ' + c.cuenta.nombre"
                       class="form-input text-right tabular-nums" style="width:7rem;padding:0.25rem 0.5rem;font-family:var(--font-mono)" />
-                    <span class="text-xs" style="color:var(--text-faint)">€</span>
+                    <span class="text-xs" style="color:var(--text-faint)">{{ moneda.simbolo() }}</span>
                   </div>
                 </td>
                 <td class="px-4 py-3 text-center">
@@ -240,7 +240,7 @@
                 <div class="flex shrink-0 flex-col items-end gap-1">
                   <span class="text-sm font-bold tabular-nums" style="font-family:var(--font-mono)"
                     [style.color]="mov.esEntrada ? 'var(--success)' : 'var(--danger)'">
-                    {{ mov.esEntrada ? '+' : '−' }}{{ mov.importe | number:'1.2-2' }} €
+                    {{ mov.esEntrada ? '+' : '−' }}{{ mov.importe | importe }}
                   </span>
                   <ng-container [ngTemplateOutlet]="estadoMovimiento" [ngTemplateOutletContext]="{ $implicit: mov.aprobado === true }" />
                 </div>
@@ -281,7 +281,7 @@
                     <td class="px-4 py-3 text-right font-bold tabular-nums"
                       [style.color]="mov.esEntrada ? 'var(--success)' : 'var(--danger)'"
                       style="font-family:var(--font-mono)">
-                      {{ mov.esEntrada ? '+' : '−' }}{{ mov.importe | number:'1.2-2' }} €
+                      {{ mov.esEntrada ? '+' : '−' }}{{ mov.importe | importe }}
                     </td>
                   </tr>
                 }
@@ -304,12 +304,12 @@
         <label for="resumen-saldo-bancario" class="form-label">Saldo bancario real</label>
         <div class="flex gap-2 mt-1">
           <div class="relative flex-1">
-            <input id="resumen-saldo-bancario" type="number" inputmode="decimal" step="0.01"
+            <input id="resumen-saldo-bancario" type="number" inputmode="decimal" [step]="moneda.step()"
               [value]="localSaldoInput()"
               (input)="localSaldoInput.set($any($event.target).value)"
               placeholder="0.00"
               class="form-input text-right pr-7" style="font-family:var(--font-mono)" />
-            <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs" style="color:var(--text-faint)" aria-hidden="true">€</span>
+            <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs" style="color:var(--text-faint)" aria-hidden="true">{{ moneda.simbolo() }}</span>
           </div>
           <button type="button" (click)="guardarSaldoBancario.emit(localSaldoInput())" [disabled]="savingSaldo()"
             class="max-sm:tap-target inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-white disabled:opacity-50 transition-colors duration-150 bg-[var(--brand)] hover:bg-[var(--brand-hover)]">
@@ -326,7 +326,7 @@
         <div class="flex items-center gap-2 rounded-xl px-4 py-3 md:py-0" style="background:var(--surface-2)">
           <div>
             <p class="text-xs" style="color:var(--text-muted)">Saldo aprobado</p>
-            <p class="text-lg font-semibold tabular-nums" style="color:var(--text-body);font-family:var(--font-display)">{{ c.sistema | number:'1.2-2' }} €</p>
+            <p class="text-lg font-semibold tabular-nums" style="color:var(--text-body);font-family:var(--font-display)">{{ c.sistema | importe }}</p>
           </div>
         </div>
         <div class="flex items-center gap-3 rounded-xl px-4 py-3 md:py-0"
@@ -340,7 +340,7 @@
             </p>
             <p class="text-lg font-semibold tabular-nums" style="font-family:var(--font-display)"
               [style.color]="c.conciliado ? 'var(--success)' : 'var(--warning)'">
-              {{ c.diferencia >= 0 ? '+' : '−' }}{{ (c.diferencia < 0 ? -c.diferencia : c.diferencia) | number:'1.2-2' }} €
+              {{ c.diferencia >= 0 ? '+' : '−' }}{{ (c.diferencia < 0 ? -c.diferencia : c.diferencia) | importe }}
             </p>
           </div>
         </div>
@@ -375,15 +375,15 @@
                 <p class="text-xs mt-0.5 truncate" style="color:var(--text-faint)">{{ cierre.notas }}</p>
               }
               <div class="mt-1 flex flex-wrap items-center gap-x-3 text-xs sm:hidden" style="font-family:var(--font-mono)">
-                <span style="color:var(--success)">+{{ cierre.totales.ingresos | number:'1.2-2' }} €</span>
-                <span style="color:var(--danger)">−{{ cierre.totales.egresos | number:'1.2-2' }} €</span>
-                <span class="font-semibold" style="color:var(--text-body)">= {{ cierre.totales.sistemaTotal | number:'1.2-2' }} €</span>
+                <span style="color:var(--success)">+{{ cierre.totales.ingresos | importe }}</span>
+                <span style="color:var(--danger)">−{{ cierre.totales.egresos | importe }}</span>
+                <span class="font-semibold" style="color:var(--text-body)">= {{ cierre.totales.sistemaTotal | importe }}</span>
               </div>
             </div>
             <div class="hidden sm:flex items-center gap-4 text-xs" style="font-family:var(--font-mono)">
-              <span style="color:var(--success)">+{{ cierre.totales.ingresos | number:'1.2-2' }} €</span>
-              <span style="color:var(--danger)">−{{ cierre.totales.egresos | number:'1.2-2' }} €</span>
-              <span class="font-semibold" style="color:var(--text-body)">= {{ cierre.totales.sistemaTotal | number:'1.2-2' }} €</span>
+              <span style="color:var(--success)">+{{ cierre.totales.ingresos | importe }}</span>
+              <span style="color:var(--danger)">−{{ cierre.totales.egresos | importe }}</span>
+              <span class="font-semibold" style="color:var(--text-body)">= {{ cierre.totales.sistemaTotal | importe }}</span>
             </div>
             <lucide-icon [img]="ChevronDownIcon" class="w-4 h-4 shrink-0 transition-transform"
               style="color:var(--text-faint)"
@@ -399,11 +399,11 @@
                     aria-hidden="true" />
                   <span class="font-medium min-w-0 flex-1 truncate sm:w-32 sm:flex-none" style="color:var(--text-body)">{{ cc.nombre }}</span>
                   <span style="color:var(--text-muted);font-family:var(--font-mono)">
-                    Sistema: <strong style="color:var(--text-body)">{{ cc.sistema | number:'1.2-2' }} €</strong>
+                    Sistema: <strong style="color:var(--text-body)">{{ cc.sistema | importe }}</strong>
                   </span>
                   @if (cc.saldoReal !== null) {
                     <span style="color:var(--text-muted);font-family:var(--font-mono)">
-                      Real: <strong style="color:var(--text-body)">{{ cc.saldoReal | number:'1.2-2' }} €</strong>
+                      Real: <strong style="color:var(--text-body)">{{ cc.saldoReal | importe }}</strong>
                     </span>
                     <span class="font-semibold" [style.color]="cc.conciliado ? 'var(--success)' : 'var(--warning)'">
                       {{ cc.conciliado ? '✓ OK' : '⚠ Discrepancia' }}
@@ -437,12 +437,12 @@
         <div class="grid grid-cols-2" style="border-bottom:1px solid var(--border)">
           <div class="min-w-0 p-4" style="border-right:1px solid var(--border)">
             <p class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Saldo sistema</p>
-            <p class="text-lg font-bold tabular-nums mt-1 break-words sm:text-xl" style="font-family:var(--font-mono);color:var(--text-body)">{{ dc.sistema | number:'1.2-2' }} €</p>
+            <p class="text-lg font-bold tabular-nums mt-1 break-words sm:text-xl" style="font-family:var(--font-mono);color:var(--text-body)">{{ dc.sistema | importe }}</p>
             <p class="text-xs mt-1.5" style="color:var(--text-faint)">Suma de movimientos aprobados</p>
           </div>
           <div class="min-w-0 p-4">
             <p class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);font-family:var(--font-mono)">Saldo real</p>
-            <p class="text-lg font-bold tabular-nums mt-1 break-words sm:text-xl" style="font-family:var(--font-mono);color:var(--text-body)">{{ dc.banco | number:'1.2-2' }} €</p>
+            <p class="text-lg font-bold tabular-nums mt-1 break-words sm:text-xl" style="font-family:var(--font-mono);color:var(--text-body)">{{ dc.banco | importe }}</p>
             <p class="text-xs mt-1.5" style="color:var(--text-faint)">Ingresado manualmente</p>
           </div>
         </div>
@@ -451,7 +451,7 @@
           <span class="text-sm font-semibold" style="color:var(--warning)">Diferencia</span>
           <span class="text-lg font-bold tabular-nums" style="font-family:var(--font-mono);color:var(--warning)">
             @let dif = dc.diferencia ?? 0;
-            {{ dif >= 0 ? '+' : '−' }}{{ (dif < 0 ? -dif : dif) | number:'1.2-2' }} €
+            {{ dif >= 0 ? '+' : '−' }}{{ (dif < 0 ? -dif : dif) | importe }}
           </span>
         </div>
       </div>
@@ -496,32 +496,32 @@
       <div class="min-w-0 p-4" style="border-right:1px solid var(--border)">
         <p class="text-xs" style="color:var(--text-muted)">Ingresos</p>
         <p class="text-base font-semibold tabular-nums mt-0.5 break-words" style="color:var(--success);font-family:var(--font-display)">
-          {{ hist.totalIngresosCerrados | number:'1.2-2' }} €
+          {{ hist.totalIngresosCerrados | importe }}
         </p>
       </div>
       <div class="min-w-0 p-4 md:border-r" style="border-color:var(--border)">
         <p class="text-xs" style="color:var(--text-muted)">Suplidos</p>
         <p class="text-base font-semibold tabular-nums mt-0.5 break-words" style="color:var(--warning);font-family:var(--font-display)">
-          {{ hist.totalSuplidosCerrados | number:'1.2-2' }} €
+          {{ hist.totalSuplidosCerrados | importe }}
         </p>
       </div>
       <div class="min-w-0 p-4" style="border-right:1px solid var(--border)">
         <p class="text-xs" style="color:var(--text-muted)">Honorarios</p>
         <p class="text-base font-semibold tabular-nums mt-0.5 break-words" style="color:var(--brand);font-family:var(--font-display)">
-          {{ hist.totalHonorariosCerrados | number:'1.2-2' }} €
+          {{ hist.totalHonorariosCerrados | importe }}
         </p>
       </div>
       <div class="min-w-0 p-4 md:border-r" style="border-color:var(--border)">
         <p class="text-xs" style="color:var(--text-muted)">Egresos</p>
         <p class="text-base font-semibold tabular-nums mt-0.5 break-words" style="color:var(--danger);font-family:var(--font-display)">
-          {{ hist.totalEgresosCerrados | number:'1.2-2' }} €
+          {{ hist.totalEgresosCerrados | importe }}
         </p>
       </div>
       <div class="col-span-2 min-w-0 p-4 max-md:border-t md:col-span-1" style="border-color:var(--border)">
         <p class="text-xs" style="color:var(--text-muted)">Saldo neto</p>
         <p class="text-base font-semibold tabular-nums mt-0.5 break-words" style="font-family:var(--font-display)"
           [style.color]="hist.saldoCerrados >= 0 ? 'var(--success)' : 'var(--danger)'">
-          {{ hist.saldoCerrados | number:'1.2-2' }} €
+          {{ hist.saldoCerrados | importe }}
         </p>
       </div>
     </div>
@@ -543,7 +543,7 @@
           <span [id]="'discrepancia-tip-' + c.cuenta.id"
             class="absolute z-20 pointer-events-none rounded-lg px-2.5 py-2 text-xs text-center"
             style="bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);width:11rem;background:var(--popover);border:1px solid var(--border);color:var(--text-body);box-shadow:0 4px 16px rgba(0,0,0,0.18)">
-            Diferencia de {{ (c.diferencia < 0 ? -c.diferencia : c.diferencia) | number:'1.2-2' }} €. Haz clic para ver el desglose.
+            Diferencia de {{ (c.diferencia < 0 ? -c.diferencia : c.diferencia) | importe }}. Haz clic para ver el desglose.
             <span class="absolute" style="top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--border)"></span>
           </span>
         }

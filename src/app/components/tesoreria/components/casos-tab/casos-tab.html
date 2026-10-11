@@ -22,25 +22,25 @@
             <dl class="mt-2 grid grid-cols-3 gap-x-3 gap-y-2 text-xs">
               <div>
                 <dt style="color:var(--text-muted)">Ingresos</dt>
-                <dd class="font-medium tabular-nums" style="color:var(--success);font-family:var(--font-mono)">{{ (r?.ingresos ?? 0) | number:'1.2-2' }} €</dd>
+                <dd class="font-medium tabular-nums" style="color:var(--success);font-family:var(--font-mono)">{{ (r?.ingresos ?? 0) | importe }}</dd>
               </div>
               <div>
                 <dt style="color:var(--text-muted)">Honorarios</dt>
-                <dd class="font-medium tabular-nums" style="color:var(--success);font-family:var(--font-mono)">{{ (r?.honorarios ?? 0) | number:'1.2-2' }} €</dd>
+                <dd class="font-medium tabular-nums" style="color:var(--success);font-family:var(--font-mono)">{{ (r?.honorarios ?? 0) | importe }}</dd>
               </div>
               <div>
                 <dt style="color:var(--text-muted)">Egresos</dt>
-                <dd class="font-medium tabular-nums" style="color:var(--danger);font-family:var(--font-mono)">{{ (r?.egresos ?? 0) | number:'1.2-2' }} €</dd>
+                <dd class="font-medium tabular-nums" style="color:var(--danger);font-family:var(--font-mono)">{{ (r?.egresos ?? 0) | importe }}</dd>
               </div>
               <div class="col-span-3 flex items-baseline justify-between gap-3 pt-2" style="border-top:1px solid var(--border)">
                 <dt style="color:var(--text-muted)">Saldo aprobado</dt>
                 <dd class="text-sm font-semibold tabular-nums" style="font-family:var(--font-mono)"
-                  [style.color]="(r?.saldoAprobado ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)'">{{ (r?.saldoAprobado ?? 0) | number:'1.2-2' }} €</dd>
+                  [style.color]="(r?.saldoAprobado ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)'">{{ (r?.saldoAprobado ?? 0) | importe }}</dd>
               </div>
               <div class="col-span-3 flex items-baseline justify-between gap-3">
                 <dt style="color:var(--text-muted)">Saldo proyectado</dt>
                 <dd class="text-sm font-semibold tabular-nums" style="font-family:var(--font-mono)"
-                  [style.color]="(r?.saldoProyectado ?? 0) >= 0 ? 'var(--text-body)' : 'var(--danger)'">{{ (r?.saldoProyectado ?? 0) | number:'1.2-2' }} €</dd>
+                  [style.color]="(r?.saldoProyectado ?? 0) >= 0 ? 'var(--text-body)' : 'var(--danger)'">{{ (r?.saldoProyectado ?? 0) | importe }}</dd>
               </div>
             </dl>
           </button>
@@ -74,23 +74,23 @@
                     (mouseleave)="$any($event.currentTarget).style.background=''">
                     <td class="px-4 py-3 font-medium" style="color:var(--text-strong)">{{ caso.titulo }}</td>
                     <td class="px-4 py-3 text-right font-medium tabular-nums" style="color:var(--success);font-family:var(--font-mono)">
-                      {{ (r?.ingresos ?? 0) | number:'1.2-2' }} €
+                      {{ (r?.ingresos ?? 0) | importe }}
                     </td>
                     <td class="px-4 py-3 text-right font-medium tabular-nums" style="color:var(--success);font-family:var(--font-mono)">
-                      {{ (r?.honorarios ?? 0) | number:'1.2-2' }} €
+                      {{ (r?.honorarios ?? 0) | importe }}
                     </td>
                     <td class="px-4 py-3 text-right font-medium tabular-nums" style="color:var(--danger);font-family:var(--font-mono)">
-                      {{ (r?.egresos ?? 0) | number:'1.2-2' }} €
+                      {{ (r?.egresos ?? 0) | importe }}
                     </td>
                     <td class="px-4 py-3 text-right font-semibold tabular-nums"
                       [style.color]="(r?.saldoAprobado ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)'"
                       style="font-family:var(--font-mono)">
-                      {{ (r?.saldoAprobado ?? 0) | number:'1.2-2' }} €
+                      {{ (r?.saldoAprobado ?? 0) | importe }}
                     </td>
                     <td class="px-4 py-3 text-right font-semibold tabular-nums"
                       [style.color]="(r?.saldoProyectado ?? 0) >= 0 ? 'var(--text-body)' : 'var(--danger)'"
                       style="font-family:var(--font-mono)">
-                      {{ (r?.saldoProyectado ?? 0) | number:'1.2-2' }} €
+                      {{ (r?.saldoProyectado ?? 0) | importe }}
                     </td>
                   </tr>
                 }
@@ -99,23 +99,23 @@
                 <tr class="font-semibold" style="color:var(--text-strong)">
                   <td class="px-4 py-3">Total</td>
                   <td class="px-4 py-3 text-right tabular-nums" style="color:var(--success);font-family:var(--font-mono)">
-                    {{ totalIngresos() | number:'1.2-2' }} €
+                    {{ totalIngresos() | importe }}
                   </td>
                   <td class="px-4 py-3 text-right tabular-nums" style="color:var(--success);font-family:var(--font-mono)">
-                    {{ totalHonorarios() | number:'1.2-2' }} €
+                    {{ totalHonorarios() | importe }}
                   </td>
                   <td class="px-4 py-3 text-right tabular-nums" style="color:var(--danger);font-family:var(--font-mono)">
-                    {{ totalEgresos() | number:'1.2-2' }} €
+                    {{ totalEgresos() | importe }}
                   </td>
                   <td class="px-4 py-3 text-right tabular-nums"
                     [style.color]="saldoAprobado() >= 0 ? 'var(--success)' : 'var(--danger)'"
                     style="font-family:var(--font-mono)">
-                    {{ saldoAprobado() | number:'1.2-2' }} €
+                    {{ saldoAprobado() | importe }}
                   </td>
                   <td class="px-4 py-3 text-right tabular-nums"
                     [style.color]="saldoProyectado() >= 0 ? 'var(--text-body)' : 'var(--danger)'"
                     style="font-family:var(--font-mono)">
-                    {{ saldoProyectado() | number:'1.2-2' }} €
+                    {{ saldoProyectado() | importe }}
                   </td>
                 </tr>
               </tfoot>
@@ -132,25 +132,25 @@
         <dl class="grid grid-cols-2 gap-x-3 gap-y-2">
         <div>
           <dt style="color:var(--text-muted)">Ingresos</dt>
-          <dd class="font-semibold tabular-nums" style="color:var(--success);font-family:var(--font-mono)">{{ totalIngresos() | number:'1.2-2' }} €</dd>
+          <dd class="font-semibold tabular-nums" style="color:var(--success);font-family:var(--font-mono)">{{ totalIngresos() | importe }}</dd>
         </div>
         <div>
           <dt style="color:var(--text-muted)">Honorarios</dt>
-          <dd class="font-semibold tabular-nums" style="color:var(--success);font-family:var(--font-mono)">{{ totalHonorarios() | number:'1.2-2' }} €</dd>
+          <dd class="font-semibold tabular-nums" style="color:var(--success);font-family:var(--font-mono)">{{ totalHonorarios() | importe }}</dd>
         </div>
         <div>
           <dt style="color:var(--text-muted)">Egresos</dt>
-          <dd class="font-semibold tabular-nums" style="color:var(--danger);font-family:var(--font-mono)">{{ totalEgresos() | number:'1.2-2' }} €</dd>
+          <dd class="font-semibold tabular-nums" style="color:var(--danger);font-family:var(--font-mono)">{{ totalEgresos() | importe }}</dd>
         </div>
         <div>
           <dt style="color:var(--text-muted)">Saldo aprobado</dt>
           <dd class="font-semibold tabular-nums" style="font-family:var(--font-mono)"
-            [style.color]="saldoAprobado() >= 0 ? 'var(--success)' : 'var(--danger)'">{{ saldoAprobado() | number:'1.2-2' }} €</dd>
+            [style.color]="saldoAprobado() >= 0 ? 'var(--success)' : 'var(--danger)'">{{ saldoAprobado() | importe }}</dd>
         </div>
         <div class="col-span-2">
           <dt style="color:var(--text-muted)">Saldo proyectado</dt>
           <dd class="font-semibold tabular-nums" style="font-family:var(--font-mono)"
-            [style.color]="saldoProyectado() >= 0 ? 'var(--text-body)' : 'var(--danger)'">{{ saldoProyectado() | number:'1.2-2' }} €</dd>
+            [style.color]="saldoProyectado() >= 0 ? 'var(--text-body)' : 'var(--danger)'">{{ saldoProyectado() | importe }}</dd>
         </div>
         </dl>
       </div>

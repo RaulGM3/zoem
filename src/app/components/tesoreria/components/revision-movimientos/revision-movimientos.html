@@ -123,7 +123,7 @@
           <!-- Importe -->
           <span class="text-sm font-bold shrink-0 tabular-nums" style="font-family:var(--font-mono)"
             [style.color]="mov.esEntrada ? 'var(--success)' : 'var(--danger)'">
-            {{ mov.esEntrada ? '+' : '−' }}{{ mov.importe | number:'1.2-2' }} €
+            {{ mov.esEntrada ? '+' : '−' }}{{ mov.importe | importe }}
           </span>
         </li>
       }

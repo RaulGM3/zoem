@@ -26,30 +26,30 @@
     <div class="kpi-card min-w-0 rounded-xl p-3 sm:p-4" style="background:var(--surface);border:1px solid var(--border)">
       <p class="text-[10.5px] uppercase tracking-wider font-semibold" style="color:var(--text-muted);font-family:var(--font-mono)">Ingresos</p>
       <p class="text-lg font-bold tabular-nums mt-1 break-words sm:text-xl" style="color:var(--success);font-family:var(--font-display)">
-        {{ reporte().ingresos | number:'1.2-2' }} €
+        {{ reporte().ingresos | importe }}
       </p>
     </div>
     <div class="kpi-card min-w-0 rounded-xl p-3 sm:p-4" style="background:var(--surface);border:1px solid var(--border)">
       <p class="text-[10.5px] uppercase tracking-wider font-semibold" style="color:var(--text-muted);font-family:var(--font-mono)">Egresos</p>
       <p class="text-lg font-bold tabular-nums mt-1 break-words sm:text-xl" style="color:var(--danger);font-family:var(--font-display)">
-        {{ reporte().egresos | number:'1.2-2' }} €
+        {{ reporte().egresos | importe }}
       </p>
     </div>
     <div class="kpi-card min-w-0 rounded-xl p-3 sm:p-4" style="background:var(--surface);border:1px solid var(--border)">
       <p class="text-[10.5px] uppercase tracking-wider font-semibold" style="color:var(--text-muted);font-family:var(--font-mono)">Resultado</p>
       <p class="text-lg font-bold tabular-nums mt-1 break-words sm:text-xl" style="font-family:var(--font-display)"
         [style.color]="reporte().saldo >= 0 ? 'var(--success)' : 'var(--danger)'">
-        {{ reporte().saldo | number:'1.2-2' }} €
+        {{ reporte().saldo | importe }}
       </p>
     </div>
     <div class="kpi-card min-w-0 rounded-xl p-3 sm:p-4" style="background:var(--surface);border:1px solid var(--border)">
       <p class="text-[10.5px] uppercase tracking-wider font-semibold" style="color:var(--text-muted);font-family:var(--font-mono)">Liquidación IVA (303)</p>
       <p class="text-lg font-bold tabular-nums mt-1 break-words sm:text-xl" style="font-family:var(--font-display)"
         [style.color]="reporte().liquidacionIva >= 0 ? 'var(--danger)' : 'var(--success)'">
-        {{ reporte().liquidacionIva | number:'1.2-2' }} €
+        {{ reporte().liquidacionIva | importe }}
       </p>
       <p class="text-xs mt-0.5" style="color:var(--text-faint)">
-        Rep. {{ reporte().ivaRepercutido | number:'1.2-2' }} · Sop. {{ reporte().ivaSoportado | number:'1.2-2' }}
+        Rep. {{ reporte().ivaRepercutido | importe }} · Sop. {{ reporte().ivaSoportado | importe }}
       </p>
     </div>
   </div>
@@ -71,15 +71,15 @@
             <dl class="mt-2 grid grid-cols-3 gap-3 text-xs">
               <div>
                 <dt style="color:var(--text-muted)">Base</dt>
-                <dd class="tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ r.base | number:'1.2-2' }} €</dd>
+                <dd class="tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ r.base | importe }}</dd>
               </div>
               <div>
                 <dt style="color:var(--text-muted)">IVA</dt>
-                <dd class="tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ r.cuota | number:'1.2-2' }} €</dd>
+                <dd class="tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ r.cuota | importe }}</dd>
               </div>
               <div>
                 <dt style="color:var(--text-muted)">Total</dt>
-                <dd class="font-semibold tabular-nums" style="color:var(--text-strong);font-family:var(--font-mono)">{{ r.importe | number:'1.2-2' }} €</dd>
+                <dd class="font-semibold tabular-nums" style="color:var(--text-strong);font-family:var(--font-mono)">{{ r.importe | importe }}</dd>
               </div>
             </dl>
           </div>
@@ -106,9 +106,9 @@
                   <tr style="border-bottom:1px solid var(--border)">
                     <td class="px-4 py-3" style="color:var(--text-body)">{{ r.tipo | titlecase }}</td>
                     <td class="px-4 py-3 text-right tabular-nums" style="color:var(--text-muted);font-family:var(--font-mono)">{{ r.count }}</td>
-                    <td class="px-4 py-3 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ r.base | number:'1.2-2' }} €</td>
-                    <td class="px-4 py-3 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ r.cuota | number:'1.2-2' }} €</td>
-                    <td class="px-4 py-3 text-right font-medium tabular-nums" style="color:var(--text-strong);font-family:var(--font-mono)">{{ r.importe | number:'1.2-2' }} €</td>
+                    <td class="px-4 py-3 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ r.base | importe }}</td>
+                    <td class="px-4 py-3 text-right tabular-nums" style="color:var(--text-body);font-family:var(--font-mono)">{{ r.cuota | importe }}</td>
+                    <td class="px-4 py-3 text-right font-medium tabular-nums" style="color:var(--text-strong);font-family:var(--font-mono)">{{ r.importe | importe }}</td>
                   </tr>
                 }
               </tbody>

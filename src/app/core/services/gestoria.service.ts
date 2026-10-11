@@ -21,6 +21,8 @@ import { CompanyService } from './company.service';
 import { CasosService } from './casos.service';
 import { ActividadService } from './actividad.service';
 import { stripUndefinedDeep } from '../firebase/sanitize';
+import { formatearImporteTexto } from '../moneda/formatear-importe';
+import { formatoDeEmpresa } from '../moneda/formato-empresa';
 import { describirCambios, type MovimientoAuditable } from '../tesoreria/cambios-movimiento';
 import { GestoriaSlot, MovimientoGestoria, MovimientoTipo, Retiro } from '../../interfaces';
 import { Auth } from '@angular/fire/auth';
@@ -37,6 +39,10 @@ export class GestoriaService {
   private readonly casosService = inject(CasosService);
   private readonly auth = inject(Auth);
   private readonly actividad = inject(ActividadService);
+
+  private formatoMoneda() {
+    return formatoDeEmpresa(this.companyService.activeCompany());
+  }
 
   readonly movimientos = signal<MovimientoGestoria[]>([]);
   readonly movimientosGenerales = signal<MovimientoGestoria[]>([]);
@@ -198,7 +204,7 @@ export class GestoriaService {
       createdAt: serverTimestamp(),
     });
     await this.casosService.recalcularResumen(casoId);
-    await this.actividad.log('Tesorería', `Registró el movimiento "${data.concepto}" (${data.importe} €)`, casoId);
+    await this.actividad.log('Tesorería', `Registró el movimiento "${data.concepto}" (${formatearImporteTexto(data.importe, this.formatoMoneda())})`, casoId);
   }
 
   /**
@@ -213,7 +219,7 @@ export class GestoriaService {
     anterior?: MovimientoAuditable,
     nombresCuenta?: ReadonlyMap<string, string>,
   ): Promise<void> {
-    const cambios = anterior ? describirCambios(anterior, data, nombresCuenta) : [];
+    const cambios = anterior ? describirCambios(anterior, data, nombresCuenta, this.formatoMoneda()) : [];
     // Nada cambió realmente: no ensuciamos el feed ni tocamos el documento.
     if (anterior && cambios.length === 0) return;
 

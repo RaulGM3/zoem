@@ -5,6 +5,7 @@ import {
   ListTableDirective,
   ResponsiveListComponent,
 } from '../../../../shared/components/responsive-list/responsive-list';
+import { ImportePipe } from '../../../../core/moneda/importe.pipe';
 
 export interface HoraFlat {
   id: string;
@@ -23,7 +24,7 @@ export interface HoraFlat {
 @Component({
   selector: 'app-facturacion-horas-tab',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DecimalPipe, ResponsiveListComponent, ListCardDirective, ListTableDirective],
+  imports: [ImportePipe, DecimalPipe, ResponsiveListComponent, ListCardDirective, ListTableDirective],
   templateUrl: './facturacion-horas-tab.html',
 })
 export class FacturacionHorasTabComponent {

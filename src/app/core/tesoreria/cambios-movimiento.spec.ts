@@ -28,6 +28,12 @@ describe('describirCambios', () => {
       .toEqual(['importe: 100,00 € → 150,50 €']);
   });
 
+  it('formatea el importe con la moneda del despacho (COP sin decimales)', () => {
+    const cop = { moneda: 'COP', locale: 'es-CO', decimales: 0 };
+    expect(describirCambios(mov({ importe: 100000 }), { importe: 150500 }, new Map(), cop))
+      .toEqual(['importe: $ 100.000 → $ 150.500']);
+  });
+
   it('describe el cambio de concepto entrecomillado', () => {
     expect(describirCambios(mov({ concepto: 'Tasa' }), { concepto: 'Tasa judicial' }))
       .toEqual(['concepto: "Tasa" → "Tasa judicial"']);

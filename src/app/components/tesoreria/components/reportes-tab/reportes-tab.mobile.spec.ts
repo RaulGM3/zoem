@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { ReportesTabComponent, type Reporte } from './reportes-tab';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 function mockViewport(mobile: boolean): void {
   Object.defineProperty(window, 'matchMedia', {
@@ -34,7 +35,7 @@ describe('ReportesTabComponent — móvil', () => {
   async function montar(mobile: boolean, reporte: Reporte = REPORTE): Promise<void> {
     TestBed.resetTestingModule();
     mockViewport(mobile);
-    await TestBed.configureTestingModule({ imports: [ReportesTabComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [ReportesTabComponent] }).compileComponents();
     fixture = TestBed.createComponent(ReportesTabComponent);
     fixture.componentRef.setInput('reporte', reporte);
     fixture.detectChanges();
@@ -49,9 +50,9 @@ describe('ReportesTabComponent — móvil', () => {
     const items = el().querySelectorAll('[data-tipo-card]');
     expect(items).toHaveLength(2);
     expect(items[0].textContent).toContain('Ingreso');
-    expect(items[0].textContent).toContain('1,000.00');
-    expect(items[0].textContent).toContain('210.00');
-    expect(items[0].textContent).toContain('1,210.00');
+    expect(items[0].textContent).toContain('1.000,00');
+    expect(items[0].textContent).toContain('210,00');
+    expect(items[0].textContent).toContain('1.210,00');
   });
 
   it('móvil: sin movimientos muestra el texto vacío', async () => {

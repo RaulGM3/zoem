@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { FacturacionHorasTabComponent, type HoraFlat } from './facturacion-horas-tab';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 function mockViewport(mobile: boolean): void {
   Object.defineProperty(window, 'matchMedia', {
@@ -28,7 +29,7 @@ describe('FacturacionHorasTabComponent', () => {
   async function montar(mobile: boolean, horas: HoraFlat[]): Promise<void> {
     TestBed.resetTestingModule();
     mockViewport(mobile);
-    TestBed.configureTestingModule({ imports: [FacturacionHorasTabComponent] });
+    TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [FacturacionHorasTabComponent] });
     fixture = TestBed.createComponent(FacturacionHorasTabComponent);
     fixture.componentRef.setInput('horasFlat', horas);
     fixture.componentRef.setInput('totalHoras', 10);
@@ -56,7 +57,7 @@ describe('FacturacionHorasTabComponent', () => {
     expect(lis[0].textContent).toContain('Hito a');
     expect(lis[0].textContent).toContain('Ana');
     expect(lis[0].textContent).toContain('1.5h');
-    expect(lis[0].textContent).toContain('150 €');
+    expect(lis[0].textContent).toContain('150\u00A0€');
     expect(lis[0].textContent).toContain('Facturado');
     expect(lis[1].textContent).toContain('—');
     expect(lis[1].textContent).toContain('Pendiente');

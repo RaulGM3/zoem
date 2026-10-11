@@ -21,6 +21,7 @@ import { PermissionService } from '../../core/services/permission.service';
 import { ToastService } from '../../core/services/toast.service';
 import type { AmbitoAccion, Caso, CompanyMember, Contact, ContactFile, ContactFolder, Evento, Hito } from '../../interfaces';
 import { analizarA11y, formatearViolaciones } from '../../../testing/axe';
+import { provideMonedaTest } from '../../core/moneda/moneda-empresa.testing';
 
 @Component({ selector: 'app-estado-contacto-dialog', template: '', changeDetection: ChangeDetectionStrategy.OnPush })
 class EstadoDialogStubComponent {
@@ -88,7 +89,7 @@ describe('ContactoDetailComponent — móvil', () => {
     mockViewport(mobile);
     TestBed.configureTestingModule({
       imports: [ContactoDetailComponent],
-      providers: [
+      providers: [provideMonedaTest(), 
         provideRouter([]),
         ...cupoDePruebas().providers,
         { provide: ContactService, useValue: { getContact: vi.fn().mockResolvedValue(contacto), updateContact: vi.fn() } },

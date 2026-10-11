@@ -4,6 +4,7 @@ import { FacturacionArchivoTabComponent } from './facturacion-archivo-tab';
 import type { Invoice } from '../../../../core/services/invoice.service';
 import type { Caso } from '../../../../interfaces';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 function mockViewport(mobile: boolean): void {
   Object.defineProperty(window, 'matchMedia', {
@@ -38,7 +39,7 @@ describe('FacturacionArchivoTabComponent — móvil', () => {
   async function montar(mobile: boolean, casos: Caso[], canReabrir = true): Promise<void> {
     TestBed.resetTestingModule();
     mockViewport(mobile);
-    TestBed.configureTestingModule({ imports: [FacturacionArchivoTabComponent] });
+    TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [FacturacionArchivoTabComponent] });
     fixture = TestBed.createComponent(FacturacionArchivoTabComponent);
     fixture.componentRef.setInput('casos', casos);
     fixture.componentRef.setInput('saving', false);
@@ -54,8 +55,8 @@ describe('FacturacionArchivoTabComponent — móvil', () => {
     expect(el().querySelector('table')).toBeNull();
     const lis = el().querySelectorAll('ul > li');
     expect(lis).toHaveLength(2);
-    expect(lis[0].textContent).toContain('200€');
-    expect(lis[0].textContent).toContain('180€');
+    expect(lis[0].textContent).toContain('200\u00A0€');
+    expect(lis[0].textContent).toContain('180\u00A0€');
     expect(lis[0].textContent).toContain('2026-09-30');
     expect(lis[0].textContent).toContain('Emitida');
     expect(lis[0].textContent).toContain('Falta NIF');

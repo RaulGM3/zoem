@@ -23,7 +23,7 @@
     <span>
       Confirmo que el saldo está corroborado en bancos.
       @if (saldoBancario() != null) {
-        <span style="color:var(--text-faint)">(Saldo bancario: {{ saldoBancario() | number:'1.0-0' }}€)</span>
+        <span style="color:var(--text-faint)">(Saldo bancario: {{ saldoBancario() | importe:'entero' }})</span>
       } @else {
         <span style="color:var(--text-faint)">(Sin saldo bancario registrado — corroboración manual)</span>
       }

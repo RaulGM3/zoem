@@ -246,7 +246,7 @@
                           >{{ gr.title }}</button>
                         }
                         @if (gr.reg.facturado) {
-                          <span class="shrink-0 rounded-md px-2 py-1 text-[10px] font-semibold leading-none" style="background:color-mix(in srgb,var(--success) 20%,transparent);color:var(--success)" title="Horas facturadas">€ Facturado</span>
+                          <span class="shrink-0 rounded-md px-2 py-1 text-[10px] font-semibold leading-none" style="background:color-mix(in srgb,var(--success) 20%,transparent);color:var(--success)" title="Horas facturadas">{{ moneda.simbolo() }} Facturado</span>
                         }
                         @if (gr.item.hitoEstado) {
                           <button

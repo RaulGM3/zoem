@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PlantillaCostosTabComponent } from './plantilla-costos-tab';
 import type { PartidaCosto } from '../../../../interfaces';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 function suplidos(): PartidaCosto[] {
   return [
@@ -45,7 +46,7 @@ describe('PlantillaCostosTabComponent', () => {
 
   beforeEach(async () => {
     TestBed.resetTestingModule();
-    await TestBed.configureTestingModule({ imports: [PlantillaCostosTabComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [PlantillaCostosTabComponent] }).compileComponents();
   });
 
   it('muestra los honorarios y las partidas con su tipo e importe', () => {
@@ -53,7 +54,7 @@ describe('PlantillaCostosTabComponent', () => {
     expect(q<HTMLInputElement>('#pd-honorarios').value).toBe('1500');
     expect(filas()[0].textContent).toContain('Tasa judicial');
     expect(filas()[0].textContent).toContain('Suplido');
-    expect(filas()[0].textContent).toContain('50 €');
+    expect(filas()[0].textContent).toContain('50,00\u00A0€');
     expect(filas()[1].textContent).toContain('Gastos repercutibles');
     expect(filas()[1].textContent).not.toContain('€');
   });

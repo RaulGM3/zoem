@@ -6,6 +6,7 @@ import { FacturaExtractionService, type DatosExtraidos, type ResultadoExtraccion
 import { ACCEPT_FACTURA, ACCEPT_FOTO, CapturaArchivoService, type ResultadoCapturaNativa } from '../../../../core/services/captura-archivo.service';
 import { QrDecodeService } from '../../../../core/services/qr-decode.service';
 import { parseQrVerifactu, type ResultadoParseQr } from '../../../../core/facturas-recibidas/qr-verifactu';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 describe('FacturaRecibidaDrawerComponent', () => {
   let fixture: ComponentFixture<FacturaRecibidaDrawerComponent>;
@@ -25,7 +26,7 @@ describe('FacturaRecibidaDrawerComponent', () => {
     leerQr = vi.fn().mockResolvedValue(null);
     await TestBed.configureTestingModule({
       imports: [FacturaRecibidaDrawerComponent],
-      providers: [...prueba.providers, 
+      providers: [provideMonedaTest(), ...prueba.providers, 
         { provide: FacturaExtractionService, useValue: { extraer } },
         { provide: QrDecodeService, useValue: { leer: leerQr } },
       ],
@@ -623,7 +624,7 @@ describe('FacturaRecibidaDrawerComponent — captura nativa (@capacitor/camera)'
     extraer = vi.fn().mockResolvedValue({ ok: false, mensaje: 'sin IA' } satisfies ResultadoExtraccion);
     await TestBed.configureTestingModule({
       imports: [FacturaRecibidaDrawerComponent],
-      providers: [...cupoDePruebas().providers, 
+      providers: [provideMonedaTest(), ...cupoDePruebas().providers, 
         { provide: FacturaExtractionService, useValue: { extraer } },
         { provide: QrDecodeService, useValue: { leer: vi.fn().mockResolvedValue(null) } },
         { provide: CapturaArchivoService, useValue: { esNativo: () => nativo, capturar, validar: (a: File) => ({ ok: true, archivo: a }) } },

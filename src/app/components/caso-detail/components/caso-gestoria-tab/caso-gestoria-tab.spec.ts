@@ -4,6 +4,7 @@ import { CasoGestoriaTabComponent } from './caso-gestoria-tab';
 import type {
   CuentaBancaria, GestoriaSlot, MovimientoGestoria, ResumenFinanciero,
 } from '../../../../interfaces';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 const SLOTS = [
   { id: 's1', nombre: 'Tasa judicial', tipoCosto: 'suplido', importeEstimado: 50, status: 'pendiente' },
@@ -56,7 +57,7 @@ describe('CasoGestoriaTabComponent', () => {
 
   beforeEach(async () => {
     TestBed.resetTestingModule();
-    await TestBed.configureTestingModule({ imports: [CasoGestoriaTabComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [CasoGestoriaTabComponent] }).compileComponents();
     fixture = TestBed.createComponent(CasoGestoriaTabComponent);
     component = fixture.componentInstance;
     set({
@@ -92,7 +93,7 @@ describe('CasoGestoriaTabComponent', () => {
   });
 
   it('el resumen y la tabla se calculan sobre los mismos movimientos', () => {
-    expect(compacto(q('app-caso-resumen-financiero'))).toContain('Ingresos1,000.00€');
+    expect(compacto(q('app-caso-resumen-financiero'))).toContain('Ingresos1.000,00€');
     expect(qa('app-caso-movimientos tbody tr')).toHaveLength(4);
   });
 

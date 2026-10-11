@@ -40,7 +40,7 @@
     </div>
     <div class="bg-white rounded-xl border border-slate-200 p-4">
       <p class="text-sm text-slate-700 font-medium">Presupuesto</p>
-      <p class="text-2xl font-bold text-slate-800 mt-1">{{ (p.budget ?? 0) | number:'1.0-0' }} €</p>
+      <p class="text-2xl font-bold text-slate-800 mt-1">{{ (p.budget ?? 0) | importe:'entero' }}</p>
     </div>
     <div class="bg-white rounded-xl border border-slate-200 p-4">
       <p class="text-sm text-slate-700 font-medium">Días hasta entrega</p>

@@ -28,6 +28,7 @@ import {
   type Modulo,
   type UserPermissionOverrides,
 } from '../../../../core/permissions/permissions';
+import { MonedaEmpresaService } from '../../../../core/moneda/moneda-empresa.service';
 
 export interface UserEditPatch {
   nombre: string;
@@ -52,6 +53,7 @@ type OverrideState = 'heredar' | 'permitir' | 'denegar';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UserEditDrawerComponent {
+  protected readonly moneda = inject(MonedaEmpresaService);
   private readonly fb = inject(FormBuilder);
   private readonly permissionService = inject(PermissionService);
   private readonly customRolesService = inject(CustomRolesService);

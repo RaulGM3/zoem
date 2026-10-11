@@ -1,9 +1,10 @@
 import { Component, ChangeDetectionStrategy, computed, input, output } from '@angular/core';
-import { DecimalPipe, TitleCasePipe } from '@angular/common';
+import { TitleCasePipe } from '@angular/common';
 import { LucideAngularModule, Download, BarChart3 } from 'lucide-angular';
 import {
   ResponsiveListComponent, ListCardDirective, ListTableDirective,
 } from '../../../../shared/components/responsive-list/responsive-list';
+import { ImportePipe } from '../../../../core/moneda/importe.pipe';
 
 export interface ReporteTipo {
   tipo: string;
@@ -27,7 +28,7 @@ export interface Reporte {
 @Component({
   selector: 'app-reportes-tab',
   host: { style: 'display: block' },
-  imports: [LucideAngularModule, DecimalPipe, TitleCasePipe, ResponsiveListComponent, ListCardDirective, ListTableDirective],
+  imports: [ImportePipe, LucideAngularModule, TitleCasePipe, ResponsiveListComponent, ListCardDirective, ListTableDirective],
   templateUrl: './reportes-tab.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

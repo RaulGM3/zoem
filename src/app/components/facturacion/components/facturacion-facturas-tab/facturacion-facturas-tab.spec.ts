@@ -4,6 +4,7 @@ import { FacturacionFacturasTabComponent } from './facturacion-facturas-tab';
 import type { Invoice } from '../../../../core/services/invoice.service';
 import type { VerifactuEstado } from '../../../../interfaces/verifactu.interface';
 import { analizarA11y, formatearViolaciones } from '../../../../../testing/axe';
+import { provideMonedaTest } from '../../../../core/moneda/moneda-empresa.testing';
 
 const AHORA = '2026-10-01T10:00:00Z';
 
@@ -44,7 +45,7 @@ describe('FacturacionFacturasTabComponent — Verifactu (R9.2, R9.3, R9.4)', () 
 
   async function montar(invoices: Invoice[]): Promise<void> {
     TestBed.resetTestingModule();
-    await TestBed.configureTestingModule({ imports: [FacturacionFacturasTabComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideMonedaTest()], imports: [FacturacionFacturasTabComponent] }).compileComponents();
     fixture = TestBed.createComponent(FacturacionFacturasTabComponent);
     fixture.componentRef.setInput('invoices', invoices);
     fixture.componentRef.setInput('loading', false);

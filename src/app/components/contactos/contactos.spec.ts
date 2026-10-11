@@ -20,6 +20,7 @@ import { PermissionService } from '../../core/services/permission.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SeguimientoContactoService } from '../../core/services/seguimiento-contacto.service';
 import type { CompanyMember, Contact } from '../../interfaces';
+import { provideMonedaTest } from '../../core/moneda/moneda-empresa.testing';
 
 interface RunOptions { successMessage?: string; errorTitle?: string; onSuccess?: () => void }
 
@@ -165,7 +166,7 @@ describe('ContactosComponent', () => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [ContactosComponent],
-      providers: [
+      providers: [provideMonedaTest(), 
         provideRouter([]),
         {
           provide: ActivatedRoute,
